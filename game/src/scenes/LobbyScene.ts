@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
-import { profile, account, mail, setArena, signOut, loadMe, loadInbox } from "../save";
+import { profile, account, mail, setArena, signOut, loadMe, loadInbox, serverNow } from "../save";
+import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
 import { dailyCounts, loginModal, questsModal } from "./daily";
 import { leagueBadge, leagueModal } from "./leagues";
@@ -36,6 +37,34 @@ export function topBar(scene: Phaser.Scene) {
   resourcePill(scene, x0 + 580, 38, "item:trophy", fmt(profile.trophies), 190);
   // League badge in the corner; tap it for the leagues list.
   pressable(leagueBadge(scene, W - 46, 38, 66, leagueFor(profile.trophies)), () => leagueModal(scene));
+}
+
+/** The running event (soonest to end), as a pill in the top bar (wide) or above the shop button (phone). Tap for the shop. */
+function eventStrip(scene: Phaser.Scene) {
+  const live = activeEvents(serverNow()).sort((a, b) => timeOf(a.endsAt) - timeOf(b.endsAt));
+  if (!live.length) return;
+  const e = live[0];
+  const w = WIDE ? Math.min(640, W - 900) : 470;
+  const h = 58;
+  const g = scene.add.graphics();
+  g.fillStyle(0x5a1f3a, 0.92).fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+  g.lineStyle(3, 0xd9a441, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+  const star = scene.add.image(-w / 2 + 34, 0, "item:star_shard").setDisplaySize(52, 52);
+  const name = txt(scene, -w / 2 + 68, 0, e.name.toUpperCase() + (live.length > 1 ? ` +${live.length - 1}` : ""), 24, "#ffd77a", [0, 0.5]);
+  const left = txt(scene, w / 2 - 22, 0, "", 22, "#ffb3e6", [1, 0.5]);
+  const c = scene.add.container(WIDE ? 24 + w / 2 : W / 2, WIDE ? 38 : 1442, [g, star, name, left]).setSize(w, h);
+  scene.tweens.add({ targets: star, angle: { from: -10, to: 10 }, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
+  const tick = () => {
+    const ms = msLeft(timeOf(e.endsAt), serverNow()) ?? 0;
+    if (ms <= 0) return void c.destroy();
+    left.setText(shortDuration(ms));
+    // Shorten a long name so it doesn't run into the time.
+    const room = w - 100 - left.width;
+    while (name.width > room && name.text.length > 4) name.setText(name.text.slice(0, -2) + "…");
+  };
+  tick();
+  scene.time.addEvent({ delay: 15_000, loop: true, callback: tick });
+  pressable(c, () => scene.scene.start("Shop"));
 }
 
 export class LobbyScene extends Phaser.Scene {
@@ -82,6 +111,7 @@ export class LobbyScene extends Phaser.Scene {
       button(this, 200, 1530, 300, 110, "DECK", "blue", () => this.scene.start("Deck"));
       button(this, 552, 1530, 300, 110, "SHOP", "green", () => this.scene.start("Shop"));
     }
+    eventStrip(this);
   }
 
   /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */

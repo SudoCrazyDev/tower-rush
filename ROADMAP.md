@@ -77,7 +77,17 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   **Effects** page, which previews each one at a few ranks and rarities. The defaults are the old
   hard-coded values, so balance is unchanged until someone edits them. Card details in the deck
   show the unit's effect with its numbers. Idea for later: per-unit overrides of these numbers.
-- Shop offers and limited-time events from the admin panel.
+- ~~Shop offers and limited-time events~~ done (`shared/offers.ts`): the admin **Offers & events**
+  page schedules events (start/end time; battle gold and gem multipliers and a chest discount while
+  they run; overlapping events use the biggest of each, not the product) and bundles (gold, gems,
+  N of a chest) sold for gold or gems on the shop's new SPECIALS shelf, each with a per-player
+  limit, trophy gate, struck-through "was" price, and either its own sale window or an event's.
+  Both live in the game config, so they're versioned with it; the server switches them on and off
+  by the clock and checks every purchase, and the game syncs to the server's time for countdowns.
+  A running event shows a banner in the lobby (tap for the shop) and the shop, and its boost on
+  the results screen. Purchases are logged, and each offer shows its sales. Ships with one offer,
+  a one-time Starter Pack. Ideas for later: real-money purchases (needs store billing), daily
+  rotating deals, offers that include specific cards or heroes, event-only quests.
 - Charts: player retention, average wave per arena over time.
 
 ### 5. Multiplayer (biggest item)

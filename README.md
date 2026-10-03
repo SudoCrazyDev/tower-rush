@@ -48,6 +48,10 @@ http://localhost:5174/admin/, add your own admin or change the password on the
 - **Mail.** Send announcements and gifts (gold, gems, a chest) to one player or everyone;
   they arrive in the game's inbox (lobby **MAIL**). Gifts are claimed once, messages can
   expire, and a sent message can be recalled.
+- **Offers & events.** Schedule limited-time events (battle gold/gem multipliers, a chest
+  discount) and sell bundles in the shop's SPECIALS shelf, each with an optional per-player
+  limit, trophy gate and sale window (its own dates or an event's). Sales per offer are
+  shown next to it. Things switch on and off by themselves at the times set.
 
 ## Production
 

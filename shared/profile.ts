@@ -3,6 +3,7 @@ import { ECONOMY, CHESTS, type ChestDef } from "./economy.ts";
 import { HEROES, HERO_BY_ID } from "./heroes.ts";
 import { freshDaily, utcDay, type DailyState, type LoginState, type Reward } from "./daily.ts";
 import { unpaidLeagues } from "./leagues.ts";
+import type { OfferDef } from "./offers.ts";
 import { RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, upgradeCost, maxCardLevel, type Rarity } from "./units.ts";
 
 export interface CardState {
@@ -28,6 +29,8 @@ export interface Profile {
   login: LoginState;
   /** Leagues whose one-time promotion reward has been paid. */
   leagues: string[];
+  /** Shop offers bought so far, by offer id (for per-player limits). */
+  offers: Record<string, number>;
 }
 
 export function newProfile(): Profile {
@@ -47,6 +50,7 @@ export function newProfile(): Profile {
     daily: { day: "", quests: [], bonusClaimed: false },
     login: { claims: 0, lastDay: "" },
     leagues: [],
+    offers: {},
   };
 }
 
@@ -77,6 +81,16 @@ export function payPromotions(p: Profile, rand?: () => number): Promotion[] {
     p.leagues.push(l.id);
     return { league: l.id, reward: l.reward, loot: grantReward(p, l.reward, rand) };
   });
+}
+
+/** Pay for a shop offer and hand over its bundle. Check offerBuyProblem() first. */
+export function buyOffer(p: Profile, o: OfferDef, rand?: () => number): ChestLoot | null {
+  p[o.currency] -= o.price;
+  p.offers[o.id] = (p.offers[o.id] ?? 0) + 1;
+  p.coins += o.reward.coins;
+  p.gems += o.reward.gems;
+  const chest = o.reward.chest ? chestById(o.reward.chest) : undefined;
+  return chest ? rollChests(p, chest, Math.max(1, o.chests), rand) : null;
 }
 
 export function ownsHero(p: Profile, id: string) {

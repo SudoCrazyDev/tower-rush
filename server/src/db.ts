@@ -78,6 +78,15 @@ CREATE TABLE IF NOT EXISTS mail_state (
   deleted_at INTEGER,
   PRIMARY KEY (mail_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS purchases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  offer TEXT NOT NULL,
+  price INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS purchases_offer ON purchases(offer);
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   admin_id INTEGER,

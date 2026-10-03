@@ -3,7 +3,8 @@ import { db } from "./db.ts";
 import { createSession, deleteSession, hashPassword, rateLimit, requirePlayer, verifyPassword } from "./auth.ts";
 import { currentConfig } from "./config-store.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
-import { canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, type Profile } from "../../shared/profile.ts";
+import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, upgradeCost } from "../../shared/units.ts";
@@ -16,7 +17,8 @@ export const player = Router();
 
 player.get("/config", (_req, res) => {
   const c = currentConfig();
-  res.json({ version: c.id, config: c.config });
+  // `now` lets the game line its event and offer countdowns up with the server's clock.
+  res.json({ version: c.id, config: c.config, now: Date.now() });
 });
 
 // ---------------------------------------------------------------- auth
@@ -174,12 +176,25 @@ player.post("/shop/chests/:id/buy", (req, res) => {
   const count = Number(req.body?.count ?? 1);
   const most = ECONOMY.chestBulkMax;
   if (!Number.isInteger(count) || count < 1 || count > most) return void res.status(400).json({ error: `You can buy 1 to ${most} at a time` });
-  const cost = chest.price * count;
-  if (m.p[chest.currency] < cost) return void res.status(400).json({ error: `Not enough ${chest.currency}` });
+  const cost = discounted(chest.price) * count;
+  if (m.p[chest.currency] < cost) return void res.status(400).json({ error: `Not enough ${chest.currency === "coins" ? "gold" : "gems"}` });
   m.p[chest.currency] -= cost;
   const loot = rollChests(m.p, chest, count);
   addQuestProgress(m.p.daily, { chests: count });
   writeProfile(m.u.id, m.p);
+  res.json({ loot, profile: m.p });
+});
+
+player.post("/shop/offers/:id/buy", (req, res) => {
+  const m = me(req, res);
+  if (!m) return;
+  const o = offerById(String(req.params.id));
+  const problem = offerBuyProblem(o, m.p);
+  if (problem || !o) return void res.status(400).json({ error: problem });
+  const loot = buyOffer(m.p, o);
+  if (loot) addQuestProgress(m.p.daily, { chests: Math.max(1, o.chests) });
+  writeProfile(m.u.id, m.p);
+  db.prepare("INSERT INTO purchases (user_id, offer, price, currency, created_at) VALUES (?, ?, ?, ?, ?)").run(m.u.id, o.id, o.price, o.currency, Date.now());
   res.json({ loot, profile: m.p });
 });
 
@@ -319,7 +334,9 @@ player.post("/battles/:id/finish", (req, res) => {
   const heroCasts = int(req.body?.heroCasts, Math.floor(elapsed / 10) + 1);
 
   const arenaIndex = Math.max(0, ARENAS.findIndex((a) => a.id === b.arena));
-  const rewards = battleRewards(wave, bosses, arenaIndex);
+  // Running events boost the gold and gems (judged at the end of the battle).
+  const boosts = eventBoosts();
+  const rewards = boostRewards(battleRewards(wave, bosses, arenaIndex));
   const newBest = wave > m.p.bestWave;
   m.p.coins += rewards.coins;
   m.p.gems += rewards.gems;
@@ -339,7 +356,7 @@ player.post("/battles/:id/finish", (req, res) => {
     rewards.trophies,
     b.id,
   );
-  res.json({ rewards, newBest, wave, promotions, profile: m.p });
+  res.json({ rewards, boosts: { coinMult: boosts.coinMult, gemMult: boosts.gemMult }, newBest, wave, promotions, profile: m.p });
 });
 
 // ---------------------------------------------------------------- leaderboard

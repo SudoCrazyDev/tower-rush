@@ -29,9 +29,16 @@ function setProfile(p: Profile) {
   Object.assign(profile, p);
 }
 
+let clockOffset = 0;
+/** The server's clock (events and offers start and end by it). */
+export const serverNow = () => Date.now() + clockOffset;
+
 export async function loadConfig() {
-  const r = await get<{ version: number; config: GameConfig }>("/config");
+  const sent = Date.now();
+  const r = await get<{ version: number; config: GameConfig; now?: number }>("/config");
   applyConfig(r.config);
+  // Server time at the middle of the round trip, so countdowns match what the server enforces.
+  if (r.now) clockOffset = r.now - (sent + Date.now()) / 2;
   return r.version;
 }
 
@@ -94,6 +101,13 @@ export async function buyHero(id: string) {
 
 export async function buyChest(id: string, count = 1) {
   const r = await post<{ profile: Profile; loot: ChestLoot }>(`/shop/chests/${id}/buy`, { count });
+  setProfile(r.profile);
+  return r.loot;
+}
+
+/** Buy a shop offer; returns the cards from its chests (null if it had none). */
+export async function buyOffer(id: string) {
+  const r = await post<{ profile: Profile; loot: ChestLoot | null }>(`/shop/offers/${id}/buy`);
   setProfile(r.profile);
   return r.loot;
 }
@@ -172,6 +186,8 @@ export interface BattleResult {
   wave: number;
   /** Leagues reached for the first time; their rewards are already in the profile. */
   promotions: Promotion[];
+  /** Event multipliers already applied to the gold and gems (1 = no event). */
+  boosts?: { coinMult: number; gemMult: number };
 }
 
 export interface BattleStats {

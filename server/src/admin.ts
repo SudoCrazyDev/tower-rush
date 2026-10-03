@@ -117,6 +117,19 @@ admin.post("/config/reset", (req, res) => {
   res.json({ version: r.id });
 });
 
+/** Sales per shop offer (all time and last 24h), for the Offers & events page. */
+admin.get("/offers/sales", (_req, res) => {
+  res.json(
+    db
+      .prepare(
+        `SELECT offer, currency, COUNT(*) AS sold, COUNT(DISTINCT user_id) AS buyers, SUM(price) AS spent,
+                SUM(created_at > ?) AS soldToday, MAX(created_at) AS lastAt
+         FROM purchases GROUP BY offer, currency ORDER BY sold DESC`,
+      )
+      .all(Date.now() - 86400_000),
+  );
+});
+
 // ---------------------------------------------------------------- users
 
 admin.get("/users", (req, res) => {

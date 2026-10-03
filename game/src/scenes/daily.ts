@@ -36,7 +36,7 @@ export function checkMark(scene: Phaser.Scene, x: number, y: number, size: numbe
 }
 
 /** What a claim gave: gold/gems, plus the chest's cards. */
-export function rewardPopup(scene: Phaser.Scene, title: string, got: Claimed, onDone: () => void) {
+export function rewardPopup(scene: Phaser.Scene, title: string, got: Claimed, onDone: () => void, chests = 1) {
   const { reward, loot } = got;
   const h = !loot ? 560 : loot.cards.length > 8 ? 1180 : 1000;
   const m = modal(scene, 680, h, title);
@@ -51,7 +51,7 @@ export function rewardPopup(scene: Phaser.Scene, title: string, got: Claimed, on
   let y = loot ? top + 150 : cy - 50 - ((lines.length - 1) * 80) / 2;
   if (loot && reward.chest) {
     m.add(scene.add.image(cx, y + 40, rewardIcon(reward)).setDisplaySize(170, 170));
-    m.add(txt(scene, cx, y + 150, chestName(reward.chest), 32, "#fff4c2"));
+    m.add(txt(scene, cx, y + 150, `${chests > 1 ? `${chests}x ` : ""}${chestName(reward.chest)}`, 32, "#fff4c2"));
     y += 230;
   }
   lines.forEach(([icon, label, color]) => {

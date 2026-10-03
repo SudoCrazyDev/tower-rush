@@ -1,7 +1,10 @@
 import Phaser from "phaser";
 import { animKey, ensureAnim, loadSheet, sheetScale } from "../assets";
-import { CHESTS, buyChest, claimGift, giftReadyAt, profile, type ChestDef, type ChestLoot } from "../save";
+import { CHESTS, buyChest, buyOffer, claimGift, giftReadyAt, profile, serverNow, type ChestDef, type ChestLoot } from "../save";
 import { ECONOMY } from "../../../shared/economy.ts";
+import { activeEvents, discounted, msLeft, nextChange, offerLeft, offerWindow, shopOffers, shortDuration, timeOf, type EventDef, type OfferDef } from "../../../shared/offers.ts";
+import { chestById } from "../../../shared/profile.ts";
+import { rewardPopup } from "./daily";
 import { RARITY_STATS } from "../data/units";
 import { W, H, WIDE, txt, button, iconButton, pressable, lootCards, modal, fmt, attempt, type Button } from "../ui";
 import { cover, topBar } from "./LobbyScene";
@@ -17,7 +20,13 @@ const TAN = "#f1d7a8";
 const GOLD_TEXT = "#ffd77a";
 
 type Filter = "all" | "free" | "coins" | "gems";
-type GroupId = "free" | "coins" | "gems";
+type GroupId = "offers" | "free" | "coins" | "gems";
+/** Draws one shelf item (a chest or an offer) centred at x, hanging from `top`. */
+type Item = (x: number, top: number, w: number, h: number) => Phaser.GameObjects.Container;
+
+/** Accent for limited-time things: sale badges, event banners and offer ribbons. */
+const SALE = 0xe0443a;
+const EVENT_TEXT = "#ffb3e6";
 
 const TABS: { id: Filter; label: string; icon?: string }[] = [
   { id: "all", label: "ALL" },
@@ -27,6 +36,7 @@ const TABS: { id: Filter; label: string; icon?: string }[] = [
 ];
 
 const GROUPS: { id: GroupId; title: string; sub: string; icon: string }[] = [
+  { id: "offers", title: "SPECIALS", sub: "Limited bundles, while they last", icon: "item:card_pack" },
   { id: "free", title: "ON THE HOUSE", sub: "A free round from the bartender", icon: "item:gift_box" },
   { id: "coins", title: "GOLD BAR", sub: "Chests paid in gold", icon: "item:coins" },
   { id: "gems", title: "TOP SHELF", sub: "Premium chests paid in gems", icon: "item:gems" },
@@ -54,7 +64,9 @@ export class ShopScene extends Phaser.Scene {
   private busy = false;
   private locked = false;
   private tabs: { id: Filter; paint: (on: boolean) => void }[] = [];
-  private giftTimer?: Phaser.Time.TimerEvent;
+  /** One-second clock for countdowns; each tick returns true when the shelves need rebuilding. */
+  private clock?: Phaser.Time.TimerEvent;
+  private ticks: (() => boolean)[] = [];
 
   preload() {
     loadSheet(this, "vfx", "chest_open");
@@ -283,21 +295,41 @@ export class ShopScene extends Phaser.Scene {
 
   /** Rebuild the shelves for the current filters, popping the items in. */
   private fill() {
-    this.giftTimer?.remove();
     this.content.removeAll(true);
     this.scroll = this.scrollTarget = 0;
+    const now = serverNow();
+    // Rebuild the moment an event or offer starts or ends.
+    const change = nextChange(now);
+    this.ticks = [() => serverNow() >= change];
+    this.clock?.remove();
+    this.clock = this.time.addEvent({ delay: 1000, loop: true, callback: () => this.ticks.some((t) => t()) && this.fill() });
 
     const f = ShopScene.filter;
     const afford = ShopScene.affordable;
-    const chests = CHESTS.filter((c) => c.enabled && (!afford || profile[c.currency] >= c.price));
+    const chests = CHESTS.filter((c) => c.enabled && (!afford || profile[c.currency] >= discounted(c.price, now)));
+    // Offers sit under the tab of their currency (free ones under FREE). A sold-out offer stays up
+    // (marked SOLD OUT) until it ends; one that never ends is just taken off the shelf.
+    const offers = shopOffers(profile.trophies, now).filter(
+      (o) =>
+        (offerLeft(o, profile.offers) > 0 || offerWindow(o).end !== null) &&
+        (f === "all" || (f === "free" ? o.price === 0 : o.price > 0 && o.currency === f)) &&
+        (!afford || (offerLeft(o, profile.offers) > 0 && profile[o.currency] >= o.price)),
+    );
     const giftReady = Date.now() >= giftReadyAt(profile);
-    const groups = GROUPS.filter((gr) => f === "all" || f === gr.id)
+    const groups = GROUPS.filter((gr) => gr.id === "offers" || f === "all" || f === gr.id)
       .map((gr) => ({
         ...gr,
-        chests: gr.id === "free" ? [] : chests.filter((c) => c.currency === gr.id).sort((a, b) => a.price - b.price),
+        items: (gr.id === "offers"
+          ? offers.map((o): Item => (x, top, w, h) => this.offerCard(o, x, top, w, h))
+          : gr.id === "free"
+            ? []
+            : chests
+                .filter((c) => c.currency === gr.id)
+                .sort((a, b) => a.price - b.price)
+                .map((c): Item => (x, top, w, h) => this.chestCard(c, x, top, w, h))) as Item[],
         gift: gr.id === "free" && (!afford || giftReady),
       }))
-      .filter((gr) => gr.gift || gr.chests.length);
+      .filter((gr) => gr.gift || gr.items.length);
 
     const cols = WIDE ? 4 : 2;
     const cardW = WIDE ? 360 : 336;
@@ -308,35 +340,45 @@ export class ShopScene extends Phaser.Scene {
     let y = 18;
     let n = 0;
 
-    if (!groups.length) {
-      const msg = txt(this, W / 2, 220, "The bartender shrugs.\nNothing on the shelves for that.", 32, TAN);
-      this.content.add(msg);
-      this.popIn(msg, 0);
-      y = 400;
+    // Running events head the shop: what they boost and when they end.
+    for (const e of activeEvents(now)) {
+      const banner = this.eventBanner(e, y, gridW);
+      this.content.add(banner);
+      this.popIn(banner, n++);
+      y += banner.height + 30;
     }
 
-    // On wide screens, small chest groups share a shelf side by side instead of each taking a row.
+    if (!groups.length) {
+      const msg = txt(this, W / 2, y + 200, "The bartender shrugs.\nNothing on the shelves for that.", 32, TAN);
+      this.content.add(msg);
+      this.popIn(msg, 0);
+      y += 380;
+    }
+
+    // On wide screens, small chest groups share a shelf side by side instead of each taking a row
+    // (the specials keep a shelf of their own).
     const bands: (typeof groups)[] = [];
     for (const gr of groups) {
       const last = bands.at(-1);
-      const used = last?.reduce((sum, b) => sum + b.chests.length, 0) ?? 0;
-      if (WIDE && last && !gr.gift && !last[0].gift && used + gr.chests.length <= cols) last.push(gr);
+      const used = last?.reduce((sum, b) => sum + b.items.length, 0) ?? 0;
+      const alone = (g: (typeof groups)[number]) => g.gift || g.id === "offers";
+      if (WIDE && last && !alone(gr) && !alone(last[0]) && used + gr.items.length <= cols) last.push(gr);
       else bands.push([gr]);
     }
 
     for (const band of bands) {
       if (band.length > 1) {
         const groupGap = 70;
-        const spans = band.map((gr) => gr.chests.length * cardW + (gr.chests.length - 1) * gap);
+        const spans = band.map((gr) => gr.items.length * cardW + (gr.items.length - 1) * gap);
         const bandW = spans.reduce((a, b) => a + b, 0) + groupGap * (band.length - 1);
         let x = W / 2 - bandW / 2;
         this.content.add(this.shelf(x - 20, y + 108 + cardH - 14, bandW + 40));
         band.forEach((gr, gi) => {
-          const head = this.groupHeader(x, y, spans[gi], gr, gr.chests.length);
+          const head = this.groupHeader(x, y, spans[gi], gr, gr.items.length);
           this.content.add(head);
           this.popIn(head, n++);
-          gr.chests.forEach((c, i) => {
-            const card = this.chestCard(c, x + cardW / 2 + i * (cardW + gap), y + 108, cardW, cardH);
+          gr.items.forEach((item, i) => {
+            const card = item(x + cardW / 2 + i * (cardW + gap), y + 108, cardW, cardH);
             this.content.add(card);
             this.popIn(card, n++);
           });
@@ -347,7 +389,7 @@ export class ShopScene extends Phaser.Scene {
       }
 
       const gr = band[0];
-      const count = gr.chests.length + (gr.gift ? 1 : 0);
+      const count = gr.items.length + (gr.gift ? 1 : 0);
       const head = this.groupHeader(left, y, gridW, gr, count);
       this.content.add(head);
       this.popIn(head, n++);
@@ -360,13 +402,13 @@ export class ShopScene extends Phaser.Scene {
         y += 210 + 40;
       }
 
-      for (let r = 0; r * cols < gr.chests.length; r++) {
-        const row = gr.chests.slice(r * cols, r * cols + cols);
+      for (let r = 0; r * cols < gr.items.length; r++) {
+        const row = gr.items.slice(r * cols, r * cols + cols);
         const rowW = row.length * cardW + (row.length - 1) * gap;
         const shelf = this.shelf(left - 20, y + cardH - 14, gridW + 40);
         this.content.add(shelf);
-        row.forEach((c, i) => {
-          const card = this.chestCard(c, W / 2 - rowW / 2 + cardW / 2 + i * (cardW + gap), y, cardW, cardH);
+        row.forEach((item, i) => {
+          const card = item(W / 2 - rowW / 2 + cardW / 2 + i * (cardW + gap), y, cardW, cardH);
           this.content.add(card);
           this.popIn(card, n++);
         });
@@ -471,8 +513,12 @@ export class ShopScene extends Phaser.Scene {
     const info = txt(this, 0, 326, "", 21, TAN);
     card.add(info);
 
+    // A running event's discount, shown as a sale badge on the art.
+    const price = discounted(c.price, serverNow());
+    if (price < c.price) card.add(this.saleBadge(w / 2 - 70, 196, `-${Math.round((1 - price / c.price) * 100)}%`));
+
     const unit = c.currency === "coins" ? "GOLD" : "GEMS";
-    const most = Math.max(1, Math.min(ECONOMY.chestBulkMax, Math.floor(profile[c.currency] / c.price)));
+    const most = Math.max(1, Math.min(ECONOMY.chestBulkMax, Math.floor(profile[c.currency] / price)));
     let n = Math.min(ShopScene.qty[c.id] ?? 1, most);
     const count = txt(this, 0, 382, "", 38);
     const buy = button(this, 0, 446, w - 70, 80, "", c.currency === "coins" ? "yellow" : "blue", this.tap(() => this.buy(c, n)), 30);
@@ -483,8 +529,8 @@ export class ShopScene extends Phaser.Scene {
       n = Math.max(1, Math.min(most, v));
       ShopScene.qty[c.id] = n;
       count.setText(`x${n}`);
-      buy.label.setText(`${fmt(c.price * n)} ${unit}`);
-      const short = c.price * n - profile[c.currency];
+      buy.label.setText(`${fmt(price * n)} ${unit}`);
+      const short = price * n - profile[c.currency];
       buy.setEnabled(short <= 0);
       minus.setEnabled(n > 1);
       plus.setEnabled(n < most);
@@ -548,16 +594,173 @@ export class ShopScene extends Phaser.Scene {
       // Live countdown; rebuild the shelves the moment it's ready.
       const tick = () => {
         const left = Math.max(0, Math.ceil((readyAt - Date.now()) / 1000));
-        if (!left) return this.fill();
+        if (!left) return true;
         const hh = Math.floor(left / 3600);
         const mm = Math.floor((left % 3600) / 60);
         const ss = left % 60;
         status.setText(`Next round in ${hh}h ${String(mm).padStart(2, "0")}m ${String(ss).padStart(2, "0")}s`);
+        return false;
       };
       tick();
-      this.giftTimer = this.time.addEvent({ delay: 1000, loop: true, callback: tick });
+      this.ticks.push(tick);
     }
     return card;
+  }
+
+  /** A tilted red price-tag starburst ("-25%"). */
+  private saleBadge(x: number, y: number, label: string) {
+    const g = this.add.graphics();
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 24; i++) {
+      const r = i % 2 ? 40 : 50;
+      const a = (i / 24) * Math.PI * 2;
+      pts.push(new Phaser.Math.Vector2(Math.cos(a) * r, Math.sin(a) * r));
+    }
+    g.fillStyle(0x000000, 0.35).fillPoints(pts.map((p) => new Phaser.Math.Vector2(p.x + 3, p.y + 5)), true);
+    g.fillStyle(SALE, 1).fillPoints(pts, true);
+    g.lineStyle(3, 0xffffff, 0.85).strokeCircle(0, 0, 34);
+    const c = this.add.container(x, y, [g, txt(this, 0, -1, label, label.length > 4 ? 22 : 26)]).setAngle(12);
+    this.tweens.add({ targets: c, scale: 1.08, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
+    return c;
+  }
+
+  /** "Ends in 2d 4h" text that counts down (and asks for a rebuild when it's over). */
+  private countdown(t: Phaser.GameObjects.Text, end: number | null, prefix: string) {
+    const tick = () => {
+      const left = msLeft(end, serverNow());
+      if (left === null) return false;
+      t.setText(`${prefix}${shortDuration(left)}`);
+      return left <= 0;
+    };
+    tick();
+    this.ticks.push(tick);
+  }
+
+  /** A running event: its name and what it boosts, with time left. */
+  private eventBanner(e: EventDef, top: number, w: number) {
+    const lines = [
+      e.coinMult > 1 && `x${+e.coinMult.toFixed(2)} BATTLE GOLD`,
+      e.gemMult > 1 && `x${+e.gemMult.toFixed(2)} BATTLE GEMS`,
+      e.chestDiscount > 0 && `${Math.round(e.chestDiscount * 100)}% OFF CHESTS`,
+    ].filter((s): s is string => !!s);
+    const h = WIDE ? 150 : 196;
+    const c = this.add.container(W / 2, top).setSize(w, h);
+    const g = this.add.graphics();
+    this.plank(g, -w / 2, 0, w, h, 26, 0x5a1f3a);
+    g.lineStyle(4, BRASS, 1).strokeRoundedRect(-w / 2 + 12, 12, w - 24, h - 24, 18);
+    this.rivets(g, -w / 2, 0, w, h, 14);
+    c.add(g);
+    const ix = -w / 2 + (WIDE ? 90 : 70);
+    const glow = this.add.image(ix, h / 2, "shop_glow").setTint(0xff7ad9).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setAlpha(0.6);
+    const star = this.add.image(ix, h / 2, "item:star_shard").setDisplaySize(WIDE ? 110 : 90, WIDE ? 110 : 90);
+    this.tweens.add({ targets: star, angle: { from: -8, to: 8 }, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
+    this.tweens.add({ targets: glow, alpha: 0.3, yoyo: true, repeat: -1, duration: 900 });
+    c.add([glow, star]);
+    const tx = ix + (WIDE ? 90 : 70);
+    c.add(txt(this, tx, WIDE ? 42 : 40, e.name.toUpperCase(), WIDE ? 38 : 32, GOLD_TEXT, [0, 0.5]));
+    if (e.text) c.add(txt(this, tx, WIDE ? 84 : 80, e.text, WIDE ? 24 : 21, TAN, [0, 0.5]).setWordWrapWidth(w / 2 + (WIDE ? 100 : 160)));
+    c.add(txt(this, tx, WIDE ? 120 : 160, lines.join("   ·   "), WIDE ? 24 : 21, EVENT_TEXT, [0, 0.5]));
+    // Time left in a dark pill at the right.
+    const pw = WIDE ? 250 : 200;
+    const px = w / 2 - 30 - pw / 2;
+    const py = WIDE ? h / 2 : 40;
+    g.fillStyle(0x000000, 0.45).fillRoundedRect(px - pw / 2, py - 26, pw, 52, 26);
+    const left = txt(this, px, py, "", WIDE ? 26 : 22, "#ffffff");
+    c.add(left);
+    this.countdown(left, timeOf(e.endsAt), "ENDS IN ");
+    return c;
+  }
+
+  private offerCard(o: OfferDef, x: number, top: number, w: number, h: number) {
+    const card = this.add.container(x, top);
+    const g = this.add.graphics();
+    this.plank(g, -w / 2, 0, w, h, 26, WOOD);
+    g.fillStyle(0x2e0f1c, 1).fillRoundedRect(-w / 2 + 14, 14, w - 28, h - 28, 18);
+    g.lineStyle(3, BRASS, 0.9).strokeRoundedRect(-w / 2 + 14, 14, w - 28, h - 28, 18);
+    this.rivets(g, -w / 2, 0, w, h, 14);
+
+    const hover = this.add.zone(0, h / 2, w, h).setInteractive();
+    hover.on("pointerover", () => this.tweens.add({ targets: card, scale: 1.025, duration: 140, ease: "Sine.Out" }));
+    hover.on("pointerout", () => this.tweens.add({ targets: card, scale: 1, duration: 160, ease: "Sine.Out" }));
+
+    const glow = this.add.image(0, 145, "shop_glow").setTint(0xffc94a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.25).setAlpha(0.55);
+    this.tweens.add({ targets: glow, alpha: 0.3, scale: 1.1, yoyo: true, repeat: -1, duration: 1100, ease: "Sine.InOut" });
+    const img = this.add.image(0, 145, `item:${o.image}`).setDisplaySize(180, 180);
+    this.tweens.add({ targets: img, y: 135, yoyo: true, repeat: -1, duration: 1400 + Math.random() * 400, ease: "Sine.InOut" });
+    card.add([g, hover, glow, img]);
+
+    // Corner tags: how many are left (when limited) and time left (when it ends).
+    const left = offerLeft(o, profile.offers);
+    const tags = this.add.graphics();
+    card.add(tags);
+    if (o.limit > 0) {
+      tags.fillStyle(left > 0 ? 0x000000 : SALE, left > 0 ? 0.55 : 1).fillRoundedRect(-w / 2 + 24, 26, 120, 36, 18);
+      card.add(txt(this, -w / 2 + 84, 44, left > 0 ? `${left} LEFT` : "SOLD OUT", 20, left > 0 ? TAN : "#ffffff"));
+    }
+    const end = offerWindow(o).end;
+    if (end !== null) {
+      tags.fillStyle(0x000000, 0.55).fillRoundedRect(w / 2 - 24 - 130, 26, 130, 36, 18);
+      const t = txt(this, w / 2 - 24 - 65, 44, "", 20, EVENT_TEXT);
+      card.add(t);
+      this.countdown(t, end, "");
+    }
+    if (o.wasPrice > o.price) card.add(this.saleBadge(w / 2 - 70, 196, `-${Math.round((1 - o.price / o.wasPrice) * 100)}%`));
+
+    // Name on a brass plaque, then the line of text.
+    const plaque = this.add.graphics();
+    const pw = w - 70;
+    plaque.fillStyle(BRASS_DARK, 1).fillRoundedRect(-pw / 2 - 3, 252, pw + 6, 52, 14);
+    plaque.fillStyle(BRASS, 1).fillRoundedRect(-pw / 2, 255, pw, 46, 12);
+    plaque.fillStyle(0xffffff, 0.25).fillRoundedRect(-pw / 2 + 8, 258, pw - 16, 10, 5);
+    card.add([plaque, txt(this, 0, 278, o.name, o.name.length > 16 ? 24 : 30)]);
+    const info = txt(this, 0, 326, o.text, 20, TAN);
+    card.add(info);
+
+    // What's in the bundle, as icon + amount chips.
+    const chest = o.reward.chest ? chestById(o.reward.chest) : undefined;
+    const parts: [string, string][] = [];
+    if (o.reward.coins) parts.push(["item:coins", fmt(o.reward.coins)]);
+    if (o.reward.gems) parts.push(["item:gems", fmt(o.reward.gems)]);
+    if (chest) parts.push([`item:${chest.image}`, `x${Math.max(1, o.chests)}`]);
+    const chipW = (w - 60) / Math.max(1, parts.length);
+    parts.forEach(([icon, label], i) => {
+      const cx = -w / 2 + 30 + chipW * (i + 0.5);
+      const t = txt(this, 0, 382, label, 28, "#ffffff", [0, 0.5]);
+      const iw = 46;
+      const span = iw + 6 + t.width;
+      const im = this.add.image(cx - span / 2 + iw / 2, 382, icon);
+      im.setScale(iw / Math.max(im.width, im.height));
+      t.setX(cx - span / 2 + iw + 6);
+      card.add([im, t]);
+    });
+
+    const unit = o.currency === "coins" ? "GOLD" : "GEMS";
+    const short = o.price - profile[o.currency];
+    const label = left <= 0 ? "SOLD OUT" : o.price === 0 ? "FREE" : `${fmt(o.price)} ${unit}`;
+    const buy = button(this, 0, 446, w - 70, 80, label, o.price === 0 ? "green" : o.currency === "coins" ? "yellow" : "blue", this.tap(() => this.buyDeal(o)), 30);
+    buy.setEnabled(left > 0 && short <= 0);
+    card.add(buy);
+    if (o.wasPrice > o.price && left > 0) {
+      // The old price, struck through, tucked into the button's corner.
+      const was = txt(this, w / 2 - 50, 418, fmt(o.wasPrice), 20, "#ffd0c8");
+      const strike = this.add.graphics().lineStyle(3, SALE, 1).lineBetween(was.x - was.width / 2 - 3, 420, was.x + was.width / 2 + 3, 416);
+      card.add([was, strike]);
+    }
+    if (left > 0 && short > 0) info.setText(`Need ${fmt(short)} more ${unit.toLowerCase()}`).setColor("#ff9a8a");
+    return card;
+  }
+
+  private async buyDeal(o: OfferDef) {
+    if (this.busy) return;
+    this.busy = true;
+    let loot: ChestLoot | null = null;
+    const ok = await attempt(this, async () => {
+      loot = await buyOffer(o.id);
+    });
+    this.busy = false;
+    if (!ok) return this.fill();
+    this.locked = true;
+    rewardPopup(this, o.name.toUpperCase(), { reward: o.reward, loot }, () => this.scene.restart(), o.chests);
   }
 
   // ---------------------------------------------------------------- scrolling
@@ -641,7 +844,7 @@ export class ShopScene extends Phaser.Scene {
   // ---------------------------------------------------------------- buying
 
   private async buy(c: ChestDef, n: number) {
-    if (this.busy || profile[c.currency] < c.price * n) return;
+    if (this.busy || profile[c.currency] < discounted(c.price, serverNow()) * n) return;
     this.busy = true;
     let loot: ChestLoot | null = null;
     const ok = await attempt(this, async () => {

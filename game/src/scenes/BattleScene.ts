@@ -1215,15 +1215,18 @@ export class BattleScene extends Phaser.Scene {
           headline.setText("NEW BEST!");
         }
         const t = r.rewards.trophies;
-        const rows: [string, string, string][] = [
-          ["item:coins", `+${fmt(r.rewards.coins)}`, "#ffd93b"],
-          ["item:gems", `+${r.rewards.gems}`, "#7fffd4"],
-          ["item:trophy", `${t >= 0 ? "+" : ""}${t}`, t >= 0 ? "#ffd93b" : "#ff8080"],
+        const rows: [string, string, string, number][] = [
+          ["item:coins", `+${fmt(r.rewards.coins)}`, "#ffd93b", r.boosts?.coinMult ?? 1],
+          ["item:gems", `+${r.rewards.gems}`, "#7fffd4", r.boosts?.gemMult ?? 1],
+          ["item:trophy", `${t >= 0 ? "+" : ""}${t}`, t >= 0 ? "#ffd93b" : "#ff8080", 1],
         ];
-        rows.forEach(([icon, value, color], i) => {
+        rows.forEach(([icon, value, color, mult], i) => {
           const y = m.cy + 10 + i * 80;
           m.add(this.add.image(m.cx - 90, y, icon).setDisplaySize(70, 70));
-          m.add(txt(this, m.cx - 30, y, value, 44, color, [0, 0.5]));
+          const label = txt(this, m.cx - 30, y, value, 44, color, [0, 0.5]);
+          m.add(label);
+          // A running event multiplied this one.
+          if (mult > 1) m.add(txt(this, label.x + label.width + 16, y, `x${+mult.toFixed(2)} EVENT`, 24, "#ff9df0", [0, 0.5]));
         });
         // Daily quests this run finished (claimed from the lobby).
         const finished = profile.daily.quests.filter((q) => questDone(q) && !doneBefore.has(q.id)).map((q) => questById(q.id)!);

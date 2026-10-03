@@ -42,6 +42,7 @@ requestAnimationFrame (useful when testing in a background tab).
 - Daily: a login reward calendar and 3 daily quests (lobby buttons, top left), reset at 00:00 UTC.
 - Leagues: trophies put you in a league (badge in the top-right corner; tap it for the list). The first time you reach one, the battle's results pay its promotion reward.
 - Mail: news and gifts from the admins (lobby **MAIL** button, with a count of unread messages and unclaimed gifts).
+- Offers & events: limited bundles on the Shop's SPECIALS shelf, and timed events that boost battle gold/gems or discount chests (a banner in the lobby and the Shop while one runs).
 - Players start as guests; Settings (gear icon in the lobby) lets them create an account to keep their progress.
 
 All the numbers (damage, HP, prices, rewards...) come from the live game config, which is
@@ -61,6 +62,7 @@ Keys in battle: `SPACE` summons, `D` toggles the path/grid overlay (for arena ca
 | `../shared/daily.ts` | Login calendar, quest pool, quest progress and UTC-day helpers |
 | `../shared/leagues.ts` | Trophy leagues, promotion rewards, which league a trophy count is in |
 | `../shared/mail.ts` | Inbox message type and the limits/checks for sending one |
+| `../shared/offers.ts` | Events and shop offers: what's live, boosts, discounts, purchase checks |
 | `src/data/*` | Re-exports of the shared tables |
 | `src/api.ts`, `src/save.ts` | Server client; player profile and every action that changes it |
 | `src/authOverlay.ts` | Sign-in / create-account screen (HTML over the canvas) |

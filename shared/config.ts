@@ -10,6 +10,7 @@ import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } fro
 import { DEFAULT_LOGIN_REWARDS, DEFAULT_QUESTS, LOGIN_REWARDS, QUESTS, QUEST_GOAL_IDS, type QuestDef, type Reward } from "./daily.ts";
 import { DEFAULT_LEAGUES, LEAGUES, type LeagueDef } from "./leagues.ts";
 import { DEFAULT_EFFECTS, EFFECTS, effectProblems, type Effects } from "./effects.ts";
+import { DEFAULT_EVENTS, DEFAULT_OFFERS, EVENTS, OFFERS, offerProblems, type EventDef, type OfferDef } from "./offers.ts";
 
 export interface GameConfig {
   units: UnitDef[];
@@ -24,6 +25,10 @@ export interface GameConfig {
   quests: QuestDef[];
   /** Trophy leagues and their one-time promotion rewards. */
   leagues: LeagueDef[];
+  /** Limited-time events (battle reward boosts, chest discounts). */
+  events: EventDef[];
+  /** Bundles sold in the shop. */
+  offers: OfferDef[];
   economy: Economy;
   /** Archetype effect numbers (slow %, crit chance, chain jumps...). */
   effects: Effects;
@@ -41,6 +46,8 @@ export function defaultConfig(): GameConfig {
     loginRewards: DEFAULT_LOGIN_REWARDS,
     quests: DEFAULT_QUESTS,
     leagues: DEFAULT_LEAGUES,
+    events: DEFAULT_EVENTS,
+    offers: DEFAULT_OFFERS,
     economy: DEFAULT_ECONOMY,
     effects: DEFAULT_EFFECTS,
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5 },
@@ -63,6 +70,8 @@ export function applyConfig(cfg: GameConfig) {
   replace(LOGIN_REWARDS, cfg.loginRewards);
   replace(QUESTS, cfg.quests);
   replace(LEAGUES, cfg.leagues);
+  replace(EVENTS, cfg.events);
+  replace(OFFERS, cfg.offers);
   Object.assign(ECONOMY, structuredClone(cfg.economy));
   Object.assign(EFFECTS, structuredClone(cfg.effects));
   for (const r of RARITIES) RARITY_STATS[r].dropWeight = cfg.dropWeights[r];
@@ -91,7 +100,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     return seen;
   };
   if (!cfg || typeof cfg !== "object") return ["Config must be an object"];
-  for (const k of ["units", "monsters", "bosses", "arenas", "chests", "heroes", "loginRewards", "quests", "leagues"] as const) {
+  for (const k of ["units", "monsters", "bosses", "arenas", "chests", "heroes", "loginRewards", "quests", "leagues", "events", "offers"] as const) {
     if (!Array.isArray(cfg[k])) errs.push(`${k} must be a list`);
   }
   if (errs.length) return errs;
@@ -187,6 +196,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     reward(l.reward, `${w} reward`);
   }
   if (!cfg.leagues.some((l) => l.trophies === 0)) errs.push("At least one league must start at 0 trophies");
+  errs.push(...offerProblems(cfg.events, cfg.offers, chestIds));
 
   const e = cfg.economy;
   if (!e) return [...errs, "economy is missing"];
