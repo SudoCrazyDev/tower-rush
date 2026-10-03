@@ -1,10 +1,11 @@
 import Phaser from "phaser";
 import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
-import { profile, account, setArena, signOut, loadMe } from "../save";
+import { profile, account, mail, setArena, signOut, loadMe, loadInbox } from "../save";
 import { utcDay } from "../../../shared/daily.ts";
 import { dailyCounts, loginModal, questsModal } from "./daily";
 import { leagueBadge, leagueModal } from "./leagues";
+import { inboxModal, mailIcon } from "./inbox";
 import { leagueFor } from "../../../shared/leagues.ts";
 import { showAuth } from "../authOverlay";
 import { music } from "../audio";
@@ -83,7 +84,7 @@ export class LobbyScene extends Phaser.Scene {
     }
   }
 
-  /** Daily reward, quests and leaderboard buttons (with a badge when something can be claimed). */
+  /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */
   private lobbyTiles(side: number) {
     // The game was left open past UTC midnight: fetch the new day's quests.
     const today = utcDay();
@@ -93,18 +94,31 @@ export class LobbyScene extends Phaser.Scene {
     }
     const counts = dailyCounts();
     const size = WIDE ? 150 : 104;
-    const at: [number, number][] = WIDE ? [[side - 95, 800], [side + 95, 800], [side, 1010]] : [[66, 160], [66, 300], [W - 66, 290]];
+    const at: [number, number][] = WIDE
+      ? [[side - 95, 800], [side + 95, 800], [side - 95, 1010], [side + 95, 1010]]
+      : [[66, 160], [66, 300], [W - 66, 300], [W - 58, 205]];
     const done = () => this.scene.restart();
-    const tile = ([x, y]: [number, number], icon: string, label: string, count: string | null, open: () => void) => {
+    const tile = ([x, y]: [number, number], icon: string, label: string | null, count: string | null, open: () => void, s = size) => {
       const img = this.add.image(x, y, icon);
-      img.setScale(size / Math.max(img.width, img.height));
+      img.setScale(s / Math.max(img.width, img.height));
       pressable(img, open);
-      txt(this, x, y + size * 0.62, label, WIDE ? 26 : 20, "#fff4c2");
-      if (count) badge(this, x + size * 0.36, y - size * 0.36, count);
+      if (label) txt(this, x, y + s * 0.62, label, WIDE ? 26 : 20, "#fff4c2");
+      return count ? badge(this, x + s * 0.36, y - s * 0.36, count) : null;
     };
     tile(at[0], "ui:icon_daily_login", "DAILY", counts.login ? "!" : null, () => loginModal(this, done));
     tile(at[1], "ui:icon_quests", "QUESTS", counts.quests ? String(counts.quests) : null, () => questsModal(this, done));
     tile(at[2], `icon:${ICON.ranks}`, "RANKS", null, () => this.scene.start("Leaderboard"));
+    // Mail: a small round button under settings on phones (the tile columns are full there).
+    const ms = WIDE ? size : 70;
+    const mailCount = () => (mail.unread ? String(mail.unread) : null);
+    let mailBadge = tile(at[3], mailIcon(this), WIDE ? "MAIL" : null, mailCount(), () => inboxModal(this, done), ms);
+    // Refresh the inbox in the background and redraw the badge.
+    loadInbox().then(() => {
+      if (!this.sys.isActive()) return;
+      mailBadge?.destroy();
+      const n = mailCount();
+      mailBadge = n ? badge(this, at[3][0] + ms * 0.36, at[3][1] - ms * 0.36, n) : null;
+    }, () => {});
     if (counts.login && !loginShown) {
       loginShown = true;
       this.time.delayedCall(400, () => loginModal(this, done));

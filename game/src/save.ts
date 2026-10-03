@@ -2,7 +2,7 @@
  * Player progress lives on the server; this module mirrors it locally and wraps every
  * action that changes it. Scenes read `profile` synchronously and await the actions.
  */
-import { get, post, put, setToken } from "./api";
+import { get, post, put, del, setToken } from "./api";
 import { applyConfig, type GameConfig } from "../../shared/config.ts";
 import { newProfile, canUpgrade as canUpgradeShared, type Profile, type ChestLoot } from "../../shared/profile.ts";
 
@@ -11,6 +11,9 @@ export { CHESTS, type ChestDef } from "../../shared/economy.ts";
 export { giftReadyAt, ownsHero, heroBuyProblem } from "../../shared/profile.ts";
 import type { Reward } from "../../shared/daily.ts";
 import type { Promotion } from "../../shared/profile.ts";
+import { needsAttention, type MailMessage } from "../../shared/mail.ts";
+
+export type { MailMessage };
 
 export interface Account {
   id: number;
@@ -120,6 +123,32 @@ export async function claimQuestBonus() {
   const r = await post<Claimed & { profile: Profile }>("/daily/bonus");
   setProfile(r.profile);
   return r as Claimed;
+}
+
+/** The inbox as last fetched (the lobby refreshes it each time it opens). */
+export const mail = { messages: [] as MailMessage[], unread: 0 };
+
+const setMail = (messages: MailMessage[]) => Object.assign(mail, { messages, unread: messages.filter(needsAttention).length });
+
+export async function loadInbox() {
+  setMail((await get<{ messages: MailMessage[] }>("/inbox")).messages);
+}
+
+export async function readMail(id: number) {
+  await post(`/inbox/${id}/read`);
+  setMail(mail.messages.map((m) => (m.id === id ? { ...m, read: true } : m)));
+}
+
+export async function claimMail(id: number) {
+  const r = await post<Claimed & { profile: Profile }>(`/inbox/${id}/claim`);
+  setProfile(r.profile);
+  setMail(mail.messages.map((m) => (m.id === id ? { ...m, read: true, claimed: true } : m)));
+  return r as Claimed;
+}
+
+export async function deleteMail(id: number) {
+  await del(`/inbox/${id}`);
+  setMail(mail.messages.filter((m) => m.id !== id));
 }
 
 export interface Leaderboard {

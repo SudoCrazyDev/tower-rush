@@ -58,6 +58,26 @@ CREATE TABLE IF NOT EXISTS battles (
 CREATE INDEX IF NOT EXISTS battles_user ON battles(user_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS users_trophies ON users(json_extract(profile, '$.trophies'));
 CREATE INDEX IF NOT EXISTS users_best_wave ON users(json_extract(profile, '$.bestWave'));
+CREATE TABLE IF NOT EXISTS mail (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, -- NULL: every player
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  reward TEXT, -- JSON Reward, or NULL for a plain announcement
+  new_players INTEGER NOT NULL DEFAULT 0, -- to everyone: also players who join after it was sent
+  admin_id INTEGER,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS mail_user ON mail(user_id);
+CREATE TABLE IF NOT EXISTS mail_state (
+  mail_id INTEGER NOT NULL REFERENCES mail(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  read_at INTEGER,
+  claimed_at INTEGER,
+  deleted_at INTEGER,
+  PRIMARY KEY (mail_id, user_id)
+);
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   admin_id INTEGER,

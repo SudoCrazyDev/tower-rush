@@ -8,6 +8,8 @@ import { newProfile, ownsHero } from "../../shared/profile.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { leaguesByTrophies } from "../../shared/leagues.ts";
 import { UNIT_BY_ID, maxCardLevel } from "../../shared/units.ts";
+import { emptyReward, mailProblems } from "../../shared/mail.ts";
+import type { Reward } from "../../shared/daily.ts";
 
 export const admin = Router();
 
@@ -282,6 +284,63 @@ admin.delete("/users/:id", (req, res) => {
   deleteSessionsFor("player", u.id);
   db.prepare("DELETE FROM users WHERE id = ?").run(u.id);
   audit(req.adminId!, "user.delete", `user:${u.id}`, { name: u.display_name, username: u.username });
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- inbox
+
+/** Sent messages, newest first, with how many players got, read and claimed each. */
+admin.get("/mail", (req, res) => {
+  const page = Math.max(0, Number(req.query.page) || 0);
+  const to = Number(req.query.to) || null;
+  const rows = db
+    .prepare(
+      `SELECT m.id, m.user_id AS userId, u.display_name AS userName, m.title, m.body, m.reward, m.new_players AS newPlayers,
+              m.created_at AS createdAt, m.expires_at AS expiresAt, a.username AS admin,
+              CASE WHEN m.user_id IS NOT NULL THEN 1
+                   WHEN m.new_players = 1 THEN (SELECT COUNT(*) FROM users)
+                   ELSE (SELECT COUNT(*) FROM users WHERE created_at <= m.created_at) END AS recipients,
+              (SELECT COUNT(*) FROM mail_state s WHERE s.mail_id = m.id AND s.read_at IS NOT NULL) AS reads,
+              (SELECT COUNT(*) FROM mail_state s WHERE s.mail_id = m.id AND s.claimed_at IS NOT NULL) AS claims
+       FROM mail m LEFT JOIN users u ON u.id = m.user_id LEFT JOIN admins a ON a.id = m.admin_id
+       ${to ? "WHERE m.user_id = ?" : ""} ORDER BY m.id DESC LIMIT 50 OFFSET ?`,
+    )
+    .all(...(to ? [to] : []), page * 50) as { reward: string | null }[];
+  res.json(rows.map((r) => ({ ...r, reward: r.reward ? JSON.parse(r.reward) : null })));
+});
+
+/** Send a message to one player (`to`: their id) or everyone (`to`: "all"). */
+admin.post("/mail", (req, res) => {
+  const b = req.body ?? {};
+  const title = String(b.title ?? "").trim();
+  const body = String(b.body ?? "").trim();
+  const r = b.reward;
+  let reward: Reward | null = r ? { coins: Number(r.coins) || 0, gems: Number(r.gems) || 0, chest: r.chest ? String(r.chest) : null } : null;
+  if (reward && emptyReward(reward)) reward = null;
+  const errors = mailProblems(title, body, reward);
+  let userId: number | null = null;
+  if (b.to !== "all") {
+    userId = Number(b.to);
+    if (!Number.isInteger(userId) || !getUser(userId)) errors.push("No such player");
+  }
+  const days = b.expiresInDays == null || b.expiresInDays === "" ? null : Number(b.expiresInDays);
+  if (days !== null && !(days > 0 && days <= 365)) errors.push("Expiry must be 1-365 days, or empty for never");
+  if (errors.length) return void res.status(400).json({ error: errors[0], errors });
+  const now = Date.now();
+  const id = db
+    .prepare("INSERT INTO mail (user_id, title, body, reward, new_players, admin_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(userId, title, body, reward && JSON.stringify(reward), userId === null && b.newPlayers ? 1 : 0, req.adminId!, now, days && now + days * 86400_000)
+    .lastInsertRowid;
+  audit(req.adminId!, "mail.send", userId === null ? "all players" : `user:${userId}`, { id: Number(id), title, reward });
+  res.json({ id: Number(id) });
+});
+
+/** Take a message back: players who haven't claimed its gift no longer can. */
+admin.delete("/mail/:id", (req, res) => {
+  const m = db.prepare("SELECT id, title FROM mail WHERE id = ?").get(Number(req.params.id)) as { id: number; title: string } | undefined;
+  if (!m) return void res.status(404).json({ error: "No such message" });
+  db.prepare("DELETE FROM mail WHERE id = ?").run(m.id);
+  audit(req.adminId!, "mail.recall", `mail:${m.id}`, { title: m.title });
   res.json({ ok: true });
 });
 

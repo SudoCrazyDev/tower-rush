@@ -41,6 +41,7 @@ requestAnimationFrame (useful when testing in a background tab).
 - Meta: chests in the Shop give cards, and copies plus gold upgrade a card's level.
 - Daily: a login reward calendar and 3 daily quests (lobby buttons, top left), reset at 00:00 UTC.
 - Leagues: trophies put you in a league (badge in the top-right corner; tap it for the list). The first time you reach one, the battle's results pay its promotion reward.
+- Mail: news and gifts from the admins (lobby **MAIL** button, with a count of unread messages and unclaimed gifts).
 - Players start as guests; Settings (gear icon in the lobby) lets them create an account to keep their progress.
 
 All the numbers (damage, HP, prices, rewards...) come from the live game config, which is
@@ -58,12 +59,14 @@ Keys in battle: `SPACE` summons, `D` toggles the path/grid overlay (for arena ca
 | `../shared/economy.ts` | Economy numbers, chests, battle rewards |
 | `../shared/daily.ts` | Login calendar, quest pool, quest progress and UTC-day helpers |
 | `../shared/leagues.ts` | Trophy leagues, promotion rewards, which league a trophy count is in |
+| `../shared/mail.ts` | Inbox message type and the limits/checks for sending one |
 | `src/data/*` | Re-exports of the shared tables |
 | `src/api.ts`, `src/save.ts` | Server client; player profile and every action that changes it |
 | `src/authOverlay.ts` | Sign-in / create-account screen (HTML over the canvas) |
 | `src/scenes/LeaderboardScene.ts` | Top players by trophies or best wave, plus your own rank |
 | `src/scenes/daily.ts` | Daily login calendar, quests list and reward popup (opened from the lobby) |
 | `src/scenes/leagues.ts` | League badge (atlas icon or drawn shield) and the leagues list |
+| `src/scenes/inbox.ts` | Inbox list, message view with gift claim, and the drawn envelope icon |
 | `src/scenes/BattleScene.ts` | Waves, summon/merge, targeting, hit effects, HUD, results |
 | `src/battle/` | `Unit`, `Monster`, path geometry |
 | `src/scenes/{Boot,Lobby,Deck,Shop,Hero}Scene.ts` | Menus |

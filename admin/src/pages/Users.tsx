@@ -168,6 +168,7 @@ export function UserDetail({ id }: { id: number }) {
       <a href="#/users" className="back">‹ All players</a>
       <PageHead title={user.name} desc={`#${user.id} · ${user.isGuest ? "guest account" : `@${user.username}`} · joined ${fmtDate(user.createdAt)} · last seen ${timeAgo(user.lastSeenAt)}`}>
         <button className="btn" onClick={editProfile}>Edit</button>
+        <a className="btn" href={`#/mail/${user.id}`}>Send mail</a>
         {user.banned ? (
           <button className="btn" onClick={() => act("POST", "/unban", {}, "Player unbanned")}>Unban</button>
         ) : (

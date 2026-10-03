@@ -61,7 +61,14 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   or for an icon number with no art, the game draws a shield in the league colour. Edit them on
   the admin **Leagues** page; the dashboard shows players per league. Ideas for later: seasons
   (trophy reset to the league floor, end-of-season rewards), and league-scoped leaderboards.
-- Player inbox: admin sends gifts or announcements to players.
+- ~~**Player inbox**~~ done (`shared/mail.ts`, `server/src/mail.ts`): the admin **Mail** page sends a
+  message to one player (also from their page: **Send mail**) or to every player, optionally with a
+  gift (gold, gems, a chest) and an expiry. "Every player" means accounts that exist when it's sent,
+  unless "also players who join later" is on. In the lobby, **MAIL** (a small envelope under the
+  settings gear on phones) shows a count of unread messages and unclaimed gifts; players read, claim
+  (once) and delete messages there. The admin list shows reads and claims per message and can
+  recall one (unclaimed gifts go with it). Ideas for later: target a segment (league, inactive for
+  N days, guests), schedule a send for later, gift cards or heroes, and a pop-up for important news.
 
 ### 4. More admin control
 - Each archetype's effect numbers (slow %, crit chance, chain jumps, freeze time...) are still

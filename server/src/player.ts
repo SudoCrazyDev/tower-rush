@@ -9,6 +9,8 @@ import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, upgradeCost } from "../../shared/units.ts";
 import { ARENAS, ARENA_BY_ID } from "../../shared/arenas.ts";
 import { ECONOMY, battleRewards } from "../../shared/economy.ts";
+import { needsAttention } from "../../shared/mail.ts";
+import { inbox, mark, message } from "./mail.ts";
 
 export const player = Router();
 
@@ -82,7 +84,7 @@ function me(req: Request, res: Response): { u: UserRow; p: Profile } | null {
   return { u, p };
 }
 
-player.use(["/me", "/cards", "/heroes", "/shop", "/battles", "/daily"], requirePlayer);
+player.use(["/me", "/cards", "/heroes", "/shop", "/battles", "/daily", "/inbox"], requirePlayer);
 
 player.get("/me", (req, res) => {
   const m = me(req, res);
@@ -233,6 +235,49 @@ player.post("/daily/bonus", (req, res) => {
   grantReward(m.p, reward);
   writeProfile(m.u.id, m.p);
   res.json({ reward, loot: null, profile: m.p });
+});
+
+// ---------------------------------------------------------------- inbox
+
+player.get("/inbox", (req, res) => {
+  const m = me(req, res);
+  if (!m) return;
+  const messages = inbox(m.u);
+  res.json({ messages, unread: messages.filter(needsAttention).length });
+});
+
+player.post("/inbox/:id/read", (req, res) => {
+  const m = me(req, res);
+  if (!m) return;
+  const msg = message(m.u, Number(req.params.id));
+  if (!msg) return void res.status(404).json({ error: "That message is gone" });
+  mark(m.u.id, msg.id, "read_at");
+  res.json({ ok: true });
+});
+
+/** Take the gift attached to a message (once). */
+player.post("/inbox/:id/claim", (req, res) => {
+  const m = me(req, res);
+  if (!m) return;
+  const msg = message(m.u, Number(req.params.id));
+  if (!msg) return void res.status(404).json({ error: "That message is gone" });
+  if (!msg.reward) return void res.status(400).json({ error: "There's no gift in this message" });
+  if (msg.claimed) return void res.status(400).json({ error: "Already claimed" });
+  const loot = grantReward(m.p, msg.reward);
+  writeProfile(m.u.id, m.p);
+  mark(m.u.id, msg.id, "claimed_at");
+  mark(m.u.id, msg.id, "read_at");
+  res.json({ reward: msg.reward, loot, profile: m.p });
+});
+
+player.delete("/inbox/:id", (req, res) => {
+  const m = me(req, res);
+  if (!m) return;
+  const msg = message(m.u, Number(req.params.id));
+  if (!msg) return void res.status(404).json({ error: "That message is gone" });
+  if (msg.reward && !msg.claimed) return void res.status(400).json({ error: "Claim the gift first" });
+  mark(m.u.id, msg.id, "deleted_at");
+  res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------- battles

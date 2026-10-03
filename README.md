@@ -44,6 +44,9 @@ http://localhost:5174/admin/, add your own admin or change the password on the
 - **Player management.** Search players, edit gold/gems/trophies, give or remove cards,
   ban/unban with a reason, reset progress, set a password, sign them out everywhere, or
   delete them. Every admin action is recorded in the **Audit log**.
+- **Mail.** Send announcements and gifts (gold, gems, a chest) to one player or everyone;
+  they arrive in the game's inbox (lobby **MAIL**). Gifts are claimed once, messages can
+  expire, and a sent message can be recalled.
 
 ## Production
 
