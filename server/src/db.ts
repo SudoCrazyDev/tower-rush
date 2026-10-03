@@ -97,6 +97,26 @@ CREATE TABLE IF NOT EXISTS audit (
 );
 `);
 
+// Which UTC days each player was active (for retention). Recorded on every signed-in request.
+const hadActivity = !!db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'activity'").get();
+db.exec(`
+CREATE TABLE IF NOT EXISTS activity (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day TEXT NOT NULL, -- "2026-10-04" (UTC)
+  PRIMARY KEY (user_id, day)
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS activity_day ON activity(day);
+`);
+// First run with the table: rebuild what we can from older data (sign-up day, battle days, last seen).
+if (!hadActivity) {
+  const day = (col: string) => `date(${col} / 1000, 'unixepoch')`;
+  db.exec(`
+    INSERT OR IGNORE INTO activity SELECT id, ${day("created_at")} FROM users;
+    INSERT OR IGNORE INTO activity SELECT id, ${day("last_seen_at")} FROM users;
+    INSERT OR IGNORE INTO activity SELECT user_id, ${day("started_at")} FROM battles;
+  `);
+}
+
 // Columns added after the first release.
 const battleCols = (db.prepare("PRAGMA table_info(battles)").all() as { name: string }[]).map((c) => c.name);
 if (!battleCols.includes("hero")) db.exec("ALTER TABLE battles ADD COLUMN hero TEXT");

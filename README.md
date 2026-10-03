@@ -42,6 +42,8 @@ http://localhost:5174/admin/, add your own admin or change the password on the
   on the server, which also does every purchase, card upgrade and chest roll, so players
   can't edit their own gold. Battles run in the browser; the server caps the reported
   wave to what's possible in the elapsed time and calculates the rewards itself.
+- **Analytics.** Daily new/active players, retention by sign-up day (day 1, 3, 7, 14, 30),
+  and average wave per arena over time, for the last 14, 30 or 90 days.
 - **Player management.** Search players, edit gold/gems/trophies, give or remove cards,
   ban/unban with a reason, reset progress, set a password, sign them out everywhere, or
   delete them. Every admin action is recorded in the **Audit log**.

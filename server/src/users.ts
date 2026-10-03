@@ -2,7 +2,7 @@ import { db } from "./db.ts";
 import { newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
 import { UNIT_BY_ID } from "../../shared/units.ts";
 import { HEROES, HERO_BY_ID } from "../../shared/heroes.ts";
-import { questById } from "../../shared/daily.ts";
+import { questById, utcDay } from "../../shared/daily.ts";
 
 export interface UserRow {
   id: number;
@@ -51,7 +51,9 @@ export function writeProfile(id: number, p: Profile) {
 }
 
 export function touch(id: number) {
-  db.prepare("UPDATE users SET last_seen_at = ? WHERE id = ?").run(Date.now(), id);
+  const now = Date.now();
+  db.prepare("UPDATE users SET last_seen_at = ? WHERE id = ?").run(now, id);
+  db.prepare("INSERT OR IGNORE INTO activity (user_id, day) VALUES (?, ?)").run(id, utcDay(now));
 }
 
 export function createUser(displayName: string) {

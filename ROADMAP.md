@@ -88,7 +88,14 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   the results screen. Purchases are logged, and each offer shows its sales. Ships with one offer,
   a one-time Starter Pack. Ideas for later: real-money purchases (needs store billing), daily
   rotating deals, offers that include specific cards or heroes, event-only quests.
-- Charts: player retention, average wave per arena over time.
+- ~~Charts: player retention, average wave per arena over time~~ done (`server/src/analytics.ts`): the
+  admin **Analytics** page (14/30/90 days, UTC days) shows new and active players per day, day
+  1/3/7/14/30 retention overall and as a table per sign-up day, average wave per arena over time
+  (daily or weekly, pick which arenas), and battles and average wave per day. Charts are plain SVG
+  (`admin/src/chart.tsx`), no library. Retention needs to know which days each player was around,
+  so the server now records one row per player per active day (`activity` table); days before this
+  were rebuilt from sign-up, battle and last-seen dates, so early retention undercounts. Ideas for
+  later: retention by league or by guest vs registered, revenue (gems spent) per day, CSV export.
 
 ### 5. Multiplayer (biggest item)
 - Rush Royale's core modes are PvP (two boards, monsters you kill get sent to the opponent)

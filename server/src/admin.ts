@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, audit } from "./db.ts";
+import { analytics } from "./analytics.ts";
 import { createSession, deleteSession, deleteSessionsFor, hashPassword, rateLimit, requireAdmin, verifyPassword } from "./auth.ts";
 import { currentConfig, getVersion, listVersions, saveConfig } from "./config-store.ts";
 import { getUser, publicUser, readProfile, writeProfile, NAME_RE, USERNAME_RE } from "./users.ts";
@@ -76,6 +77,12 @@ admin.get("/stats", (_req, res) => {
       )
       .all(),
   });
+});
+
+/** Daily players and battles, retention and per-arena waves over the last `days` days. */
+admin.get("/analytics", (req, res) => {
+  const days = Math.max(7, Math.min(365, Math.floor(Number(req.query.days) || 30)));
+  res.json(analytics(days));
 });
 
 // ---------------------------------------------------------------- game config
