@@ -61,6 +61,15 @@ export function ShopPage() {
             </tbody>
           </table>
         </div>
+        <table className="kv">
+          <tbody>
+            <tr className={saved.economy.chestBulkMax !== e.chestBulkMax ? "changed" : ""}>
+              <td>Max chests per purchase</td>
+              <td><Num value={e.chestBulkMax} min={1} onChange={(v) => setE("chestBulkMax", v)} /></td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="muted small">Players pick how many of one chest to buy and open them all at once, up to this many.</p>
       </section>
 
       <div className="two-col">

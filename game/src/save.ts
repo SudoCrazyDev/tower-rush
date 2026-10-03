@@ -88,8 +88,8 @@ export async function buyHero(id: string) {
   setProfile((await post<{ profile: Profile }>(`/heroes/${id}/buy`)).profile);
 }
 
-export async function buyChest(id: string) {
-  const r = await post<{ profile: Profile; loot: ChestLoot }>(`/shop/chests/${id}/buy`);
+export async function buyChest(id: string, count = 1) {
+  const r = await post<{ profile: Profile; loot: ChestLoot }>(`/shop/chests/${id}/buy`, { count });
   setProfile(r.profile);
   return r.loot;
 }

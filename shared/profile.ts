@@ -133,4 +133,19 @@ export function rollChest(p: Profile, chest: ChestDef, rand: () => number = Math
   return { coins, cards };
 }
 
+/** Open `count` of the same chest and combine the loot into one reveal. */
+export function rollChests(p: Profile, chest: ChestDef, count: number, rand: () => number = Math.random): ChestLoot {
+  const before = new Set(Object.keys(p.cards));
+  const counts = new Map<string, number>();
+  let coins = 0;
+  for (let i = 0; i < count; i++) {
+    const loot = rollChest(p, chest, rand);
+    coins += loot.coins;
+    for (const c of loot.cards) counts.set(c.id, (counts.get(c.id) ?? 0) + c.copies);
+  }
+  const cards = [...counts].map(([id, copies]) => ({ id, copies, isNew: !before.has(id) }));
+  cards.sort((a, b) => RARITY_ORDER.indexOf(UNIT_BY_ID[b.id].rarity) - RARITY_ORDER.indexOf(UNIT_BY_ID[a.id].rarity) || b.copies - a.copies);
+  return { coins, cards };
+}
+
 export const chestById = (id: string) => CHESTS.find((c) => c.id === id);

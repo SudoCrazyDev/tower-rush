@@ -161,15 +161,22 @@ export function heroCardView(scene: Phaser.Scene, x: number, y: number, size: nu
 }
 
 /** Cards from a chest, popping in one by one (4 per row). Returns the card containers. */
-export function lootCards(scene: Phaser.Scene, cx: number, y: number, cards: { id: string; copies: number; isNew: boolean }[], size = 120) {
-  const cols = 4;
-  return cards.slice(0, 12).map((card, i) => {
+export function lootCards(
+  scene: Phaser.Scene,
+  cx: number,
+  y: number,
+  cards: { id: string; copies: number; isNew: boolean }[],
+  size = 120,
+  cols = 4,
+  max = 12,
+) {
+  return cards.slice(0, max).map((card, i) => {
     const x = cx + ((i % cols) - (Math.min(cols, cards.length) - 1) / 2) * (size + 30);
     const v = cardView(scene, x, y + Math.floor(i / cols) * (size + 70), size, card.id);
     v.add(txt(scene, 0, size * 0.63, `x${card.copies}`, 26));
     if (card.isNew) v.add(txt(scene, 0, -size * 0.55, "NEW!", 24, "#7dff7a"));
     v.setScale(0);
-    scene.tweens.add({ targets: v, scale: 1, delay: 150 * i, duration: 250, ease: "Back.Out" });
+    scene.tweens.add({ targets: v, scale: 1, delay: i * Math.min(150, 1800 / cards.length), duration: 250, ease: "Back.Out" });
     return v;
   });
 }

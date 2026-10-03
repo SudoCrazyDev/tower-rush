@@ -56,6 +56,9 @@ export interface Economy {
   giftCoins: number;
   giftGems: number;
   giftCooldownHours: number;
+  // shop
+  /** Most chests of one kind a player can buy and open in a single purchase. */
+  chestBulkMax: number;
 }
 
 export const DEFAULT_ECONOMY: Economy = {
@@ -113,6 +116,8 @@ export const DEFAULT_ECONOMY: Economy = {
   giftCoins: 50,
   giftGems: 10,
   giftCooldownHours: 4,
+
+  chestBulkMax: 10,
 };
 
 export const ECONOMY: Economy = structuredClone(DEFAULT_ECONOMY);
