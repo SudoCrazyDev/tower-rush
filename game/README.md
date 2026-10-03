@@ -56,6 +56,7 @@ Keys in battle: `SPACE` summons, `D` toggles the path/grid overlay (for arena ca
 | `../shared/units.ts` | 60 units: rarity, element, archetype, damage/speed, stat formulas |
 | `../shared/monsters.ts` | 30 monsters (traits) and 12 bosses (powers) |
 | `../shared/arenas.ts` | 16 arenas: board grid and path ring measured on the art, monster pools, bosses |
+| `../shared/effects.ts` | Archetype effect numbers (slow, freeze, chain...) and the formulas battles use |
 | `../shared/economy.ts` | Economy numbers, chests, battle rewards |
 | `../shared/daily.ts` | Login calendar, quest pool, quest progress and UTC-day helpers |
 | `../shared/leagues.ts` | Trophy leagues, promotion rewards, which league a trophy count is in |

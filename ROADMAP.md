@@ -71,8 +71,12 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   N days, guests), schedule a send for later, gift cards or heroes, and a pop-up for important news.
 
 ### 4. More admin control
-- Each archetype's effect numbers (slow %, crit chance, chain jumps, freeze time...) are still
-  hard-coded in `game/src/scenes/BattleScene.ts` (`applyHit`). Move them into the config.
+- ~~Archetype effect numbers in the config~~ done (`shared/effects.ts`): every archetype's numbers
+  (splash radius, burn, chain jumps/range/falloff, pierce, slow, freeze, stun, poison, crit, curse,
+  execute, sniper bullet speed, growth, buff, mana) are in the game config and edited on the admin
+  **Effects** page, which previews each one at a few ranks and rarities. The defaults are the old
+  hard-coded values, so balance is unchanged until someone edits them. Card details in the deck
+  show the unit's effect with its numbers. Idea for later: per-unit overrides of these numbers.
 - Shop offers and limited-time events from the admin panel.
 - Charts: player retention, average wave per arena over time.
 

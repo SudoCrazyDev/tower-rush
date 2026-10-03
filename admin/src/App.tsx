@@ -11,6 +11,7 @@ import { HeroesPage } from "./pages/Heroes";
 import { DailyPage } from "./pages/Daily";
 import { LeaguesPage } from "./pages/Leagues";
 import { EconomyPage } from "./pages/Economy";
+import { EffectsPage } from "./pages/Effects";
 import { VersionsPage } from "./pages/Versions";
 import { UsersPage, UserDetail } from "./pages/Users";
 import { AdminsPage, AuditPage } from "./pages/Admins";
@@ -31,6 +32,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/units", label: "Units", group: "Game balance" },
   { path: "/monsters", label: "Monsters" },
   { path: "/bosses", label: "Bosses" },
+  { path: "/effects", label: "Effects" },
   { path: "/heroes", label: "Heroes" },
   { path: "/arenas", label: "Arenas" },
   { path: "/shop", label: "Shop & prices" },
@@ -139,6 +141,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     case "/units": page = <UnitsPage />; break;
     case "/monsters": page = <MonstersPage />; break;
     case "/bosses": page = <BossesPage />; break;
+    case "/effects": page = <EffectsPage />; break;
     case "/heroes": page = <HeroesPage />; break;
     case "/daily": page = <DailyPage />; break;
     case "/leagues": page = <LeaguesPage />; break;

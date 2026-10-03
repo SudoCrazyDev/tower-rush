@@ -9,6 +9,7 @@ import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type Ch
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
 import { DEFAULT_LOGIN_REWARDS, DEFAULT_QUESTS, LOGIN_REWARDS, QUESTS, QUEST_GOAL_IDS, type QuestDef, type Reward } from "./daily.ts";
 import { DEFAULT_LEAGUES, LEAGUES, type LeagueDef } from "./leagues.ts";
+import { DEFAULT_EFFECTS, EFFECTS, effectProblems, type Effects } from "./effects.ts";
 
 export interface GameConfig {
   units: UnitDef[];
@@ -24,6 +25,8 @@ export interface GameConfig {
   /** Trophy leagues and their one-time promotion rewards. */
   leagues: LeagueDef[];
   economy: Economy;
+  /** Archetype effect numbers (slow %, crit chance, chain jumps...). */
+  effects: Effects;
   dropWeights: Record<Rarity, number>;
 }
 
@@ -39,6 +42,7 @@ export function defaultConfig(): GameConfig {
     quests: DEFAULT_QUESTS,
     leagues: DEFAULT_LEAGUES,
     economy: DEFAULT_ECONOMY,
+    effects: DEFAULT_EFFECTS,
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5 },
   });
 }
@@ -60,6 +64,7 @@ export function applyConfig(cfg: GameConfig) {
   replace(QUESTS, cfg.quests);
   replace(LEAGUES, cfg.leagues);
   Object.assign(ECONOMY, structuredClone(cfg.economy));
+  Object.assign(EFFECTS, structuredClone(cfg.effects));
   for (const r of RARITIES) RARITY_STATS[r].dropWeight = cfg.dropWeights[r];
   indexUnits();
   indexMonsters();
@@ -200,6 +205,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   for (const id of [...e.starterDeck, ...e.starterCards]) if (!unitIds.has(id)) errs.push(`economy starter unit "${id}" doesn't exist`);
   for (const id of e.starterDeck) if (!e.starterCards.includes(id)) errs.push(`starter deck unit "${id}" must also be in starterCards`);
 
+  errs.push(...effectProblems(cfg.effects));
   for (const r of RARITIES) num(cfg.dropWeights?.[r], `dropWeights.${r}`);
   return errs;
 }

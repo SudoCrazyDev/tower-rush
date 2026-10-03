@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { effectSummary } from "../../../shared/effects.ts";
 import { ARCHETYPES, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, unitStats, upgradeCost } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
@@ -449,8 +450,11 @@ export class DeckScene extends Phaser.Scene {
     const rarityCss = "#" + RARITY_STATS[def.rarity].color.toString(16).padStart(6, "0");
     const rarityLine = txt(this, cx, cy - 110, `${def.rarity.toUpperCase()} · ${def.element.toUpperCase()}`, 28, rarityCss);
     m.add(rarityLine);
-    m.add(txt(this, cx, cy - 66, ARCHETYPES[def.arch].label, 26, "#ffffff"));
-    m.add(txt(this, cx, cy - 26, `"${def.blurb}"`, 22, "#c9d2ff"));
+    m.add(txt(this, cx, cy - 72, ARCHETYPES[def.arch].label, 26, "#ffffff"));
+    // The archetype's numbers for this unit as summoned (rank 1).
+    const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity));
+    if (effect) m.add(txt(this, cx, cy - 40, effect, 20, "#7fffd4"));
+    m.add(txt(this, cx, effect ? cy - 8 : cy - 26, `"${def.blurb}"`, effect ? 20 : 22, "#c9d2ff"));
 
     const level = owned?.level ?? 1;
     const stats = unitStats(def, 1, level, 0);

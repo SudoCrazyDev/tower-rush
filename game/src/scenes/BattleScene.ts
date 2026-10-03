@@ -5,6 +5,9 @@ import { ARENAS, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "../data/monsters";
 import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
 import { ECONOMY } from "../../../shared/economy.ts";
+import {
+  EFFECTS, buffBonus, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
+} from "../../../shared/effects.ts";
 import { HERO_BY_ID, type HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
 import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
@@ -608,7 +611,7 @@ export class BattleScene extends Phaser.Scene {
     const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
     sfx("ultimate");
     if (unit.def.arch === "mana" || !target) {
-      this.gainMana(Math.round(20 + 4 * this.wave), from.x, from.y - 30);
+      this.gainMana(Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave), from.x, from.y - 30);
       this.vfx("coin_burst", from.x, from.y, 160);
       return;
     }
@@ -712,7 +715,7 @@ export class BattleScene extends Phaser.Scene {
     for (const u of this.board) if (u) u.haste = 0;
     this.board.forEach((u, i) => {
       if (!u || u.def.arch !== "buff") return;
-      const bonus = (0.08 + 0.05 * u.rank + 0.03 * RARITY_ORDER.indexOf(u.def.rarity)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
       const col = i % 5;
       const n = [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1];
       for (const j of n) {
@@ -758,7 +761,7 @@ export class BattleScene extends Phaser.Scene {
   fire(unit: Unit, target: Monster) {
     const def = unit.def;
     let damage = unit.stats.damage * this.heroDamageMult;
-    if (def.arch === "growth") damage *= 1 + Math.min(2, unit.alive * 0.02);
+    if (def.arch === "growth") damage *= growthMult(unit.alive);
     const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
 
     if (def.arch === "chain") {
@@ -769,16 +772,16 @@ export class BattleScene extends Phaser.Scene {
     const img = this.add.image(from.x, from.y, tex).setDepth(2000);
     img.setScale((def.proj === "spark" ? 40 : 56) / img.width);
     sfx("shoot", def.proj);
-    this.shots.push({ img, unit, def, rank: unit.rank, damage, target, aim: target.pos, speed: def.arch === "sniper" ? 1500 : 1100 });
+    this.shots.push({ img, unit, def, rank: unit.rank, damage, target, aim: target.pos, speed: def.arch === "sniper" ? EFFECTS.sniper.shotSpeed : 1100 });
   }
 
   private chainLightning(unit: Unit, first: Monster, damage: number, from: Pt) {
-    const jumps = 2 + Math.floor(unit.rank / 2) + (RARITY_ORDER.indexOf(unit.def.rarity) >= 3 ? 1 : 0);
+    const jumps = chainJumps(unit.rank, RARITY_ORDER.indexOf(unit.def.rarity));
     const hit: Monster[] = [first];
     let cur = first;
     while (hit.length < jumps) {
       let next: Monster | null = null;
-      let bestD = 200;
+      let bestD = EFFECTS.chain.range;
       for (const m of this.monsters) {
         if (m.gone || hit.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
@@ -802,7 +805,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
     hit.forEach((m, i) => {
       this.vfx("lightning_strike", m.pos.x, m.pos.y, 80);
-      m.damage(damage * Math.pow(0.85, i));
+      m.damage(damage * Math.pow(EFFECTS.chain.falloff, i));
     });
   }
 
@@ -844,6 +847,7 @@ export class BattleScene extends Phaser.Scene {
 
   private applyHit(s: Pick<Shot, "def" | "rank" | "damage">, m: Monster) {
     const { def, rank, damage } = s;
+    const e = EFFECTS;
     const now = this.now;
     const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
     const pos = m.pos;
@@ -854,22 +858,21 @@ export class BattleScene extends Phaser.Scene {
     switch (def.arch) {
       case "splash":
       case "burn": {
-        const radius = 85 + rank * 4;
-        const splash = this.nearby(pos, radius, m);
-        const burnDps = def.arch === "burn" ? damage * 0.45 : 0;
+        const splash = this.nearby(pos, splashRadius(def.arch, rank), m);
+        const burnDps = def.arch === "burn" ? damage * e.burn.burnDps : 0;
         m.damage(damage);
-        for (const o of splash) o.damage(damage * (def.arch === "burn" ? 0.5 : 0.6), { sure: true, quiet: true });
-        if (burnDps) for (const o of [m, ...splash]) o.burn = { dps: Math.max(o.burn.until > now ? o.burn.dps : 0, burnDps), until: now + 3 };
+        for (const o of splash) o.damage(damage * e[def.arch].splash, { sure: true, quiet: true });
+        if (burnDps) for (const o of [m, ...splash]) o.burn = { dps: Math.max(o.burn.until > now ? o.burn.dps : 0, burnDps), until: now + e.burn.burnTime };
         vfxSize = 130 + rank * 6;
         break;
       }
       case "pierce": {
         m.damage(damage);
-        const behind = this.nearby(pos, 120, m)
+        const behind = this.nearby(pos, e.pierce.range, m)
           .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
-          .slice(0, 2 + Math.floor(rank / 3));
+          .slice(0, pierceTargets(rank));
         for (const o of behind) {
-          o.damage(damage * 0.7, { sure: true });
+          o.damage(damage * e.pierce.damage, { sure: true });
           this.vfx("hit_impact", o.pos.x, o.pos.y, 50);
         }
         break;
@@ -877,43 +880,43 @@ export class BattleScene extends Phaser.Scene {
       case "slow":
         m.damage(damage);
         if (!frostproof || def.element !== "ice") {
-          m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, Math.min(0.6, 0.2 + 0.04 * rank + 0.04 * rarityIdx) * (isBoss ? 0.5 : 1));
-          m.slowUntil = now + 2;
+          m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, slowAmount(rank, rarityIdx, isBoss));
+          m.slowUntil = now + e.slow.duration;
         }
         break;
       case "freeze":
         m.damage(damage);
-        if (!frostproof && Math.random() < 0.12 + 0.02 * rank + 0.02 * rarityIdx) {
-          m.frozenUntil = now + (isBoss ? 0.4 : 1.2);
+        if (!frostproof && Math.random() < freezeChance(rank, rarityIdx)) {
+          m.frozenUntil = now + (isBoss ? e.freeze.bossDuration : e.freeze.duration);
           this.floater(pos.x, pos.y - 30, "FROZEN", "#7fd8ff", 22);
           sfx("freeze");
         }
         break;
       case "stun":
         m.damage(damage);
-        if (Math.random() < 0.1 + 0.02 * rank) {
-          m.stunUntil = now + (isBoss ? 0.3 : 0.8);
+        if (Math.random() < stunChance(rank, rarityIdx)) {
+          m.stunUntil = now + (isBoss ? e.stun.bossDuration : e.stun.duration);
           this.floater(pos.x, pos.y - 30, "STUN", "#ffd93b", 22);
         }
         break;
       case "poison":
         m.damage(damage);
-        m.poison.push({ dps: damage * 0.6, until: now + 4 });
-        if (m.poison.length > 8) m.poison.shift();
+        m.poison.push({ dps: damage * e.poison.dps, until: now + e.poison.duration });
+        while (m.poison.length > e.poison.maxStacks) m.poison.shift();
         break;
       case "crit": {
-        const crit = Math.random() < 0.25 + 0.03 * rank;
-        m.damage(crit ? damage * (2.5 + 0.1 * rank) : damage, { crit });
+        const crit = Math.random() < critChance(rank);
+        m.damage(crit ? damage * critMult(rank) : damage, { crit });
         if (crit) vfxSize = 110;
         break;
       }
       case "curse":
         m.damage(damage);
-        m.curse = Math.min(0.6, m.curse + 0.03 * rank + 0.01 * rarityIdx);
+        m.curse = Math.min(e.curse.max, m.curse + curseStep(rank, rarityIdx));
         break;
       case "execute":
-        if (Math.random() < 0.03 + 0.01 * rank + 0.01 * rarityIdx) {
-          if (isBoss) m.damage(damage * 4, { crit: true, color: "#ff7ad9" });
+        if (Math.random() < executeChance(rank, rarityIdx)) {
+          if (isBoss) m.damage(damage * e.execute.bossMult, { crit: true, color: "#ff7ad9" });
           else {
             this.floater(pos.x, pos.y - 30, "EXECUTE", "#ff7ad9", 26);
             m.damage(m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, { sure: true });

@@ -28,7 +28,8 @@ http://localhost:5174/admin/, add your own admin or change the password on the
 
 - **Game config.** All balance numbers live in one JSON document: every unit's damage,
   speed, rarity, element and archetype; every monster's and boss's HP and speed; arena
-  unlocks and monster pools; hero abilities and prices; chest prices and drop odds; the daily login
+  unlocks and monster pools; each archetype's effect numbers (slow %, crit chance, chain
+  jumps...); hero abilities and prices; chest prices and drop odds; the daily login
   calendar and quest pool; trophy leagues and their promotion rewards; the economy (mana, wave scaling,
   rewards, upgrade costs, starter deck). Defaults come from `shared/`. The server stores
   every published version in the database, and the game downloads the live one when it starts.

@@ -5,8 +5,8 @@ export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arca
 
 /**
  * How a unit fights. Every unit uses exactly one archetype; the special-effect numbers
- * (slow %, crit chance, ...) live in the battle code, while each unit's own damage and
- * attack speed are editable in the admin panel.
+ * (slow %, crit chance, ...) are per archetype in effects.ts, while each unit's own damage
+ * and attack speed are in its UnitDef. Both are editable in the admin panel.
  */
 export type Arch =
   | "shot" // single target

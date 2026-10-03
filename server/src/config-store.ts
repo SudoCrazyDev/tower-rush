@@ -1,4 +1,5 @@
 import { applyConfig, defaultConfig, validateConfig, type GameConfig } from "../../shared/config.ts";
+import { withEffectDefaults } from "../../shared/effects.ts";
 import { db, audit } from "./db.ts";
 
 interface VersionRow {
@@ -18,6 +19,7 @@ function upgrade(cfg: GameConfig): GameConfig {
     ...d,
     ...cfg,
     economy: { ...d.economy, ...cfg.economy },
+    effects: withEffectDefaults(cfg.effects),
     dropWeights: { ...d.dropWeights, ...cfg.dropWeights },
   };
 }

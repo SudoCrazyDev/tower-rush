@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale } from "../assets";
 import { ELEMENT_COLOR, MAX_RANK, unitStats, type UnitDef } from "../data/units";
 import { ECONOMY } from "../../../shared/economy.ts";
+import { EFFECTS, manaPerPulse } from "../../../shared/effects.ts";
 import { NAVY } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
 
@@ -154,10 +155,10 @@ export class Unit {
     }
     if (this.def.arch === "mana") {
       this.pulse += dt;
-      if (this.pulse >= 6) {
+      if (this.pulse >= EFFECTS.mana.every) {
         this.pulse = 0;
         this.playOnce("skill");
-        this.scene.gainMana(5 * this.rank, this.sprite.x, this.sprite.y - 50);
+        this.scene.gainMana(manaPerPulse(this.rank), this.sprite.x, this.sprite.y - 50);
       }
     }
 
