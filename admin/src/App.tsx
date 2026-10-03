@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { api, token, setOnUnauthorized, ApiError } from "./api";
+import { api, token, setOnUnauthorized, ApiError, ASSETS } from "./api";
 import { ConfigProvider, useConfig } from "./config";
 import { Toasts, toast } from "./components";
 import { Dashboard } from "./pages/Dashboard";
@@ -103,7 +103,7 @@ function Login({ onDone }: { onDone: (a: { id: number; username: string }) => vo
   return (
     <div className="login-wrap">
       <form className="login" onSubmit={submit}>
-        <img src="/assets/ui/logo.webp" alt="" width={200} />
+        <img src={`${ASSETS}ui/logo.webp`} alt="" width={200} />
         <h2>Admin panel</h2>
         <input placeholder="Username" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
         <input placeholder="Password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -166,7 +166,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     <div className="shell">
       <aside className="side">
         <div className="brand">
-          <img src="/assets/ui/logo.webp" alt="" />
+          <img src={`${ASSETS}ui/logo.webp`} alt="" />
           <span>Admin</span>
         </div>
         <nav>

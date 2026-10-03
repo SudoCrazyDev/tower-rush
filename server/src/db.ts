@@ -1,128 +1,25 @@
-import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+/** D1 helpers. The schema lives in ../migrations (applied with `wrangler d1 migrations apply`). */
 
-export const DATA_DIR = resolve(process.env.DATA_DIR ?? join(import.meta.dirname, "..", "data"));
-mkdirSync(DATA_DIR, { recursive: true });
+type Arg = string | number | null;
 
-export const db = new DatabaseSync(join(DATA_DIR, "tower-rush.db"));
-db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+/** First row, or null. */
+export const one = <T>(db: D1Database, sql: string, ...args: Arg[]) => db.prepare(sql).bind(...args).first<T>();
 
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE COLLATE NOCASE,
-  password_hash TEXT,
-  display_name TEXT NOT NULL,
-  is_guest INTEGER NOT NULL DEFAULT 1,
-  banned INTEGER NOT NULL DEFAULT 0,
-  ban_reason TEXT,
-  profile TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  last_seen_at INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS admins (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-  password_hash TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS sessions (
-  token TEXT PRIMARY KEY,
-  kind TEXT NOT NULL CHECK (kind IN ('player', 'admin')),
-  subject_id INTEGER NOT NULL,
-  created_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS config_versions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  config TEXT NOT NULL,
-  note TEXT,
-  admin_id INTEGER,
-  created_at INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS battles (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  arena TEXT NOT NULL,
-  deck TEXT NOT NULL,
-  started_at INTEGER NOT NULL,
-  finished_at INTEGER,
-  wave INTEGER,
-  kills INTEGER,
-  bosses INTEGER,
-  coins INTEGER,
-  gems INTEGER,
-  trophies INTEGER
-);
-CREATE INDEX IF NOT EXISTS battles_user ON battles(user_id, started_at DESC);
-CREATE INDEX IF NOT EXISTS users_trophies ON users(json_extract(profile, '$.trophies'));
-CREATE INDEX IF NOT EXISTS users_best_wave ON users(json_extract(profile, '$.bestWave'));
-CREATE TABLE IF NOT EXISTS mail (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, -- NULL: every player
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  reward TEXT, -- JSON Reward, or NULL for a plain announcement
-  new_players INTEGER NOT NULL DEFAULT 0, -- to everyone: also players who join after it was sent
-  admin_id INTEGER,
-  created_at INTEGER NOT NULL,
-  expires_at INTEGER
-);
-CREATE INDEX IF NOT EXISTS mail_user ON mail(user_id);
-CREATE TABLE IF NOT EXISTS mail_state (
-  mail_id INTEGER NOT NULL REFERENCES mail(id) ON DELETE CASCADE,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  read_at INTEGER,
-  claimed_at INTEGER,
-  deleted_at INTEGER,
-  PRIMARY KEY (mail_id, user_id)
-);
-CREATE TABLE IF NOT EXISTS purchases (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  offer TEXT NOT NULL,
-  price INTEGER NOT NULL,
-  currency TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS purchases_offer ON purchases(offer);
-CREATE TABLE IF NOT EXISTS audit (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  admin_id INTEGER,
-  action TEXT NOT NULL,
-  target TEXT,
-  details TEXT,
-  created_at INTEGER NOT NULL
-);
-`);
-
-// Which UTC days each player was active (for retention). Recorded on every signed-in request.
-const hadActivity = !!db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'activity'").get();
-db.exec(`
-CREATE TABLE IF NOT EXISTS activity (
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  day TEXT NOT NULL, -- "2026-10-04" (UTC)
-  PRIMARY KEY (user_id, day)
-) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS activity_day ON activity(day);
-`);
-// First run with the table: rebuild what we can from older data (sign-up day, battle days, last seen).
-if (!hadActivity) {
-  const day = (col: string) => `date(${col} / 1000, 'unixepoch')`;
-  db.exec(`
-    INSERT OR IGNORE INTO activity SELECT id, ${day("created_at")} FROM users;
-    INSERT OR IGNORE INTO activity SELECT id, ${day("last_seen_at")} FROM users;
-    INSERT OR IGNORE INTO activity SELECT user_id, ${day("started_at")} FROM battles;
-  `);
+export async function all<T>(db: D1Database, sql: string, ...args: Arg[]) {
+  return (await db.prepare(sql).bind(...args).all<T>()).results;
 }
 
-// Columns added after the first release.
-const battleCols = (db.prepare("PRAGMA table_info(battles)").all() as { name: string }[]).map((c) => c.name);
-if (!battleCols.includes("hero")) db.exec("ALTER TABLE battles ADD COLUMN hero TEXT");
+export const run = (db: D1Database, sql: string, ...args: Arg[]) => db.prepare(sql).bind(...args).run();
 
-export function audit(adminId: number | null, action: string, target: string | null, details?: unknown) {
-  db.prepare("INSERT INTO audit (admin_id, action, target, details, created_at) VALUES (?, ?, ?, ?, ?)").run(
+/** `SELECT COUNT(*) n ...` style queries. */
+export async function count(db: D1Database, sql: string, ...args: Arg[]) {
+  return (await one<{ n: number }>(db, sql, ...args))?.n ?? 0;
+}
+
+export function audit(db: D1Database, adminId: number | null, action: string, target: string | null, details?: unknown) {
+  return run(
+    db,
+    "INSERT INTO audit (admin_id, action, target, details, created_at) VALUES (?, ?, ?, ?, ?)",
     adminId,
     action,
     target,

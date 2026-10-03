@@ -7,7 +7,7 @@ and an admin panel for balancing the game and managing players.
 |---|---|---|
 | `game/` | The game: Phaser 3 + TypeScript + Vite ([game/README.md](game/README.md)) | http://localhost:5173 |
 | `admin/` | Admin panel: React + Vite | http://localhost:5174/admin/ |
-| `server/` | API + database: Node 24 + Express + built-in SQLite | http://localhost:8787 |
+| `server/` | API: Cloudflare Worker (Hono) with a D1 database ([DEPLOY.md](DEPLOY.md)) | http://localhost:8787 |
 | `shared/` | Game data and rules used by all three (units, monsters, arenas, economy, config validation) | |
 | `assets/` | The generated art pack, source files ([assets/README.md](assets/README.md)) | |
 
@@ -15,14 +15,13 @@ and an admin panel for balancing the game and managing players.
 
 Needs Node 24+ and Python 3 with Pillow/numpy (only for the asset conversion).
 
-    npm run setup   # installs all three apps and converts the art into game/public/assets
-    npm run dev     # starts server, game and admin together
+    npm run setup   # installs everything, creates the local database, converts the art
+    npm run dev     # starts the API (wrangler dev), game and admin together
 
-The first time the server starts it creates an admin account named `admin` with a random
-password, written to `server/data/admin-credentials.txt`. Sign in at
-http://localhost:5174/admin/, add your own admin or change the password on the
-**Admins** page, then delete that file. To pick the first password yourself instead, copy
-`server/.env.example` to `server/.env` and set `ADMIN_PASSWORD` before the first start.
+The API runs locally in `wrangler dev` with a local copy of the D1 database (in `.wrangler/`).
+For the admin panel, copy `.dev.vars.example` to `.dev.vars` and pick a password. The first
+sign-in at http://localhost:5174/admin/ as `admin` creates that account. In dev the art is
+served from `game/public/assets`; production loads it from R2.
 
 ## How the pieces fit
 
@@ -57,12 +56,11 @@ http://localhost:5174/admin/, add your own admin or change the password on the
 
 ## Production
 
-    npm run build   # builds game/dist and admin/dist
-    npm start       # one server: game at /, admin at /admin, API at /api
+It all runs on Cloudflare: one Worker serves the API, the game (`/`) and the admin panel
+(`/admin/`), with a D1 database. The art comes from an R2 bucket. Pushes to master deploy
+automatically. See [DEPLOY.md](DEPLOY.md).
 
-The database is `server/data/tower-rush.db` (SQLite). Back up that folder. Put the
-server behind HTTPS (e.g. a reverse proxy) before exposing it publicly, since passwords
-and session tokens travel in requests.
+    npm run deploy   # build, migrate the database, deploy (by hand)
 
 ## API overview
 

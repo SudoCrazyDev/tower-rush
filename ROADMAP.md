@@ -104,8 +104,16 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   Art waiting for it: 12 emotes, `pvp_versus_background`, and the PvP/co-op/friends/clan/chat icons.
 
 ### 6. Release prep
-- Hosting: one Node server serves game, admin and API (`npm run build && npm start`); needs HTTPS.
-  SQLite is fine to start; move to Postgres if it grows.
+- ~~Hosting~~ done (2026-10-04, [DEPLOY.md](DEPLOY.md)): all on Cloudflare (Workers Free plan).
+  - One Worker serves the API (Hono, ported from Express), the game and the admin panel.
+  - D1 replaces SQLite, with the same schema plus a `rev` column. Requests now run
+    concurrently, so a profile save only lands if nothing else saved it in between; double
+    taps can't double-spend or double-claim.
+  - The art is served from R2 (`assets.depedtoolkit.com`, with CORS).
+  - Live at tower-rush.philiplouis0717.workers.dev. Pushes to master deploy once Workers
+    Builds is connected.
+  - Ideas for later: a custom domain, and the Paid plan when traffic grows (then raise the
+    password hash cost).
 - Mobile: wrap with Capacitor for app stores; add a PWA manifest for install-to-home-screen.
 - Performance: the art is 250 MB of WebP (about 130 MB of it HD sheets). A battle only loads its
   deck, arena and hero, but packing sheets into atlases would cut the number of requests.

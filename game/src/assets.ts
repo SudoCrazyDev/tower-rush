@@ -30,7 +30,8 @@ export interface AssetIndex {
   hazy: string[];
 }
 
-export const BASE = "assets/";
+/** Where the art lives: public/assets in dev, the R2 bucket in production (see vite.config.ts). */
+export const BASE = __ASSET_BASE__;
 let index: AssetIndex;
 
 export const assetIndex = () => index;

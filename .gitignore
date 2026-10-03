@@ -19,3 +19,7 @@ game/public/assets
 # Rendered output and copied art of the roadmap video project.
 roadmap-video/out
 roadmap-video/public
+
+# Cloudflare: local D1/dev state, local secrets (ADMIN_PASSWORD for wrangler dev).
+.wrangler
+.dev.vars

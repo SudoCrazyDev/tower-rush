@@ -15,7 +15,9 @@ export function ambientVideo(scene: Phaser.Scene, name: string, fit: Fit, loop =
   const v = scene.add.video(0, 0).setAlpha(0);
   // Loaded "with audio" and muted by hand: Phaser's no-audio mode sets `autoplay`, and if the
   // browser starts it first, `play()` thinks it's already running and never grabs frames.
-  v.loadURL(`${BASE}video/${name}.mp4`, false);
+  // "anonymous": the video may come from the art bucket on another origin, and WebGL can only
+  // draw cross-origin video that was fetched with CORS.
+  v.loadURL(`${BASE}video/${name}.mp4`, false, "anonymous");
   if (v.video) v.video.muted = v.video.defaultMuted = true;
   v.once(Phaser.GameObjects.Events.VIDEO_CREATED, (_v: unknown, width: number, height: number) => {
     fit(v, width, height);

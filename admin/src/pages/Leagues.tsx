@@ -1,4 +1,5 @@
 import { useConfig } from "../config";
+import { ASSETS } from "../api";
 import { Num, Text, Select, PageHead } from "../components";
 import type { LeagueDef } from "../../../shared/leagues.ts";
 import type { GameConfig } from "../../../shared/config.ts";
@@ -51,7 +52,7 @@ export function LeaguesPage() {
                 <td>
                   <img
                     className="thumb"
-                    src={`/assets/ui/league_${l.icon}.webp`}
+                    src={`${ASSETS}ui/league_${l.icon}.webp`}
                     width={44}
                     height={44}
                     alt=""

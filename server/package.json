@@ -3,15 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch --disable-warning=ExperimentalWarning src/index.ts",
-    "start": "node --disable-warning=ExperimentalWarning src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "dev": "node -e \"require('fs').mkdirSync('../dist',{recursive:true})\" && cd .. && wrangler dev --port 8787",
+    "typecheck": "tsc --noEmit",
+    "types": "cd .. && wrangler types server/worker-configuration.d.ts"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "hono": "^4.13.12"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
     "@types/node": "^26.6.4",
     "typescript": "^7.0.2"
   }

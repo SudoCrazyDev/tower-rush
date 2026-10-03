@@ -1,0 +1,27 @@
+// Cloudflare Worker: the API (server/src) plus the built game and admin panel (dist/).
+// See DEPLOY.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tower-rush",
+  "main": "server/src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  // `npm run build` puts the game at dist/ and the admin panel at dist/admin/.
+  // Paths that aren't files (like /api/...) fall through to the Worker.
+  "assets": { "directory": "./dist" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tower-rush",
+      "database_id": "8633ac1c-c935-448e-9473-05d5554e6df3",
+      "migrations_dir": "server/migrations"
+    }
+  ],
+  // Sign-in attempts per IP per minute.
+  "ratelimits": [
+    { "name": "AUTH_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+    { "name": "ADMIN_LIMIT", "namespace_id": "1002", "simple": { "limit": 5, "period": 60 } }
+  ],
+  "vars": { "ADMIN_USERNAME": "admin" }
+  // Secret (not in this file): ADMIN_PASSWORD, used once to create the first admin.
+}

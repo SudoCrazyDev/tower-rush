@@ -43,4 +43,6 @@ export async function api<T = unknown>(method: string, path: string, body?: unkn
   return data as T;
 }
 
-export const asset = (folder: string, id: string) => `/assets/${folder}/${id}.webp`;
+/** Game art: the game dev server in dev, the R2 bucket in production (see vite.config.ts). */
+export const ASSETS = __ASSET_BASE__;
+export const asset = (folder: string, id: string) => `${ASSETS}${folder}/${id}.webp`;

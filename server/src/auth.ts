@@ -1,28 +1,55 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import type { NextFunction, Request, Response } from "express";
-import { db } from "./db.ts";
+import type { Next } from "hono";
+import { one, run } from "./db.ts";
+import { clientIp, fail, type Ctx } from "./http.ts";
 
 const SESSION_DAYS = { player: 365, admin: 7 };
 
-export function hashPassword(password: string) {
+// ---------------------------------------------------------------- passwords
+
+/**
+ * PBKDF2-SHA256 (Web Crypto). The iteration count is stored in each hash, so it can be
+ * raised later: logins with an older count get re-hashed (see `needsRehash`). 50k keeps a
+ * sign-in inside the Workers Free plan's CPU budget; on the Paid plan raise it to 100k (the
+ * most Workers allows).
+ */
+const ITERATIONS = 50_000;
+
+const b64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const unb64 = (s: string) => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+const randomBytes = (n: number) => crypto.getRandomValues(new Uint8Array(n));
+
+async function derive(password: string, salt: Uint8Array, iterations: number) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
+}
+
+export async function hashPassword(password: string) {
   const salt = randomBytes(16);
-  const hash = scryptSync(password, salt, 32);
-  return `scrypt$${salt.toString("base64")}$${hash.toString("base64")}`;
+  return `pbkdf2$${ITERATIONS}$${b64(salt)}$${b64(await derive(password, salt, ITERATIONS))}`;
 }
 
-export function verifyPassword(password: string, stored: string | null) {
+export async function verifyPassword(password: string, stored: string | null) {
   if (!stored) return false;
-  const [scheme, salt, hash] = stored.split("$");
-  if (scheme !== "scrypt" || !salt || !hash) return false;
-  const expected = Buffer.from(hash, "base64");
-  const actual = scryptSync(password, Buffer.from(salt, "base64"), expected.length);
-  return timingSafeEqual(expected, actual);
+  const [scheme, iter, salt, hash] = stored.split("$");
+  if (scheme !== "pbkdf2" || !salt || !hash) return false;
+  const expected = unb64(hash);
+  const actual = await derive(password, unb64(salt), Number(iter));
+  // Constant time compare.
+  let diff = expected.length ^ actual.length;
+  for (let i = 0; i < expected.length; i++) diff |= expected[i] ^ actual[i];
+  return diff === 0;
 }
 
-export function createSession(kind: "player" | "admin", subjectId: number) {
-  const token = randomBytes(32).toString("base64url");
+export const needsRehash = (stored: string) => Number(stored.split("$")[1]) !== ITERATIONS;
+
+// ---------------------------------------------------------------- sessions
+
+export async function createSession(db: D1Database, kind: "player" | "admin", subjectId: number) {
+  const token = b64(randomBytes(32)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const now = Date.now();
-  db.prepare("INSERT INTO sessions (token, kind, subject_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?)").run(
+  await run(
+    db,
+    "INSERT INTO sessions (token, kind, subject_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
     token,
     kind,
     subjectId,
@@ -32,62 +59,49 @@ export function createSession(kind: "player" | "admin", subjectId: number) {
   return token;
 }
 
-export function deleteSession(token: string) {
-  db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
-}
+export const deleteSession = (db: D1Database, token: string) => run(db, "DELETE FROM sessions WHERE token = ?", token);
 
-export function deleteSessionsFor(kind: "player" | "admin", subjectId: number) {
-  db.prepare("DELETE FROM sessions WHERE kind = ? AND subject_id = ?").run(kind, subjectId);
-}
+export const deleteSessionsFor = (db: D1Database, kind: "player" | "admin", subjectId: number) =>
+  run(db, "DELETE FROM sessions WHERE kind = ? AND subject_id = ?", kind, subjectId);
 
-function bearer(req: Request) {
-  const h = req.headers.authorization ?? "";
+export function bearer(c: Ctx) {
+  const h = c.req.header("authorization") ?? "";
   return h.startsWith("Bearer ") ? h.slice(7) : null;
 }
 
-function lookup(req: Request, kind: "player" | "admin") {
-  const token = bearer(req);
+/** The signed-in player or admin id for the request's token, if it's valid. */
+export async function sessionFor(c: Ctx, kind: "player" | "admin") {
+  const token = bearer(c);
   if (!token) return null;
-  const row = db.prepare("SELECT subject_id, expires_at FROM sessions WHERE token = ? AND kind = ?").get(token, kind) as
-    | { subject_id: number; expires_at: number }
-    | undefined;
+  const row = await one<{ subject_id: number; expires_at: number }>(
+    c.env.DB,
+    "SELECT subject_id, expires_at FROM sessions WHERE token = ? AND kind = ?",
+    token,
+    kind,
+  );
   if (!row || row.expires_at < Date.now()) return null;
   return { token, id: row.subject_id };
 }
 
-declare module "express-serve-static-core" {
-  interface Request {
-    playerId?: number;
-    adminId?: number;
-    token?: string;
-  }
+export async function requirePlayer(c: Ctx, next: Next) {
+  const s = await sessionFor(c, "player");
+  if (!s) fail(401, "Not signed in");
+  c.set("playerId", s.id);
+  c.set("token", s.token);
+  await next();
 }
 
-export function requirePlayer(req: Request, res: Response, next: NextFunction) {
-  const s = lookup(req, "player");
-  if (!s) return void res.status(401).json({ error: "Not signed in" });
-  req.playerId = s.id;
-  req.token = s.token;
-  next();
+export async function requireAdmin(c: Ctx, next: Next) {
+  const s = await sessionFor(c, "admin");
+  if (!s) fail(401, "Admin sign-in required");
+  c.set("adminId", s.id);
+  c.set("token", s.token);
+  await next();
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const s = lookup(req, "admin");
-  if (!s) return void res.status(401).json({ error: "Admin sign-in required" });
-  req.adminId = s.id;
-  req.token = s.token;
-  next();
-}
-
-/** Very small in-memory limiter for sign-in endpoints: `max` attempts per window per IP. */
-export function rateLimit(max: number, windowMs: number) {
-  const hits = new Map<string, { n: number; reset: number }>();
-  return (req: Request, res: Response, next: NextFunction) => {
-    const key = req.ip ?? "?";
-    const now = Date.now();
-    const h = hits.get(key);
-    if (!h || h.reset < now) hits.set(key, { n: 1, reset: now + windowMs });
-    else if (++h.n > max) return void res.status(429).json({ error: "Too many attempts, try again in a few minutes" });
-    next();
-  };
-}
+/** Sign-in endpoints: a few attempts per IP per minute (Workers rate limiting binding). */
+export const rateLimit = (which: "AUTH_LIMIT" | "ADMIN_LIMIT") => async (c: Ctx, next: Next) => {
+  const { success } = await c.env[which].limit({ key: clientIp(c) });
+  if (!success) fail(429, "Too many attempts, try again in a minute");
+  await next();
+};

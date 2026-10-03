@@ -36,6 +36,8 @@ async function start() {
     backgroundColor: "#0d1030",
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 2 },
+    // Production art comes from another origin (the R2 bucket), which allows it with CORS.
+    loader: { crossOrigin: "anonymous" },
     render: { antialias: true, roundPixels: false },
     // ?timer drives the loop with setTimeout, for testing in background tabs.
     fps: { target: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
