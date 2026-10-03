@@ -4,6 +4,8 @@ import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/ar
 import { profile, account, setArena, signOut, loadMe } from "../save";
 import { utcDay } from "../../../shared/daily.ts";
 import { dailyCounts, loginModal, questsModal } from "./daily";
+import { leagueBadge, leagueModal } from "./leagues";
+import { leagueFor } from "../../../shared/leagues.ts";
 import { showAuth } from "../authOverlay";
 import { music } from "../audio";
 import { ambientVideo, coverFit } from "../backdrop";
@@ -31,6 +33,8 @@ export function topBar(scene: Phaser.Scene) {
   resourcePill(scene, x0 + 120, 38, "item:coins", fmt(profile.coins), 200);
   resourcePill(scene, x0 + 350, 38, "item:gems", fmt(profile.gems), 180);
   resourcePill(scene, x0 + 580, 38, "item:trophy", fmt(profile.trophies), 190);
+  // League badge in the corner; tap it for the leagues list.
+  pressable(leagueBadge(scene, W - 46, 38, 66, leagueFor(profile.trophies)), () => leagueModal(scene));
 }
 
 export class LobbyScene extends Phaser.Scene {

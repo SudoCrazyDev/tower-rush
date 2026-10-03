@@ -22,7 +22,8 @@ export interface AssetIndex {
   anims: Record<string, string[]>;
   /** Frame size per sheet folder, including the `<folder>_hd` twins. */
   frameSize: Record<string, number>;
-  atlas: { buttons: number; icons: number };
+  /** Slices of the button, icon and league_ranks sheets (`leagues` is missing in older builds). */
+  atlas: { buttons: number; icons: number; leagues?: number };
   /** Ambient location loops and the trailer, in `video/<name>.mp4`. */
   videos: string[];
   /** "<folder>/<name>" sheets whose background didn't key out cleanly; treated as missing. */

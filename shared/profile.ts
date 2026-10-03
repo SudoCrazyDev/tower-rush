@@ -2,6 +2,7 @@
 import { ECONOMY, CHESTS, type ChestDef } from "./economy.ts";
 import { HEROES, HERO_BY_ID } from "./heroes.ts";
 import { freshDaily, utcDay, type DailyState, type LoginState, type Reward } from "./daily.ts";
+import { unpaidLeagues } from "./leagues.ts";
 import { RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, upgradeCost, maxCardLevel, type Rarity } from "./units.ts";
 
 export interface CardState {
@@ -25,6 +26,8 @@ export interface Profile {
   /** Today's quests (refreshed by the server when the UTC day changes). */
   daily: DailyState;
   login: LoginState;
+  /** Leagues whose one-time promotion reward has been paid. */
+  leagues: string[];
 }
 
 export function newProfile(): Profile {
@@ -43,6 +46,7 @@ export function newProfile(): Profile {
     hero: HEROES.find((h) => h.enabled && h.price === 0)?.id ?? null,
     daily: { day: "", quests: [], bonusClaimed: false },
     login: { claims: 0, lastDay: "" },
+    leagues: [],
   };
 }
 
@@ -59,6 +63,20 @@ export function grantReward(p: Profile, r: Reward, rand?: () => number): ChestLo
   p.gems += r.gems;
   const chest = r.chest ? chestById(r.chest) : undefined;
   return chest ? rollChest(p, chest, rand) : null;
+}
+
+export interface Promotion {
+  league: string;
+  reward: Reward;
+  loot: ChestLoot | null;
+}
+
+/** Pay the promotion reward of every league the player has reached for the first time. */
+export function payPromotions(p: Profile, rand?: () => number): Promotion[] {
+  return unpaidLeagues(p.trophies, p.leagues).map((l) => {
+    p.leagues.push(l.id);
+    return { league: l.id, reward: l.reward, loot: grantReward(p, l.reward, rand) };
+  });
 }
 
 export function ownsHero(p: Profile, id: string) {

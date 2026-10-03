@@ -4,6 +4,7 @@ import { useConfig } from "../config";
 import { Modal, Num, PageHead, Select, Thumb, fmtDate, timeAgo, toast } from "../components";
 import { maxCardLevel } from "../../../shared/units.ts";
 import type { Profile } from "../../../shared/profile.ts";
+import { leagueFor } from "../../../shared/leagues.ts";
 
 interface UserRow {
   id: number;
@@ -20,6 +21,7 @@ interface UserRow {
 }
 
 export function UsersPage() {
+  const { saved } = useConfig();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "registered" | "guests" | "banned">("all");
   const [sort, setSort] = useState<"seen" | "created" | "trophies" | "name">("seen");
@@ -67,7 +69,10 @@ export function UsersPage() {
                   <strong>{u.name}</strong> {u.banned ? <span className="badge err">banned</span> : null}
                 </td>
                 <td>{u.isGuest ? <span className="badge">guest</span> : <span className="muted">@{u.username}</span>}</td>
-                <td className="num-cell">{u.trophies}</td>
+                <td className="num-cell">
+                  {u.trophies}
+                  {saved?.leagues.length ? <div className="muted small">{leagueFor(u.trophies, saved.leagues).name}</div> : null}
+                </td>
                 <td className="num-cell">{u.bestWave}</td>
                 <td className="num-cell">{u.coins?.toLocaleString()}</td>
                 <td className="num-cell">{u.gems?.toLocaleString()}</td>
@@ -184,7 +189,7 @@ export function UserDetail({ id }: { id: number }) {
       <div className="stats">
         <Stat2 icon="coins" label="Gold" value={profile.coins} />
         <Stat2 icon="gems" label="Gems" value={profile.gems} />
-        <Stat2 icon="trophy" label="Trophies" value={profile.trophies} />
+        <Stat2 icon="trophy" label="Trophies" value={profile.trophies} sub={saved?.leagues.length ? leagueFor(profile.trophies, saved.leagues).name : undefined} />
         <Stat2 icon="hourglass_speedup" label="Best wave" value={profile.bestWave} />
         <Stat2 icon="card_pack" label="Cards owned" value={owned.length} />
       </div>
@@ -296,13 +301,14 @@ export function UserDetail({ id }: { id: number }) {
   );
 }
 
-function Stat2({ icon, label, value }: { icon: string; label: string; value: number }) {
+function Stat2({ icon, label, value, sub }: { icon: string; label: string; value: number; sub?: string }) {
   return (
     <div className="stat with-icon">
       <img src={asset("items", icon)} alt="" width={40} height={40} />
       <div>
         <div className="stat-label">{label}</div>
         <div className="stat-value">{value.toLocaleString()}</div>
+        {sub && <div className="stat-sub">{sub}</div>}
       </div>
     </div>
   );

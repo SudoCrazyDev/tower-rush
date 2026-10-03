@@ -136,7 +136,7 @@ for folder, out, size in STATIC:
         jobs.append(lambda f=folder, o=out, i=i, s=size: fit(f"{SRC}/{f}/{i}.png", f"{OUT}/{o}/{i}.webp", s))
 
 UI_SIZES = {"logo": 640, "panel_dialog": 640, "banner_victory": 640, "banner_defeat": 640, "boss_warning": 320}
-index["ui"] = [i for i in ids("ui") if i not in ("merge_rank_pips", "element_icons", "buttons_set")]
+index["ui"] = [i for i in ids("ui") if i not in ("merge_rank_pips", "element_icons", "buttons_set", "league_ranks")]
 for i in index["ui"]:
     jobs.append(lambda i=i: fit(f"{SRC}/ui/{i}.png", f"{OUT}/ui/{i}.webp", UI_SIZES.get(i, 256)))
 
@@ -241,6 +241,8 @@ if __name__ == "__main__":
     index["atlas"] = {
         "buttons": slice_atlas(f"{SRC}/ui/buttons_set.png", f"{OUT}/ui/button", 320),
         "icons": slice_atlas(f"{SRC}/ui/icon_buttons_set.png", f"{OUT}/ui/icon", 128),
+        # League badges, lowest league first (a league's `icon` in the config is its slice number).
+        "leagues": slice_atlas(f"{SRC}/ui/league_ranks.png", f"{OUT}/ui/league", 160),
     }
     index["hazy"] = [
         f"{folder}/{n}"

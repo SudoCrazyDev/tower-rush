@@ -6,6 +6,7 @@ import { getUser, publicUser, readProfile, writeProfile, NAME_RE, USERNAME_RE } 
 import { defaultConfig, type GameConfig } from "../../shared/config.ts";
 import { newProfile, ownsHero } from "../../shared/profile.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
+import { leaguesByTrophies } from "../../shared/leagues.ts";
 import { UNIT_BY_ID, maxCardLevel } from "../../shared/units.ts";
 
 export const admin = Router();
@@ -45,6 +46,15 @@ admin.get("/stats", (_req, res) => {
     battles: one("SELECT COUNT(*) n FROM battles WHERE finished_at IS NOT NULL"),
     battlesToday: one("SELECT COUNT(*) n FROM battles WHERE finished_at > ?", day),
     configVersion: currentConfig().id,
+    // Players (not banned) in each league, lowest first.
+    leagues: leaguesByTrophies().map((l, i, all) => ({
+      league: l.id,
+      players: one(
+        "SELECT COUNT(*) n FROM users WHERE banned = 0 AND json_extract(profile, '$.trophies') >= ? AND json_extract(profile, '$.trophies') < ?",
+        l.trophies,
+        all[i + 1]?.trophies ?? Number.MAX_SAFE_INTEGER,
+      ),
+    })),
     topPlayers: db
       .prepare(
         `SELECT id, display_name AS name, json_extract(profile, '$.trophies') AS trophies, json_extract(profile, '$.bestWave') AS bestWave

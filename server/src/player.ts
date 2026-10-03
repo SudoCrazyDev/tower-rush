@@ -3,7 +3,7 @@ import { db } from "./db.ts";
 import { createSession, deleteSession, hashPassword, rateLimit, requirePlayer, verifyPassword } from "./auth.ts";
 import { currentConfig } from "./config-store.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
-import { canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, refreshDaily, rollChests, type Profile } from "../../shared/profile.ts";
+import { canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, upgradeCost } from "../../shared/units.ts";
@@ -280,6 +280,8 @@ player.post("/battles/:id/finish", (req, res) => {
   m.p.gems += rewards.gems;
   m.p.trophies = Math.max(0, m.p.trophies + rewards.trophies);
   m.p.bestWave = Math.max(m.p.bestWave, wave);
+  // First time in a league pays its promotion reward.
+  const promotions = payPromotions(m.p);
   addQuestProgress(m.p.daily, { battles: 1, wave, kills, bosses, summons, merges, awakens, heroCasts });
   writeProfile(m.u.id, m.p);
   db.prepare("UPDATE battles SET finished_at = ?, wave = ?, kills = ?, bosses = ?, coins = ?, gems = ?, trophies = ? WHERE id = ?").run(
@@ -292,7 +294,7 @@ player.post("/battles/:id/finish", (req, res) => {
     rewards.trophies,
     b.id,
   );
-  res.json({ rewards, newBest, wave, profile: m.p });
+  res.json({ rewards, newBest, wave, promotions, profile: m.p });
 });
 
 // ---------------------------------------------------------------- leaderboard

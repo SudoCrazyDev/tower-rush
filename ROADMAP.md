@@ -8,7 +8,7 @@ management, audit log). See [README.md](README.md) for how to run it.
 ## Recommended order
 
 ### 1. Housekeeping (small, do first)
-- The project isn't under version control yet: `git init`, first commit (root `.gitignore` is ready).
+- ~~The project isn't under version control yet~~ done: it's in git.
 - No automated tests. Start with `shared/` (config validation, rewards, chest rolls) and the server API.
 
 ### 2. Use the art that's already generated but unused
@@ -36,7 +36,7 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   they wrap cleanly. Off with `?novideo` or the system's reduced-motion setting. The 4 promo
   clips aren't used (two show towers that aren't in the game; they suit a store page).
 - The rest of the unused art belongs to features that don't exist yet, so it's listed with them:
-  **league rank icons** under Leagues, the **quests / daily login** icons under section 3,
+  the **quests / daily login** icons under section 3,
   **friends / clan / chat / PvP / co-op** icons and **emotes** (12) under Multiplayer (emotes
   only make sense with an opponent), and the **items** (essences, talent runes, potions,
   scrolls, battle pass ticket) when there's a system to spend them on.
@@ -52,8 +52,15 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   (ties share a rank; players with 0 aren't ranked), with each player's hero as their avatar, your
   row highlighted and scrolled into view, and your rank shown even outside the top 100. Ideas for
   later: a weekly/seasonal board (needs per-season trophy history), and per-arena best waves.
-- Leagues based on trophies (`ui/league_ranks.png` is a sheet of rank icons; slice it like the
-  button atlas).
+- ~~**Leagues**~~ done (`shared/leagues.ts`): 7 trophy leagues, Bronze (0) to Champion (5000). A
+  player's league follows their current trophies, so they can drop back down; reaching a league
+  for the first time pays a one-time promotion reward (gold, gems, maybe a chest) when the battle
+  ends, shown on the results screen. The badge sits in the top-right of the top bar (tap it for
+  the leagues list and progress to the next one) and on each leaderboard avatar. Icons are sliced
+  from `ui/league_ranks.png` into `ui/league_<n>.webp` (re-run `npm run assets` once); until then,
+  or for an icon number with no art, the game draws a shield in the league colour. Edit them on
+  the admin **Leagues** page; the dashboard shows players per league. Ideas for later: seasons
+  (trophy reset to the league floor, end-of-season rewards), and league-scoped leaderboards.
 - Player inbox: admin sends gifts or announcements to players.
 
 ### 4. More admin control

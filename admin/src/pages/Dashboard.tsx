@@ -15,6 +15,7 @@ interface Stats {
   topPlayers: { id: number; name: string; trophies: number; bestWave: number }[];
   arenaPopularity: { arena: string; battles: number; avgWave: number; maxWave: number }[];
   unitPopularity: { unit: string; decks: number }[];
+  leagues: { league: string; players: number }[];
 }
 
 export function Dashboard() {
@@ -27,6 +28,8 @@ export function Dashboard() {
   const unitName = (id: string) => saved?.units.find((u) => u.id === id)?.name ?? id;
   const arenaName = (id: string) => saved?.arenas.find((a) => a.id === id)?.name ?? id;
   const maxDecks = Math.max(1, ...s.unitPopularity.map((u) => u.decks));
+  const leagueName = (id: string) => saved?.leagues.find((l) => l.id === id)?.name ?? id;
+  const maxLeague = Math.max(1, ...s.leagues.map((l) => l.players));
 
   return (
     <>
@@ -93,6 +96,20 @@ export function Dashboard() {
               )}
             </tbody>
           </table>
+        </section>
+        <section className="panel">
+          <h2>Leagues</h2>
+          <p className="muted small">Players (not banned) in each league by their current trophies.</p>
+          {s.leagues.map((l) => (
+            <div className="bar-row" key={l.league}>
+              <Thumb src={asset("ui", `league_${saved?.leagues.find((x) => x.id === l.league)?.icon ?? 0}`)} size={28} />
+              <span className="bar-label">{leagueName(l.league)}</span>
+              <div className="bar">
+                <div style={{ width: `${(l.players / maxLeague) * 100}%` }} />
+              </div>
+              <span className="num-cell">{l.players}</span>
+            </div>
+          ))}
         </section>
         <section className="panel">
           <h2>Most used units</h2>

@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import { getLeaderboard, type Leaderboard } from "../save";
 import { HERO_BY_ID } from "../data/heroes";
+import { leagueFor } from "../../../shared/leagues.ts";
+import { leagueBadge } from "./leagues";
 import { RES } from "../display";
 import { W, H, WIDE, txt, button, iconButton, NAVY, fmt } from "../ui";
 import { cover, topBar } from "./LobbyScene";
@@ -120,6 +122,8 @@ export class LeaderboardScene extends Phaser.Scene {
     const hero = r.hero && HERO_BY_ID[r.hero] ? `hero_portrait:${r.hero}` : null;
     if (hero && this.textures.exists(hero)) parts.push(this.add.image(ax, y, hero).setDisplaySize(46, 46));
     parts.push(this.add.image(ax, y, "ui:avatar_frame").setDisplaySize(74, 74));
+    // League badge on the avatar's corner.
+    parts.push(leagueBadge(this, ax + 28, y + 22, 36, leagueFor(r.trophies)));
 
     const name = r.name.length > 18 ? `${r.name.slice(0, 17)}…` : r.name;
     parts.push(txt(this, ax + 52, y, isMe ? `${name} (you)` : name, WIDE ? 32 : 28, isMe ? "#fff4c2" : "#ffffff", [0, 0.5]));

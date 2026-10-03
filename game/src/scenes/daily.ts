@@ -15,7 +15,7 @@ const inTime = (ms: number) => {
 };
 
 /** Icon for a reward: its chest, else gems or gold. */
-function rewardIcon(r: Reward) {
+export function rewardIcon(r: Reward) {
   if (r.chest && chestById(r.chest)) return `item:${chestById(r.chest)!.image}`;
   return r.gems && !r.coins ? "item:gems" : "item:coins";
 }
@@ -28,7 +28,7 @@ export function dailyCounts() {
   return { login: loginReady(profile.login), quests: quests + bonus };
 }
 
-function checkMark(scene: Phaser.Scene, x: number, y: number, size: number) {
+export function checkMark(scene: Phaser.Scene, x: number, y: number, size: number) {
   const g = scene.add.graphics();
   g.lineStyle(size * 0.22, NAVY, 1).beginPath().moveTo(x - size * 0.4, y).lineTo(x - size * 0.1, y + size * 0.3).lineTo(x + size * 0.45, y - size * 0.35).strokePath();
   g.lineStyle(size * 0.12, 0x59d64a, 1).beginPath().moveTo(x - size * 0.4, y).lineTo(x - size * 0.1, y + size * 0.3).lineTo(x + size * 0.45, y - size * 0.35).strokePath();

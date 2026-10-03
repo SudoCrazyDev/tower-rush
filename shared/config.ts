@@ -8,6 +8,7 @@ import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts"
 import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type ChestDef } from "./economy.ts";
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
 import { DEFAULT_LOGIN_REWARDS, DEFAULT_QUESTS, LOGIN_REWARDS, QUESTS, QUEST_GOAL_IDS, type QuestDef, type Reward } from "./daily.ts";
+import { DEFAULT_LEAGUES, LEAGUES, type LeagueDef } from "./leagues.ts";
 
 export interface GameConfig {
   units: UnitDef[];
@@ -20,6 +21,8 @@ export interface GameConfig {
   loginRewards: Reward[];
   /** Pool the daily quests are drawn from. */
   quests: QuestDef[];
+  /** Trophy leagues and their one-time promotion rewards. */
+  leagues: LeagueDef[];
   economy: Economy;
   dropWeights: Record<Rarity, number>;
 }
@@ -34,6 +37,7 @@ export function defaultConfig(): GameConfig {
     heroes: DEFAULT_HEROES,
     loginRewards: DEFAULT_LOGIN_REWARDS,
     quests: DEFAULT_QUESTS,
+    leagues: DEFAULT_LEAGUES,
     economy: DEFAULT_ECONOMY,
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5 },
   });
@@ -54,6 +58,7 @@ export function applyConfig(cfg: GameConfig) {
   replace(HEROES, cfg.heroes);
   replace(LOGIN_REWARDS, cfg.loginRewards);
   replace(QUESTS, cfg.quests);
+  replace(LEAGUES, cfg.leagues);
   Object.assign(ECONOMY, structuredClone(cfg.economy));
   for (const r of RARITIES) RARITY_STATS[r].dropWeight = cfg.dropWeights[r];
   indexUnits();
@@ -81,7 +86,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     return seen;
   };
   if (!cfg || typeof cfg !== "object") return ["Config must be an object"];
-  for (const k of ["units", "monsters", "bosses", "arenas", "chests", "heroes", "loginRewards", "quests"] as const) {
+  for (const k of ["units", "monsters", "bosses", "arenas", "chests", "heroes", "loginRewards", "quests", "leagues"] as const) {
     if (!Array.isArray(cfg[k])) errs.push(`${k} must be a list`);
   }
   if (errs.length) return errs;
@@ -164,6 +169,19 @@ export function validateConfig(cfg: GameConfig): string[] {
     num(q.weight, `${w} weight`);
     reward(q.reward, `${w} reward`);
   }
+  ids(cfg.leagues, "league");
+  const gates = new Set<number>();
+  for (const l of cfg.leagues) {
+    const w = `League ${l.id}`;
+    if (!l.name) errs.push(`${w}: name is required`);
+    num(l.trophies, `${w} trophies`);
+    if (gates.has(l.trophies)) errs.push(`${w}: another league already starts at ${l.trophies} trophies`);
+    gates.add(l.trophies);
+    if (!/^#[0-9a-f]{6}$/i.test(l.color ?? "")) errs.push(`${w}: colour must look like #ffd93b`);
+    if (!Number.isInteger(l.icon) || l.icon < 0) errs.push(`${w}: icon must be a whole number ≥ 0`);
+    reward(l.reward, `${w} reward`);
+  }
+  if (!cfg.leagues.some((l) => l.trophies === 0)) errs.push("At least one league must start at 0 trophies");
 
   const e = cfg.economy;
   if (!e) return [...errs, "economy is missing"];

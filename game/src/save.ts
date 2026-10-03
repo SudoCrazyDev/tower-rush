@@ -10,6 +10,7 @@ export type { Profile, ChestLoot };
 export { CHESTS, type ChestDef } from "../../shared/economy.ts";
 export { giftReadyAt, ownsHero, heroBuyProblem } from "../../shared/profile.ts";
 import type { Reward } from "../../shared/daily.ts";
+import type { Promotion } from "../../shared/profile.ts";
 
 export interface Account {
   id: number;
@@ -140,6 +141,8 @@ export interface BattleResult {
   rewards: { coins: number; gems: number; trophies: number };
   newBest: boolean;
   wave: number;
+  /** Leagues reached for the first time; their rewards are already in the profile. */
+  promotions: Promotion[];
 }
 
 export interface BattleStats {

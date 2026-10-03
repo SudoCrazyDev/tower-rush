@@ -9,6 +9,7 @@ import { ArenasPage } from "./pages/Arenas";
 import { ShopPage } from "./pages/Shop";
 import { HeroesPage } from "./pages/Heroes";
 import { DailyPage } from "./pages/Daily";
+import { LeaguesPage } from "./pages/Leagues";
 import { EconomyPage } from "./pages/Economy";
 import { VersionsPage } from "./pages/Versions";
 import { UsersPage, UserDetail } from "./pages/Users";
@@ -34,6 +35,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/shop", label: "Shop & prices" },
   { path: "/economy", label: "Economy" },
   { path: "/daily", label: "Daily & quests" },
+  { path: "/leagues", label: "Leagues" },
   { path: "/versions", label: "Versions" },
   { path: "/users", label: "Players", group: "People" },
   { path: "/admins", label: "Admins" },
@@ -137,6 +139,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     case "/bosses": page = <BossesPage />; break;
     case "/heroes": page = <HeroesPage />; break;
     case "/daily": page = <DailyPage />; break;
+    case "/leagues": page = <LeaguesPage />; break;
     case "/arenas": page = <ArenasPage />; break;
     case "/shop": page = <ShopPage />; break;
     case "/economy": page = <EconomyPage />; break;

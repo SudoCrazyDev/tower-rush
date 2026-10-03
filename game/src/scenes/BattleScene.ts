@@ -7,6 +7,9 @@ import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, maxPowerUp, powerUpCost, type Eleme
 import { ECONOMY } from "../../../shared/economy.ts";
 import { HERO_BY_ID, type HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
+import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
+import { rewardPopup } from "./daily";
+import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, type BattleResult } from "../save";
 import { music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast } from "../ui";
@@ -1165,12 +1168,13 @@ export class BattleScene extends Phaser.Scene {
     music(null);
     const stats = { wave: this.wave, kills: this.kills, bosses: this.bossesKilled, ...this.counts };
     const doneBefore = new Set(profile.daily.quests.filter(questDone).map((q) => q.id));
+    const leagueBefore = leagueFor(profile.trophies);
     const result: Promise<BattleResult | null> = this.battleId
       .then((id) => (id === null ? null : finishBattle(id, stats)))
       .catch(() => null);
 
     this.time.delayedCall(500, () => {
-      const m = modal(this, 600, 820, "");
+      const m = modal(this, 600, 900, "");
       const banner = this.add.image(m.cx, m.cy - 300, "ui:banner_defeat");
       banner.setScale(460 / banner.width);
       const headline = txt(this, m.cx, m.cy - 290, "GAME OVER", 40);
@@ -1179,7 +1183,18 @@ export class BattleScene extends Phaser.Scene {
       m.add(txt(this, m.cx, m.cy - 90, `${stats.kills} monsters  ·  ${stats.bosses} bosses`, 26, "#c9d2ff"));
       const saving = txt(this, m.cx, m.cy + 90, "Saving...", 36, "#c9d2ff");
       m.add(saving);
-      m.add(button(this, m.cx, m.cy + 320, 360, 100, "CONTINUE", "green", () => this.scene.start("Lobby")));
+      // Promotion rewards are shown one after another before going back to the lobby.
+      let promotions: BattleResult["promotions"] = [];
+      const next = () => {
+        const p = promotions.shift();
+        if (!p) return void this.scene.start("Lobby");
+        const name = LEAGUES.find((l) => l.id === p.league)?.name ?? p.league;
+        rewardPopup(this, `${name.toUpperCase()} REWARD`, p, next);
+      };
+      m.add(button(this, m.cx, m.cy + 370, 360, 100, "CONTINUE", "green", () => {
+        if (promotions.length) m.destroy();
+        next();
+      }));
 
       result.then((r) => {
         if (!m.active) return;
@@ -1214,6 +1229,15 @@ export class BattleScene extends Phaser.Scene {
           m.add(txt(this, m.cx, m.cy + 232, `Quest complete: ${questText(finished[0])}${more}`, 24, "#7dff7a").setWordWrapWidth(540));
           sfx("upgrade");
         }
+        // League change: promoted (with rewards to show) or dropped back down.
+        const league = leagueFor(profile.trophies);
+        if (league.id !== leagueBefore.id) {
+          const up = league.trophies > leagueBefore.trophies;
+          const line = txt(this, m.cx + 30, m.cy + 285, up ? `PROMOTED TO ${league.name.toUpperCase()}!` : `Dropped to ${league.name}`, up ? 30 : 26, up ? league.color : "#ff8080");
+          m.add([line, leagueBadge(this, line.x - line.width / 2 - 36, m.cy + 285, 56, league)]);
+          if (up) sfx("win");
+        }
+        promotions = [...r.promotions];
       });
     });
   }
