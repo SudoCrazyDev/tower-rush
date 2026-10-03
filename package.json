@@ -1,0 +1,14 @@
+{
+  "name": "tower-rush",
+  "private": true,
+  "scripts": {
+    "setup": "npm install && npm --prefix server install && npm --prefix game install && npm --prefix admin install && npm --prefix game run assets",
+    "dev": "concurrently -n server,game,admin -c yellow,green,blue \"npm --prefix server run dev\" \"npm --prefix game run dev\" \"npm --prefix admin run dev\"",
+    "build": "npm --prefix game run build && npm --prefix admin run build",
+    "start": "npm --prefix server start",
+    "typecheck": "npm --prefix server run typecheck && cd game && npx tsc --noEmit && cd ../admin && npx tsc --noEmit"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

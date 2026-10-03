@@ -1,0 +1,188 @@
+import Phaser from "phaser";
+import { BASE, ICON } from "../assets";
+import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
+import { profile, account, setArena, signOut, loadMe } from "../save";
+import { utcDay } from "../../../shared/daily.ts";
+import { dailyCounts, loginModal, questsModal } from "./daily";
+import { showAuth } from "../authOverlay";
+import { music } from "../audio";
+import { ambientVideo, coverFit } from "../backdrop";
+import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, attempt, pressable, badge } from "../ui";
+
+/** The login reward pops up by itself once per session. */
+let loginShown = false;
+/** Day we last re-fetched the profile for (quests roll over at UTC midnight). */
+let refreshedFor = "";
+
+/** Full-screen background that covers the canvas, with its ambient loop on top if it has one. */
+export function cover(scene: Phaser.Scene, key: string, dim = 0, loop?: string) {
+  const bg = scene.add.image(W / 2, H / 2, key);
+  bg.setScale(Math.max(W / bg.width, H / bg.height));
+  if (loop) ambientVideo(scene, loop, coverFit(W, H));
+  if (dim) scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, dim);
+  return bg;
+}
+
+export function topBar(scene: Phaser.Scene) {
+  const g = scene.add.graphics();
+  g.fillStyle(NAVY, 0.6).fillRect(0, 0, W, 76);
+  // Right-aligned on wide screens, spread across the top on phones.
+  const x0 = WIDE ? W - 820 : 0;
+  resourcePill(scene, x0 + 120, 38, "item:coins", fmt(profile.coins), 200);
+  resourcePill(scene, x0 + 350, 38, "item:gems", fmt(profile.gems), 180);
+  resourcePill(scene, x0 + 580, 38, "item:trophy", fmt(profile.trophies), 190);
+}
+
+export class LobbyScene extends Phaser.Scene {
+  private arena!: ArenaDef;
+
+  constructor() {
+    super("Lobby");
+  }
+
+  create() {
+    music("lobby");
+    const unlocked = arenaForTrophies(profile.trophies);
+    const chosen = profile.arena ? ARENA_BY_ID[profile.arena] : null;
+    this.arena = chosen && chosen.trophies <= profile.trophies ? chosen : unlocked;
+
+    cover(this, WIDE ? "loc:lobby_landscape" : "loc:lobby_portrait", 0, WIDE ? "lobby_landscape" : "lobby_portrait");
+    topBar(this);
+    iconButton(this, W - 44, 120, "settings", 70, () => this.settings());
+
+    // Wide: logo on the left, arena in the middle, deck on the right. Phone: stacked.
+    const side = W * 0.2;
+    const logoPos = WIDE ? [side, 330] : [W / 2, 250];
+    const logo = this.add.image(logoPos[0], logoPos[1], "ui:logo").setScale(WIDE ? 1 : 0.78);
+    this.tweens.add({ targets: logo, y: logoPos[1] + 12, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
+    if (WIDE) txt(this, side, 620, `Welcome, ${account.name}!`, 40, "#fff4c2");
+
+    this.drawArenaCard();
+
+    // Deck preview.
+    const deckX = WIDE ? W - side : W / 2;
+    const deckY = WIDE ? 420 : 1340;
+    const gap = WIDE ? Math.min(140, (side * 2 - 40) / 5) : 140;
+    txt(this, deckX, deckY - 90, "YOUR DECK", 30, "#fff4c2");
+    profile.deck.forEach((id, i) =>
+      cardView(this, deckX + (i - 2) * gap, deckY, Math.min(120, gap - 12), id, { level: profile.cards[id].level }),
+    );
+
+    this.lobbyTiles(side);
+
+    if (WIDE) {
+      button(this, deckX, 640, 340, 110, "DECK", "blue", () => this.scene.start("Deck"));
+      button(this, deckX, 790, 340, 110, "SHOP", "green", () => this.scene.start("Shop"));
+    } else {
+      button(this, 200, 1530, 300, 110, "DECK", "blue", () => this.scene.start("Deck"));
+      button(this, 552, 1530, 300, 110, "SHOP", "green", () => this.scene.start("Shop"));
+    }
+  }
+
+  /** Daily reward, quests and leaderboard buttons (with a badge when something can be claimed). */
+  private lobbyTiles(side: number) {
+    // The game was left open past UTC midnight: fetch the new day's quests.
+    const today = utcDay();
+    if (profile.daily.day !== today && refreshedFor !== today) {
+      refreshedFor = today;
+      loadMe().then(() => this.sys.isActive() && this.scene.restart(), () => {});
+    }
+    const counts = dailyCounts();
+    const size = WIDE ? 150 : 104;
+    const at: [number, number][] = WIDE ? [[side - 95, 800], [side + 95, 800], [side, 1010]] : [[66, 160], [66, 300], [W - 66, 290]];
+    const done = () => this.scene.restart();
+    const tile = ([x, y]: [number, number], icon: string, label: string, count: string | null, open: () => void) => {
+      const img = this.add.image(x, y, icon);
+      img.setScale(size / Math.max(img.width, img.height));
+      pressable(img, open);
+      txt(this, x, y + size * 0.62, label, WIDE ? 26 : 20, "#fff4c2");
+      if (count) badge(this, x + size * 0.36, y - size * 0.36, count);
+    };
+    tile(at[0], "ui:icon_daily_login", "DAILY", counts.login ? "!" : null, () => loginModal(this, done));
+    tile(at[1], "ui:icon_quests", "QUESTS", counts.quests ? String(counts.quests) : null, () => questsModal(this, done));
+    tile(at[2], `icon:${ICON.ranks}`, "RANKS", null, () => this.scene.start("Leaderboard"));
+    if (counts.login && !loginShown) {
+      loginShown = true;
+      this.time.delayedCall(400, () => loginModal(this, done));
+    }
+  }
+
+  private drawArenaCard() {
+    const a = this.arena;
+    const key = `loc:arena_${a.id}`;
+    const y = WIDE ? 680 : 760;
+    const group = this.add.container(W / 2, y);
+    const frame = this.add.graphics();
+    frame.fillStyle(NAVY, 0.85).fillRoundedRect(-300, -330, 600, 660, 36);
+    frame.lineStyle(8, 0xf2b630, 1).strokeRoundedRect(-300, -330, 600, 660, 36);
+    group.add(frame);
+
+    const show = () => {
+      // Show the middle of the arena (the board) inside the card window.
+      const img = this.add.image(0, 0, key);
+      const s = 540 / img.width;
+      img.setScale(s).setCrop(0, 380, img.width, 470 / s);
+      img.setY(-320 - 380 * s + (img.height * s) / 2);
+      group.addAt(img, 1);
+    };
+    if (this.textures.exists(key)) show();
+    else {
+      this.load.image(key, `${BASE}locations/arena_${a.id}.webp`);
+      this.load.once("complete", show);
+      this.load.start();
+    }
+
+    const idx = ARENAS.indexOf(a);
+    group.add(txt(this, 0, -290, `ARENA ${idx + 1}`, 28, "#ffd27a"));
+    group.add(txt(this, 0, 190, a.name, 46));
+    group.add(txt(this, 0, 240, `Best wave: ${profile.bestWave}`, 26, "#c9d2ff"));
+    group.add(button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.scene.start("Battle", { arena: a.id }), 54));
+
+    const step = (d: number) => {
+      const next = ARENAS[idx + d];
+      if (!next) return;
+      if (next.trophies > profile.trophies) {
+        this.toast(`Unlocks at ${next.trophies} trophies`);
+        return;
+      }
+      attempt(this, () => setArena(next.id)).then((ok) => ok && this.scene.restart());
+    };
+    if (idx > 0) group.add(iconButton(this, -250, -60, "back", 76, () => step(-1)));
+    if (idx < ARENAS.length - 1) {
+      const fwd = iconButton(this, 250, -60, "back", 76, () => step(1)).setFlipX(true);
+      if (ARENAS[idx + 1].trophies > profile.trophies) fwd.setTint(0x777777);
+      group.add(fwd);
+    }
+  }
+
+  private toast(msg: string) {
+    const t = txt(this, W / 2, 1180, msg, 32, "#ffb0b0").setDepth(100);
+    this.tweens.add({ targets: t, alpha: 0, delay: 1200, duration: 300, onComplete: () => t.destroy() });
+  }
+
+  private settings() {
+    const m = modal(this, 600, 780, "SETTINGS", () => {});
+    const { cx, cy } = m;
+    m.add(txt(this, cx, cy - 280, account.name, 40, "#fff4c2"));
+    m.add(txt(this, cx, cy - 230, account.isGuest ? "Guest account" : `Signed in as ${account.username}`, 24, "#c9d2ff"));
+    m.add(audioButtons(this, cx, cy - 130));
+    m.add(txt(this, cx, cy - 40, "Drag matching units to merge.\nSPACE summons, H uses your hero,\nD shows the path overlay.", 22, "#ffffff"));
+    if (account.isGuest) {
+      m.add(txt(this, cx, cy + 50, "Create an account so you\ndon't lose your progress.", 24, "#ffd27a"));
+      m.add(
+        button(this, cx, cy + 150, 400, 96, "SAVE PROGRESS", "green", async () => {
+          m.close();
+          if (await showAuth({ mode: "register", canClose: true })) this.scene.restart();
+        }, 34),
+      );
+    }
+    m.add(
+      button(this, cx, cy + 280, 400, 96, account.isGuest ? "SWITCH ACCOUNT" : "SIGN OUT", "red", async () => {
+        m.close();
+        await signOut().catch(() => {});
+        // Re-run boot, which shows the sign-in screen.
+        location.reload();
+      }, 34),
+    );
+  }
+}

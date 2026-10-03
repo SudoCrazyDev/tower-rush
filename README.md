@@ -1,0 +1,72 @@
+# Tower Rush
+
+A merge tower-defense web game (Rush Royale-style) with a server for player accounts
+and an admin panel for balancing the game and managing players.
+
+| Folder | What | Dev URL |
+|---|---|---|
+| `game/` | The game: Phaser 3 + TypeScript + Vite ([game/README.md](game/README.md)) | http://localhost:5173 |
+| `admin/` | Admin panel: React + Vite | http://localhost:5174/admin/ |
+| `server/` | API + database: Node 24 + Express + built-in SQLite | http://localhost:8787 |
+| `shared/` | Game data and rules used by all three (units, monsters, arenas, economy, config validation) | |
+| `assets/` | The generated art pack, source files ([assets/README.md](assets/README.md)) | |
+
+## Quick start
+
+Needs Node 24+ and Python 3 with Pillow/numpy (only for the asset conversion).
+
+    npm run setup   # installs all three apps and converts the art into game/public/assets
+    npm run dev     # starts server, game and admin together
+
+The first time the server starts it creates an admin account named `admin` with a random
+password, written to `server/data/admin-credentials.txt`. Sign in at
+http://localhost:5174/admin/, add your own admin or change the password on the
+**Admins** page, then delete that file. To pick the first password yourself instead, copy
+`server/.env.example` to `server/.env` and set `ADMIN_PASSWORD` before the first start.
+
+## How the pieces fit
+
+- **Game config.** All balance numbers live in one JSON document: every unit's damage,
+  speed, rarity, element and archetype; every monster's and boss's HP and speed; arena
+  unlocks and monster pools; hero abilities and prices; chest prices and drop odds; the daily login
+  calendar and quest pool; the economy (mana, wave scaling,
+  rewards, upgrade costs, starter deck). Defaults come from `shared/`. The server stores
+  every published version in the database, and the game downloads the live one when it starts.
+- **Admin panel.** Edit anything on the balance pages; changes are highlighted and
+  collected into a draft. **Publish** validates the draft and makes it live as a new
+  version (players get it on their next load). **Versions** lets you restore, export or
+  import any version, or reset to defaults.
+- **Players.** The game signs players in as guests automatically. Guests can create an
+  account (username + password) from Settings and keep their progress. All progress lives
+  on the server, which also does every purchase, card upgrade and chest roll, so players
+  can't edit their own gold. Battles run in the browser; the server caps the reported
+  wave to what's possible in the elapsed time and calculates the rewards itself.
+- **Player management.** Search players, edit gold/gems/trophies, give or remove cards,
+  ban/unban with a reason, reset progress, set a password, sign them out everywhere, or
+  delete them. Every admin action is recorded in the **Audit log**.
+
+## Production
+
+    npm run build   # builds game/dist and admin/dist
+    npm start       # one server: game at /, admin at /admin, API at /api
+
+The database is `server/data/tower-rush.db` (SQLite). Back up that folder. Put the
+server behind HTTPS (e.g. a reverse proxy) before exposing it publicly, since passwords
+and session tokens travel in requests.
+
+## API overview
+
+Player endpoints (`/api`, Bearer token from the auth calls):
+`GET /config` · `POST /auth/guest | /auth/login | /auth/register | /auth/logout` ·
+`GET /me` · `PUT /me/deck | /me/arena | /me/name | /me/hero` · `POST /cards/:id/upgrade` ·
+`POST /heroes/:id/buy` ·
+`POST /shop/chests/:id/buy` · `POST /shop/gift` · `POST /daily/login` ·
+`POST /daily/quests/:id/claim` · `POST /daily/bonus` · `POST /battles` ·
+`POST /battles/:id/finish` · `GET /leaderboard?by=trophies|wave`
+
+Admin endpoints (`/api/admin`, Bearer token from `POST /login`):
+`GET /stats` · `GET|PUT /config` · `GET /config/versions[/:id]` ·
+`POST /config/versions/:id/restore` · `POST /config/reset` · `GET /users` ·
+`GET|PATCH|DELETE /users/:id` · `PUT|DELETE /users/:id/cards/:card` ·
+`POST /users/:id/ban | unban | reset | password | logout` · `GET|POST /admins` ·
+`DELETE /admins/:id` · `POST /me/password` · `GET /audit`
