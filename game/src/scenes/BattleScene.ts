@@ -15,7 +15,7 @@ import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, type BattleResult } from "../save";
 import { music, sfx } from "../audio";
-import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast } from "../ui";
+import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT } from "../ui";
 import { Monster } from "../battle/Monster";
 import { Unit, canAwaken } from "../battle/Unit";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
@@ -291,7 +291,7 @@ export class BattleScene extends Phaser.Scene {
       const [x, y] = WIDE ? [R + ((i < 3 ? i - 1 : i - 3.5) * 165), i < 3 ? 250 : 450] : [76 + i * 150, ARENA_H + 66];
       const def = UNIT_BY_ID[id];
       const frame = this.add.image(0, 0, `card:frame_${def.rarity}`).setDisplaySize(104, 104);
-      const portrait = this.add.image(0, 0, `portrait:${id}`).setDisplaySize(84, 84);
+      const portrait = this.add.image(0, 0, `portrait:${id}`).setDisplaySize(104 * PORTRAIT_FIT, 104 * PORTRAIT_FIT);
       const pips = this.add.graphics();
       const costBg = this.add.graphics();
       costBg.fillStyle(NAVY, 0.9).fillRoundedRect(-50, 52, 100, 32, 16);
@@ -367,7 +367,7 @@ export class BattleScene extends Phaser.Scene {
     const glow = this.add.graphics();
     glow.fillStyle(0xffd93b, 0.55).fillCircle(0, 0, size * 0.62);
     const frame = this.add.image(0, 0, "card:frame_legendary").setDisplaySize(size, size);
-    const portrait = this.add.image(0, 0, `hero_portrait:${h.id}`).setDisplaySize(size * 0.8, size * 0.8);
+    const portrait = this.add.image(0, 0, `hero_portrait:${h.id}`).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
     const pie = this.add.graphics();
     const time = txt(this, 0, 0, "", Math.round(size * 0.34));
     const parts: Phaser.GameObjects.GameObject[] = [glow, frame, portrait, pie, time];

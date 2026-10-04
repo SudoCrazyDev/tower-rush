@@ -104,6 +104,9 @@ export function resourcePill(scene: Phaser.Scene, x: number, y: number, icon: st
   return Object.assign(c, { text: t });
 }
 
+/** Portrait size as a share of the card frame: fills the frame's inner window without covering its border. */
+export const PORTRAIT_FIT = 0.68;
+
 /** A unit card: rarity frame + portrait, with optional level and dimmed state. */
 export function cardView(
   scene: Phaser.Scene,
@@ -116,7 +119,7 @@ export function cardView(
   const def = UNIT_BY_ID[id];
   const frame = scene.add.image(0, 0, `card:frame_${opts.awakened ? "mythic" : def.rarity}`).setDisplaySize(size, size);
   const art = opts.awakened && scene.textures.exists(`portrait_awakened:${id}`) ? `portrait_awakened:${id}` : `portrait:${id}`;
-  const portrait = scene.add.image(0, 0, art).setDisplaySize(size * 0.8, size * 0.8);
+  const portrait = scene.add.image(0, 0, art).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
   const parts: Phaser.GameObjects.GameObject[] = [frame, portrait];
   // Element gem in the corner.
   const gem = scene.add.graphics();
@@ -145,7 +148,7 @@ export function cardView(
 /** A hero card: gold frame + hero portrait, optionally locked. */
 export function heroCardView(scene: Phaser.Scene, x: number, y: number, size: number, id: string, opts: { locked?: boolean; name?: string } = {}) {
   const frame = scene.add.image(0, 0, "card:frame_legendary").setDisplaySize(size, size);
-  const portrait = scene.add.image(0, 0, `hero_portrait:${id}`).setDisplaySize(size * 0.8, size * 0.8);
+  const portrait = scene.add.image(0, 0, `hero_portrait:${id}`).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
   const parts: Phaser.GameObjects.GameObject[] = [frame, portrait];
   if (opts.name) parts.push(txt(scene, 0, size * 0.58, opts.name, Math.round(size * 0.12), "#ffffff"));
   if (opts.locked) {

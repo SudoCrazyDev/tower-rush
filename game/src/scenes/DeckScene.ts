@@ -110,6 +110,7 @@ export class DeckScene extends Phaser.Scene {
   private hint!: Phaser.GameObjects.Text;
   private view!: ScrollView;
   private slots: Phaser.GameObjects.Image[] = [];
+  private deckCards: Phaser.GameObjects.Container[] = [];
   private statusChips: { id: Status; paint: (on: boolean) => void }[] = [];
   private elementChips: { id: Element; paint: (on: boolean, dim: boolean) => void }[] = [];
 
@@ -121,6 +122,7 @@ export class DeckScene extends Phaser.Scene {
     music("lobby");
     this.swapping = null;
     this.slots = [];
+    this.deckCards = [];
     this.statusChips = [];
     this.elementChips = [];
     saloonAmbience(this, "loc:deck_room_background", [[0.15, 0.12], [0.85, 0.12], [0.5, 0.42]], undefined, 0.38);
@@ -186,6 +188,7 @@ export class DeckScene extends Phaser.Scene {
       pressable(c, () => this.tapDeckSlot(i));
       c.on("pointerover", () => this.tweens.add({ targets: c, y: cardY - 6, duration: 120 }));
       c.on("pointerout", () => this.tweens.add({ targets: c, y: cardY, duration: 140 }));
+      this.deckCards.push(c);
     });
     this.hint = stxt(this, cx, barY + 20, "Tap a card to see it", WIDE ? 24 : 22, TAN);
   }
@@ -519,6 +522,22 @@ export class DeckScene extends Phaser.Scene {
             halo.setTint(0x7dff7a);
             this.tweens.add({ targets: halo, alpha: 0.75, scale: 0.9, yoyo: true, repeat: -1, duration: 450, ease: "Sine.InOut" });
           }
+          // The deck cards wiggle in a wave so it's obvious they're waiting to be tapped.
+          this.deckCards.forEach((c, i) => {
+            this.tweens.add({ targets: c, scale: 1.08, yoyo: true, repeat: -1, duration: 450, ease: "Sine.InOut", delay: i * 90 });
+            this.tweens.chain({
+              targets: c,
+              delay: i * 90,
+              loop: -1,
+              loopDelay: 700,
+              tweens: [
+                { angle: -6, duration: 70 },
+                { angle: 6, duration: 110 },
+                { angle: -4, duration: 100 },
+                { angle: 0, duration: 80 },
+              ],
+            });
+          });
         }),
       );
     }
