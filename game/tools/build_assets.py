@@ -55,13 +55,41 @@ def fit(src, dst, size):
     save(im, dst)
 
 
-def sheet(src, dst, frame):
+# Clips whose smoke, splash or wings run off the edge of the source video, which shows
+# in game as a straight cut-off line. Feathered clips fade out toward the frame edge.
+FEATHER = {
+    "bosses/fire_dragon_intro",
+    "bosses/frost_wyrm_death",
+    "bosses/kraken_attack",
+    "bosses/lich_king_intro",
+    "bosses/stone_colossus_attack",
+}
+# HD clips cut off like that whose SD version is clean: the HD sheet is built from the SD one.
+HD_USE_SD = {"bosses/sand_pharaoh_walk", "bosses/demon_lord_attack"}
+# Clips boxed in with no clean stretch (fog or water fills the frame): the game skips them.
+BOXED = {"bosses/ghost_pirate_captain_intro", "bosses/kraken_intro"}
+
+
+def feather(im, width=0.12):
+    """Fade alpha to zero over the outer `width` of every frame."""
+    a = np.asarray(im).copy()
+    fr = a.shape[0]
+    ramp = np.clip(np.minimum(np.arange(fr), np.arange(fr)[::-1]) / (fr * width), 0, 1)
+    ramp = ramp * ramp * (3 - 2 * ramp)  # smoothstep
+    mask = np.minimum.outer(ramp, ramp)
+    a[..., 3] = (a[..., 3] * np.tile(mask, (1, a.shape[1] // fr))).astype(np.uint8)
+    return Image.fromarray(a)
+
+
+def sheet(src, dst, frame, soft=False):
     """Resize a 16-frame horizontal sheet so each square frame is `frame` px."""
     if not need(dst):
         return
     im = Image.open(src).convert("RGBA")
     n = im.width // im.height
     im = im.resize((frame * n, frame), Image.LANCZOS)
+    if soft:
+        im = feather(im)
     save(im, dst, 80)
 
 
@@ -152,7 +180,7 @@ for folder, frame in FRAME.items():
     names = sorted(os.path.basename(p)[: -len("_sheet.png")] for p in glob.glob(f"{SRC}/sprites/{folder}/*_sheet.png"))
     index["anims"][folder] = names
     for n in names:
-        jobs.append(lambda f=folder, n=n, fr=frame: sheet(f"{SRC}/sprites/{f}/{n}_sheet.png", f"{OUT}/sheets/{f}/{n}.webp", fr))
+        jobs.append(lambda f=folder, n=n, fr=frame: sheet(f"{SRC}/sprites/{f}/{n}_sheet.png", f"{OUT}/sheets/{f}/{n}.webp", fr, f"{f}/{n}" in FEATHER))
 index["frameSize"] = dict(FRAME)
 
 # HD sheets for big/high-DPI screens (the game picks them when it renders above 1x).
@@ -165,9 +193,10 @@ hd_source = {}  # "<folder>_hd/<name>" -> source sheet path
 def hd_sheet(folder, n, frame):
     hd = f"{SRC}/sprites/{folder}_hd/{n}_sheet.png"
     sd = f"{SRC}/sprites/{folder}/{n}_sheet.png"
-    clean = os.path.exists(hd) and (f"{folder}/{n}" in HAZY_OK or border_score(hd) <= 0.5)
+    key = f"{folder}/{n}"
+    clean = os.path.exists(hd) and key not in HD_USE_SD and (key in HAZY_OK or border_score(hd) <= 0.5)
     hd_source[f"{folder}_hd/{n}"] = hd if clean else sd
-    sheet(hd_source[f"{folder}_hd/{n}"], f"{OUT}/sheets/{folder}_hd/{n}.webp", frame)
+    sheet(hd_source[f"{folder}_hd/{n}"], f"{OUT}/sheets/{folder}_hd/{n}.webp", frame, key in FEATHER)
 
 
 for folder, frame in HD_FRAME.items():
@@ -250,8 +279,9 @@ if __name__ == "__main__":
         for n in index["anims"][folder]
         if f"{folder}/{n}" not in HAZY_OK and border_score(f"{SRC}/sprites/{folder}/{n}_sheet.png") > 0.5
     ]
+    index["hazy"] += sorted(BOXED - set(index["hazy"]))
     # An HD sheet is only as clean as its source.
-    index["hazy"] += [k for k, src in sorted(hd_source.items()) if "_hd/" not in src and k.replace("_hd/", "/") in index["hazy"]]
+    index["hazy"] += [k for k, src in sorted(hd_source.items()) if ("_hd/" not in src or k.replace("_hd/", "/") in BOXED) and k.replace("_hd/", "/") in index["hazy"]]
     with open(f"{OUT}/index.json", "w") as fh:
         json.dump(index, fh, indent=1)
     total = sum(os.path.getsize(p) for p in glob.glob(f"{OUT}/**/*.webp", recursive=True))
