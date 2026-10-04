@@ -33,11 +33,13 @@ export function topBar(scene: Phaser.Scene) {
   g.fillStyle(NAVY, 0.6).fillRect(0, 0, W, 76);
   // Right-aligned on wide screens, spread across the top on phones.
   const x0 = WIDE ? W - 820 : 0;
-  resourcePill(scene, x0 + 120, 38, "item:coins", fmt(profile.coins), 200);
-  resourcePill(scene, x0 + 350, 38, "item:gems", fmt(profile.gems), 180);
+  const coins = resourcePill(scene, x0 + 120, 38, "item:coins", fmt(profile.coins), 200);
+  const gems = resourcePill(scene, x0 + 350, 38, "item:gems", fmt(profile.gems), 180);
   resourcePill(scene, x0 + 580, 38, "item:trophy", fmt(profile.trophies), 190);
   // League badge in the corner; tap it for the leagues list.
   pressable(leagueBadge(scene, W - 46, 38, 66, leagueFor(profile.trophies)), () => leagueModal(scene));
+  /** Re-read coins and gems after spending without rebuilding the scene. */
+  return { refresh: () => (coins.text.setText(fmt(profile.coins)), gems.text.setText(fmt(profile.gems))) };
 }
 
 /** The running event (soonest to end), as a pill in the top bar (wide) or above the shop button (phone). Tap for the shop. */

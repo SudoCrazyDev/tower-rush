@@ -111,6 +111,9 @@ export class DeckScene extends Phaser.Scene {
   private view!: ScrollView;
   private slots: Phaser.GameObjects.Image[] = [];
   private deckCards: Phaser.GameObjects.Container[] = [];
+  /** Set after an upgrade; closing the card dialog then rebuilds the scene to show the new levels. */
+  private upgraded = false;
+  private bar!: ReturnType<typeof topBar>;
   private statusChips: { id: Status; paint: (on: boolean) => void }[] = [];
   private elementChips: { id: Element; paint: (on: boolean, dim: boolean) => void }[] = [];
 
@@ -124,6 +127,7 @@ export class DeckScene extends Phaser.Scene {
     this.swapping = null;
     this.slots = [];
     this.deckCards = [];
+    this.upgraded = false;
     this.statusChips = [];
     this.elementChips = [];
     saloonAmbience(this, "loc:deck_room_background", [[0.15, 0.12], [0.85, 0.12], [0.5, 0.42]], undefined, 0.38);
@@ -147,7 +151,7 @@ export class DeckScene extends Phaser.Scene {
     }
 
     this.view = new ScrollView(this, listRect);
-    topBar(this);
+    this.bar = topBar(this);
     hangingSign(this, colX, "BATTLE DECK", "~ THE REGULARS' TABLE ~", WIDE ? 520 : 400, WIDE ? 124 : 104);
     iconButton(this, 50, 130, "back", 76, () => this.scene.start("Lobby"));
 
@@ -431,13 +435,22 @@ export class DeckScene extends Phaser.Scene {
     this.scene.restart();
   }
 
-  private showCard(id: string) {
+  /** `celebrate` reopens the dialog in place after an upgrade, with a level-up burst. */
+  private showCard(id: string, celebrate = false) {
     const def = UNIT_BY_ID[id];
     const owned = profile.cards[id];
-    const m = modal(this, 640, 980, def.name, () => {});
+    const m = modal(this, 640, 980, def.name, () => {
+      if (this.upgraded) this.scene.restart();
+    });
     const { cx, cy } = m;
     const card = cardView(this, cx, cy - 270, 260, id, { level: owned?.level, locked: !owned });
     m.add(card);
+    if (celebrate) {
+      // Skip the dialog's pop-in: it's the same dialog, refreshed.
+      this.tweens.killTweensOf(m);
+      m.setScale(1).setAlpha(1).setPosition(0, 0);
+      this.levelUpBurst(m, card);
+    }
     // Awakened form: a small preview to the side; tap either card to flip between them.
     if (canAwaken(id) && this.textures.exists(`portrait_awakened:${id}`)) {
       const awake = cardView(this, cx, cy - 270, 260, id, { awakened: true, locked: !owned }).setVisible(false);
@@ -487,6 +500,11 @@ export class DeckScene extends Phaser.Scene {
       p.label.setX(x + 68);
       x += pairW(p) + gap;
       m.add([p.img, p.label]);
+      if (celebrate && def.arch !== "buff") {
+        p.label.setColor("#7dff7a");
+        this.tweens.add({ targets: p.label, scale: 1.25, yoyo: true, duration: 220, delay: 250, ease: "Quad.Out" });
+        this.time.delayedCall(1400, () => p.label.active && p.label.setColor("#ffffff"));
+      }
     }
 
     if (!owned) {
@@ -501,8 +519,17 @@ export class DeckScene extends Phaser.Scene {
       const up = button(this, cx, cy + 230, 400, 100, `UPGRADE  ${fmt(cost.coins)}`, "yellow", () => {
         up.setEnabled(false);
         attempt(this, () => upgradeCard(id)).then((ok) => {
-          if (ok) sfx("upgrade");
-          this.scene.restart();
+          if (!this.sys.isActive()) return;
+          if (!ok) {
+            up.setEnabled(canUpgrade(id));
+            return;
+          }
+          sfx("upgrade");
+          this.upgraded = true;
+          this.bar.refresh();
+          // Rebuild the dialog with the new level so they can keep upgrading.
+          m.destroy();
+          this.showCard(id, true);
         });
       }, 36);
       up.setEnabled(canUpgrade(id));
@@ -545,5 +572,41 @@ export class DeckScene extends Phaser.Scene {
         }),
       );
     }
+  }
+
+  /** Glow, sparks, a card pop and a "LEVEL UP!" banner over the card in the dialog. */
+  private levelUpBurst(m: ReturnType<typeof modal>, card: Phaser.GameObjects.Container) {
+    const { x, y } = card;
+    const glow = this.add.image(x, y, GLOW).setTint(0xffd93b).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6);
+    m.add(glow);
+    m.moveBelow<Phaser.GameObjects.GameObject>(glow, card);
+    this.tweens.add({ targets: glow, scale: 2.6, alpha: 0, duration: 750, ease: "Cubic.Out", onComplete: () => glow.destroy() });
+
+    const sparks = this.add.particles(x, y, "saloon_mote", {
+      speed: { min: 220, max: 560 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 500, max: 850 },
+      scale: { start: 1.6, end: 0 },
+      tint: [0xffd93b, 0xffffff, 0x7dff7a],
+      blendMode: "ADD",
+      emitting: false,
+    });
+    m.add(sparks);
+    sparks.explode(36);
+    this.time.delayedCall(1000, () => sparks.destroy());
+
+    card.setScale(1.3);
+    this.tweens.add({ targets: card, scale: 1, duration: 420, ease: "Back.Out" });
+
+    const banner = txt(this, x, y + 40, "LEVEL UP!", 60, "#ffd93b").setScale(0);
+    m.add(banner);
+    this.tweens.chain({
+      targets: banner,
+      tweens: [
+        { scale: 1.15, y, duration: 260, ease: "Back.Out" },
+        { scale: 1, duration: 120 },
+        { alpha: 0, y: y - 40, delay: 700, duration: 300, onComplete: () => banner.destroy() },
+      ],
+    });
   }
 }
