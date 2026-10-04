@@ -239,7 +239,7 @@ export class PvpScene extends Phaser.Scene {
 
   /** HUD objects stay put while the battle camera scrolls. */
   private hud<T extends Phaser.GameObjects.GameObject & { setScrollFactor(x: number): T }>(o: T): T {
-    o.setScrollFactor(0);
+    pin(o);
     return o;
   }
 
@@ -1121,6 +1121,25 @@ export class PvpScene extends Phaser.Scene {
       }
     }));
   }
+}
+
+/**
+ * Scroll factor 0 for an object and, in a container, everything inside it, now and when
+ * added later. Phaser draws a container's children with the container's scroll factor but
+ * hit-tests each child with its own, so a nested button would miss its clicks on the wide
+ * layout, where the main camera is scrolled.
+ */
+function pin(o: Phaser.GameObjects.GameObject) {
+  (o as unknown as { setScrollFactor?: (x: number) => void }).setScrollFactor?.(0);
+  if (!(o instanceof Phaser.GameObjects.Container) || o.getData("pinned")) return;
+  o.setData("pinned", true);
+  o.list.forEach(pin);
+  const box = o as unknown as { addHandler: (child: Phaser.GameObjects.GameObject) => void };
+  const add = box.addHandler;
+  box.addHandler = function (child) {
+    add.call(this, child);
+    pin(child);
+  };
 }
 
 function loadAutoCast() {
