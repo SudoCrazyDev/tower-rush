@@ -11,6 +11,7 @@ import { leagueFor } from "../../../shared/leagues.ts";
 import { showAuth } from "../authOverlay";
 import { music } from "../audio";
 import { bakeAll } from "../bake";
+import { pointAt, tutorialDue } from "../tutorial";
 import { ambientVideo, coverFit } from "../backdrop";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, attempt, pressable, badge } from "../ui";
 
@@ -120,6 +121,9 @@ export class LobbyScene extends Phaser.Scene {
     eventStrip(this);
     // Static shapes become cached images (see bake.ts).
     bakeAll(this);
+    // New players: point at the first battle, then at the deck once it's done.
+    if (tutorialDue("battle")) pointAt(this, { x: W / 2, y: (WIDE ? 680 : 760) + 330 }, "down", "START HERE!", 80);
+    else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: 140, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
   }
 
   /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */

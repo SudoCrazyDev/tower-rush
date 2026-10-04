@@ -18,6 +18,7 @@ import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, type BattleResult } from "../save";
 import { music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT } from "../ui";
+import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
 import { Monster } from "../battle/Monster";
 import { Unit, canAwaken } from "../battle/Unit";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
@@ -126,6 +127,9 @@ export class BattleScene extends Phaser.Scene {
   private heroBtn: { root: Phaser.GameObjects.Container; pie: Phaser.GameObjects.Graphics; time: Phaser.GameObjects.Text; glow: Phaser.GameObjects.Graphics; r: number } | null = null;
   /** Cast the hero ability by itself whenever it is ready (remembered between battles). */
   private autoCast = loadAutoCast();
+  /** First-battle tutorial: waves wait while it runs, and its summons are chosen for it. */
+  private tutorialHold = false;
+  private tutorialPick: { id: string; slot: number } | null = null;
 
   constructor() {
     super("Battle");
@@ -162,6 +166,8 @@ export class BattleScene extends Phaser.Scene {
     this.heroSprite = null;
     this.heroBtn = null;
     this.awakenedRequested = new Set();
+    this.tutorialHold = false;
+    this.tutorialPick = null;
   }
 
   preload() {
@@ -219,6 +225,7 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.timeScale = 1;
     });
     this.refreshHud();
+    if (tutorialDue("battle")) this.runTutorial();
   }
 
   private makeAnims() {
@@ -607,10 +614,13 @@ export class BattleScene extends Phaser.Scene {
     this.mana -= this.summonCost;
     this.summonCost += ECONOMY.summonCostStep;
     this.counts.summons++;
-    const slot = empty[Math.floor(Math.random() * empty.length)];
-    const id = this.deck[Math.floor(Math.random() * this.deck.length)];
+    const pick = this.tutorialPick && !this.board[this.tutorialPick.slot] ? this.tutorialPick : null;
+    this.tutorialPick = null;
+    const slot = pick?.slot ?? empty[Math.floor(Math.random() * empty.length)];
+    const id = pick?.id ?? this.deck[Math.floor(Math.random() * this.deck.length)];
     this.spawnUnit(id, 1, slot);
     this.refreshHud();
+    this.events.emit("tutorial", "summon");
   }
 
   private spawnUnit(id: string, rank: number, slot: number) {
@@ -628,6 +638,80 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: u.sprite, scale: u.baseScale, duration: u.awakened ? 420 : 260, ease: "Back.Out" });
     this.recomputeBuffs();
     return u;
+  }
+
+  // ---------------------------------------------------------------- tutorial
+
+  /** The first battle teaches summon, merge and power-up before the first wave comes in. */
+  private runTutorial() {
+    this.tutorialHold = true;
+    const cam = this.cameras.main;
+    const screen = (p: Pt) => ({ x: p.x - cam.scrollX, y: p.y - cam.scrollY });
+    const y = WIDE ? H - 230 : 1090;
+    const [slotA, slotB] = [6, 8];
+    let merged: Unit | null = null;
+    let waitFor: string | null = null;
+    // Mana for the next step, so an early power-up or extra summons can't leave them stuck.
+    const topUp = (need: number) => this.mana < need && this.gainMana(need - this.mana);
+    const summonStep = (text: string, slot: number): CoachStep => {
+      topUp(this.summonCost);
+      this.tutorialPick = { id: this.deck[0], slot };
+      waitFor = "summon";
+      const b = this.summonBtn;
+      return { text, y, point: { x: b.x, y: b.y }, r: 62 * b.scaleY + 6 };
+    };
+    const c = coach(
+      this,
+      [
+        { text: "Monsters march along the path. Stop them before they reach the exit: each one that gets through costs a heart!", y, ok: "GOT IT" },
+        () => summonStep("Tap SUMMON to put a unit from your deck on the board. It costs mana, and the price goes up each time.", slotA),
+        () => summonStep("Nice! Summon one more.", slotB),
+        () => {
+          waitFor = "merge";
+          return { text: "Two of the same unit with the same rank? Drag one onto the other to MERGE them.", y, drag: [screen(this.slotPos(slotA)), screen(this.slotPos(slotB))] };
+        },
+        () => {
+          const u = merged!;
+          return {
+            text: "Merged! The new unit is one rank higher and hits much harder. It can turn into any card in your deck, so keep merging!",
+            y,
+            ok: "NEXT",
+            point: screen({ x: u.sprite.x, y: u.sprite.y - 20 }),
+            r: 56,
+          };
+        },
+        () => {
+          const id = merged?.def.id ?? this.deck[0];
+          const card = this.deckCards.find((d) => d.id === id) ?? this.deckCards[0];
+          topUp(powerUpCost(this.powerUps[card.id]));
+          waitFor = "powerup";
+          const name = UNIT_BY_ID[card.id].name;
+          return {
+            text: `Tap a deck card to POWER UP that unit. Every ${name} on the board gets stronger for the rest of this battle.`,
+            y,
+            point: { x: card.root.x, y: card.root.y },
+            r: 52 * card.root.scaleY + 12,
+          };
+        },
+        { text: `Each card can be powered up ${maxPowerUp()} times (the dots on top). Earn mana by beating monsters and clearing waves. Good luck!`, y, ok: "FIGHT!" },
+      ],
+      (skipped) => {
+        this.events.off("tutorial", on);
+        this.tutorialHold = false;
+        this.tutorialPick = null;
+        // Start the first wave with the usual mana, whatever the lessons spent.
+        topUp(ECONOMY.startMana);
+        if (!skipped) setTutorialDone("battle");
+      },
+    );
+    const on = (what: string, u?: Unit) => {
+      if (what !== waitFor) return;
+      waitFor = null;
+      if (u) merged = u;
+      // A beat to see the result before the next tip.
+      this.time.delayedCall(what === "merge" ? 500 : 250, c.next);
+    };
+    this.events.on("tutorial", on);
   }
 
   // ---------------------------------------------------------------- awakening
@@ -704,6 +788,7 @@ export class BattleScene extends Phaser.Scene {
     // Power-ups strengthen a buff unit's bonus too.
     if (UNIT_BY_ID[id]?.arch === "buff") this.recomputeBuffs();
     this.refreshHud();
+    this.events.emit("tutorial", "powerup");
   }
 
   private setupDrag() {
@@ -769,6 +854,7 @@ export class BattleScene extends Phaser.Scene {
     this.counts.merges++;
     this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 10, 150);
     this.refreshHud();
+    this.events.emit("tutorial", "merge", u);
   }
 
   /** Buff units speed up their four neighbours (more with card level and power-ups) and hand them their perk. */
@@ -1184,7 +1270,7 @@ export class BattleScene extends Phaser.Scene {
 
     // Wave flow.
     if (this.waveState === "intro") {
-      this.introTimer -= dt;
+      if (!this.tutorialHold) this.introTimer -= dt;
       if (this.introTimer <= 0) this.startWave();
     } else if (this.waveState === "spawning") {
       this.spawnTimer -= dt;
@@ -1246,6 +1332,8 @@ export class BattleScene extends Phaser.Scene {
   private endGame() {
     if (this.over) return;
     this.over = true;
+    // Left mid-tutorial (surrendered): it still only runs once.
+    if (this.tutorialHold) setTutorialDone("battle");
     music(null);
     const stats = { wave: this.wave, kills: this.kills, bosses: this.bossesKilled, ...this.counts };
     const doneBefore = new Set(profile.daily.quests.filter(questDone).map((q) => q.id));

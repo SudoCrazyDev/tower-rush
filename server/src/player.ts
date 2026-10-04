@@ -5,7 +5,7 @@ import { currentConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
-import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, type Profile } from "../../shared/profile.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, upgradeCost } from "../../shared/units.ts";
@@ -141,6 +141,17 @@ player.put("/me/hero", P, async (c) => {
         if (!HERO_BY_ID[id].enabled) fail(400, "That hero isn't available");
       }
       p.hero = id;
+    }),
+  );
+});
+
+/** Mark tutorial parts as done (finished or skipped) so they never run again. */
+player.post("/me/tutorial", P, async (c) => {
+  const parts = (await body(c)).parts;
+  if (!Array.isArray(parts) || !parts.length || !parts.every((x) => (TUTORIAL_PARTS as readonly unknown[]).includes(x))) fail(400, "Unknown tutorial part");
+  return c.json(
+    await update(c, (p) => {
+      p.tutorial = [...new Set([...(p.tutorial ?? []), ...(parts as string[])])];
     }),
   );
 });

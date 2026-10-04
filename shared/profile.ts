@@ -34,7 +34,12 @@ export interface Profile {
   leagues: string[];
   /** Shop offers bought so far, by offer id (for per-player limits). */
   offers: Record<string, number>;
+  /** Tutorial parts finished or skipped ("battle", "deck"); each one runs once per account. */
+  tutorial: string[];
 }
+
+export const TUTORIAL_PARTS = ["battle", "deck"] as const;
+export type TutorialPart = (typeof TUTORIAL_PARTS)[number];
 
 export function newProfile(): Profile {
   const cards: Record<string, CardState> = {};
@@ -55,6 +60,7 @@ export function newProfile(): Profile {
     login: { claims: 0, lastDay: "" },
     leagues: [],
     offers: {},
+    tutorial: [],
   };
 }
 

@@ -9,6 +9,7 @@ import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, raceBadge } from "../ui";
 import { topBar } from "./LobbyScene";
+import { coach, setTutorialDone, tutorialDue } from "../tutorial";
 import { music, sfx } from "../audio";
 import { bakeAll, bakedImage } from "../bake";
 import {
@@ -167,8 +168,30 @@ export class DeckScene extends Phaser.Scene {
     // Static shapes become cached images (see bake.ts); phones can't redraw them every frame.
     bakeAll(this);
     if (data?.show && UNIT_BY_ID[data.show]) this.showCard(data.show);
+    else if (tutorialDue("deck")) this.tour(colX);
     // Phaser keeps start data across restart(), which would reopen the card after every upgrade.
     this.sys.settings.data = {};
+  }
+
+  /** First visit after the battle tutorial: what the deck is, the collection, and upgrades. */
+  private tour(colX: number) {
+    const [x, y] = WIDE ? [colX, 1000] : [W / 2, 1250];
+    const mid = this.deckCards[2];
+    const rect = this.view.rect;
+    const cols = Math.max(3, Math.min(WIDE ? 12 : 4, Math.floor((rect.width - 40) / GAP_X)));
+    const first = { x: rect.centerX - (cols * GAP_X) / 2 + GAP_X / 2, y: rect.y + 136 + CARD / 2 + 20 };
+    coach(
+      this,
+      [
+        {
+          text: `This is your battle deck: the ${profile.deck.length} cards you take into battle. Summons and merges only ever give you these units.`,
+          x, y, ok: "NEXT", point: { x: mid.x, y: mid.y }, dir: "up", r: mid.width / 2 + 8,
+        },
+        { text: "Below is your collection. Tap any card to see what it does, or USE IN DECK to swap it in.", x, y, ok: "NEXT", point: first, r: CARD / 2 + 10 },
+        { text: "Copies from chests plus gold UPGRADE a card for good, unlike battle power ups. A full green bar means it's ready!", x, y, ok: "GOT IT" },
+      ],
+      (skipped) => skipped || setTutorialDone("deck"),
+    );
   }
 
   // ---------------------------------------------------------------- deck + hero

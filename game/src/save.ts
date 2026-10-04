@@ -95,6 +95,12 @@ export async function setHero(hero: string | null) {
   setProfile((await put<{ profile: Profile }>("/me/hero", { hero })).profile);
 }
 
+/** Mark tutorial parts done. Applied locally first, so a lost connection never shows them twice in this session. */
+export async function finishTutorial(parts: string[]) {
+  profile.tutorial = [...new Set([...(profile.tutorial ?? []), ...parts])];
+  setProfile((await post<{ profile: Profile }>("/me/tutorial", { parts })).profile);
+}
+
 export async function buyHero(id: string) {
   setProfile((await post<{ profile: Profile }>(`/heroes/${id}/buy`)).profile);
 }
