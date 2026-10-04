@@ -465,7 +465,7 @@ export class DeckScene extends Phaser.Scene {
     const stats = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
       ["stat:damage", def.arch === "buff" ? "—" : fmt(stats.damage)],
-      ["stat:attack_speed", def.arch === "buff" ? "—" : `${stats.speed.toFixed(2)}/s`],
+      ["stat:attack_speed", def.arch === "buff" ? "—" : `every ${+(1 / stats.speed).toFixed(2)}s`],
     ];
     rows.forEach(([icon, value], i) => {
       const x = cx - 130 + i * 260;
