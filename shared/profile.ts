@@ -15,7 +15,10 @@ export interface Profile {
   coins: number;
   gems: number;
   trophies: number;
+  /** Best wave in any arena (the wave leaderboard). */
   bestWave: number;
+  /** Best wave reached in each arena, by arena id. */
+  arenaBest: Record<string, number>;
   cards: Record<string, CardState>;
   deck: string[];
   arena: string | null;
@@ -41,6 +44,7 @@ export function newProfile(): Profile {
     gems: ECONOMY.startingGems,
     trophies: 0,
     bestWave: 0,
+    arenaBest: {},
     cards,
     deck: [...ECONOMY.starterDeck],
     arena: null,

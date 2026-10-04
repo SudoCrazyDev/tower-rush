@@ -189,7 +189,7 @@ export class LobbyScene extends Phaser.Scene {
     const idx = ARENAS.indexOf(a);
     group.add(txt(this, 0, -290, `ARENA ${idx + 1}`, 28, "#ffd27a"));
     group.add(txt(this, 0, 190, a.name, 46));
-    group.add(txt(this, 0, 240, `Best wave: ${profile.bestWave}`, 26, "#c9d2ff"));
+    group.add(txt(this, 0, 240, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
     group.add(button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.scene.start("Battle", { arena: a.id }), 54));
 
     const step = (d: number) => {

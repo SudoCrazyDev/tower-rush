@@ -376,7 +376,10 @@ player.post("/battles/:id/finish", P, async (c) => {
   let r;
   try {
     r = await update(c, (p) => {
-      const newBest = wave > p.bestWave;
+      // Records are kept per arena; bestWave stays the overall best for the leaderboard.
+      const before = p.arenaBest[b.arena] ?? 0;
+      const newBest = wave > before;
+      p.arenaBest[b.arena] = Math.max(before, wave);
       p.coins += rewards.coins;
       p.gems += rewards.gems;
       p.trophies = Math.max(0, p.trophies + rewards.trophies);

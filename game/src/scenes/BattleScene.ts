@@ -1234,7 +1234,7 @@ export class BattleScene extends Phaser.Scene {
       const headline = txt(this, m.cx, m.cy - 290, "GAME OVER", 40);
       m.add([banner, headline]);
       m.add(txt(this, m.cx, m.cy - 150, `Wave ${stats.wave}`, 64, "#fff4c2"));
-      m.add(txt(this, m.cx, m.cy - 90, `${stats.kills} monsters  ·  ${stats.bosses} bosses`, 26, "#c9d2ff"));
+      m.add(txt(this, m.cx, m.cy - 100, `${stats.kills} monsters  ·  ${stats.bosses} bosses`, 26, "#c9d2ff"));
       const saving = txt(this, m.cx, m.cy + 90, "Saving...", 36, "#c9d2ff");
       m.add(saving);
       // Promotion rewards are shown one after another before going back to the lobby.
@@ -1265,6 +1265,8 @@ export class BattleScene extends Phaser.Scene {
           banner.setTexture("ui:banner_victory");
           headline.setText("NEW BEST!");
         }
+        const best = profile.arenaBest?.[this.arena.id] ?? stats.wave;
+        m.add(txt(this, m.cx, m.cy - 62, r.newBest ? `New record in ${this.arena.name}!` : `Best in ${this.arena.name}: wave ${best}`, 22, r.newBest ? "#7dff7a" : "#ffd27a"));
         const t = r.rewards.trophies;
         const rows: [string, string, string, number][] = [
           ["item:coins", `+${fmt(r.rewards.coins)}`, "#ffd93b", r.boosts?.coinMult ?? 1],
