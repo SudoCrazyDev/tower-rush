@@ -16,7 +16,7 @@ export const DEFAULT_EFFECTS = {
   slow: { base: 0.2, perRank: 0.04, perRarity: 0.04, max: 0.6, bossMult: 0.5, duration: 2 },
   freeze: { chance: 0.12, perRank: 0.02, perRarity: 0.02, duration: 1.2, bossDuration: 0.4 },
   stun: { chance: 0.1, perRank: 0.02, perRarity: 0, duration: 0.8, bossDuration: 0.3 },
-  poison: { dps: 0.6, duration: 4, maxStacks: 8 },
+  poison: { dps: 0.35, duration: 4, maxStacks: 8 },
   crit: { chance: 0.25, perRank: 0.03, mult: 2.5, multPerRank: 0.1 },
   curse: { perRank: 0.03, perRarity: 0.01, max: 0.6 },
   execute: { chance: 0.03, perRank: 0.01, perRarity: 0.01, bossMult: 4 },

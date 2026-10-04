@@ -91,7 +91,7 @@ export const ARCHETYPES: Record<Arch, { speed: number; dmg: number; label: strin
 };
 export const ARCHS = Object.keys(ARCHETYPES) as Arch[];
 
-const SEED_DAMAGE: Record<Rarity, number> = { common: 20, rare: 26, epic: 34, legendary: 44, mythic: 56 };
+const SEED_DAMAGE: Record<Rarity, number> = { common: 20, rare: 28, epic: 40, legendary: 58, mythic: 82 };
 
 const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arch, proj: Proj, blurb: string, race: Race): UnitDef => ({
   id,
