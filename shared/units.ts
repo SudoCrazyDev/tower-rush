@@ -233,6 +233,8 @@ export const levelMult = (level: number) => 1 + (level - 1) * ECONOMY.levelBonus
 export const powerUpMult = (lvl: number) => 1 + lvl * ECONOMY.powerUpBonus;
 /** Merge rank 1..7 multiplies damage. */
 export const rankMult = (rank: number) => 1 + (rank - 1) * ECONOMY.rankDamageStep;
+/** Card level × power-up multiplier: scales damage, and a buff unit's speed bonus. */
+export const boostMult = (level: number, powerUp: number) => levelMult(level) * powerUpMult(powerUp);
 /** Mana cost of the next in-battle power-up. */
 export const powerUpCost = (lvl: number) => ECONOMY.powerUpCosts[lvl] ?? Infinity;
 

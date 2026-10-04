@@ -30,7 +30,7 @@ import {
 } from "./effects.ts";
 import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "./monsters.ts";
-import { RARITY_ORDER, UNIT_BY_ID, unitStats, type Element, type UnitDef } from "./units.ts";
+import { RARITY_ORDER, UNIT_BY_ID, boostMult, unitStats, type Element, type UnitDef } from "./units.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
 
@@ -421,7 +421,8 @@ export class Sim {
     }
     this.units.forEach((u, i) => {
       if (!u || u.def.arch !== "buff") return;
-      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const mult = boostMult(this.setup.cardLevel, this.setup.powerUp) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
       const col = i % 5;
       for (const j of [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1]) {
         const v = this.units[j];

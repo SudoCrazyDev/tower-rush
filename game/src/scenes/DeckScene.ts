@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import { effectSummary } from "../../../shared/effects.ts";
+import { buffBonus, effectSummary, EFFECTS } from "../../../shared/effects.ts";
 import { PERKS } from "../../../shared/perks.ts";
-import { ARCHETYPES, STYLES, MAX_RANK, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost } from "../data/units";
+import { ARCHETYPES, STYLES, MAX_RANK, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
@@ -506,7 +506,7 @@ export class DeckScene extends Phaser.Scene {
     const style = def.arch === "buff" ? "" : `${STYLES[def.style].label.toUpperCase()} · `;
     info.add(txt(this, cx, cy - 82, style + ARCHETYPES[def.arch].label, 26, "#ffffff"));
     // The archetype's numbers for this unit as summoned (rank 1).
-    const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity));
+    const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity), EFFECTS, levelMult(owned?.level ?? 1));
     let lineY = cy - 48;
     if (effect) {
       info.add(txt(this, cx, lineY, effect, 20, "#7fffd4"));
@@ -521,8 +521,12 @@ export class DeckScene extends Phaser.Scene {
 
     const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
-      ["stat:damage", def.arch === "buff" ? "—" : fmt(now.damage)],
-      ["stat:attack_speed", def.arch === "buff" ? "—" : `every ${+(1 / now.speed).toFixed(2)}s`],
+      ...(def.arch === "buff"
+        ? ([["stat:attack_speed", `neighbours +${Math.round(buffBonus(1, RARITY_ORDER.indexOf(def.rarity), levelMult(level)) * 100)}% faster`]] as [string, string][])
+        : ([
+            ["stat:damage", fmt(now.damage)],
+            ["stat:attack_speed", `every ${+(1 / now.speed).toFixed(2)}s`],
+          ] as [string, string][])),
     ];
     // Lay the icon+value pairs out by their real widths and centre the row.
     const statY = cy + 76;
@@ -631,6 +635,9 @@ export class DeckScene extends Phaser.Scene {
     const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
     const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
     const pct = (v: number) => `${Math.round(v * 100)}%`;
+    // Buff units: the attack speed they give their neighbours, in place of damage.
+    const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
+    const buff = (rank: number, lvl: number, up: number, mult = 1) => `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
     const ROW = 33;
     let y = top - 6;
     // How it fights: style (hit size vs attack speed) and its perk.
@@ -669,20 +676,27 @@ export class DeckScene extends Phaser.Scene {
     const max = maxCardLevel();
     const first = Math.max(1, Math.min(level, max - 4));
     const levels = Array.from({ length: Math.min(5, max) }, (_, i) => first + i);
-    section("CARD LEVEL", `+${pct(ECONOMY.levelBonus)} damage per upgrade · max level ${max}`);
+    const what = noAttack ? "boost" : "damage";
+    section("CARD LEVEL", `+${pct(ECONOMY.levelBonus)} ${what} per upgrade · max level ${max}`);
     table(
       levels.map((l) => (l === max ? "MAX" : `Lv ${l}`)),
-      [{ icon: "stat:damage", cells: levels.map((l) => dmg(unitStats(def, 1, l, 0).damage)) }],
+      [
+        noAttack
+          ? { icon: "stat:attack_speed", cells: levels.map((l) => buff(1, l, 0)) }
+          : { icon: "stat:damage", cells: levels.map((l) => dmg(unitStats(def, 1, l, 0).damage)) },
+      ],
       levels.indexOf(level),
     );
 
     // Power-ups are bought with mana during a battle and last until it ends.
     const ups = Array.from({ length: maxPowerUp() + 1 }, (_, i) => i);
-    section("POWER-UPS IN BATTLE", `Spend mana: +${pct(ECONOMY.powerUpBonus)} damage each, for that battle`);
+    section("POWER-UPS IN BATTLE", `Spend mana: +${pct(ECONOMY.powerUpBonus)} ${what} each, for that battle`);
     table(
       ups.map((p) => (p ? `+${p}` : "Base")),
       [
-        { icon: "stat:damage", cells: ups.map((p) => dmg(unitStats(def, 1, level, p).damage)) },
+        noAttack
+          ? { icon: "stat:attack_speed", cells: ups.map((p) => buff(1, level, p)) }
+          : { icon: "stat:damage", cells: ups.map((p) => dmg(unitStats(def, 1, level, p).damage)) },
         { icon: "item:mana_orb", cells: ups.map((p) => (p ? fmt(powerUpCost(p - 1)) : "—")) },
       ],
       0,
@@ -692,16 +706,21 @@ export class DeckScene extends Phaser.Scene {
     const ranks = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
     const awakens = canAwaken(def.id);
     const boost = (r: number, mult: number) => (awakens && r === MAX_RANK ? mult : 1);
-    section("MERGE RANK", `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? " · ★7 awakens" : ""}`);
+    const mergeNote = noAttack
+      ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★7 awakens (×${ECONOMY.awakenDamageMult})` : ""}`
+      : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? " · ★7 awakens" : ""}`;
+    section("MERGE RANK", mergeNote);
     table(
       ranks.map((r) => `★${r}`),
-      [
+      noAttack ? [{ icon: "stat:attack_speed", cells: ranks.map((r) => buff(r, level, 0, boost(r, ECONOMY.awakenDamageMult))) }] : [
         { icon: "stat:damage", cells: ranks.map((r) => dmg(unitStats(def, r, level, 0).damage * boost(r, ECONOMY.awakenDamageMult))) },
         { icon: "stat:attack_speed", cells: ranks.map((r) => every(unitStats(def, r, level, 0).speed * boost(r, ECONOMY.awakenSpeedMult))) },
       ],
       0,
     );
-    const foot = noAttack ? "Doesn't attack: it speeds up neighbouring units." : `At your card level (Lv ${level}). Times are seconds between attacks.`;
+    const foot = noAttack
+      ? `Its four neighbours attack this much faster (Lv ${level}, max +${pct(EFFECTS.buff.max)}).`
+      : `At your card level (Lv ${level}). Times are seconds between attacks.`;
     box.add(txt(this, cx, y - 6, foot, 18, "#9fb0e0").setWordWrapWidth(540));
     return box;
   }

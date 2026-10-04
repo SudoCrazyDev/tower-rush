@@ -3,7 +3,7 @@ import { ambientVideo } from "../backdrop";
 import { BASE, ensureAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale } from "../assets";
 import { ARENAS, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "../data/monsters";
-import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
+import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
 import { raceLabel } from "../../../shared/races.ts";
 import { chills, withPerk, type Perk } from "../../../shared/perks.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
@@ -695,6 +695,8 @@ export class BattleScene extends Phaser.Scene {
         u.playOnce("skill");
       }
     }
+    // Power-ups strengthen a buff unit's bonus too.
+    if (UNIT_BY_ID[id]?.arch === "buff") this.recomputeBuffs();
     this.refreshHud();
   }
 
@@ -705,6 +707,7 @@ export class BattleScene extends Phaser.Scene {
       if (!u || this.over || this.paused) return;
       origin = u;
       u.dragging = true;
+      u.setBuffVisible(false);
       obj.setDepth(2500);
       for (const other of this.board) {
         if (other && other !== u && other.def.id === u.def.id && other.rank === u.rank && u.rank < MAX_RANK) {
@@ -728,6 +731,7 @@ export class BattleScene extends Phaser.Scene {
         this.merge(u, target);
       } else {
         u.place(u.slot);
+        u.setBuffVisible(true);
         u.playIdle();
       }
     });
@@ -761,7 +765,7 @@ export class BattleScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  /** Buff units speed up their four neighbours and hand them their perk. */
+  /** Buff units speed up their four neighbours (more with card level and power-ups) and hand them their perk. */
   private recomputeBuffs() {
     for (const u of this.board) {
       if (!u) continue;
@@ -771,7 +775,8 @@ export class BattleScene extends Phaser.Scene {
     }
     this.board.forEach((u, i) => {
       if (!u || u.def.arch !== "buff") return;
-      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const mult = boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
       const col = i % 5;
       const n = [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1];
       for (const j of n) {
@@ -782,6 +787,7 @@ export class BattleScene extends Phaser.Scene {
         }
       }
     });
+    for (const u of this.board) u?.showBuff();
   }
 
   private pause() {

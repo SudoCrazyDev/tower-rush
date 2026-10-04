@@ -22,7 +22,7 @@ export const DEFAULT_EFFECTS = {
   execute: { chance: 0.03, perRank: 0.01, perRarity: 0.01, bossMult: 4 },
   sniper: { shotSpeed: 1500 },
   growth: { perSecond: 0.02, max: 2 },
-  buff: { base: 0.08, perRank: 0.05, perRarity: 0.03 },
+  buff: { base: 0.08, perRank: 0.05, perRarity: 0.03, max: 1.5 },
   mana: { every: 6, perRank: 5, ultimateBase: 20, ultimatePerWave: 4 },
 };
 
@@ -129,6 +129,7 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     base: PCT("Neighbours' attack speed at rank 1, common (0.08 = +8%)", 2),
     perRank: PCT("…plus this per rank", 1),
     perRarity: PCT("…plus this per rarity step", 1),
+    max: F("Most a buff unit can give, after card level and power-ups (1.5 = +150%)", 0.05, 10),
   },
   mana: {
     every: F("Makes mana every N seconds", 0.5, 60, false, 0.5),
@@ -155,14 +156,19 @@ export const curseStep = (rank: number, rarity: number, e = EFFECTS) => e.curse.
 export const executeChance = (rank: number, rarity: number, e = EFFECTS) =>
   Math.min(1, e.execute.chance + e.execute.perRank * rank + e.execute.perRarity * rarity);
 export const growthMult = (secondsOnBoard: number, e = EFFECTS) => 1 + Math.min(e.growth.max, secondsOnBoard * e.growth.perSecond);
-export const buffBonus = (rank: number, rarity: number, e = EFFECTS) => e.buff.base + e.buff.perRank * rank + e.buff.perRarity * rarity;
+/**
+ * Attack speed a buff unit gives its neighbours. `mult` is its card level × power-up (× awakened)
+ * multiplier, the same one that scales an attacking unit's damage.
+ */
+export const buffBonus = (rank: number, rarity: number, mult = 1, e = EFFECTS) =>
+  Math.min(e.buff.max, (e.buff.base + e.buff.perRank * rank + e.buff.perRarity * rarity) * mult);
 export const manaPerPulse = (rank: number, e = EFFECTS) => e.mana.perRank * rank;
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const secs = (x: number) => `${+x.toFixed(2)}s`;
 
 /** One line describing an archetype's effect for a unit at this rank and rarity (card details). */
-export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFECTS): string | null {
+export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFECTS, mult = 1): string | null {
   switch (arch) {
     case "splash":
       return `Splash ${Math.round(splashRadius("splash", rank, e))}px · ${pct(e.splash.splash)} damage`;
@@ -189,7 +195,7 @@ export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFE
     case "growth":
       return `+${pct(e.growth.perSecond)} damage per second, up to +${pct(e.growth.max)}`;
     case "buff":
-      return `Neighbours attack ${pct(buffBonus(rank, rarity, e))} faster`;
+      return `Neighbours attack ${pct(buffBonus(rank, rarity, mult, e))} faster`;
     case "mana":
       return `+${manaPerPulse(rank, e)} mana every ${secs(e.mana.every)}`;
     default:
