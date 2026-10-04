@@ -9,6 +9,7 @@ import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt } from "../ui";
 import { topBar } from "./LobbyScene";
 import { music, sfx } from "../audio";
+import { bakeAll, bakedImage } from "../bake";
 import {
   BRASS,
   BRASS_DARK,
@@ -152,6 +153,8 @@ export class DeckScene extends Phaser.Scene {
     this.heroStrip(colX, deckTop + (WIDE ? 270 : 218), colW);
     this.filters(filterX, filterY, filterW);
     this.fill();
+    // Static shapes become cached images (see bake.ts); phones can't redraw them every frame.
+    bakeAll(this);
   }
 
   // ---------------------------------------------------------------- deck + hero
@@ -243,15 +246,16 @@ export class DeckScene extends Phaser.Scene {
     const rowW = ELEMENTS.length * (dot + dotGap) + groupW;
     let x = cx - rowW / 2 + dot / 2;
     for (const e of ELEMENTS) {
-      const g = this.add.graphics();
+      const face = bakedImage(this);
       const icon = this.add.image(0, 0, `item:essence_${e}`);
       icon.setScale((dot * 0.8) / Math.max(icon.width, icon.height));
-      const c = this.add.container(x, y2, [g, icon]).setSize(dot, dot);
+      const c = this.add.container(x, y2, [face, icon]).setSize(dot, dot);
       const paint = (on: boolean, dim: boolean) => {
-        g.clear();
-        g.fillStyle(0x000000, 0.4).fillCircle(2, 4, dot / 2 + 2);
-        g.fillStyle(on ? BRASS : 0x1a0c04, 1).fillCircle(0, 0, dot / 2 + 3);
-        g.fillStyle(on ? ELEMENT_COLOR[e] : 0x4a2812, on ? 0.6 : 1).fillCircle(0, 0, dot / 2 - 2);
+        face.draw((g) => {
+          g.fillStyle(0x000000, 0.4).fillCircle(2, 4, dot / 2 + 2);
+          g.fillStyle(on ? BRASS : 0x1a0c04, 1).fillCircle(0, 0, dot / 2 + 3);
+          g.fillStyle(on ? ELEMENT_COLOR[e] : 0x4a2812, on ? 0.6 : 1).fillCircle(0, 0, dot / 2 - 2);
+        });
         icon.setAlpha(dim ? 0.35 : 1);
         c.setScale(on ? 1.08 : 1);
       };
@@ -348,6 +352,7 @@ export class DeckScene extends Phaser.Scene {
       }
       y += 14;
     }
+    bakeAll(content);
     this.view.setHeight(y + 40);
   }
 

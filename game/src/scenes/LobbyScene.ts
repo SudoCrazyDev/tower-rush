@@ -10,6 +10,7 @@ import { inboxModal, mailIcon } from "./inbox";
 import { leagueFor } from "../../../shared/leagues.ts";
 import { showAuth } from "../authOverlay";
 import { music } from "../audio";
+import { bakeAll } from "../bake";
 import { ambientVideo, coverFit } from "../backdrop";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, attempt, pressable, badge } from "../ui";
 
@@ -112,6 +113,8 @@ export class LobbyScene extends Phaser.Scene {
       button(this, 552, 1530, 300, 110, "SHOP", "green", () => this.scene.start("Shop"));
     }
     eventStrip(this);
+    // Static shapes become cached images (see bake.ts).
+    bakeAll(this);
   }
 
   /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */

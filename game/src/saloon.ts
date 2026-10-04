@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { W, H, WIDE, txt } from "./ui";
 import { cover } from "./scenes/LobbyScene";
+import { bakedImage } from "./bake";
 
 /** Saloon palette: dark mahogany, warm planks and brass trim. */
 export const WOOD_DARK = 0x2a150a;
@@ -201,10 +202,10 @@ export function shelf(scene: Phaser.Scene, x: number, y: number, w: number) {
 
 /** A brass/wood toggle chip. `paint(on)` restyles it. */
 export function chip(scene: Phaser.Scene, x: number, y: number, w: number, h: number, label: string, icon?: string) {
-  const g = scene.add.graphics();
+  const face = bakedImage(scene);
   const size = Math.round(h * 0.4);
   const t = stxt(scene, icon ? h * 0.28 : 0, -1, label, size, TAN);
-  const parts: Phaser.GameObjects.GameObject[] = [g, t];
+  const parts: Phaser.GameObjects.GameObject[] = [face, t];
   if (icon) {
     const img = scene.add.image(-w / 2 + h * 0.48, 0, icon);
     img.setScale((h * 0.58) / Math.max(img.width, img.height));
@@ -213,11 +214,12 @@ export function chip(scene: Phaser.Scene, x: number, y: number, w: number, h: nu
   }
   const c = scene.add.container(x, y, parts).setSize(w, h);
   const paint = (on: boolean) => {
-    g.clear();
-    g.fillStyle(0x000000, 0.4).fillRoundedRect(-w / 2 + 3, -h / 2 + 6, w, h, h * 0.28);
-    g.fillStyle(on ? BRASS_DARK : 0x1a0c04, 1).fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, h * 0.3);
-    g.fillStyle(on ? BRASS : 0x4a2812, 1).fillRoundedRect(-w / 2, -h / 2, w, h, h * 0.28);
-    g.fillStyle(0xffffff, on ? 0.3 : 0.08).fillRoundedRect(-w / 2 + 8, -h / 2 + 5, w - 16, h * 0.17, 6);
+    face.draw((g) => {
+      g.fillStyle(0x000000, 0.4).fillRoundedRect(-w / 2 + 3, -h / 2 + 6, w, h, h * 0.28);
+      g.fillStyle(on ? BRASS_DARK : 0x1a0c04, 1).fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, h * 0.3);
+      g.fillStyle(on ? BRASS : 0x4a2812, 1).fillRoundedRect(-w / 2, -h / 2, w, h, h * 0.28);
+      g.fillStyle(0xffffff, on ? 0.3 : 0.08).fillRoundedRect(-w / 2 + 8, -h / 2 + 5, w - 16, h * 0.17, 6);
+    });
     t.setColor(on ? "#fff8e0" : TAN);
   };
   return Object.assign(c, { paint, label: t });
@@ -235,7 +237,9 @@ export class ScrollView {
   private target = 0;
   private max = 0;
   private drag: { y: number; scroll: number; last: number; v: number } | null = null;
-  private knob: Phaser.GameObjects.Graphics;
+  private track: ReturnType<typeof bakedImage>;
+  private thumb: ReturnType<typeof bakedImage>;
+  private thumbLen = 0;
 
   constructor(
     private scene: Phaser.Scene,
@@ -249,7 +253,8 @@ export class ScrollView {
     const dark = 0x140802;
     g.fillGradientStyle(dark, dark, dark, dark, 0.75, 0.75, 0, 0).fillRect(x, y, width, 26);
     g.fillGradientStyle(dark, dark, dark, dark, 0, 0, 0.8, 0.8).fillRect(x, y + height - 40, width, 40);
-    this.knob = scene.add.graphics();
+    this.track = bakedImage(scene);
+    this.thumb = bakedImage(scene);
 
     const inView = (p: Phaser.Input.Pointer) => rect.contains(p.worldX, p.worldY);
     // A press on something interactive outside the list (a dialog's backdrop, say) isn't a scroll.
@@ -293,7 +298,9 @@ export class ScrollView {
     this.max = Math.max(0, contentH - this.rect.height);
     if (resetScroll) this.scroll = this.target = 0;
     this.content.y = this.rect.y - this.scroll;
+    this.thumbLen = 0;
     this.drawKnob();
+    cull(this.content, this.scroll, this.rect.height);
   }
 
   private update() {
@@ -306,19 +313,36 @@ export class ScrollView {
     if (this.content.y !== y) {
       this.content.y = y;
       this.drawKnob();
+      cull(this.content, this.scroll, this.rect.height);
     }
   }
 
   private drawKnob() {
-    const k = this.knob;
-    k.clear();
-    if (this.max <= 0) return;
     const { y: top, height } = this.rect;
     const x = this.rect.right - 12;
     const span = height - 40;
     const len = Math.max(80, (span * height) / (this.max + height));
-    const y = top + 20 + (span - len) * Phaser.Math.Clamp(this.scroll / this.max, 0, 1);
-    k.fillStyle(0x000000, 0.35).fillRoundedRect(x - 4, top + 20, 8, span, 4);
-    k.fillStyle(BRASS, 0.9).fillRoundedRect(x - 5, y, 10, len, 5);
+    if (this.max <= 0) {
+      this.track.setVisible(false);
+      this.thumb.setVisible(false);
+      return;
+    }
+    // Redrawn only when the content height changes; scrolling just moves the thumb.
+    if (len !== this.thumbLen) {
+      this.thumbLen = len;
+      this.track.draw((g) => g.fillStyle(0x000000, 0.35).fillRoundedRect(x - 4, top + 20, 8, span, 4));
+      this.thumb.draw((g) => g.fillStyle(BRASS, 0.9).fillRoundedRect(x - 5, 0, 10, len, 5));
+    }
+    this.thumb.y = top + 20 + (span - len) * Phaser.Math.Clamp(this.scroll / this.max, 0, 1);
+  }
+}
+
+/**
+ * Hide a scroll list's items that are well outside the visible band, so the renderer skips
+ * them. Items are placed by their top or centre, hence the generous margin.
+ */
+export function cull(content: Phaser.GameObjects.Container, scroll: number, height: number, margin = 600) {
+  for (const o of content.list as (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform & Phaser.GameObjects.Components.Visible)[]) {
+    o.setVisible(o.y > scroll - margin && o.y < scroll + height + margin / 2);
   }
 }

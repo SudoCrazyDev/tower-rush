@@ -9,6 +9,8 @@ import { RARITY_STATS } from "../data/units";
 import { W, H, WIDE, txt, button, iconButton, pressable, lootCards, modal, fmt, attempt, type Button } from "../ui";
 import { cover, topBar } from "./LobbyScene";
 import { music, sfx } from "../audio";
+import { bakeAll, bakedImage } from "../bake";
+import { cull } from "../saloon";
 
 /** Saloon palette: dark mahogany, warm planks and brass trim. */
 const WOOD_DARK = 0x2a150a;
@@ -58,7 +60,9 @@ export class ShopScene extends Phaser.Scene {
   private scroll = 0;
   private scrollTarget = 0;
   private scrollMax = 0;
-  private knob?: Phaser.GameObjects.Graphics;
+  private track?: ReturnType<typeof bakedImage>;
+  private thumb?: ReturnType<typeof bakedImage>;
+  private thumbLen = 0;
   private drag: { y: number; scroll: number; last: number; v: number } | null = null;
   private dragged = false;
   private busy = false;
@@ -96,6 +100,8 @@ export class ShopScene extends Phaser.Scene {
     this.edgeShades();
     this.scrolling();
     this.fill();
+    // Static shapes become cached images (see bake.ts); phones can't redraw them every frame.
+    bakeAll(this);
   }
 
   // ---------------------------------------------------------------- ambience
@@ -231,9 +237,9 @@ export class ShopScene extends Phaser.Scene {
 
   private tab(x: number, y: number, w: number, t: (typeof TABS)[number]) {
     const h = 70;
-    const g = this.add.graphics();
+    const face = bakedImage(this);
     const label = txt(this, t.icon ? 16 : 0, -1, t.label, WIDE ? 30 : 26, TAN);
-    const parts: Phaser.GameObjects.GameObject[] = [g, label];
+    const parts: Phaser.GameObjects.GameObject[] = [face, label];
     if (t.icon) {
       const icon = this.add.image(-w / 2 + (WIDE ? 40 : 28), 0, t.icon);
       icon.setScale((WIDE ? 46 : 38) / Math.max(icon.width, icon.height));
@@ -241,11 +247,12 @@ export class ShopScene extends Phaser.Scene {
     }
     const c = this.add.container(x, y, parts).setSize(w, h);
     const paint = (on: boolean) => {
-      g.clear();
-      g.fillStyle(0x000000, 0.4).fillRoundedRect(-w / 2 + 3, -h / 2 + 6, w, h, 18);
-      g.fillStyle(on ? BRASS_DARK : 0x1a0c04, 1).fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 20);
-      g.fillStyle(on ? BRASS : 0x4a2812, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
-      g.fillStyle(0xffffff, on ? 0.3 : 0.08).fillRoundedRect(-w / 2 + 8, -h / 2 + 5, w - 16, 12, 6);
+      face.draw((g) => {
+        g.fillStyle(0x000000, 0.4).fillRoundedRect(-w / 2 + 3, -h / 2 + 6, w, h, 18);
+        g.fillStyle(on ? BRASS_DARK : 0x1a0c04, 1).fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 20);
+        g.fillStyle(on ? BRASS : 0x4a2812, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
+        g.fillStyle(0xffffff, on ? 0.3 : 0.08).fillRoundedRect(-w / 2 + 8, -h / 2 + 5, w - 16, 12, 6);
+      });
       label.setColor(on ? "#fff8e0" : TAN);
       c.setScale(on ? 1.04 : 1);
     };
@@ -261,26 +268,14 @@ export class ShopScene extends Phaser.Scene {
 
   private affordToggle(x: number, y: number, w: number) {
     const h = 70;
-    const g = this.add.graphics();
+    const face = bakedImage(this);
     const box = WIDE ? 34 : 30;
     const bx = -w / 2 + 16;
     const label = txt(this, bx + box + 10, -1, WIDE ? "CAN AFFORD" : "CAN BUY", WIDE ? 26 : 22, TAN, [0, 0.5]);
-    const c = this.add.container(x, y, [g, label]).setSize(w, h);
+    const c = this.add.container(x, y, [face, label]).setSize(w, h);
     const paint = () => {
       const on = ShopScene.affordable;
-      g.clear();
-      g.fillStyle(0x000000, 0.35).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
-      g.lineStyle(3, on ? BRASS : 0x8a6440, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
-      g.fillStyle(0x1a0c04, 1).fillRoundedRect(bx, -box / 2, box, box, 8);
-      g.lineStyle(3, BRASS, 1).strokeRoundedRect(bx, -box / 2, box, box, 8);
-      if (on) {
-        g.lineStyle(6, 0x7dff7a, 1);
-        g.beginPath();
-        g.moveTo(bx + box * 0.2, 0);
-        g.lineTo(bx + box * 0.43, box * 0.25);
-        g.lineTo(bx + box * 0.85, -box * 0.3);
-        g.strokePath();
-      }
+      face.draw((g) => this.affordBox(g, w, h, bx, box, on));
       label.setColor(on ? "#fff8e0" : TAN);
     };
     paint();
@@ -289,6 +284,21 @@ export class ShopScene extends Phaser.Scene {
       paint();
       this.fill();
     });
+  }
+
+  private affordBox(g: Phaser.GameObjects.Graphics, w: number, h: number, bx: number, box: number, on: boolean) {
+    g.fillStyle(0x000000, 0.35).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
+    g.lineStyle(3, on ? BRASS : 0x8a6440, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
+    g.fillStyle(0x1a0c04, 1).fillRoundedRect(bx, -box / 2, box, box, 8);
+    g.lineStyle(3, BRASS, 1).strokeRoundedRect(bx, -box / 2, box, box, 8);
+    if (on) {
+      g.lineStyle(6, 0x7dff7a, 1);
+      g.beginPath();
+      g.moveTo(bx + box * 0.2, 0);
+      g.lineTo(bx + box * 0.43, box * 0.25);
+      g.lineTo(bx + box * 0.85, -box * 0.3);
+      g.strokePath();
+    }
   }
 
   // ---------------------------------------------------------------- layout
@@ -417,9 +427,12 @@ export class ShopScene extends Phaser.Scene {
       y += 16;
     }
 
+    bakeAll(this.content);
     this.scrollMax = Math.max(0, y - (this.viewBottom - this.viewTop));
     this.content.y = this.viewTop;
+    this.thumbLen = 0;
     this.drawKnob();
+    cull(this.content, this.scroll, this.viewBottom - this.viewTop);
   }
 
   private popIn(obj: Phaser.GameObjects.Container | Phaser.GameObjects.Text, i: number) {
@@ -771,20 +784,28 @@ export class ShopScene extends Phaser.Scene {
     const dark = 0x140802;
     g.fillGradientStyle(dark, dark, dark, dark, 0.75, 0.75, 0, 0).fillRect(0, this.viewTop, W, 26);
     g.fillGradientStyle(dark, dark, dark, dark, 0, 0, 0.8, 0.8).fillRect(0, this.viewBottom - 40, W, 40);
-    this.knob = this.add.graphics();
+    this.track = bakedImage(this);
+    this.thumb = bakedImage(this);
   }
 
   private drawKnob() {
-    const k = this.knob;
-    if (!k) return;
-    k.clear();
-    if (this.scrollMax <= 0) return;
+    const { track, thumb } = this;
+    if (!track || !thumb) return;
+    if (this.scrollMax <= 0) {
+      track.setVisible(false);
+      thumb.setVisible(false);
+      return;
+    }
     const x = W - 14;
     const span = this.viewBottom - this.viewTop - 40;
     const len = Math.max(80, (span * (this.viewBottom - this.viewTop)) / (this.scrollMax + this.viewBottom - this.viewTop));
-    const y = this.viewTop + 20 + (span - len) * (this.scroll / this.scrollMax);
-    k.fillStyle(0x000000, 0.35).fillRoundedRect(x - 4, this.viewTop + 20, 8, span, 4);
-    k.fillStyle(BRASS, 0.9).fillRoundedRect(x - 5, y, 10, len, 5);
+    // Redrawn only when the shelves change; scrolling just moves the thumb.
+    if (len !== this.thumbLen) {
+      this.thumbLen = len;
+      track.draw((g) => g.fillStyle(0x000000, 0.35).fillRoundedRect(x - 4, this.viewTop + 20, 8, span, 4));
+      thumb.draw((g) => g.fillStyle(BRASS, 0.9).fillRoundedRect(x - 5, 0, 10, len, 5));
+    }
+    thumb.y = this.viewTop + 20 + (span - len) * (this.scroll / this.scrollMax);
   }
 
   private scrolling() {
@@ -838,6 +859,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.content.y !== y) {
       this.content.y = y;
       this.drawKnob();
+      cull(this.content, this.scroll, this.viewBottom - this.viewTop);
     }
   }
 
