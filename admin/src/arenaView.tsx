@@ -15,6 +15,8 @@ function img(src: string) {
   let i = images.get(src);
   if (!i) {
     i = new Image();
+    // CORS, like the game: a plain fetch would be cached without CORS headers and break the game's loads.
+    i.crossOrigin = "anonymous";
     i.src = src;
     images.set(src, i);
   }

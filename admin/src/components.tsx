@@ -96,7 +96,7 @@ export function NumList({ value, onChange }: { value: number[]; onChange: (v: nu
 }
 
 export function Thumb({ src, size = 40 }: { src: string; size?: number }) {
-  return <img className="thumb" src={src} width={size} height={size} alt="" loading="lazy" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />;
+  return <img className="thumb" crossOrigin="anonymous" src={src} width={size} height={size} alt="" loading="lazy" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />;
 }
 
 export function Modal({ title, onClose, children, actions }: { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode }) {

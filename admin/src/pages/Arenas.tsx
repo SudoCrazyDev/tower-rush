@@ -22,7 +22,7 @@ export function ArenasPage() {
       <div className="cards">
         {draft.arenas.map((a, i) => (
           <div className="card arena" key={a.id}>
-            <img className="arena-img" src={asset("locations", `arena_${a.id}`)} alt="" loading="lazy" />
+            <img className="arena-img" crossOrigin="anonymous" src={asset("locations", `arena_${a.id}`)} alt="" loading="lazy" />
             <div className="arena-body">
               <div className="row">
                 <div className={changed(a, "name")} style={{ flex: 1 }}>

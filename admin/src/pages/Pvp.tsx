@@ -144,7 +144,7 @@ export function PvpPage() {
             {p.sends.map((s, i) => (
               <tr key={i} className={s.enabled ? "" : "muted"}>
                 <td>
-                  <img className="thumb" width={40} height={40} alt="" src={`${ASSETS}${s.monster === "boss" ? `bosses/${draft.arenas[0].bosses[0]}` : `monsters/${s.monster}`}.webp`} />
+                  <img className="thumb" width={40} height={40} alt="" crossOrigin="anonymous" src={`${ASSETS}${s.monster === "boss" ? `bosses/${draft.arenas[0].bosses[0]}` : `monsters/${s.monster}`}.webp`} />
                 </td>
                 <td className={sendChanged(s, "name")}>
                   <Text value={s.name} width={110} onChange={(v) => editPvp((x) => void (x.sends[i].name = v))} />

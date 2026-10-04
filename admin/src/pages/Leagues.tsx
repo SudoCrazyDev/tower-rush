@@ -52,6 +52,7 @@ export function LeaguesPage() {
                 <td>
                   <img
                     className="thumb"
+                    crossOrigin="anonymous"
                     src={`${ASSETS}ui/league_${l.icon}.webp`}
                     width={44}
                     height={44}
