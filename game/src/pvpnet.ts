@@ -22,12 +22,17 @@ export type QueueEvent =
   | { t: "bot"; setup: MatchSetup; now: number }
   | { t: "closed"; reason: string };
 
-/** How to find an opponent: a mode's queue, a new friend challenge, or a friend's code. */
-export type Search = { mode: PvpMode } | { challenge: PvpMode } | { join: string };
+/** How to find an opponent: a mode's queue, a new friend challenge, a friend's code, or a practice bot. */
+export type Search = { mode: PvpMode } | { challenge: PvpMode } | { join: string } | { bot: PvpMode };
 
 /** Start searching. Returns a function that gives up. */
 export function joinQueue(search: Search, on: (e: QueueEvent) => void) {
-  const query = "join" in search ? `join=${encodeURIComponent(search.join)}` : "challenge" in search ? `mode=${search.challenge}&challenge=host` : `mode=${search.mode}`;
+  const query =
+    "join" in search
+      ? `join=${encodeURIComponent(search.join)}`
+      : "bot" in search
+        ? `mode=${search.bot}&bot=1`
+        : "challenge" in search ? `mode=${search.challenge}&challenge=host` : `mode=${search.mode}`;
   const ws = socket(`/pvp/queue?${query}`);
   let done = false;
   ws.onmessage = (e) => {

@@ -1092,6 +1092,7 @@ export class PvpScene extends Phaser.Scene {
         if (!m.active) return;
         if (!r) return void saving.setText("Couldn't save this match\n(no connection)").setColor("#ff8080");
         saving.destroy();
+        if (this.setup.practice) return void m.add(txt(this, m.cx, m.cy + 40, "Practice match: no rewards", 30, "#c9d2ff"));
         const rows: [string, string, string][] = [["item:coins", `+${fmt(r.coins)}`, "#ffd93b"]];
         if (this.setup.mode === "ranked" && !this.setup.friendly) rows.push(["item:trophy", `${r.trophies >= 0 ? "+" : ""}${r.trophies}`, r.trophies >= 0 ? "#ffd93b" : "#ff8080"]);
         rows.forEach(([icon, value, color], i) => {

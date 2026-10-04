@@ -12,6 +12,7 @@ const MODE_COLOR: Record<PvpMode, "yellow" | "blue" | "green"> = { ranked: "yell
 /**
  * PvP: pick Ranked, Mirror or Casual and search for an opponent (a bot after a few seconds),
  * or play a friend: open a challenge and share its code, or join one with a friend's code.
+ * VS BOT starts a practice match against a bot straight away (no rewards).
  */
 export class PvpMenuScene extends Phaser.Scene {
   private leave: (() => void) | null = null;
@@ -55,14 +56,18 @@ export class PvpMenuScene extends Phaser.Scene {
       this.add.container(x, y, parts);
     });
     if (!WIDE) txt(this, W / 2, H - 60, `Trophies: ${profile.trophies}`, 30, "#ffd93b");
-    // Friends: no trophies either way.
+    // Friends: no trophies either way. Practice: no rewards at all.
     const y = WIDE ? 1215 : 1335;
-    const gap = WIDE ? 230 : 172;
-    button(this, W / 2 - gap, y, WIDE ? 420 : 330, WIDE ? 110 : 96, "CHALLENGE A FRIEND", "blue", () => this.pickChallenge(), WIDE ? 34 : 28);
-    button(this, W / 2 + gap, y, WIDE ? 420 : 330, WIDE ? 110 : 96, "JOIN WITH CODE", "grey", async () => {
+    const gap = WIDE ? 450 : 172;
+    const bw = WIDE ? 400 : 330;
+    const bh = WIDE ? 110 : 96;
+    const fs = WIDE ? 34 : 28;
+    button(this, W / 2 - gap, y, bw, bh, "CHALLENGE A FRIEND", "blue", () => this.pickChallenge(), fs);
+    button(this, WIDE ? W / 2 : W / 2 + gap, y, bw, bh, "JOIN WITH CODE", "grey", async () => {
       const code = await askCode();
       if (code && this.sys.isActive()) this.search({ join: code });
-    }, WIDE ? 34 : 28);
+    }, fs);
+    button(this, WIDE ? W / 2 + gap : W / 2, WIDE ? y : 1455, bw, bh, "VS BOT", "green", () => this.pickBot(), fs);
   }
 
   /** Choose the rules for a friend challenge. */
@@ -79,12 +84,33 @@ export class PvpMenuScene extends Phaser.Scene {
     });
   }
 
+  /** Choose the rules for a practice match against a bot. */
+  private pickBot() {
+    const m = modal(this, 620, 720, "VS BOT", () => {});
+    m.add(txt(this, m.cx, m.cy - 195, "Practice: no gold, trophies or quests.", 24, "#c9d2ff"));
+    PVP_MODES.forEach((mode, i) => {
+      const y = m.cy - 95 + i * 150;
+      m.add(button(this, m.cx, y, 440, 96, mode === "ranked" ? "REAL LEVELS" : PVP_MODE_INFO[mode].name.toUpperCase(), MODE_COLOR[mode], () => {
+        m.close();
+        this.search({ bot: mode });
+      }, 36));
+      m.add(txt(this, m.cx, y + 64, CHALLENGE_RULES[mode], 22, "#ffffff"));
+    });
+  }
+
   /** Searching overlay; leaves the queue (or closes the challenge) when cancelled or when the scene changes. */
   private search(search: Search) {
-    const heading = "mode" in search ? PVP_MODE_INFO[search.mode].name.toUpperCase() : "challenge" in search ? "FRIEND CHALLENGE" : `JOINING ${search.join}`;
+    const heading =
+      "mode" in search
+        ? PVP_MODE_INFO[search.mode].name.toUpperCase()
+        : "bot" in search
+          ? "VS BOT"
+          : "challenge" in search
+            ? "FRIEND CHALLENGE"
+            : `JOINING ${search.join}`;
     const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.88).setInteractive().setDepth(100);
     const title = txt(this, W / 2, H / 2 - 160, heading, 56, "#ffd27a").setDepth(101);
-    const status = txt(this, W / 2, H / 2 - 60, "join" in search ? "Connecting..." : "challenge" in search ? "Opening a challenge..." : "Searching for an opponent...", 34).setDepth(101);
+    const status = txt(this, W / 2, H / 2 - 60, "join" in search || "bot" in search ? "Connecting..." : "challenge" in search ? "Opening a challenge..." : "Searching for an opponent...", 34).setDepth(101);
     const timer = txt(this, W / 2, H / 2 + 10, "0:00", 44, "#c9d2ff").setDepth(101);
     const ring = this.add.graphics().setDepth(101).setPosition(W / 2, H / 2 + 130);
     ring.lineStyle(10, 0xffd93b, 1).beginPath().arc(0, 0, 44, 0, Math.PI * 1.4).strokePath();

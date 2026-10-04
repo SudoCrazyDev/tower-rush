@@ -103,6 +103,12 @@ also raises the sender's income for the rest of the match ("eco").
   - A bot match runs entirely in the browser.
   - It still goes through the server for rewards and trophies. Its trust level is the same as a
     solo battle's.
+- **VS Bot (practice).**
+  - The **VS Bot** button picks a mode (Real levels / Mirror / Casual) and starts a bot match
+    straight away, with no queue (`/api/pvp/queue?mode=…&bot=1`).
+  - The setup is marked `practice`: no gold, no trophies and no quest progress, and walking
+    away from one never counts as a loss.
+  - The admin match list shows these as "practice".
 
 ## How it runs (networking)
 

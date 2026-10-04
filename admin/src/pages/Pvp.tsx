@@ -262,6 +262,7 @@ interface MatchRow {
   id: string;
   mode: string;
   friendly: number | null;
+  practice: number | null;
   p1: number;
   p2: number | null;
   name1: string | null;
@@ -314,7 +315,7 @@ function RecentMatches() {
             {data.rows.map((m) => (
               <tr key={m.id}>
                 <td title={fmtDate(m.startedAt)}>{timeAgo(m.startedAt)}</td>
-                <td>{m.friendly ? `friendly (${m.mode === "ranked" ? "real levels" : m.mode})` : m.mode}</td>
+                <td>{m.practice ? `practice (${m.mode})` : m.friendly ? `friendly (${m.mode === "ranked" ? "real levels" : m.mode})` : m.mode}</td>
                 <td>
                   <a href={`#/users/${m.p1}`}>{name(m, 0)}</a> vs {m.p2 ? <a href={`#/users/${m.p2}`}>{name(m, 1)}</a> : name(m, 1)}
                 </td>

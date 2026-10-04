@@ -151,8 +151,10 @@ export const CHALLENGE_RULES: Record<PvpMode, string> = {
 };
 
 /** Name of a match's mode for the screen (a friendly game with real levels isn't "Ranked"). */
-export const matchModeName = (setup: { mode: PvpMode; friendly?: boolean }) =>
-  setup.friendly ? `Friendly ${setup.mode === "ranked" ? "" : PVP_MODE_INFO[setup.mode].name}`.trim() : PVP_MODE_INFO[setup.mode].name;
+export const matchModeName = (setup: { mode: PvpMode; friendly?: boolean; practice?: boolean }) =>
+  setup.practice
+    ? `Practice ${PVP_MODE_INFO[setup.mode].name}`
+    : setup.friendly ? `Friendly ${setup.mode === "ranked" ? "" : PVP_MODE_INFO[setup.mode].name}`.trim() : PVP_MODE_INFO[setup.mode].name;
 
 /** Challenge codes: 6 characters, without ones that are easy to mix up (0/O, 1/I/L). */
 export const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -179,6 +181,8 @@ export interface MatchSetup {
   startAt: number;
   /** A friend challenge (by code): no trophies either way. */
   friendly?: boolean;
+  /** Practice against a bot (picked from the menu, no queue): no gold or trophies. */
+  practice?: boolean;
   players: [Loadout, Loadout];
 }
 

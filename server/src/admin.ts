@@ -161,7 +161,7 @@ admin.get("/pvp/matches", async (c) => {
   const [rows, summary] = await Promise.all([
     all(
       db,
-      `SELECT m.id, m.mode, json_extract(m.setup, '$.friendly') AS friendly, m.p1, m.p2, a.display_name AS name1, b.display_name AS name2,
+      `SELECT m.id, m.mode, json_extract(m.setup, '$.friendly') AS friendly, json_extract(m.setup, '$.practice') AS practice, m.p1, m.p2, a.display_name AS name1, b.display_name AS name2,
               json_extract(m.setup, '$.players[1].name') AS botName, json_extract(m.setup, '$.arena') AS arena,
               m.started_at AS startedAt, m.finished_at AS finishedAt, m.winner, m.reason,
               m.trophies1, m.trophies2, m.log1 IS NOT NULL AS hasLog1, m.log2 IS NOT NULL AS hasLog2

@@ -99,9 +99,9 @@ async function questProgress(db: D1Database, userId: number, stats: Stats, secon
 function rewards(setup: MatchSetup, winner: 0 | 1 | null) {
   const r = PVP.rules;
   const [a, b] = setup.players;
-  const coin = (i: 0 | 1) => (winner === null ? r.drawCoins : winner === i ? r.winCoins : r.lossCoins);
+  const coin = (i: 0 | 1) => (setup.practice ? 0 : winner === null ? r.drawCoins : winner === i ? r.winCoins : r.lossCoins);
   const trophies: [number, number] =
-    setup.mode === "ranked" && !setup.friendly
+    setup.mode === "ranked" && !setup.friendly && !setup.practice
       ? [trophyChange(winner === null ? null : winner === 0, a.trophies, b.trophies), trophyChange(winner === null ? null : winner === 1, b.trophies, a.trophies)]
       : [0, 0];
   return { trophies, coins: [coin(0), coin(1)] as [number, number] };
@@ -160,7 +160,7 @@ async function newMatch(db: D1Database, setup: MatchSetup, p1: number, p2: numbe
 async function settleAbandoned(db: D1Database, userId: number) {
   const row = await one<{ setup: string }>(
     db,
-    "SELECT setup FROM pvp_matches WHERE p1 = ? AND p2 IS NULL AND finished_at IS NULL AND mode = 'ranked' ORDER BY started_at DESC LIMIT 1",
+    "SELECT setup FROM pvp_matches WHERE p1 = ? AND p2 IS NULL AND finished_at IS NULL AND mode = 'ranked' AND json_extract(setup, '$.practice') IS NULL ORDER BY started_at DESC LIMIT 1",
     userId,
   );
   if (row) await settle(db, JSON.parse(row.setup), [userId, null], 1, "left");
@@ -197,7 +197,8 @@ function forward(c: Ctx, stub: DurableObjectStub, userId: number, extra: Record<
 }
 
 /**
- * The matchmaking socket. `?mode=` joins that mode's queue; `?mode=&challenge=host` opens a
+ * The matchmaking socket. `?mode=` joins that mode's queue; `?mode=&bot=1` starts a practice
+ * match against a bot right away; `?mode=&challenge=host` opens a
  * friend challenge and answers with its code; `?join=CODE` accepts one.
  */
 pvp.get("/queue", async (c) => {
@@ -206,8 +207,9 @@ pvp.get("/queue", async (c) => {
   const host = c.req.query("challenge") === "host";
   const mode = (c.req.query("mode") ?? "") as PvpMode;
   if (!join && !PVP_MODES.includes(mode)) fail(400, "Unknown mode");
-  if (!join && !host) await settleAbandoned(c.env.DB, userId);
-  const extra: Record<string, string> = join ? { "x-join": join } : { "x-mode": mode, ...(host ? { "x-host": "1" } : {}) };
+  const bot = c.req.query("bot") === "1";
+  if (!join && !host && !bot) await settleAbandoned(c.env.DB, userId);
+  const extra: Record<string, string> = join ? { "x-join": join } : { "x-mode": mode, ...(host ? { "x-host": "1" } : {}), ...(bot ? { "x-bot": "1" } : {}) };
   return forward(c, c.env.MATCHMAKER.get(c.env.MATCHMAKER.idFromName("main")), userId, extra);
 });
 
@@ -241,7 +243,7 @@ pvp.post("/matches/:id/finish", requirePlayer, async (c) => {
   const r = await settle(db, setup, [userId, null], winner, req.result === "draw" ? "maxWave" : req.result === "left" ? "left" : "hp");
   if (!r) fail(409, "Match already finished");
   await run(db, "UPDATE pvp_matches SET log1 = ? WHERE id = ?", logJson(req.log), setup.id);
-  await questProgress(db, userId, req.stats ?? {}, seconds);
+  if (!setup.practice) await questProgress(db, userId, req.stats ?? {}, seconds);
   const u = await getUser(db, userId);
   return c.json({ result: r.result, promotions: r.promotions[0], profile: u ? readProfile(u) : null });
 });
@@ -308,6 +310,17 @@ export class Matchmaker extends DurableObject<Bindings> {
       return response;
     }
     const mode = req.headers.get("x-mode") as PvpMode;
+    // Practice: a bot straight away (once the socket is open).
+    if (req.headers.get("x-bot") === "1") {
+      const w: Waiting = { ws: server, userId, mode, trophies, since: Date.now() };
+      setTimeout(() => {
+        this.bot(w, true).catch((e) => {
+          console.error("practice match failed", e);
+          this.drop(w, "Couldn't start the match");
+        });
+      }, 50);
+      return response;
+    }
     if (req.headers.get("x-host") === "1") {
       // One open challenge per player.
       for (const h of this.hosts.values()) if (h.userId === userId) this.drop(h, "Replaced by a new challenge");
@@ -408,11 +421,11 @@ export class Matchmaker extends DurableObject<Bindings> {
     }
   }
 
-  private async bot(w: Waiting) {
+  private async bot(w: Waiting, practice = false) {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
     const base = this.setup(w.mode, seed);
     const me = await this.loadout(w, w.mode, seed);
-    const setup: MatchSetup = { ...base, players: [me, botLoadout(w.mode, me, seed)] };
+    const setup: MatchSetup = { ...base, ...(practice ? { practice } : {}), players: [me, botLoadout(w.mode, me, seed)] };
     await newMatch(this.env.DB, setup, w.userId, null);
     this.send(w, { t: "bot", setup, now: Date.now() });
     this.drop(w, "Matched");
