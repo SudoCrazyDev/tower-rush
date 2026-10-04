@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { api, asset } from "../api";
 import { useConfig } from "../config";
 import { Modal, Num, PageHead, Select, Thumb, fmtDate, timeAgo, toast } from "../components";
-import { maxCardLevel } from "../../../shared/units.ts";
+import { ARCHETYPES, ARCHS, ELEMENTS, ELEMENT_COLOR, RARITIES, RARITY_STATS, maxCardLevel, type Element, type Rarity } from "../../../shared/units.ts";
+import { RACE_IDS, RACES, type Race } from "../../../shared/races.ts";
 import type { Profile } from "../../../shared/profile.ts";
 import { leagueFor } from "../../../shared/leagues.ts";
 
@@ -130,10 +131,11 @@ export function UserDetail({ id }: { id: number }) {
   };
 
   const editProfile = () => setModal(<EditProfile d={d} onSave={(body) => act("PATCH", "", body, "Saved")} onClose={() => setModal(null)} />);
-  const editCard = (card: string | null) =>
+  const editCard = (card: string | null, preset?: string) =>
     setModal(
       <EditCard
         card={card}
+        preset={preset}
         state={card ? profile.cards[card] : undefined}
         options={(saved?.units ?? []).filter((u) => !profile.cards[u.id]).map((u) => u.id)}
         names={Object.fromEntries((saved?.units ?? []).map((u) => [u.id, u.name]))}
@@ -143,6 +145,7 @@ export function UserDetail({ id }: { id: number }) {
         onClose={() => setModal(null)}
       />,
     );
+  const giveCard = (preset?: string) => editCard(null, preset);
   const ban = () => {
     const reason = prompt(`Ban ${user.name}? Optional reason shown to the player:`);
     if (reason !== null) act("POST", "/ban", { reason }, "Player banned");
@@ -233,23 +236,7 @@ export function UserDetail({ id }: { id: number }) {
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Cards</h2>
-          <button className="btn small" onClick={() => editCard(null)}>+ Give card</button>
-        </div>
-        <div className="card-grid">
-          {owned.map(([cid, c]) => (
-            <button key={cid} className="owned" onClick={() => editCard(cid)} title="Edit">
-              <Thumb src={asset("portraits", cid)} size={56} />
-              <div>
-                <strong>{unitName(cid)}</strong>
-                <div className="muted small">Lv {c.level} · {c.copies} copies</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
+      <CardsPanel profile={profile} onEdit={editCard} onGive={giveCard} />
 
       <section className="panel">
         <h2>Recent battles</h2>
@@ -302,10 +289,153 @@ export function UserDetail({ id }: { id: number }) {
   );
 }
 
+type CardStatus = "owned" | "deck" | "upgrade" | "missing";
+type CardGroup = "none" | "rarity" | "element" | "race" | "arch" | "level";
+type CardSort = "level" | "copies" | "rarity" | "name";
+
+const hex = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
+const RACE_LABELS = Object.fromEntries(RACE_IDS.map((r) => [r, RACES[r].label]));
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** The player's cards with search, filters, grouping and sorting; "Not owned" lists cards to give. */
+function CardsPanel({ profile, onEdit, onGive }: { profile: Profile; onEdit: (card: string) => void; onGive: (card?: string) => void }) {
+  const { saved } = useConfig();
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState<CardStatus>("owned");
+  const [rarity, setRarity] = useState<Rarity | "all">("all");
+  const [element, setElement] = useState<Element | "all">("all");
+  const [race, setRace] = useState<Race | "all">("all");
+  const [group, setGroup] = useState<CardGroup>("rarity");
+  const [sort, setSort] = useState<CardSort>("level");
+
+  const units = saved?.units ?? [];
+  const eco = saved?.economy;
+  // Same formula as upgradeCost(), but from the saved config rather than the bundled defaults.
+  const needCopies = (level: number, r: Rarity) => {
+    if (!eco || level >= maxCardLevel()) return Infinity;
+    const copies = eco.upgradeCopies[level - 1] ?? Infinity;
+    return Math.max(1, Math.ceil(copies / (1 + RARITIES.indexOf(r) * eco.rarityCopyDiscount)));
+  };
+
+  const rows = units
+    .map((u) => {
+      const c = profile.cards[u.id];
+      return { u, c, need: c ? needCopies(c.level, u.rarity) : Infinity };
+    })
+    .filter(({ u, c, need }) => {
+      if (status === "missing" ? c : !c) return false;
+      if (status === "deck" && !profile.deck.includes(u.id)) return false;
+      if (status === "upgrade" && !(c && c.copies >= need)) return false;
+      if (rarity !== "all" && u.rarity !== rarity) return false;
+      if (element !== "all" && u.element !== element) return false;
+      if (race !== "all" && u.race !== race) return false;
+      return (u.name + u.id).toLowerCase().includes(q.toLowerCase());
+    });
+  const rarityRank = (r: Rarity) => -RARITIES.indexOf(r);
+  rows.sort((a, b) => {
+    const by =
+      sort === "level" ? (b.c?.level ?? 0) - (a.c?.level ?? 0)
+      : sort === "copies" ? (b.c?.copies ?? 0) - (a.c?.copies ?? 0)
+      : sort === "rarity" ? rarityRank(a.u.rarity) - rarityRank(b.u.rarity)
+      : 0;
+    return by || a.u.name.localeCompare(b.u.name);
+  });
+
+  // Group keys in a meaningful order: rarest first, highest level first, otherwise as defined.
+  const groups: { key: string; label: string; color?: string; rows: typeof rows }[] = [];
+  if (group === "none") groups.push({ key: "all", label: "", rows });
+  else {
+    const keyOf = (r: (typeof rows)[number]) => (group === "level" ? String(r.c?.level ?? 0) : r.u[group]);
+    const order: string[] =
+      group === "rarity" ? [...RARITIES].reverse()
+      : group === "element" ? ELEMENTS
+      : group === "race" ? RACE_IDS
+      : group === "arch" ? ARCHS
+      : [...new Set(rows.map(keyOf))].sort((a, b) => Number(b) - Number(a));
+    for (const key of order) {
+      const g = rows.filter((r) => keyOf(r) === key);
+      if (!g.length) continue;
+      const label =
+        group === "level" ? (key === "0" ? "Not owned" : `Level ${key}`)
+        : group === "race" ? RACE_LABELS[key]
+        : group === "arch" ? `${cap(key)} — ${ARCHETYPES[key as keyof typeof ARCHETYPES].label}`
+        : cap(key);
+      const color = group === "rarity" ? hex(RARITY_STATS[key as Rarity].color) : group === "element" ? hex(ELEMENT_COLOR[key as Element]) : group === "race" ? hex(RACES[key as Race].color) : undefined;
+      groups.push({ key, label, color, rows: g });
+    }
+  }
+
+  const ownedCount = Object.keys(profile.cards).length;
+  const filtered = q || rarity !== "all" || element !== "all" || race !== "all";
+  const clear = () => (setQ(""), setRarity("all"), setElement("all"), setRace("all"));
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2>Cards <span className="muted small">{ownedCount} of {units.length} owned</span></h2>
+        <button className="btn small" onClick={() => onGive()}>+ Give card</button>
+      </div>
+      <div className="toolbar">
+        <input className="search" placeholder="Search cards…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="seg small">
+          {(["owned", "deck", "upgrade", "missing"] as const).map((s) => (
+            <button key={s} className={status === s ? "on" : ""} onClick={() => setStatus(s)}>
+              {{ owned: "Owned", deck: "In deck", upgrade: "Can upgrade", missing: "Not owned" }[s]}
+            </button>
+          ))}
+        </div>
+        <Select value={rarity} options={["all", ...RARITIES] as const} labels={{ all: "All rarities" }} onChange={setRarity} />
+        <Select value={element} options={["all", ...ELEMENTS] as const} labels={{ all: "All elements" }} onChange={setElement} />
+        <Select value={race} options={["all", ...RACE_IDS] as const} labels={{ all: "All races", ...RACE_LABELS }} onChange={setRace} />
+        {filtered && <button className="btn small ghost" onClick={clear}>Clear</button>}
+        <span className="spacer" />
+        <span className="muted small">Group</span>
+        <Select value={group} options={["none", "rarity", "element", "race", "arch", "level"] as const} labels={{ none: "None", rarity: "Rarity", element: "Element", race: "Race", arch: "Archetype", level: "Level" }} onChange={setGroup} />
+        <span className="muted small">Sort</span>
+        <Select value={sort} options={["level", "copies", "rarity", "name"] as const} labels={{ level: "Level", copies: "Copies", rarity: "Rarity", name: "Name" }} onChange={setSort} />
+      </div>
+      {groups.map((g) => (
+        <div key={g.key} className="card-group">
+          {g.label && (
+            <h3 className="card-group-head">
+              {g.color && <span className="dot" style={{ background: g.color }} />}
+              {g.label} <span className="muted small">{g.rows.length}</span>
+            </h3>
+          )}
+          <div className="card-grid">
+            {g.rows.map(({ u, c, need }) =>
+              c ? (
+                <button key={u.id} className="owned" onClick={() => onEdit(u.id)} title="Edit" style={{ borderLeft: `3px solid ${hex(RARITY_STATS[u.rarity].color)}` }}>
+                  <Thumb src={asset("portraits", u.id)} size={56} />
+                  <div>
+                    <strong>{profile.deck.includes(u.id) ? "★ " : ""}{u.name}</strong>
+                    <div className="muted small">
+                      Lv {c.level} · {c.copies}{Number.isFinite(need) ? ` / ${need}` : ""} copies
+                    </div>
+                    {c.copies >= need && <div className="small good">Upgrade ready</div>}
+                  </div>
+                </button>
+              ) : (
+                <button key={u.id} className="owned" onClick={() => onGive(u.id)} title="Give this card" style={{ opacity: 0.55, borderLeft: `3px solid ${hex(RARITY_STATS[u.rarity].color)}` }}>
+                  <Thumb src={asset("portraits", u.id)} size={56} />
+                  <div>
+                    <strong>{u.name}</strong>
+                    <div className="muted small">Not owned · {u.rarity}</div>
+                  </div>
+                </button>
+              ),
+            )}
+          </div>
+        </div>
+      ))}
+      {!rows.length && <div className="muted center">No cards match</div>}
+    </section>
+  );
+}
+
 function Stat2({ icon, label, value, sub }: { icon: string; label: string; value: number; sub?: string }) {
   return (
     <div className="stat with-icon">
-      <img src={asset("items", icon)} alt="" width={40} height={40} />
+      <img crossOrigin="anonymous" src={asset("items", icon)} alt="" width={40} height={40} />
       <div>
         <div className="stat-label">{label}</div>
         <div className="stat-value">{value.toLocaleString()}</div>
@@ -361,6 +491,8 @@ function EditProfile({ d, onSave, onClose }: { d: Detail; onSave: (body: Record<
 
 function EditCard(props: {
   card: string | null;
+  /** Unit picked when giving a new card. */
+  preset?: string;
   state?: { level: number; copies: number };
   options: string[];
   names: Record<string, string>;
@@ -369,7 +501,7 @@ function EditCard(props: {
   onRemove: (card: string) => void;
   onClose: () => void;
 }) {
-  const [card, setCard] = useState(props.card ?? props.options[0] ?? "");
+  const [card, setCard] = useState(props.card ?? props.preset ?? props.options[0] ?? "");
   const [level, setLevel] = useState(props.state?.level ?? 1);
   const [copies, setCopies] = useState(props.state?.copies ?? 0);
   return (
