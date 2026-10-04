@@ -166,7 +166,7 @@ export function boardUnitStats(b: BoardUnit, cardLevel: number, powerUp: number)
   return s;
 }
 
-const DUMMY: MonsterDef = { id: "dummy", name: "Training dummy", hp: 1, speed: 0, traits: [], mana: 0, size: 84 };
+const DUMMY: MonsterDef = { id: "dummy", name: "Training dummy", race: "construct", hp: 1, speed: 0, traits: [], mana: 0, size: 84 };
 
 // ---------------------------------------------------------------- actors
 

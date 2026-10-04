@@ -3,6 +3,9 @@ import { useConfig } from "../config";
 import { Num, Text, Select, Chips, Thumb, PageHead } from "../components";
 import { asset } from "../api";
 import { TRAITS, BOSS_POWERS, type MonsterDef, type BossDef } from "../../../shared/monsters.ts";
+import { RACE_IDS, RACES } from "../../../shared/races.ts";
+
+const RACE_LABELS = Object.fromEntries(RACE_IDS.map((r) => [r, RACES[r].label]));
 
 const TRAIT_HELP: Record<string, string> = {
   fast: "moves quickly",
@@ -47,6 +50,7 @@ export function MonstersPage() {
             <tr>
               <th></th>
               <th>Name</th>
+              <th>Race</th>
               <th>HP ×</th>
               <th>Speed</th>
               <th>Mana on kill</th>
@@ -63,6 +67,7 @@ export function MonstersPage() {
                     <Text value={m.name} onChange={(v) => set(i, "name", v)} width={150} />
                     <div className="id">{m.id}</div>
                   </td>
+                  <td className={changed(m, "race")}><Select value={m.race} options={RACE_IDS} labels={RACE_LABELS} onChange={(v) => set(i, "race", v)} /></td>
                   <td className={changed(m, "hp")}><Num value={m.hp} step={0.1} min={0.01} onChange={(v) => set(i, "hp", v)} /></td>
                   <td className={changed(m, "speed")}><Num value={m.speed} step={5} min={0} onChange={(v) => set(i, "speed", v)} /></td>
                   <td className={changed(m, "mana")}><Num value={m.mana} min={0} onChange={(v) => set(i, "mana", v)} /></td>
@@ -109,6 +114,7 @@ export function BossesPage() {
             <tr>
               <th></th>
               <th>Name</th>
+              <th>Race</th>
               <th>HP ×</th>
               <th>Speed</th>
               <th>Power</th>
@@ -123,6 +129,7 @@ export function BossesPage() {
                   <Text value={b.name} onChange={(v) => set(i, "name", v)} width={180} />
                   <div className="id">{b.id}</div>
                 </td>
+                <td className={changed(b, "race")}><Select value={b.race} options={RACE_IDS} labels={RACE_LABELS} onChange={(v) => set(i, "race", v)} /></td>
                 <td className={changed(b, "hp")}><Num value={b.hp} step={0.1} min={0.01} onChange={(v) => set(i, "hp", v)} /></td>
                 <td className={changed(b, "speed")}><Num value={b.speed} step={2} min={0} onChange={(v) => set(i, "speed", v)} /></td>
                 <td className={changed(b, "power")}>

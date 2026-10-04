@@ -2,6 +2,9 @@ import { useConfig } from "../config";
 import { Num, Text, Select, Toggle, Thumb, PageHead } from "../components";
 import { asset } from "../api";
 import { HERO_POWERS, HERO_POWER_IDS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
+import { RACE_IDS, RACES } from "../../../shared/races.ts";
+
+const RACE_LABELS = Object.fromEntries(RACE_IDS.map((r) => [r, RACES[r].label]));
 
 const POWER_LABELS = Object.fromEntries(HERO_POWER_IDS.map((p) => [p, `${p} — ${HERO_POWERS[p].label}`]));
 
@@ -27,6 +30,7 @@ export function HeroesPage() {
             <tr>
               <th></th>
               <th>Name</th>
+              <th>Race</th>
               <th>Ability</th>
               <th>Power</th>
               <th title="Seconds between uses">Recharge (s)</th>
@@ -48,6 +52,7 @@ export function HeroesPage() {
                     <Text value={h.name} onChange={(v) => set(i, "name", v)} width={150} />
                     <div className="id">{h.id}</div>
                   </td>
+                  <td className={changed(h, "race")}><Select value={h.race} options={RACE_IDS} labels={RACE_LABELS} onChange={(v) => set(i, "race", v)} /></td>
                   <td className={changed(h, "ability")}>
                     <Text value={h.ability} onChange={(v) => set(i, "ability", v)} width={140} />
                   </td>

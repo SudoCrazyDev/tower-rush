@@ -10,6 +10,7 @@ import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } fro
 import { DEFAULT_LOGIN_REWARDS, DEFAULT_QUESTS, LOGIN_REWARDS, QUESTS, QUEST_GOAL_IDS, type QuestDef, type Reward } from "./daily.ts";
 import { DEFAULT_LEAGUES, LEAGUES, type LeagueDef } from "./leagues.ts";
 import { DEFAULT_EFFECTS, EFFECTS, effectProblems, type Effects } from "./effects.ts";
+import { RACE_IDS, withRaces } from "./races.ts";
 import { DEFAULT_EVENTS, DEFAULT_OFFERS, EVENTS, OFFERS, offerProblems, type EventDef, type OfferDef } from "./offers.ts";
 
 export interface GameConfig {
@@ -61,12 +62,12 @@ function replace<T>(target: T[], items: T[]) {
 
 /** Swap the live tables for the ones in `cfg` (in place, so existing imports see them). */
 export function applyConfig(cfg: GameConfig) {
-  replace(UNITS, cfg.units);
-  replace(MONSTERS, cfg.monsters);
-  replace(BOSSES, cfg.bosses);
+  replace(UNITS, withRaces(cfg.units, DEFAULT_UNITS));
+  replace(MONSTERS, withRaces(cfg.monsters, DEFAULT_MONSTERS));
+  replace(BOSSES, withRaces(cfg.bosses, DEFAULT_BOSSES));
   replace(ARENAS, cfg.arenas);
   replace(CHESTS, cfg.chests);
-  replace(HEROES, cfg.heroes);
+  replace(HEROES, withRaces(cfg.heroes, DEFAULT_HEROES));
   replace(LOGIN_REWARDS, cfg.loginRewards);
   replace(QUESTS, cfg.quests);
   replace(LEAGUES, cfg.leagues);
@@ -111,6 +112,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     if (!u.name) errs.push(`${w}: name is required`);
     oneOf(u.rarity, RARITIES, `${w} rarity`);
     oneOf(u.element, ELEMENTS, `${w} element`);
+    oneOf(u.race, RACE_IDS, `${w} race`);
     oneOf(u.arch, ARCHS, `${w} archetype`);
     oneOf(u.proj, PROJECTILES, `${w} projectile`);
     num(u.damage, `${w} damage`);
@@ -119,6 +121,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   const monsterIds = ids(cfg.monsters, "monster");
   for (const m of cfg.monsters) {
     const w = `Monster ${m.id}`;
+    oneOf(m.race, RACE_IDS, `${w} race`);
     num(m.hp, `${w} hp`, 0.01);
     num(m.speed, `${w} speed`);
     num(m.mana, `${w} mana`);
@@ -128,6 +131,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   const bossIds = ids(cfg.bosses, "boss");
   for (const b of cfg.bosses) {
     const w = `Boss ${b.id}`;
+    oneOf(b.race, RACE_IDS, `${w} race`);
     num(b.hp, `${w} hp`, 0.01);
     num(b.speed, `${w} speed`);
     oneOf(b.power, BOSS_POWERS, `${w} power`);
@@ -157,6 +161,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   for (const h of cfg.heroes) {
     const w = `Hero ${h.id}`;
     if (!h.name) errs.push(`${w}: name is required`);
+    oneOf(h.race, RACE_IDS, `${w} race`);
     oneOf(h.power, HERO_POWER_IDS, `${w} power`);
     num(h.cooldown, `${w} cooldown`, 1);
     num(h.amount, `${w} amount`);

@@ -1,12 +1,12 @@
 import Phaser from "phaser";
 import { effectSummary } from "../../../shared/effects.ts";
-import { ARCHETYPES, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, unitStats, upgradeCost } from "../data/units";
+import { ARCHETYPES, MAX_RANK, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
-import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, raceBadge } from "../ui";
 import { topBar } from "./LobbyScene";
 import { music, sfx } from "../audio";
 import { bakeAll, bakedImage } from "../bake";
@@ -104,6 +104,8 @@ export class DeckScene extends Phaser.Scene {
   private static status: Status = "all";
   private static elements = new Set<Element>();
   private static groupBy: GroupBy = "rarity";
+  /** Last tab viewed in the card dialog. */
+  private static cardTab: "info" | "stats" = "info";
 
   /** When set, the next tap on a deck slot puts this card there. */
   private swapping: string | null = null;
@@ -439,11 +441,12 @@ export class DeckScene extends Phaser.Scene {
   private showCard(id: string, celebrate = false) {
     const def = UNIT_BY_ID[id];
     const owned = profile.cards[id];
-    const m = modal(this, 640, 980, def.name, () => {
+    const m = modal(this, 640, 1180, def.name, () => {
       if (this.upgraded) this.scene.restart();
     });
     const { cx, cy } = m;
-    const card = cardView(this, cx, cy - 270, 260, id, { level: owned?.level, locked: !owned });
+    const cardY = cy - 370;
+    const card = cardView(this, cx, cardY, 260, id, { level: owned?.level, locked: !owned });
     m.add(card);
     if (celebrate) {
       // Skip the dialog's pop-in: it's the same dialog, refreshed.
@@ -451,14 +454,37 @@ export class DeckScene extends Phaser.Scene {
       m.setScale(1).setAlpha(1).setPosition(0, 0);
       this.levelUpBurst(m, card);
     }
+    m.add(raceBadge(this, cx - 212, cardY - 40, def.race));
+
+    // Two tabs under the card: the unit's details, and how its stats grow.
+    const level = owned?.level ?? 1;
+    const info = this.add.container(0, 0);
+    const stats = this.statsTab(def, level, cx, cy - 120);
+    const show = (t: "info" | "stats") => {
+      DeckScene.cardTab = t;
+      for (const x of tabs) x.c.paint(x.t === t);
+      info.setVisible(t === "info");
+      stats.setVisible(t === "stats");
+    };
+    const tabs = (["info", "stats"] as const).map((t, i) => {
+      const c = chip(this, cx + (i ? 115 : -115), cy - 190, 210, 60, t === "info" ? "DETAILS" : "STATS");
+      pressable(c, () => show(t));
+      return { t, c };
+    });
+
+    const rarityCss = "#" + RARITY_STATS[def.rarity].color.toString(16).padStart(6, "0");
+    const rarityLine = txt(this, cx, cy - 120, `${def.rarity.toUpperCase()} · ${def.element.toUpperCase()}`, 28, rarityCss);
+    info.add(rarityLine);
     // Awakened form: a small preview to the side; tap either card to flip between them.
     if (canAwaken(id) && this.textures.exists(`portrait_awakened:${id}`)) {
-      const awake = cardView(this, cx, cy - 270, 260, id, { awakened: true, locked: !owned }).setVisible(false);
+      const awake = cardView(this, cx, cardY, 260, id, { awakened: true, locked: !owned }).setVisible(false);
       m.add(awake);
-      const thumb = cardView(this, cx + 225, cy - 330, 96, id, { awakened: true, locked: !owned });
+      const thumb = cardView(this, cx + 225, cardY - 60, 96, id, { awakened: true, locked: !owned });
       m.add(thumb);
-      const label = txt(this, cx + 225, cy - 258, "AWAKENS\nAT RANK 7", 18, "#ffd93b");
+      const label = txt(this, cx + 225, cardY + 12, "AWAKENS\nAT RANK 7", 18, "#ffd93b");
       m.add(label);
+      const awakeText = txt(this, cx, cy - 120, `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ultimate every ${ECONOMY.ultimateCooldown}s`, 22, "#ffd93b");
+      info.add(awakeText.setVisible(false));
       const flip = () => {
         const showAwake = !awake.visible;
         awake.setVisible(showAwake);
@@ -466,31 +492,26 @@ export class DeckScene extends Phaser.Scene {
         thumb.setVisible(!showAwake);
         label.setVisible(!showAwake);
         rarityLine.setVisible(!showAwake);
-        info.setText(showAwake ? `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ultimate every ${ECONOMY.ultimateCooldown}s` : "");
+        awakeText.setVisible(showAwake);
       };
-      const info = txt(this, cx, cy - 110, "", 22, "#ffd93b");
-      m.add(info);
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
-    const rarityCss = "#" + RARITY_STATS[def.rarity].color.toString(16).padStart(6, "0");
-    const rarityLine = txt(this, cx, cy - 110, `${def.rarity.toUpperCase()} · ${def.element.toUpperCase()}`, 28, rarityCss);
-    m.add(rarityLine);
-    m.add(txt(this, cx, cy - 72, ARCHETYPES[def.arch].label, 26, "#ffffff"));
+    info.add(txt(this, cx, cy - 76, ARCHETYPES[def.arch].label, 26, "#ffffff"));
     // The archetype's numbers for this unit as summoned (rank 1).
     const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity));
-    if (effect) m.add(txt(this, cx, cy - 40, effect, 20, "#7fffd4"));
-    m.add(txt(this, cx, effect ? cy - 8 : cy - 26, `"${def.blurb}"`, effect ? 20 : 22, "#c9d2ff"));
+    if (effect) info.add(txt(this, cx, cy - 40, effect, 20, "#7fffd4"));
+    info.add(txt(this, cx, effect ? cy - 4 : cy - 28, `"${def.blurb}"`, effect ? 20 : 22, "#c9d2ff"));
 
-    const level = owned?.level ?? 1;
-    const stats = unitStats(def, 1, level, 0);
+    const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
-      ["stat:damage", def.arch === "buff" ? "—" : fmt(stats.damage)],
-      ["stat:attack_speed", def.arch === "buff" ? "—" : `every ${+(1 / stats.speed).toFixed(2)}s`],
+      ["stat:damage", def.arch === "buff" ? "—" : fmt(now.damage)],
+      ["stat:attack_speed", def.arch === "buff" ? "—" : `every ${+(1 / now.speed).toFixed(2)}s`],
     ];
     // Lay the icon+value pairs out by their real widths and centre the row.
+    const statY = cy + 60;
     const pairs = rows.map(([icon, value]) => ({
-      img: this.add.image(0, cy + 40, icon).setDisplaySize(56, 56).setOrigin(0, 0.5),
-      label: txt(this, 0, cy + 40, value, 32, "#ffffff", [0, 0.5]),
+      img: this.add.image(0, statY, icon).setDisplaySize(56, 56).setOrigin(0, 0.5),
+      label: txt(this, 0, statY, value, 32, "#ffffff", [0, 0.5]),
     }));
     const pairW = (p: (typeof pairs)[number]) => 56 + 12 + p.label.width;
     const gap = 60;
@@ -499,24 +520,33 @@ export class DeckScene extends Phaser.Scene {
       p.img.setX(x);
       p.label.setX(x + 68);
       x += pairW(p) + gap;
-      m.add([p.img, p.label]);
+      info.add([p.img, p.label]);
       if (celebrate && def.arch !== "buff") {
         p.label.setColor("#7dff7a");
         this.tweens.add({ targets: p.label, scale: 1.25, yoyo: true, duration: 220, delay: 250, ease: "Quad.Out" });
         this.time.delayedCall(1400, () => p.label.active && p.label.setColor("#ffffff"));
       }
     }
+    this.cardActions(m, info, id, cx, cy);
+    // Filled before adding, so the modal pins every child to the screen.
+    m.add([info, stats, ...tabs.map((x) => x.c)]);
+    show(celebrate ? "info" : DeckScene.cardTab);
+  }
 
+  /** The buttons on the details tab: upgrade, and put the card in the deck. */
+  private cardActions(m: ReturnType<typeof modal>, box: Phaser.GameObjects.Container, id: string, cx: number, cy: number) {
+    const def = UNIT_BY_ID[id];
+    const owned = profile.cards[id];
     if (!owned) {
-      m.add(txt(this, cx, cy + 170, "Find this card in chests!", 32, "#ffd27a"));
-      m.add(button(this, cx, cy + 330, 360, 100, "SHOP", "green", () => this.scene.start("Shop")));
+      box.add(txt(this, cx, cy + 200, "Find this card in chests!", 32, "#ffd27a"));
+      box.add(button(this, cx, cy + 360, 360, 100, "SHOP", "green", () => this.scene.start("Shop")));
       return;
     }
 
     if (owned.level < maxCardLevel()) {
       const cost = upgradeCost(owned.level, def.rarity);
-      m.add(txt(this, cx, cy + 130, `Cards: ${owned.copies} / ${cost.copies}`, 30, owned.copies >= cost.copies ? "#7dff7a" : "#ffffff"));
-      const up = button(this, cx, cy + 230, 400, 100, `UPGRADE  ${fmt(cost.coins)}`, "yellow", () => {
+      box.add(txt(this, cx, cy + 170, `Cards: ${owned.copies} / ${cost.copies}`, 30, owned.copies >= cost.copies ? "#7dff7a" : "#ffffff"));
+      const up = button(this, cx, cy + 270, 400, 100, `UPGRADE  ${fmt(cost.coins)}`, "yellow", () => {
         up.setEnabled(false);
         attempt(this, () => upgradeCard(id)).then((ok) => {
           if (!this.sys.isActive()) return;
@@ -533,18 +563,18 @@ export class DeckScene extends Phaser.Scene {
         });
       }, 36);
       up.setEnabled(canUpgrade(id));
-      m.add(up);
+      box.add(up);
     } else {
-      m.add(txt(this, cx, cy + 170, "MAX LEVEL", 40, "#ffd93b"));
+      box.add(txt(this, cx, cy + 220, "MAX LEVEL", 40, "#ffd93b"));
     }
 
     if (profile.deck.includes(id)) {
-      m.add(txt(this, cx, cy + 350, "In your deck", 30, "#7dff7a"));
+      box.add(txt(this, cx, cy + 400, "In your deck", 30, "#7dff7a"));
     } else if (!def.enabled) {
-      m.add(txt(this, cx, cy + 350, "Currently unavailable", 30, "#ff8080"));
+      box.add(txt(this, cx, cy + 400, "Currently unavailable", 30, "#ff8080"));
     } else {
-      m.add(
-        button(this, cx, cy + 350, 400, 100, "USE IN DECK", "blue", () => {
+      box.add(
+        button(this, cx, cy + 400, 400, 100, "USE IN DECK", "blue", () => {
           m.close();
           this.swapping = id;
           this.hint.setText("Tap a deck slot to replace").setColor("#ffd93b");
@@ -572,6 +602,82 @@ export class DeckScene extends Phaser.Scene {
         }),
       );
     }
+  }
+
+  /**
+   * How the unit's numbers grow: permanent card levels, in-battle power-ups (mana) and
+   * merge ranks. Every value comes from unitStats(), so it matches the battle.
+   */
+  private statsTab(def: UnitDef, level: number, cx: number, top: number) {
+    const box = this.add.container(0, 0);
+    const noAttack = def.arch === "buff";
+    const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
+    const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const ROW = 36;
+    let y = top;
+    const section = (title: string, note: string) => {
+      box.add(txt(this, cx, y, title, 26, "#ffd93b"));
+      box.add(txt(this, cx, y + 30, note, 19, "#c9d2ff"));
+      y += 74;
+    };
+    // A header row of column names, then one row per stat; column `hi` is highlighted.
+    const table = (heads: string[], rows: { icon: string; cells: string[] }[], hi = -1) => {
+      const colW = Math.min(96, 480 / heads.length);
+      const x0 = cx - (colW * heads.length) / 2 + 22;
+      const at = (i: number) => x0 + colW * (i + 0.5);
+      if (hi >= 0) {
+        const h = ROW * (rows.length + 1) + 8;
+        box.add(this.add.rectangle(at(hi), y - ROW / 2 - 4 + h / 2, colW - 6, h, 0xffd93b, 0.16).setStrokeStyle(2, 0xffd93b, 0.7));
+      }
+      heads.forEach((h, i) => box.add(txt(this, at(i), y, h, 20, i === hi ? "#ffd93b" : "#9fb0e0")));
+      rows.forEach((r, ri) => {
+        const ry = y + ROW * (ri + 1);
+        box.add(this.add.image(x0 - 26, ry, r.icon).setDisplaySize(32, 32));
+        r.cells.forEach((c, i) => box.add(txt(this, at(i), ry, c, 22, i === hi ? "#ffffff" : "#e6e9ff")));
+      });
+      y += ROW * (rows.length + 1) + 30;
+    };
+
+    // Card levels: the current one and the next few (or the last few near max).
+    const max = maxCardLevel();
+    const first = Math.max(1, Math.min(level, max - 4));
+    const levels = Array.from({ length: Math.min(5, max) }, (_, i) => first + i);
+    section("CARD LEVEL", `+${pct(ECONOMY.levelBonus)} damage per upgrade · max level ${max}`);
+    table(
+      levels.map((l) => (l === max ? "MAX" : `Lv ${l}`)),
+      [{ icon: "stat:damage", cells: levels.map((l) => dmg(unitStats(def, 1, l, 0).damage)) }],
+      levels.indexOf(level),
+    );
+
+    // Power-ups are bought with mana during a battle and last until it ends.
+    const ups = Array.from({ length: maxPowerUp() + 1 }, (_, i) => i);
+    section("POWER-UPS IN BATTLE", `Spend mana: +${pct(ECONOMY.powerUpBonus)} damage each, for that battle`);
+    table(
+      ups.map((p) => (p ? `+${p}` : "Base")),
+      [
+        { icon: "stat:damage", cells: ups.map((p) => dmg(unitStats(def, 1, level, p).damage)) },
+        { icon: "item:mana_orb", cells: ups.map((p) => (p ? fmt(powerUpCost(p - 1)) : "—")) },
+      ],
+      0,
+    );
+
+    // Merge ranks: two of the same unit at the same rank make one of the next rank.
+    const ranks = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
+    const awakens = canAwaken(def.id);
+    const boost = (r: number, mult: number) => (awakens && r === MAX_RANK ? mult : 1);
+    section("MERGE RANK", `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? " · ★7 awakens" : ""}`);
+    table(
+      ranks.map((r) => `★${r}`),
+      [
+        { icon: "stat:damage", cells: ranks.map((r) => dmg(unitStats(def, r, level, 0).damage * boost(r, ECONOMY.awakenDamageMult))) },
+        { icon: "stat:attack_speed", cells: ranks.map((r) => every(unitStats(def, r, level, 0).speed * boost(r, ECONOMY.awakenSpeedMult))) },
+      ],
+      0,
+    );
+    const foot = noAttack ? "Doesn't attack: it speeds up neighbouring units." : `At your card level (Lv ${level}). Times are seconds between attacks.`;
+    box.add(txt(this, cx, y - 6, foot, 18, "#9fb0e0").setWordWrapWidth(540));
+    return box;
   }
 
   /** Glow, sparks, a card pop and a "LEVEL UP!" banner over the card in the dialog. */

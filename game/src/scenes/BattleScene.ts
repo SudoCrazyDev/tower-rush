@@ -4,6 +4,7 @@ import { BASE, ensureAnim, loadImages, loadSheet, assetIndex, animKey, sheetScal
 import { ARENAS, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "../data/monsters";
 import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
+import { raceLabel } from "../../../shared/races.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import {
   EFFECTS, buffBonus, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
@@ -1011,7 +1012,7 @@ export class BattleScene extends Phaser.Scene {
       const boss = BOSS_BY_ID[bosses[(n / e.bossEvery - 1) % bosses.length]];
       this.queue.push({ boss });
       for (let i = 0; i < 4 + Math.floor(n / e.bossEvery); i++) this.queue.push({ def: pick() });
-      this.showBanner(`BOSS: ${boss.name}`, true, boss.id);
+      this.showBanner(`BOSS: ${boss.name}`, true, boss.id, raceLabel(boss.race).toUpperCase());
       sfx("boss");
       music("boss");
     } else {
@@ -1027,7 +1028,7 @@ export class BattleScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  private showBanner(text: string, boss = false, bossId?: string) {
+  private showBanner(text: string, boss = false, bossId?: string, sub?: string) {
     const parts: Phaser.GameObjects.GameObject[] = [];
     if (boss && bossId && this.textures.exists(`boss_banner:${bossId}`)) {
       const img = this.add.image(0, -40, `boss_banner:${bossId}`);
@@ -1039,6 +1040,7 @@ export class BattleScene extends Phaser.Scene {
       parts.push(this.add.image(-150, 0, "ui:wave_horn").setDisplaySize(110, 110));
     }
     parts.push(txt(this, boss ? 0 : 40, boss ? 130 : 0, text, boss ? 46 : 64, boss ? "#ff8080" : "#fff4c2"));
+    if (sub) parts.push(txt(this, 0, 178, sub, 26, "#ffd0d0"));
     const c = this.add.container(ARENA_W / 2, 470, parts).setDepth(2800).setAlpha(0).setScale(0.6);
     this.tweens.add({
       targets: c,

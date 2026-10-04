@@ -3,6 +3,7 @@ import { BUTTON, ICON, type ButtonColor } from "./assets";
 import { UNIT_BY_ID, RARITY_STATS, ELEMENT_COLOR } from "./data/units";
 import { sfx, audioSettings, setAudio } from "./audio";
 import { LAYOUT, RES } from "./display";
+import { RACES, raceCss, raceLabel, type Race } from "../../shared/races.ts";
 
 
 export const WIDE = LAYOUT.wide;
@@ -227,6 +228,14 @@ export function modal(scene: Phaser.Scene, w: number, h: number, title: string, 
   root.setPosition((W / 2) * 0.1, (H / 2) * 0.1);
   scene.tweens.add({ targets: root, x: 0, y: 0, duration: 140, ease: "Back.Out" });
   return Object.assign(root, { close, cx: W / 2, cy: H / 2 });
+}
+
+/** A small "RACE / Human" plate in the race's colour. */
+export function raceBadge(scene: Phaser.Scene, x: number, y: number, race: Race) {
+  const g = scene.add.graphics();
+  g.fillStyle(0x0b1530, 0.85).fillRoundedRect(-64, -36, 128, 72, 16);
+  g.lineStyle(3, RACES[race]?.color ?? 0xffffff, 1).strokeRoundedRect(-64, -36, 128, 72, 16);
+  return scene.add.container(x, y, [g, txt(scene, 0, -14, "RACE", 18, "#c9d2ff"), txt(scene, 0, 12, raceLabel(race).toUpperCase(), 20, raceCss(race))]);
 }
 
 export function fmt(n: number) {

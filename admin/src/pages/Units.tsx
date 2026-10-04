@@ -3,6 +3,9 @@ import { useConfig } from "../config";
 import { Num, Text, Select, Toggle, Thumb, PageHead } from "../components";
 import { asset } from "../api";
 import { ARCHETYPES, ARCHS, ELEMENTS, PROJECTILES, RARITIES, unitStats, type Rarity, type UnitDef } from "../../../shared/units.ts";
+import { RACE_IDS, RACES } from "../../../shared/races.ts";
+
+const RACE_LABELS = Object.fromEntries(RACE_IDS.map((r) => [r, RACES[r].label]));
 
 const ARCH_LABELS = Object.fromEntries(ARCHS.map((a) => [a, `${a} — ${ARCHETYPES[a].label}`]));
 
@@ -62,6 +65,7 @@ export function UnitsPage() {
               <th>Name</th>
               <th>Rarity</th>
               <th>Element</th>
+              <th>Race</th>
               <th>Archetype</th>
               <th>Projectile</th>
               <th>Damage</th>
@@ -84,6 +88,7 @@ export function UnitsPage() {
                   </td>
                   <td className={changed(u, "rarity")}><Select value={u.rarity} options={RARITIES} onChange={(v) => set(i, "rarity", v)} /></td>
                   <td className={changed(u, "element")}><Select value={u.element} options={ELEMENTS} onChange={(v) => set(i, "element", v)} /></td>
+                  <td className={changed(u, "race")}><Select value={u.race} options={RACE_IDS} labels={RACE_LABELS} onChange={(v) => set(i, "race", v)} /></td>
                   <td className={changed(u, "arch")}><Select value={u.arch} options={ARCHS} onChange={(v) => set(i, "arch", v)} labels={ARCH_LABELS} /></td>
                   <td className={changed(u, "proj")}><Select value={u.proj} options={PROJECTILES} onChange={(v) => set(i, "proj", v)} /></td>
                   <td className={changed(u, "damage")}><Num value={u.damage} step={0.5} min={0} onChange={(v) => set(i, "damage", v)} /></td>

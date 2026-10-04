@@ -1,4 +1,5 @@
 import { ECONOMY } from "./economy.ts";
+import type { Race } from "./races.ts";
 
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane";
@@ -37,6 +38,7 @@ export interface UnitDef {
   name: string;
   rarity: Rarity;
   element: Element;
+  race: Race;
   arch: Arch;
   proj: Proj;
   blurb: string;
@@ -91,11 +93,12 @@ export const ARCHS = Object.keys(ARCHETYPES) as Arch[];
 
 const SEED_DAMAGE: Record<Rarity, number> = { common: 20, rare: 26, epic: 34, legendary: 44, mythic: 56 };
 
-const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arch, proj: Proj, blurb: string): UnitDef => ({
+const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arch, proj: Proj, blurb: string, race: Race): UnitDef => ({
   id,
   name,
   rarity,
   element,
+  race,
   arch,
   proj,
   blurb,
@@ -106,70 +109,70 @@ const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arc
 
 export const DEFAULT_UNITS: UnitDef[] = [
   // common
-  U("hooded_archer", "Hooded Archer", "common", "nature", "shot", "arrow", "Never misses a heartbeat."),
-  U("fox_spearman", "Fox Spearman", "common", "nature", "pierce", "spark", "One thrust, three goblins."),
-  U("goblin_bomber", "Goblin Bomber", "common", "fire", "splash", "cannonball", "Loves loud noises."),
-  U("flame_adept", "Flame Adept", "common", "fire", "burn", "fireball", "Still learning not to singe allies."),
-  U("penguin_wizard", "Penguin Wizard", "common", "ice", "slow", "ice_shard", "Cold hands, colder spells."),
-  U("tesla_gnome", "Tesla Gnome", "common", "lightning", "chain", "lightning", "Pocket-sized thunderstorm."),
-  U("cactus_gunslinger", "Cactus Gunslinger", "common", "nature", "crit", "cannonball", "Prickly and precise."),
-  U("clockwork_turret", "Clockwork Turret", "common", "lightning", "shot", "cannonball", "Tick, tock, pop."),
-  U("wind_sylph", "Wind Sylph", "common", "nature", "shot", "arrow", "Fast as a breeze."),
-  U("shield_knight", "Shield Knight", "common", "arcane", "curse", "spark", "Cracks armor like eggshells."),
-  U("wolf_hunter", "Wolf Hunter", "common", "nature", "crit", "arrow", "Aims for the weak spot."),
-  U("pirate_gunner", "Pirate Gunner", "common", "fire", "splash", "cannonball", "Fire in the hole!"),
+  U("hooded_archer", "Hooded Archer", "common", "nature", "shot", "arrow", "Never misses a heartbeat.", "human"),
+  U("fox_spearman", "Fox Spearman", "common", "nature", "pierce", "spark", "One thrust, three goblins.", "beast"),
+  U("goblin_bomber", "Goblin Bomber", "common", "fire", "splash", "cannonball", "Loves loud noises.", "goblin"),
+  U("flame_adept", "Flame Adept", "common", "fire", "burn", "fireball", "Still learning not to singe allies.", "human"),
+  U("penguin_wizard", "Penguin Wizard", "common", "ice", "slow", "ice_shard", "Cold hands, colder spells.", "beast"),
+  U("tesla_gnome", "Tesla Gnome", "common", "lightning", "chain", "lightning", "Pocket-sized thunderstorm.", "gnome"),
+  U("cactus_gunslinger", "Cactus Gunslinger", "common", "nature", "crit", "cannonball", "Prickly and precise.", "sylvan"),
+  U("clockwork_turret", "Clockwork Turret", "common", "lightning", "shot", "cannonball", "Tick, tock, pop.", "construct"),
+  U("wind_sylph", "Wind Sylph", "common", "nature", "shot", "arrow", "Fast as a breeze.", "elemental"),
+  U("shield_knight", "Shield Knight", "common", "arcane", "curse", "spark", "Cracks armor like eggshells.", "human"),
+  U("wolf_hunter", "Wolf Hunter", "common", "nature", "crit", "arrow", "Aims for the weak spot.", "human"),
+  U("pirate_gunner", "Pirate Gunner", "common", "fire", "splash", "cannonball", "Fire in the hole!", "human"),
   // rare
-  U("ember_witch", "Ember Witch", "rare", "fire", "burn", "fireball", "Her cauldron never cools."),
-  U("frost_sorceress", "Frost Sorceress", "rare", "ice", "slow", "ice_shard", "Turns marches into crawls."),
-  U("frog_alchemist", "Frog Alchemist", "rare", "poison", "poison", "poison", "Ribbit. Bubble. Melt."),
-  U("bee_keeper", "Bee Keeper", "rare", "nature", "poison", "poison", "The bees know what to do."),
-  U("bear_rider", "Bear Rider", "rare", "nature", "stun", "spark", "The bear does most of the work."),
-  U("gear_engineer", "Gear Engineer", "rare", "lightning", "splash", "cannonball", "Twin gear cannons, zero patience."),
-  U("imp_hunter", "Imp Hunter", "rare", "fire", "crit", "fireball", "Knows exactly where it hurts."),
-  U("lute_bard", "Lute Bard", "rare", "arcane", "buff", "arcane_orb", "Neighbours fight to the beat."),
-  U("raccoon_thief", "Raccoon Thief", "rare", "nature", "mana", "spark", "Pockets full of stolen mana."),
-  U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "Palm strike, sand storm."),
-  U("snowglobe_fairy", "Snowglobe Fairy", "rare", "ice", "freeze", "ice_shard", "Shakes things up. Then freezes them."),
-  U("spore_sage", "Spore Sage", "rare", "poison", "poison", "poison", "Mushrooms are friends."),
-  U("storm_totem", "Storm Totem", "rare", "lightning", "chain", "lightning", "Calls lightning from a clear sky."),
-  U("thunder_dwarf", "Thunder Dwarf", "rare", "lightning", "stun", "lightning", "Hammer meets thunder."),
-  U("vine_druid", "Vine Druid", "rare", "nature", "slow", "poison", "Roots grab every ankle."),
-  U("witch_doctor", "Witch Doctor", "rare", "poison", "curse", "poison", "Hexes stack. So does the damage."),
-  U("pumpkin_scarecrow", "Pumpkin Scarecrow", "rare", "poison", "stun", "fireball", "Scares monsters stiff."),
-  U("ogre_chef", "Ogre Chef", "rare", "fire", "splash", "cannonball", "Today's special: flying pots."),
+  U("ember_witch", "Ember Witch", "rare", "fire", "burn", "fireball", "Her cauldron never cools.", "human"),
+  U("frost_sorceress", "Frost Sorceress", "rare", "ice", "slow", "ice_shard", "Turns marches into crawls.", "elf"),
+  U("frog_alchemist", "Frog Alchemist", "rare", "poison", "poison", "poison", "Ribbit. Bubble. Melt.", "beast"),
+  U("bee_keeper", "Bee Keeper", "rare", "nature", "poison", "poison", "The bees know what to do.", "human"),
+  U("bear_rider", "Bear Rider", "rare", "nature", "stun", "spark", "The bear does most of the work.", "dwarf"),
+  U("gear_engineer", "Gear Engineer", "rare", "lightning", "splash", "cannonball", "Twin gear cannons, zero patience.", "gnome"),
+  U("imp_hunter", "Imp Hunter", "rare", "fire", "crit", "fireball", "Knows exactly where it hurts.", "demon"),
+  U("lute_bard", "Lute Bard", "rare", "arcane", "buff", "arcane_orb", "Neighbours fight to the beat.", "elf"),
+  U("raccoon_thief", "Raccoon Thief", "rare", "nature", "mana", "spark", "Pockets full of stolen mana.", "beast"),
+  U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "Palm strike, sand storm.", "human"),
+  U("snowglobe_fairy", "Snowglobe Fairy", "rare", "ice", "freeze", "ice_shard", "Shakes things up. Then freezes them.", "fae"),
+  U("spore_sage", "Spore Sage", "rare", "poison", "poison", "poison", "Mushrooms are friends.", "sylvan"),
+  U("storm_totem", "Storm Totem", "rare", "lightning", "chain", "lightning", "Calls lightning from a clear sky.", "construct"),
+  U("thunder_dwarf", "Thunder Dwarf", "rare", "lightning", "stun", "lightning", "Hammer meets thunder.", "dwarf"),
+  U("vine_druid", "Vine Druid", "rare", "nature", "slow", "poison", "Roots grab every ankle.", "elf"),
+  U("witch_doctor", "Witch Doctor", "rare", "poison", "curse", "poison", "Hexes stack. So does the damage.", "orc"),
+  U("pumpkin_scarecrow", "Pumpkin Scarecrow", "rare", "poison", "stun", "fireball", "Scares monsters stiff.", "sylvan"),
+  U("ogre_chef", "Ogre Chef", "rare", "fire", "splash", "cannonball", "Today's special: flying pots.", "giant"),
   // epic
-  U("crystal_golem", "Crystal Golem", "epic", "arcane", "splash", "arcane_orb", "Shatters on purpose."),
-  U("cyclops_smith", "Cyclops Smith", "epic", "fire", "buff", "fireball", "Forges sharper neighbours."),
-  U("fox_samurai", "Fox Samurai", "epic", "arcane", "crit", "spark", "One cut. Clean."),
-  U("lava_golem", "Lava Golem", "epic", "fire", "burn", "fireball", "Leaves only ashes."),
-  U("magnet_robot", "Magnet Robot", "epic", "lightning", "curse", "lightning", "Pulls armor right off."),
-  U("minotaur_gladiator", "Minotaur Gladiator", "epic", "nature", "stun", "spark", "The crowd loves him."),
-  U("moon_oracle", "Moon Oracle", "epic", "arcane", "mana", "arcane_orb", "Moonlight becomes mana."),
-  U("lantern_ghost", "Lantern Ghost", "epic", "arcane", "mana", "arcane_orb", "Its lantern burns pure mana."),
-  U("phoenix_chick", "Phoenix Chick", "epic", "fire", "burn", "fireball", "Small bird, big fire."),
-  U("plague_alchemist", "Plague Alchemist", "epic", "poison", "poison", "poison", "Brews the worst cough."),
-  U("sand_worm", "Sand Worm", "epic", "nature", "splash", "cannonball", "Bursts from below."),
-  U("shadow_ninja", "Shadow Ninja", "epic", "poison", "crit", "spark", "You will not see it coming."),
-  U("storm_whelp", "Storm Whelp", "epic", "lightning", "chain", "lightning", "Baby dragon, grown-up thunder."),
-  U("tide_mermaid", "Tide Mermaid", "epic", "ice", "slow", "ice_shard", "Drags monsters into the tide."),
-  U("treant_guardian", "Treant Guardian", "epic", "nature", "stun", "spark", "Old roots, heavy branches."),
-  U("bone_necromancer", "Bone Necromancer", "epic", "poison", "curse", "poison", "Marks the living for death."),
-  U("card_jester", "Card Jester", "epic", "arcane", "crit", "arcane_orb", "Always holds the ace."),
+  U("crystal_golem", "Crystal Golem", "epic", "arcane", "splash", "arcane_orb", "Shatters on purpose.", "elemental"),
+  U("cyclops_smith", "Cyclops Smith", "epic", "fire", "buff", "fireball", "Forges sharper neighbours.", "giant"),
+  U("fox_samurai", "Fox Samurai", "epic", "arcane", "crit", "spark", "One cut. Clean.", "beast"),
+  U("lava_golem", "Lava Golem", "epic", "fire", "burn", "fireball", "Leaves only ashes.", "elemental"),
+  U("magnet_robot", "Magnet Robot", "epic", "lightning", "curse", "lightning", "Pulls armor right off.", "construct"),
+  U("minotaur_gladiator", "Minotaur Gladiator", "epic", "nature", "stun", "spark", "The crowd loves him.", "beast"),
+  U("moon_oracle", "Moon Oracle", "epic", "arcane", "mana", "arcane_orb", "Moonlight becomes mana.", "elf"),
+  U("lantern_ghost", "Lantern Ghost", "epic", "arcane", "mana", "arcane_orb", "Its lantern burns pure mana.", "undead"),
+  U("phoenix_chick", "Phoenix Chick", "epic", "fire", "burn", "fireball", "Small bird, big fire.", "beast"),
+  U("plague_alchemist", "Plague Alchemist", "epic", "poison", "poison", "poison", "Brews the worst cough.", "human"),
+  U("sand_worm", "Sand Worm", "epic", "nature", "splash", "cannonball", "Bursts from below.", "beast"),
+  U("shadow_ninja", "Shadow Ninja", "epic", "poison", "crit", "spark", "You will not see it coming.", "human"),
+  U("storm_whelp", "Storm Whelp", "epic", "lightning", "chain", "lightning", "Baby dragon, grown-up thunder.", "dragon"),
+  U("tide_mermaid", "Tide Mermaid", "epic", "ice", "slow", "ice_shard", "Drags monsters into the tide.", "fae"),
+  U("treant_guardian", "Treant Guardian", "epic", "nature", "stun", "spark", "Old roots, heavy branches.", "sylvan"),
+  U("bone_necromancer", "Bone Necromancer", "epic", "poison", "curse", "poison", "Marks the living for death.", "undead"),
+  U("card_jester", "Card Jester", "epic", "arcane", "crit", "arcane_orb", "Always holds the ace.", "human"),
   // legendary
-  U("anubis_priest", "Anubis Priest", "legendary", "arcane", "execute", "arcane_orb", "Weighs every soul."),
-  U("crystal_queen", "Crystal Queen", "legendary", "ice", "freeze", "ice_shard", "Her court is forever still."),
-  U("lion_paladin", "Lion Paladin", "legendary", "arcane", "buff", "arcane_orb", "Leads from the front."),
-  U("spider_queen", "Spider Queen", "legendary", "poison", "slow", "poison", "Webs everywhere."),
-  U("star_astronomer", "Star Astronomer", "legendary", "arcane", "sniper", "arcane_orb", "Calls down falling stars."),
-  U("sun_priestess", "Sun Priestess", "legendary", "fire", "buff", "fireball", "Blessed by the noon sun."),
-  U("unicorn_knight", "Unicorn Knight", "legendary", "arcane", "pierce", "arcane_orb", "Charges through the line."),
-  U("valkyrie", "Valkyrie", "legendary", "lightning", "chain", "lightning", "Chooses who falls."),
-  U("vampire_countess", "Vampire Countess", "legendary", "poison", "growth", "poison", "Grows stronger with every bite."),
+  U("anubis_priest", "Anubis Priest", "legendary", "arcane", "execute", "arcane_orb", "Weighs every soul.", "celestial"),
+  U("crystal_queen", "Crystal Queen", "legendary", "ice", "freeze", "ice_shard", "Her court is forever still.", "elf"),
+  U("lion_paladin", "Lion Paladin", "legendary", "arcane", "buff", "arcane_orb", "Leads from the front.", "beast"),
+  U("spider_queen", "Spider Queen", "legendary", "poison", "slow", "poison", "Webs everywhere.", "beast"),
+  U("star_astronomer", "Star Astronomer", "legendary", "arcane", "sniper", "arcane_orb", "Calls down falling stars.", "human"),
+  U("sun_priestess", "Sun Priestess", "legendary", "fire", "buff", "fireball", "Blessed by the noon sun.", "celestial"),
+  U("unicorn_knight", "Unicorn Knight", "legendary", "arcane", "pierce", "arcane_orb", "Charges through the line.", "fae"),
+  U("valkyrie", "Valkyrie", "legendary", "lightning", "chain", "lightning", "Chooses who falls.", "celestial"),
+  U("vampire_countess", "Vampire Countess", "legendary", "poison", "growth", "poison", "Grows stronger with every bite.", "undead"),
   // mythic
-  U("void_titan", "Void Titan", "mythic", "arcane", "execute", "arcane_orb", "Erases what it touches."),
-  U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "fireball", "Something huge is hatching."),
-  U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "arcane_orb", "Time bends to his staff."),
-  U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff bounces between foes."),
+  U("void_titan", "Void Titan", "mythic", "arcane", "execute", "arcane_orb", "Erases what it touches.", "giant"),
+  U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "fireball", "Something huge is hatching.", "dragon"),
+  U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "arcane_orb", "Time bends to his staff.", "human"),
+  U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff bounces between foes.", "beast"),
 ];
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */

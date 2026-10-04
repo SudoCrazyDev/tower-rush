@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { ensureAnim, loadSheet, animKey, sheetScale, hasAnim } from "../assets";
 import { HEROES, HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { profile, ownsHero, heroBuyProblem, buyHero, setHero } from "../save";
-import { W, H, WIDE, txt, button, iconButton, heroCardView, modal, pressable, attempt, fmt } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, heroCardView, modal, pressable, attempt, fmt, raceBadge } from "../ui";
 import { cover, topBar } from "./LobbyScene";
 import { music, sfx } from "../audio";
 
@@ -74,6 +74,7 @@ export class HeroScene extends Phaser.Scene {
     } else {
       m.add(heroCardView(this, cx, top + 270, 260, id, { locked: !owned }));
     }
+    m.add(raceBadge(this, cx - 212, top + 200, h.race));
     m.add(txt(this, cx, top + 470, h.ability.toUpperCase(), 38, "#ffd93b"));
     m.add(txt(this, cx, top + 540, heroAbilityText(h), 26, "#ffffff").setWordWrapWidth(540));
     m.add(this.add.image(cx - 110, top + 620, "item:hourglass_speedup").setDisplaySize(48, 48));
