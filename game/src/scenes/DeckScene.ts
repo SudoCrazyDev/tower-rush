@@ -467,11 +467,20 @@ export class DeckScene extends Phaser.Scene {
       ["stat:damage", def.arch === "buff" ? "—" : fmt(stats.damage)],
       ["stat:attack_speed", def.arch === "buff" ? "—" : `every ${+(1 / stats.speed).toFixed(2)}s`],
     ];
-    rows.forEach(([icon, value], i) => {
-      const x = cx - 130 + i * 260;
-      m.add(this.add.image(x - 50, cy + 40, icon).setDisplaySize(56, 56));
-      m.add(txt(this, x + 10, cy + 40, value, 32, "#ffffff", [0, 0.5]));
-    });
+    // Lay the icon+value pairs out by their real widths and centre the row.
+    const pairs = rows.map(([icon, value]) => ({
+      img: this.add.image(0, cy + 40, icon).setDisplaySize(56, 56).setOrigin(0, 0.5),
+      label: txt(this, 0, cy + 40, value, 32, "#ffffff", [0, 0.5]),
+    }));
+    const pairW = (p: (typeof pairs)[number]) => 56 + 12 + p.label.width;
+    const gap = 60;
+    let x = cx - (pairs.reduce((s, p) => s + pairW(p), 0) + gap * (pairs.length - 1)) / 2;
+    for (const p of pairs) {
+      p.img.setX(x);
+      p.label.setX(x + 68);
+      x += pairW(p) + gap;
+      m.add([p.img, p.label]);
+    }
 
     if (!owned) {
       m.add(txt(this, cx, cy + 170, "Find this card in chests!", 32, "#ffd27a"));
