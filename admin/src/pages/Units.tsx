@@ -70,7 +70,7 @@ export function UnitsPage() {
           <thead>
             <tr>
               <th></th>
-              <th title="Awakened form, used at merge rank 7">Awak.</th>
+              <th title="Awakened form, used at the max merge rank (Economy)">Awak.</th>
               <th>Name</th>
               <th>Rarity</th>
               <th>Element</th>
@@ -115,7 +115,7 @@ export function UnitsPage() {
           </tbody>
         </table>
       </div>
-      <p className="muted small">Units with an awakened portrait awaken when merged to rank 7 (numbers on the Economy page). Turning a unit off removes it from chests and decks; players keep their copies.</p>
+      <p className="muted small">Units with an awakened portrait awaken when merged to the max rank (that and the numbers on the Economy page). Turning a unit off removes it from chests and decks; players keep their copies.</p>
     </>
   );
 }

@@ -229,6 +229,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   if (e.waveHpGrowth < 1) errs.push("economy.waveHpGrowth must be ≥ 1");
   if (e.bossEvery < 1) errs.push("economy.bossEvery must be ≥ 1");
   if (e.lives < 1) errs.push("economy.lives must be ≥ 1");
+  if (!Number.isInteger(e.maxRank) || e.maxRank < 2 || e.maxRank > 10) errs.push("economy.maxRank must be a whole number from 2 to 10");
   if (!Number.isInteger(e.chestBulkMax) || e.chestBulkMax < 1) errs.push("economy.chestBulkMax must be a whole number ≥ 1");
   if (e.upgradeCopies.length !== e.upgradeCoins.length) errs.push("economy.upgradeCopies and upgradeCoins must be the same length");
   if (e.starterDeck.length !== 5) errs.push("economy.starterDeck must have exactly 5 units");

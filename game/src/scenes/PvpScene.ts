@@ -15,7 +15,7 @@ import { rewardPopup } from "./daily";
 import { MatchConn, finishBotMatch } from "../pvpnet";
 import { ARENA_BY_ID, ARENAS, type ArenaDef } from "../../../shared/arenas.ts";
 import { BOSS_BY_ID } from "../../../shared/monsters.ts";
-import { ELEMENT_COLOR, MAX_RANK, UNIT_BY_ID, maxPowerUp, powerUpCost } from "../../../shared/units.ts";
+import { ELEMENT_COLOR, maxRank, UNIT_BY_ID, maxPowerUp, powerUpCost } from "../../../shared/units.ts";
 import { HERO_BY_ID } from "../../../shared/heroes.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { LEAGUES } from "../../../shared/leagues.ts";
@@ -662,7 +662,7 @@ export class PvpScene extends Phaser.Scene {
     for (let i = 0; i < u.rank; i++) {
       const x = p.x - ((u.rank - 1) * gap) / 2 + i * gap;
       pips.fillStyle(NAVY, 1).fillCircle(x, p.y + 40, 6.5);
-      pips.fillStyle(u.rank === MAX_RANK ? 0xffd93b : ELEMENT_COLOR[u.def.element], 1).fillCircle(x, p.y + 40, 4.5);
+      pips.fillStyle(u.rank >= maxRank() ? 0xffd93b : ELEMENT_COLOR[u.def.element], 1).fillCircle(x, p.y + 40, 4.5);
     }
     this.vfx("summon_circle", p.x, p.y + 20, u.awakened ? 200 : 130, 90);
     sfx(u.rank > 1 ? (u.awakened ? "awaken" : "merge") : "summon");
@@ -974,7 +974,7 @@ export class PvpScene extends Phaser.Scene {
       this.dragging = slot!;
       obj.setDepth(2500);
       this.board.units.forEach((o, i) => {
-        if (!o || i === slot || o.def.id !== u.def.id || o.rank !== u.rank || u.rank >= MAX_RANK) return;
+        if (!o || i === slot || o.def.id !== u.def.id || o.rank !== u.rank || u.rank >= maxRank()) return;
         const p = slotPos(this.arena, i);
         this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
       });

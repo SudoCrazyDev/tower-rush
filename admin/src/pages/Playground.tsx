@@ -32,7 +32,7 @@ import { ECONOMY } from "../../../shared/economy.ts";
 import { EFFECTS, effectSummary } from "../../../shared/effects.ts";
 import { HEROES, HERO_BY_ID, HERO_POWERS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
 import { BOSSES, BOSS_BY_ID, MONSTER_BY_ID, type BossDef } from "../../../shared/monsters.ts";
-import { ARCHETYPES, MAX_RANK, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, boostMult, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { ARCHETYPES, maxRank, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, boostMult, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
 import { PERKS } from "../../../shared/perks.ts";
 import { arenaGeometry, boardUnitStats, bossAppearances, simulate, simulateMany, waveBaseHp, type SimSetup, type SimSummary } from "../../../shared/sim.ts";
 
@@ -181,7 +181,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
   const canAwaken = useAwakenable();
   const def = UNIT_BY_ID[s.unit] ?? UNITS[0];
   const arena = arenaOf(s);
-  const awakened = s.rank >= MAX_RANK && canAwaken.has(def.id);
+  const awakened = s.rank >= maxRank() && canAwaken.has(def.id);
   const level = Math.min(s.cardLevel, maxCardLevel());
   const powerUp = Math.min(s.powerUp, maxPowerUp());
   const stats = boardUnitStats({ id: def.id, rank: s.rank, awakened }, level, powerUp);
@@ -192,7 +192,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
 
   const dummySetup = (id: string, count: number, seed = 1): SimSetup => {
     const board = Array(15).fill(null);
-    board[7] = { id, rank: s.rank, awakened: s.rank >= MAX_RANK && canAwaken.has(id) };
+    board[7] = { id, rank: s.rank, awakened: s.rank >= maxRank() && canAwaken.has(id) };
     return makeSetup({ arena: arena.id, board, cardLevel: level, powerUp, growthStart: s.growthStart, seed, scenario: { kind: "dummies", count, wave: s.wave, duration: DUMMY_TIME } });
   };
   const measure = (id: string, count: number, runs: number) => {
@@ -211,7 +211,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
   const all = useSimulation(
     () =>
       UNITS.map((u) => {
-        const st = boardUnitStats({ id: u.id, rank: s.rank, awakened: s.rank >= MAX_RANK && canAwaken.has(u.id) }, level, powerUp);
+        const st = boardUnitStats({ id: u.id, rank: s.rank, awakened: s.rank >= maxRank() && canAwaken.has(u.id) }, level, powerUp);
         return { u, raw: u.arch === "buff" ? 0 : st.damage * st.speed, one: measure(u.id, 1, 2), pack: measure(u.id, PACK, 2) };
       }),
     deps,

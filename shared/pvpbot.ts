@@ -4,7 +4,7 @@
  * sends. `skill` (0-1) sets how quickly it reacts and how much it sends.
  */
 import { rng } from "./sim.ts";
-import { MAX_RANK, maxPowerUp, powerUpCost } from "./units.ts";
+import { maxRank, maxPowerUp, powerUpCost } from "./units.ts";
 import { PVP } from "./pvp.ts";
 import type { PvpAction, PvpBoard } from "./pvpsim.ts";
 
@@ -44,7 +44,7 @@ export class PvpBot {
     const units = this.board.units;
     for (let i = 0; i < 15; i++) {
       const u = units[i];
-      if (!u || u.rank >= MAX_RANK) continue;
+      if (!u || u.rank >= maxRank()) continue;
       for (let j = i + 1; j < 15; j++) {
         const v = units[j];
         if (v && v.def.id === u.def.id && v.rank === u.rank) out.push([i, j, u.rank]);

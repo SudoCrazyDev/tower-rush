@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { Modal, Select, Thumb } from "./components";
 import { ASSETS, asset } from "./api";
-import { ARCHETYPES, MAX_RANK, RARITIES, STYLES, UNITS, UNIT_BY_ID, type UnitDef } from "../../shared/units.ts";
+import { ARCHETYPES, maxRank, RARITIES, STYLES, UNITS, UNIT_BY_ID, type UnitDef } from "../../shared/units.ts";
 import { PERKS } from "../../shared/perks.ts";
 import { ECONOMY } from "../../shared/economy.ts";
 import { boardUnitStats, type BoardUnit, type SimSetup } from "../../shared/sim.ts";
@@ -106,7 +106,7 @@ export function simBoard(board: (BoardUnit | null)[], canAwaken: Set<string>) {
   return Array.from({ length: 15 }, (_, i) => {
     const b = board[i];
     if (!b || !UNIT_BY_ID[b.id]) return null;
-    return { id: b.id, rank: b.rank, awakened: b.rank >= MAX_RANK && canAwaken.has(b.id) };
+    return { id: b.id, rank: b.rank, awakened: b.rank >= maxRank() && canAwaken.has(b.id) };
   });
 }
 
@@ -184,7 +184,7 @@ export function UnitSelect({ value, onChange, units }: { value: string; onChange
 export function RankPicker({ value, onChange }: { value: number; onChange: (r: number) => void }) {
   return (
     <div className="seg">
-      {Array.from({ length: MAX_RANK }, (_, i) => i + 1).map((r) => (
+      {Array.from({ length: maxRank() }, (_, i) => i + 1).map((r) => (
         <button key={r} type="button" className={r === value ? "on" : ""} onClick={() => onChange(r)}>
           {r}
         </button>
@@ -247,7 +247,7 @@ export function BoardEditor({
     while (deck.length < 5 && pool.length) deck.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0].id);
     onChange(Array.from({ length: 15 }, () => ({ id: deck[Math.floor(Math.random() * deck.length)], rank: fillRank })));
   };
-  const shiftRanks = (d: number) => onChange(tiles.map((t) => (t ? { ...t, rank: Math.min(MAX_RANK, Math.max(1, t.rank + d)) } : t)));
+  const shiftRanks = (d: number) => onChange(tiles.map((t) => (t ? { ...t, rank: Math.min(maxRank(), Math.max(1, t.rank + d)) } : t)));
   const edit = editing !== null ? tiles[editing] : null;
 
   return (
@@ -265,7 +265,7 @@ export function BoardEditor({
       <div className="board">
         {tiles.map((t, i) => {
           const def = t ? UNIT_BY_ID[t.id] : null;
-          const awakened = !!t && t.rank >= MAX_RANK && canAwaken.has(t.id);
+          const awakened = !!t && t.rank >= maxRank() && canAwaken.has(t.id);
           return (
             <button key={i} type="button" className={`tile ${def ? `r-${def.rarity}` : "empty"}`} onClick={() => setEditing(i)} title={def ? `${def.name} · rank ${t!.rank}` : "Empty tile"}>
               {def ? (
@@ -315,7 +315,7 @@ export function BoardEditor({
                   {ARCHETYPES[UNIT_BY_ID[edit.id]?.arch ?? "shot"].label}.{" "}
                   {UNIT_BY_ID[edit.id] && UNIT_BY_ID[edit.id].arch !== "buff" && `${STYLES[UNIT_BY_ID[edit.id].style].label} style. `}
                   {UNIT_BY_ID[edit.id] && UNIT_BY_ID[edit.id].perk !== "none" && `${PERKS[UNIT_BY_ID[edit.id].perk].label}: ${PERKS[UNIT_BY_ID[edit.id].perk].text}. `}
-                  {canAwaken.has(edit.id) ? "Awakens at rank 7." : "No awakened art, so it doesn't awaken."}
+                  {canAwaken.has(edit.id) ? `Awakens at rank ${maxRank()}.` : "No awakened art, so it doesn't awaken."}
                 </p>
               </>
             )}

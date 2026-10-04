@@ -82,7 +82,7 @@ async function questProgress(db: D1Database, userId: number, stats: Stats, secon
     bosses: int(stats.bosses, Math.floor(wave / ECONOMY.bossEvery) + 4),
     summons,
     merges: int(stats.merges, summons),
-    awakens: int(stats.awakens, Math.floor(summons / 63)),
+    awakens: int(stats.awakens, Math.floor(summons / (2 ** (ECONOMY.maxRank - 1) - 1))),
     heroCasts: int(stats.heroCasts, Math.floor(seconds / 10) + 1),
   };
   for (let attempt = 0; attempt < 4; attempt++) {

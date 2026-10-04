@@ -8,7 +8,7 @@
  */
 import { Sim, SimUnit, SIM_DT, boardUnitStats, rng, type SimMonster } from "./sim.ts";
 import { ECONOMY } from "./economy.ts";
-import { MAX_RANK, UNIT_BY_ID, maxPowerUp, powerUpCost } from "./units.ts";
+import { maxRank, UNIT_BY_ID, maxPowerUp, powerUpCost } from "./units.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "./monsters.ts";
 import { slotPos } from "./path.ts";
 import { PVP, SendStock, sendProblem, type BoardSnap, type Loadout, type SendDef } from "./pvp.ts";
@@ -270,7 +270,7 @@ export class PvpBoard extends Sim {
       case "merge": {
         const x = this.units[a.from];
         const y = this.units[a.to];
-        if (!x || !y || a.from === a.to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= MAX_RANK) return false;
+        if (!x || !y || a.from === a.to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= maxRank()) return false;
         this.units[a.from] = null;
         const u = this.place(this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, a.to);
         this.counts.merges++;
@@ -313,7 +313,7 @@ export class PvpBoard extends Sim {
   }
 
   private place(id: string, rank: number, slot: number) {
-    const awakened = rank >= MAX_RANK && !!this.opts.awakens?.(id);
+    const awakened = rank >= maxRank() && !!this.opts.awakens?.(id);
     const u = new SimUnit({ id, rank, awakened }, slot, slotPos(this.arena, slot), this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0);
     this.units[slot] = u;
     this.recomputeBuffs();

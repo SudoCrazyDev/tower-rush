@@ -12,6 +12,8 @@ export interface Economy {
   rankDamageStep: number;
   rankSpeedStep: number;
   // awakening (a unit merged to max rank with awakened art)
+  /** Highest merge rank; reaching it awakens a unit. Each rank doubles the summons needed. */
+  maxRank: number;
   awakenDamageMult: number;
   awakenSpeedMult: number;
   ultimateCooldown: number;
@@ -72,6 +74,7 @@ export const DEFAULT_ECONOMY: Economy = {
   powerUpBonus: 0.15,
   rankDamageStep: 1,
   rankSpeedStep: 0.08,
+  maxRank: 7,
   awakenDamageMult: 1.5,
   awakenSpeedMult: 1.2,
   ultimateCooldown: 10,

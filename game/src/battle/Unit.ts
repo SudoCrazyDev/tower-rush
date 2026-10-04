@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale } from "../assets";
-import { ELEMENT_COLOR, MAX_RANK, unitStats, type UnitDef } from "../data/units";
+import { ELEMENT_COLOR, maxRank, unitStats, type UnitDef } from "../data/units";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { EFFECTS, manaPerPulse } from "../../../shared/effects.ts";
 import { withPerk, type Perk } from "../../../shared/perks.ts";
@@ -47,7 +47,7 @@ export class Unit {
     this.def = def;
     this.rank = rank;
     this.slot = slot;
-    this.awakened = rank >= MAX_RANK && canAwaken(def.id);
+    this.awakened = rank >= maxRank() && canAwaken(def.id);
     withPerk(this.perks, def.perk);
     const p = scene.slotPos(slot);
     if (this.awakened) {

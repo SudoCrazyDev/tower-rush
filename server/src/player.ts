@@ -377,7 +377,7 @@ player.post("/battles/:id/finish", P, async (c) => {
   // Quest counters, capped to what the run could plausibly have done.
   const summons = int(req.summons, 15 + wave * 12);
   const merges = int(req.merges, summons);
-  const awakens = int(req.awakens, Math.floor(merges / 63)); // a max-rank unit takes 63 merges
+  const awakens = int(req.awakens, Math.floor(merges / (2 ** (ECONOMY.maxRank - 1) - 1))); // a max-rank unit takes 2^(maxRank-1) - 1 merges
   const heroCasts = int(req.heroCasts, Math.floor(elapsed / 10) + 1);
 
   const arenaIndex = Math.max(0, ARENAS.findIndex((a) => a.id === b.arena));

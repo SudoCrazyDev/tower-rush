@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { buffBonus, effectSummary, EFFECTS } from "../../../shared/effects.ts";
 import { PERKS } from "../../../shared/perks.ts";
-import { ARCHETYPES, STYLES, MAX_RANK, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
+import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
@@ -511,7 +511,7 @@ export class DeckScene extends Phaser.Scene {
       m.add(awake);
       const thumb = cardView(this, cx + 225, cardY - 60, 96, id, { awakened: true, locked: !owned });
       m.add(thumb);
-      const label = txt(this, cx + 225, cardY + 12, "AWAKENS\nAT RANK 7", 18, "#ffd93b");
+      const label = txt(this, cx + 225, cardY + 12, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
       m.add(label);
       const awakeText = txt(this, cx, cy - 120, `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ultimate every ${ECONOMY.ultimateCooldown}s`, 22, "#ffd93b");
       info.add(awakeText.setVisible(false));
@@ -726,9 +726,9 @@ export class DeckScene extends Phaser.Scene {
     );
 
     // Merge ranks: two of the same unit at the same rank make one of the next rank.
-    const ranks = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
+    const ranks = Array.from({ length: maxRank() }, (_, i) => i + 1);
     const awakens = canAwaken(def.id);
-    const boost = (r: number, mult: number) => (awakens && r === MAX_RANK ? mult : 1);
+    const boost = (r: number, mult: number) => (awakens && r === maxRank() ? mult : 1);
     const mergeNote = noAttack
       ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★7 awakens (×${ECONOMY.awakenDamageMult})` : ""}`
       : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? " · ★7 awakens" : ""}`;

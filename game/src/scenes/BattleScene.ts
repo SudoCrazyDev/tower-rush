@@ -3,7 +3,7 @@ import { ambientVideo } from "../backdrop";
 import { BASE, ensureAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale } from "../assets";
 import { ARENAS, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "../data/monsters";
-import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
+import { maxRank, RARITY_ORDER, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
 import { raceLabel } from "../../../shared/races.ts";
 import { chills, withPerk, type Perk } from "../../../shared/perks.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
@@ -632,7 +632,7 @@ export class BattleScene extends Phaser.Scene {
     else sfx(rank > 1 ? "merge" : "summon");
     // Merges give a random deck unit, so once anything gets close to max rank, fetch the
     // awakened art for the whole deck in the background.
-    if (rank >= MAX_RANK - 2) for (const d of this.deck) this.requestAwakenedArt(d);
+    if (rank >= maxRank() - 2) for (const d of this.deck) this.requestAwakenedArt(d);
     if (u.awakened) this.requestAwakenedArt(id);
     u.sprite.setScale(0);
     this.tweens.add({ targets: u.sprite, scale: u.baseScale, duration: u.awakened ? 420 : 260, ease: "Back.Out" });
@@ -801,7 +801,7 @@ export class BattleScene extends Phaser.Scene {
       u.setBuffVisible(false);
       obj.setDepth(2500);
       for (const other of this.board) {
-        if (other && other !== u && other.def.id === u.def.id && other.rank === u.rank && u.rank < MAX_RANK) {
+        if (other && other !== u && other.def.id === u.def.id && other.rank === u.rank && u.rank < maxRank()) {
           const p = this.slotPos(other.slot);
           this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
         }
@@ -818,7 +818,7 @@ export class BattleScene extends Phaser.Scene {
       origin = null;
       u.dragging = false;
       const target = this.unitAt(obj.x, obj.y);
-      if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < MAX_RANK && !this.over) {
+      if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank() && !this.over) {
         this.merge(u, target);
       } else {
         u.place(u.slot);

@@ -42,7 +42,7 @@ const BOSS_INTRO = 1.4;
 export interface BoardUnit {
   id: string;
   rank: number;
-  /** Rank 7 with awakened art. The game decides this from the art; here it's a switch. */
+  /** Max rank with awakened art. The game decides this from the art; here it's a switch. */
   awakened?: boolean;
 }
 
