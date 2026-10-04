@@ -99,9 +99,10 @@ export class LobbyScene extends Phaser.Scene {
     const deckY = WIDE ? 420 : 1340;
     const gap = WIDE ? Math.min(140, (side * 2 - 40) / 5) : 140;
     txt(this, deckX, deckY - 90, "YOUR DECK", 30, "#fff4c2");
-    profile.deck.forEach((id, i) =>
-      cardView(this, deckX + (i - 2) * gap, deckY, Math.min(120, gap - 12), id, { level: profile.cards[id].level }),
-    );
+    profile.deck.forEach((id, i) => {
+      const c = cardView(this, deckX + (i - 2) * gap, deckY, Math.min(120, gap - 12), id, { level: profile.cards[id].level });
+      pressable(c, () => this.scene.start("Deck", { show: id }));
+    });
 
     this.lobbyTiles(side);
 

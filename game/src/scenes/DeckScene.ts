@@ -118,7 +118,8 @@ export class DeckScene extends Phaser.Scene {
     super("Deck");
   }
 
-  create() {
+  /** `show` opens that card's details on arrival (from the lobby's deck row). */
+  create(data?: { show?: string }) {
     music("lobby");
     this.swapping = null;
     this.slots = [];
@@ -157,6 +158,9 @@ export class DeckScene extends Phaser.Scene {
     this.fill();
     // Static shapes become cached images (see bake.ts); phones can't redraw them every frame.
     bakeAll(this);
+    if (data?.show && UNIT_BY_ID[data.show]) this.showCard(data.show);
+    // Phaser keeps start data across restart(), which would reopen the card after every upgrade.
+    this.sys.settings.data = {};
   }
 
   // ---------------------------------------------------------------- deck + hero
