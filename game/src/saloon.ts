@@ -303,6 +303,19 @@ export class ScrollView {
     cull(this.content, this.scroll, this.rect.height);
   }
 
+  /** How far the list is scrolled, to restore it with `scrollTo` after a rebuild. */
+  get position() {
+    return this.target;
+  }
+
+  /** Jump straight to a scroll position (no easing). Call after `setHeight`. */
+  scrollTo(y: number) {
+    this.scroll = this.target = Phaser.Math.Clamp(y, 0, this.max);
+    this.content.y = this.rect.y - this.scroll;
+    this.drawKnob();
+    cull(this.content, this.scroll, this.rect.height);
+  }
+
   private update() {
     if (!this.drag || !this.dragged) {
       this.target = Phaser.Math.Clamp(this.target, 0, this.max);

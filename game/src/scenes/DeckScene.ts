@@ -124,8 +124,8 @@ export class DeckScene extends Phaser.Scene {
     super("Deck");
   }
 
-  /** `show` opens that card's details on arrival (from the lobby's deck row). */
-  create(data?: { show?: string }) {
+  /** `show` opens that card's details on arrival (from the lobby's deck row); `scroll` restores the list after a rebuild. */
+  create(data?: { show?: string; scroll?: number }) {
     music("lobby");
     this.swapping = null;
     this.slots = [];
@@ -163,6 +163,7 @@ export class DeckScene extends Phaser.Scene {
     this.heroStrip(colX, deckTop + (WIDE ? 270 : 218), colW);
     this.filters(filterX, filterY, filterW);
     this.fill();
+    if (data?.scroll) this.view.scrollTo(data.scroll);
     // Static shapes become cached images (see bake.ts); phones can't redraw them every frame.
     bakeAll(this);
     if (data?.show && UNIT_BY_ID[data.show]) this.showCard(data.show);
@@ -431,11 +432,16 @@ export class DeckScene extends Phaser.Scene {
       const deck = [...profile.deck];
       deck[i] = this.swapping;
       this.swapping = null;
-      if (await attempt(this, () => setDeck(deck))) this.scene.restart();
-      else this.scene.restart();
+      await attempt(this, () => setDeck(deck));
+      this.rebuild();
       return;
     }
-    this.scene.restart();
+    this.rebuild();
+  }
+
+  /** Restart the scene to show fresh state, keeping the collection where it was scrolled. */
+  private rebuild() {
+    this.scene.restart({ scroll: this.view.position });
   }
 
   /** `celebrate` reopens the dialog in place after an upgrade, with a level-up burst. */
@@ -443,7 +449,7 @@ export class DeckScene extends Phaser.Scene {
     const def = UNIT_BY_ID[id];
     const owned = profile.cards[id];
     const m = modal(this, 640, 1180, def.name, () => {
-      if (this.upgraded) this.scene.restart();
+      if (this.upgraded) this.rebuild();
     });
     const { cx, cy } = m;
     const cardY = cy - 370;
