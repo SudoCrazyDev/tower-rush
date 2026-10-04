@@ -625,12 +625,21 @@ export class DeckScene extends Phaser.Scene {
     const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
     const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
     const pct = (v: number) => `${Math.round(v * 100)}%`;
-    const ROW = 36;
-    let y = top;
+    const ROW = 33;
+    let y = top - 6;
+    // How it fights: style (hit size vs attack speed) and its perk.
+    const st = STYLES[def.style];
+    const vs = def.style === "balanced" ? "" : ` · ×${+st.dmg.toFixed(2)} damage, ×${st.speed} speed`;
+    if (!noAttack) box.add(txt(this, cx, y, `${st.label.toUpperCase()}: ${st.text}${vs}`, 21, "#ffffff"));
+    if (def.perk !== "none") {
+      const perk = PERKS[def.perk];
+      box.add(txt(this, cx, noAttack ? y : y + 30, `${noAttack ? "Neighbours get " : ""}${perk.label}: ${perk.text}`, 20, "#ffd27a"));
+    }
+    y += 72;
     const section = (title: string, note: string) => {
       box.add(txt(this, cx, y, title, 26, "#ffd93b"));
-      box.add(txt(this, cx, y + 30, note, 19, "#c9d2ff"));
-      y += 74;
+      box.add(txt(this, cx, y + 28, note, 19, "#c9d2ff"));
+      y += 64;
     };
     // A header row of column names, then one row per stat; column `hi` is highlighted.
     const table = (heads: string[], rows: { icon: string; cells: string[] }[], hi = -1) => {
@@ -647,7 +656,7 @@ export class DeckScene extends Phaser.Scene {
         box.add(this.add.image(x0 - 26, ry, r.icon).setDisplaySize(32, 32));
         r.cells.forEach((c, i) => box.add(txt(this, at(i), ry, c, 22, i === hi ? "#ffffff" : "#e6e9ff")));
       });
-      y += ROW * (rows.length + 1) + 30;
+      y += ROW * (rows.length + 1) + 20;
     };
 
     // Card levels: the current one and the next few (or the last few near max).

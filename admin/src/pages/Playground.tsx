@@ -32,7 +32,8 @@ import { ECONOMY } from "../../../shared/economy.ts";
 import { effectSummary } from "../../../shared/effects.ts";
 import { HEROES, HERO_BY_ID, HERO_POWERS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
 import { BOSSES, BOSS_BY_ID, MONSTER_BY_ID, type BossDef } from "../../../shared/monsters.ts";
-import { ARCHETYPES, MAX_RANK, RARITY_ORDER, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { ARCHETYPES, MAX_RANK, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { PERKS } from "../../../shared/perks.ts";
 import { arenaGeometry, boardUnitStats, bossAppearances, simulate, simulateMany, waveBaseHp, type SimSetup, type SimSummary } from "../../../shared/sim.ts";
 
 type Tab = "units" | "bosses" | "heroes";
@@ -264,6 +265,8 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
               <tr><td>Attacks per second</td><td>{def.arch === "buff" ? "—" : stats.speed.toFixed(2)}</td></tr>
               <tr><td>Damage per second (on paper)</td><td><strong>{def.arch === "buff" ? "—" : f1(stats.damage * stats.speed)}</strong></td></tr>
               <tr><td>Effect</td><td>{effectSummary(def.arch, s.rank, rarityIdx) ?? "—"}</td></tr>
+              <tr><td>Style</td><td>{def.arch === "buff" ? "—" : `${STYLES[def.style].label} — ${STYLES[def.style].text}`}</td></tr>
+              <tr><td>Perk</td><td>{def.perk === "none" ? "—" : `${def.arch === "buff" ? "Neighbours get " : ""}${PERKS[def.perk].label}: ${PERKS[def.perk].text}`}</td></tr>
               {awakened && (
                 <tr>
                   <td>Ultimate</td>

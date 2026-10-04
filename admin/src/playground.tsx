@@ -5,7 +5,8 @@
 import { useEffect, useState } from "react";
 import { Modal, Select, Thumb } from "./components";
 import { ASSETS, asset } from "./api";
-import { ARCHETYPES, MAX_RANK, RARITIES, UNITS, UNIT_BY_ID, type UnitDef } from "../../shared/units.ts";
+import { ARCHETYPES, MAX_RANK, RARITIES, STYLES, UNITS, UNIT_BY_ID, type UnitDef } from "../../shared/units.ts";
+import { PERKS } from "../../shared/perks.ts";
 import { ECONOMY } from "../../shared/economy.ts";
 import { boardUnitStats, type BoardUnit, type SimSetup } from "../../shared/sim.ts";
 
@@ -312,6 +313,8 @@ export function BoardEditor({
                 </div>
                 <p className="muted small">
                   {ARCHETYPES[UNIT_BY_ID[edit.id]?.arch ?? "shot"].label}.{" "}
+                  {UNIT_BY_ID[edit.id] && UNIT_BY_ID[edit.id].arch !== "buff" && `${STYLES[UNIT_BY_ID[edit.id].style].label} style. `}
+                  {UNIT_BY_ID[edit.id] && UNIT_BY_ID[edit.id].perk !== "none" && `${PERKS[UNIT_BY_ID[edit.id].perk].label}: ${PERKS[UNIT_BY_ID[edit.id].perk].text}. `}
                   {canAwaken.has(edit.id) ? "Awakens at rank 7." : "No awakened art, so it doesn't awaken."}
                 </p>
               </>
