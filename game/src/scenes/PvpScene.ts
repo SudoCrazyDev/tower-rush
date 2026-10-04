@@ -448,7 +448,7 @@ export class PvpScene extends Phaser.Scene {
       if (locked || charges <= 0) sb.shade.fillStyle(0x000000, 0.6).fillRoundedRect(-size / 2, -size / 2, size, size, 14);
       else if (b.mana < s.cost) sb.shade.fillStyle(0x000000, 0.35).fillRoundedRect(-size / 2, -size / 2, size, size, 14);
       sb.pips.clear();
-      if (!locked && s.stock > 1) for (let i = 0; i < s.stock; i++) sb.pips.fillStyle(i < charges ? 0xffd93b : 0x3b4270, 1).fillCircle((i - (s.stock - 1) / 2) * 12, -size / 2 - 8, 5);
+      if (!locked && s.cooldown > 0 && s.stock > 1) for (let i = 0; i < s.stock; i++) sb.pips.fillStyle(i < charges ? 0xffd93b : 0x3b4270, 1).fillCircle((i - (s.stock - 1) / 2) * 12, -size / 2 - 8, 5);
     }
     // Opponent line under their board.
     const o = this.oppSnap;

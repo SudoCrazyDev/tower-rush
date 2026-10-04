@@ -37,7 +37,7 @@ also raises the sender's income for the rest of the match ("eco").
 | Brute | 1 orc brute (tank, armored) | 6 | tests damage per hit |
 | Healers | 3 troll healers | 8 | punishes slow kills |
 | Splitters | 4 gelatinous cubes | 10 | needs splash |
-| Champion | a boss at 40% health | 15 | expensive, no income, long cooldown |
+| Champion | a boss at 40% health | 15 | expensive, no income |
 
 - **Cost and income.**
   - Each send costs mana and adds `income` to the sender.
@@ -46,10 +46,16 @@ also raises the sender's income for the rest of the match ("eco").
   - Cheaper sends pay back more income per mana spent. The Champion is a pure attack.
 - **Health** is `hpMult ×` that monster's normal health on the current wave, so an early send
   stays useful later.
-- **Cooldown and stock.**
-  - Each send has a cooldown and a stock of `stock` charges.
-  - A used charge comes back after the cooldown.
-  - This stops a single burst of one send.
+- **No cooldowns: mana is the only limit** (since 2026-10-05).
+  - Like Bloons TD Battles, you can spam a send as often as you can pay for it. Saving up for a
+    big flood is a real strategy, and so is defending against one.
+  - Each send still has a `cooldown` and `stock` (charges) in the config. A cooldown of 0
+    (the default for every send) means no limit; set one above 0 on the admin page to bring
+    charges back for that send.
+  - **Cheat guard.** Each client runs its own board, so the room can't see a player's mana.
+    Instead it caps total send spending at `startMana + 2 × (20t + 0.06t²)` by match time
+    `t` seconds. That is twice the most mana strong bot boards earned (level 15, mana units:
+    about 18t + 0.06t²), so honest play never reaches it.
 - **Warning.**
   - Sends land `sendDelay` seconds (3) after they're bought.
   - The receiver sees an "incoming" banner with the icons first, so they can answer, for

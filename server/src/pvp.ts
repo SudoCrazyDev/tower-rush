@@ -248,6 +248,14 @@ pvp.post("/matches/:id/finish", requirePlayer, async (c) => {
   return c.json({ result: r.result, promotions: r.promotions[0], profile: u ? readProfile(u) : null });
 });
 
+/**
+ * Most mana a player can have spent on sends by match time `t`. The client simulates its own
+ * board, so the room can't see its mana; this caps a cheating client instead. Strong bot
+ * boards (level 15, mana units) earned at most ~18t + 0.06t² (see PVP.md); this
+ * allows twice that, which honest play can't reach.
+ */
+const sendBudget = (t: number) => ECONOMY.startMana + 2 * (20 * Math.max(0, t) + 0.06 * Math.max(0, t) ** 2);
+
 /** Finish a socket's close handshake (or close it), ignoring one that is already gone. */
 function closeQuietly(ws: WebSocket, reason = "") {
   try {
@@ -446,6 +454,8 @@ export class MatchRoom extends DurableObject<Bindings> {
   private state: RoomState | null = null;
   private sockets: [WebSocket | null, WebSocket | null] = [null, null];
   private stocks: [SendStock, SendStock] = [new SendStock(), new SendStock()];
+  /** Mana each player has spent on sends, checked against what a board could have earned. */
+  private spent: [number, number] = [0, 0];
   /** Last HP each board reported, for deciding a match at max wave. */
   private hp: [number, number] = [0, 0];
   private logged: [boolean, boolean] = [false, false];
@@ -538,9 +548,18 @@ export class MatchRoom extends DurableObject<Bindings> {
         const now = this.time();
         const send = PVP.sends.find((x) => x.id === msg.id && x.enabled);
         const wave = waveAt(now + 1, ECONOMY.bossEvery);
-        const problem = !send ? "Unknown send" : wave < send.unlockWave ? "Locked" : this.stocks[you].charges(send, now + 1) <= 0 ? "Recharging" : null;
+        const problem = !send
+          ? "Unknown send"
+          : wave < send.unlockWave
+            ? "Locked"
+            : this.stocks[you].charges(send, now + 1) <= 0
+              ? "Recharging"
+              : this.spent[you] + send.cost > sendBudget(now + 1)
+                ? "Not enough mana"
+                : null;
         if (problem || !send) return this.to(you, { t: "rejected", id: String(msg.id), reason: problem ?? "" });
         this.stocks[you].use(send, now);
+        this.spent[you] += send.cost;
         this.to(other, { t: "incoming", id: send.id, at: now });
         break;
       }

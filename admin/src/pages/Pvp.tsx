@@ -65,7 +65,7 @@ const SEND_NUMS: { k: keyof SendDef; label: string; step?: number; int?: boolean
   { k: "cost", label: "Cost", int: true, step: 10 },
   { k: "income", label: "Income +", int: true },
   { k: "unlockWave", label: "Unlock wave", int: true },
-  { k: "cooldown", label: "Cooldown s" },
+  { k: "cooldown", label: "Cooldown s (0 = none)" },
   { k: "stock", label: "Charges", int: true },
   { k: "leakDamage", label: "Leak HP", int: true },
 ];

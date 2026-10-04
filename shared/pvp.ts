@@ -30,9 +30,9 @@ export interface SendDef {
   income: number;
   /** First wave it can be sent on. */
   unlockWave: number;
-  /** Seconds for a used charge to come back. */
+  /** Seconds for a used charge to come back; 0 = no limit, only mana (and the unlock wave) gate it. */
   cooldown: number;
-  /** Charges held at once. */
+  /** Charges held at once (ignored when cooldown is 0). */
   stock: number;
   /** HP the receiver loses per monster of this send that gets through. */
   leakDamage: number;
@@ -129,13 +129,14 @@ export const DEFAULT_PVP: PvpConfig = {
     matchBandGrowth: 40,
   },
   sends: [
-    S("rabble", "Rabble", "zombie_peasant", 6, 1, 40, 4, 1, 4, 3),
-    S("swarm", "Swarm", "goblin_runner", 10, 1, 80, 6, 3, 6, 2),
-    S("bats", "Bats", "vampire_bat", 6, 1, 110, 7, 5, 8, 2),
-    S("brute", "Brute", "orc_brute", 1, 2.5, 140, 7, 6, 9, 2, 3),
-    S("healers", "Healers", "troll_healer", 3, 1.2, 200, 8, 8, 12, 2, 2),
-    S("splitters", "Splitters", "gelatinous_cube", 4, 1.2, 260, 8, 10, 14, 1, 2),
-    S("champion", "Champion", "boss", 1, 0.4, 600, 0, 15, 40, 1, 6),
+    // No cooldowns: mana is the only limit, Bloons TD Battles style spam.
+    S("rabble", "Rabble", "zombie_peasant", 6, 1, 40, 4, 1, 0, 3),
+    S("swarm", "Swarm", "goblin_runner", 10, 1, 80, 6, 3, 0, 2),
+    S("bats", "Bats", "vampire_bat", 6, 1, 110, 7, 5, 0, 2),
+    S("brute", "Brute", "orc_brute", 1, 2.5, 140, 7, 6, 0, 2, 3),
+    S("healers", "Healers", "troll_healer", 3, 1.2, 200, 8, 8, 0, 2, 2),
+    S("splitters", "Splitters", "gelatinous_cube", 4, 1.2, 260, 8, 10, 0, 1, 2),
+    S("champion", "Champion", "boss", 1, 0.4, 600, 0, 15, 0, 1, 6),
   ],
 };
 
@@ -188,12 +189,13 @@ export interface MatchSetup {
 
 // ---------------------------------------------------------------- send charges (shared by client, bot and server)
 
-/** Charges per send, refilled one at a time after its cooldown. */
+/** Charges per send, refilled one at a time after its cooldown. A send with no cooldown has no limit. */
 export class SendStock {
   /** Times (match seconds) when used charges come back. */
   private back: Record<string, number[]> = {};
 
   charges(s: SendDef, now: number) {
+    if (s.cooldown <= 0) return Infinity;
     const b = (this.back[s.id] ??= []).filter((t) => t > now);
     this.back[s.id] = b;
     return Math.max(0, s.stock - b.length);
@@ -206,6 +208,7 @@ export class SendStock {
   }
 
   use(s: SendDef, now: number) {
+    if (s.cooldown <= 0) return;
     // Charges refill one after another, not all at once.
     const b = (this.back[s.id] ??= []);
     const last = b.length ? Math.max(...b) : now;
