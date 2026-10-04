@@ -37,6 +37,11 @@ interface UnitView {
   pips: Phaser.GameObjects.Graphics;
   aura: Phaser.GameObjects.Graphics | null;
   fired: number;
+  /** Gold ring and "+N%" badge while a neighbouring buff unit speeds this one up. */
+  buff: { ring: Phaser.GameObjects.Graphics; badge: Phaser.GameObjects.Container } | null;
+  haste: number;
+  /** Board time of the last crit/execute callout, so rapid-fire units don't stack them. */
+  calloutAt: number;
 }
 
 interface MonView {
@@ -619,10 +624,12 @@ export class PvpScene extends Phaser.Scene {
         v.sprite.destroy();
         v.pips.destroy();
         v.aura?.destroy();
+        this.clearBuff(v);
         v = this.units[slot] = null;
       }
       if (!u) continue;
       if (!v) v = this.units[slot] = this.unitView(u);
+      this.showBuff(v, slot !== this.dragging);
       if (slot === this.dragging) continue;
       if (u.firedAt !== v.fired) {
         v.fired = u.firedAt;
@@ -659,7 +666,63 @@ export class PvpScene extends Phaser.Scene {
     }
     this.vfx("summon_circle", p.x, p.y + 20, u.awakened ? 200 : 130, 90);
     sfx(u.rank > 1 ? (u.awakened ? "awaken" : "merge") : "summon");
-    return { u, sprite, pips, aura, fired: u.firedAt };
+    return { u, sprite, pips, aura, fired: u.firedAt, buff: null, haste: 0, calloutAt: -1 };
+  }
+
+  /** The buffed marker (same look as solo battles): follows the unit's haste, hidden while it's dragged. */
+  private showBuff(v: UnitView, visible: boolean) {
+    const haste = v.u.haste;
+    if (haste !== v.haste) {
+      v.haste = haste;
+      if (haste <= 0) this.clearBuff(v);
+      else {
+        const p = slotPos(this.arena, v.u.slot);
+        if (!v.buff) {
+          const ring = this.add.graphics().setPosition(p.x, p.y + 32).setDepth(98 + p.y);
+          ring.lineStyle(4, 0xffd93b, 0.85).strokeEllipse(0, 0, 96, 36).fillStyle(0xffd93b, 0.12).fillEllipse(0, 0, 96, 36);
+          this.tweens.add({ targets: ring, alpha: { from: 1, to: 0.45 }, yoyo: true, repeat: -1, duration: 650, ease: "Sine.InOut" });
+          const bg = this.add.graphics();
+          const icon = this.add.image(-20, 0, "stat:attack_speed").setDisplaySize(26, 26);
+          const text = txt(this, -6, 0, "", 18, "#ffd93b", [0, 0.5]);
+          v.buff = { ring, badge: this.add.container(p.x + 36, p.y - 44, [bg, icon, text]).setDepth(160 + p.y) };
+        }
+        const [bg, , text] = v.buff.badge.list as [Phaser.GameObjects.Graphics, Phaser.GameObjects.Image, Phaser.GameObjects.Text];
+        text.setText(`+${Math.round(haste * 100)}%`);
+        const w = 26 + text.width + 10;
+        bg.clear().fillStyle(NAVY, 0.92).fillRoundedRect(-36, -16, w, 32, 16).lineStyle(2, 0xffd93b, 1).strokeRoundedRect(-36, -16, w, 32, 16);
+        v.buff.badge.setScale(1.4);
+        this.tweens.add({ targets: v.buff.badge, scale: 1, duration: 260, ease: "Back.Out" });
+      }
+    }
+    v.buff?.ring.setVisible(visible);
+    v.buff?.badge.setVisible(visible);
+  }
+
+  private clearBuff(v: UnitView) {
+    v.buff?.ring.destroy();
+    v.buff?.badge.destroy();
+    v.buff = null;
+  }
+
+  /** Pops a label over the unit that landed a big hit (crit, execute). */
+  private callout(slot: number, text: string, color: string) {
+    const v = this.units[slot];
+    if (!v || slot === this.dragging || this.board.now - v.calloutAt < 0.35) return;
+    v.calloutAt = this.board.now;
+    const { x, y } = slotPos(this.arena, slot);
+    const burst = this.add.graphics().setPosition(x, y - 10).setDepth(99 + y);
+    burst.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 0.5).fillCircle(0, 0, 52).setScale(0.4);
+    this.tweens.add({ targets: burst, scale: 1.3, alpha: 0, duration: 320, ease: "Cubic.Out", onComplete: () => burst.destroy() });
+    const t = txt(this, x, y - 78, text, 26, color).setDepth(600).setScale(0.3);
+    this.tweens.chain({
+      targets: t,
+      tweens: [
+        { scale: 1.15, duration: 140, ease: "Back.Out" },
+        { scale: 1, duration: 80 },
+        { y: y - 112, alpha: 0, delay: 260, duration: 420, ease: "Cubic.In" },
+      ],
+      onComplete: () => t.destroy(),
+    });
   }
 
   private playOnce(v: UnitView, anim: "attack" | "skill") {
@@ -764,7 +827,14 @@ export class PvpScene extends Phaser.Scene {
       if (this.seenFx.has(f)) continue;
       this.seenFx.add(f);
       const color = Phaser.Display.Color.HexStringToColor(f.color).color;
-      if (f.kind === "text" && f.text) floatText(this, f.x, f.y, f.text, f.color, 26);
+      if (f.kind === "text" && f.text) {
+        if (f.callout && f.slot !== undefined) {
+          // Big hits punch in at the target and pop a label over the unit that landed them.
+          const t = floatText(this, f.x, f.y, f.text, f.color, 32).setDepth(520).setScale(1.8);
+          this.tweens.add({ targets: t, scale: 1, duration: 180, ease: "Back.Out" });
+          this.callout(f.slot, f.callout, f.color);
+        } else floatText(this, f.x, f.y, f.text, f.color, 26);
+      }
       else if (f.kind === "zap") {
         const g = this.add.graphics().setDepth(2050);
         zigzag(g, { x: f.x, y: f.y }, { x: f.x2 ?? f.x, y: f.y2 ?? f.y }, color);

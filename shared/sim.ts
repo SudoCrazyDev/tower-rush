@@ -294,6 +294,9 @@ export interface SimFx {
   y2?: number;
   text?: string;
   color: string;
+  /** A big hit (crit, execute): the slot of the unit that landed it, and the label to pop over it. */
+  slot?: number;
+  callout?: string;
 }
 
 const ELEMENT_CSS: Record<Element, string> = {
@@ -1055,7 +1058,7 @@ export class Sim {
       case "crit": {
         const crit = this.rand() < critChance(rank);
         this.hurt(m, crit ? damage * critMult(rank) : damage, src, P);
-        if (crit) this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT" });
+        if (crit) this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT", slot: src, callout: `CRIT ×${+critMult(rank).toFixed(1)}` });
         break;
       }
       case "curse":
@@ -1064,9 +1067,11 @@ export class Sim {
         break;
       case "execute":
         if (this.rand() < executeChance(rank, rarityIdx)) {
-          if (isBoss) this.hurt(m, damage * e.execute.bossMult, src, P);
-          else {
-            this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE" });
+          if (isBoss) {
+            this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: `×${e.execute.bossMult}`, slot: src, callout: `×${e.execute.bossMult}` });
+            this.hurt(m, damage * e.execute.bossMult, src, P);
+          } else {
+            this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE", slot: src, callout: "EXECUTE" });
             this.hurt(m, m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, src, { ...P, sure: true });
           }
         } else this.hurt(m, damage, src, P);
