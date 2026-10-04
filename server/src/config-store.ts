@@ -1,6 +1,7 @@
 import { applyConfig, defaultConfig, validateConfig, type GameConfig } from "../../shared/config.ts";
 import { withEffectDefaults } from "../../shared/effects.ts";
 import { withRaces } from "../../shared/races.ts";
+import { withStyles } from "../../shared/units.ts";
 import { all, audit, one, run } from "./db.ts";
 
 interface VersionRow {
@@ -25,7 +26,7 @@ function upgrade(cfg: GameConfig): GameConfig {
   return {
     ...d,
     ...cfg,
-    units: withRaces(cfg.units, d.units),
+    units: withStyles(withRaces(cfg.units, d.units), d.units),
     monsters: withRaces(cfg.monsters, d.monsters),
     bosses: withRaces(cfg.bosses, d.bosses),
     heroes: withRaces(cfg.heroes ?? d.heroes, d.heroes),

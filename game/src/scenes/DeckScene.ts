@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { effectSummary } from "../../../shared/effects.ts";
-import { ARCHETYPES, MAX_RANK, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost } from "../data/units";
+import { PERKS } from "../../../shared/perks.ts";
+import { ARCHETYPES, STYLES, MAX_RANK, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
@@ -496,11 +497,21 @@ export class DeckScene extends Phaser.Scene {
       };
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
-    info.add(txt(this, cx, cy - 76, ARCHETYPES[def.arch].label, 26, "#ffffff"));
+    const style = def.arch === "buff" ? "" : `${STYLES[def.style].label.toUpperCase()} · `;
+    info.add(txt(this, cx, cy - 82, style + ARCHETYPES[def.arch].label, 26, "#ffffff"));
     // The archetype's numbers for this unit as summoned (rank 1).
     const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity));
-    if (effect) info.add(txt(this, cx, cy - 40, effect, 20, "#7fffd4"));
-    info.add(txt(this, cx, effect ? cy - 4 : cy - 28, `"${def.blurb}"`, effect ? 20 : 22, "#c9d2ff"));
+    let lineY = cy - 48;
+    if (effect) {
+      info.add(txt(this, cx, lineY, effect, 20, "#7fffd4"));
+      lineY += 32;
+    }
+    if (def.perk !== "none") {
+      const perk = PERKS[def.perk];
+      info.add(txt(this, cx, lineY, `${def.arch === "buff" ? "Neighbours get " : ""}${perk.label}: ${perk.text}`, 20, "#ffd27a"));
+      lineY += 32;
+    }
+    info.add(txt(this, cx, lineY, `"${def.blurb}"`, 20, "#c9d2ff"));
 
     const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
@@ -508,7 +519,7 @@ export class DeckScene extends Phaser.Scene {
       ["stat:attack_speed", def.arch === "buff" ? "—" : `every ${+(1 / now.speed).toFixed(2)}s`],
     ];
     // Lay the icon+value pairs out by their real widths and centre the row.
-    const statY = cy + 60;
+    const statY = cy + 76;
     const pairs = rows.map(([icon, value]) => ({
       img: this.add.image(0, statY, icon).setDisplaySize(56, 56).setOrigin(0, 0.5),
       label: txt(this, 0, statY, value, 32, "#ffffff", [0, 0.5]),

@@ -32,6 +32,7 @@ import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "./monsters.ts";
 import { RARITY_ORDER, UNIT_BY_ID, unitStats, type Element, type UnitDef } from "./units.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
+import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
 
 /** Simulation step in seconds. */
 export const SIM_DT = 1 / 30;
@@ -181,6 +182,8 @@ export class SimUnit {
   cooldown: number;
   alive: number;
   haste = 0;
+  /** Its own perk plus those from neighbouring buff units. */
+  perks: Perk[] = [];
   frozenUntil = 0;
   pulse = 0;
   ult = 0;
@@ -195,6 +198,7 @@ export class SimUnit {
     this.x = pos.x;
     this.y = pos.y;
     this.stats = boardUnitStats(b, cardLevel, powerUp);
+    withPerk(this.perks, this.def.perk);
     this.cooldown = cooldown;
     this.alive = alive;
   }
@@ -409,14 +413,22 @@ export class Sim {
   // ---------------------------------------------------------------- setup helpers
 
   private recomputeBuffs() {
-    for (const u of this.units) if (u) u.haste = 0;
+    for (const u of this.units) {
+      if (!u) continue;
+      u.haste = 0;
+      u.perks = [];
+      withPerk(u.perks, u.def.perk);
+    }
     this.units.forEach((u, i) => {
       if (!u || u.def.arch !== "buff") return;
       const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
       const col = i % 5;
       for (const j of [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1]) {
         const v = this.units[j];
-        if (v && v.def.arch !== "buff") v.haste += bonus;
+        if (v && v.def.arch !== "buff") {
+          v.haste += bonus;
+          withPerk(v.perks, u.def.perk);
+        }
       }
     });
   }
@@ -657,24 +669,26 @@ export class Sim {
   }
 
   /** Apply damage; returns true if it killed. */
-  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean } = {}) {
+  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; perks?: readonly Perk[] } = {}) {
     if (m.dead) return false;
     if (this.now < m.shieldUntil) {
       this.blocked += amount;
       return false;
     }
-    if (!opts.sure && m.has("dodge") && this.rand() < 0.15) {
+    const perks = opts.perks ?? [];
+    if (!opts.sure && m.has("dodge") && !perks.includes("true_strike") && this.rand() < 0.15) {
       this.dodged++;
       return false;
     }
-    let dmg = amount * (1 + m.curse);
-    if (m.has("armored")) dmg *= 0.7;
+    let dmg = amount * (1 + m.curse) * perkMult(perks, m);
+    if (m.has("armored") && !perks.includes("armor_breaker")) dmg *= 0.7;
     const dealt = Math.min(Math.max(0, m.hp), dmg);
     if (src === "hero") this.heroDamage += dealt;
     else this.damageBySlot[src] += dealt;
     m.hp -= dmg;
     if (m.hp <= 0) {
       this.kill(m, src);
+      if (perks.includes("plunder")) this.gainMana(PERK.plunder);
       return true;
     }
     return false;
@@ -936,7 +950,7 @@ export class Sim {
       this.mark("zap", p.x, p.y, u.def.element === "lightning" ? "#fff27a" : "#9ff0ff", { x2: m.pos.x, y2: m.pos.y });
       p = m.pos;
     }
-    hit.forEach((m, i) => this.hurt(m, damage * Math.pow(EFFECTS.chain.falloff, i), u.slot));
+    hit.forEach((m, i) => this.hurt(m, damage * Math.pow(EFFECTS.chain.falloff, i), u.slot, { perks: u.perks }));
   }
 
   private updateShots(dt: number) {
@@ -970,7 +984,8 @@ export class Sim {
     const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
     const pos = m.pos;
     const isBoss = !!m.boss;
-    const frostproof = m.has("frostproof");
+    const P = { perks: u.perks };
+    const chilled = chills(u.perks, m);
     this.mark("hit", pos.x, pos.y, ELEMENT_CSS[def.element]);
 
     switch (def.arch) {
@@ -978,8 +993,8 @@ export class Sim {
       case "burn": {
         const splash = this.nearby(pos, splashRadius(def.arch, rank), m);
         const burnDps = def.arch === "burn" ? damage * e.burn.burnDps : 0;
-        this.hurt(m, damage, src);
-        for (const o of splash) this.hurt(o, damage * e[def.arch].splash, src, { sure: true });
+        this.hurt(m, damage, src, P);
+        for (const o of splash) this.hurt(o, damage * e[def.arch].splash, src, { ...P, sure: true });
         if (burnDps) {
           for (const o of [m, ...splash]) {
             const keep = o.burn.until > now && o.burn.dps > burnDps;
@@ -990,60 +1005,60 @@ export class Sim {
         break;
       }
       case "pierce": {
-        this.hurt(m, damage, src);
+        this.hurt(m, damage, src, P);
         const behind = this.nearby(pos, e.pierce.range, m)
           .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
           .slice(0, pierceTargets(rank));
-        for (const o of behind) this.hurt(o, damage * e.pierce.damage, src, { sure: true });
+        for (const o of behind) this.hurt(o, damage * e.pierce.damage, src, { ...P, sure: true });
         break;
       }
       case "slow":
-        this.hurt(m, damage, src);
-        if (!frostproof || def.element !== "ice") {
+        this.hurt(m, damage, src, P);
+        if (chilled || def.element !== "ice") {
           m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, slowAmount(rank, rarityIdx, isBoss));
           m.slowUntil = now + e.slow.duration;
         }
         break;
       case "freeze":
-        this.hurt(m, damage, src);
-        if (!frostproof && this.rand() < freezeChance(rank, rarityIdx)) {
+        this.hurt(m, damage, src, P);
+        if (chilled && this.rand() < freezeChance(rank, rarityIdx)) {
           m.frozenUntil = now + (isBoss ? e.freeze.bossDuration : e.freeze.duration);
           this.mark("text", pos.x, pos.y - 30, "#7fd8ff", { text: "FROZEN" });
         }
         break;
       case "stun":
-        this.hurt(m, damage, src);
+        this.hurt(m, damage, src, P);
         if (this.rand() < stunChance(rank, rarityIdx)) {
           m.stunUntil = now + (isBoss ? e.stun.bossDuration : e.stun.duration);
           this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "STUN" });
         }
         break;
       case "poison":
-        this.hurt(m, damage, src);
+        this.hurt(m, damage, src, P);
         m.poison.push({ dps: damage * e.poison.dps, until: now + e.poison.duration, src });
         while (m.poison.length > e.poison.maxStacks) m.poison.shift();
         break;
       case "crit": {
         const crit = this.rand() < critChance(rank);
-        this.hurt(m, crit ? damage * critMult(rank) : damage, src);
+        this.hurt(m, crit ? damage * critMult(rank) : damage, src, P);
         if (crit) this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT" });
         break;
       }
       case "curse":
-        this.hurt(m, damage, src);
+        this.hurt(m, damage, src, P);
         m.curse = Math.min(e.curse.max, m.curse + curseStep(rank, rarityIdx));
         break;
       case "execute":
         if (this.rand() < executeChance(rank, rarityIdx)) {
-          if (isBoss) this.hurt(m, damage * e.execute.bossMult, src);
+          if (isBoss) this.hurt(m, damage * e.execute.bossMult, src, P);
           else {
             this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE" });
-            this.hurt(m, m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, src, { sure: true });
+            this.hurt(m, m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, src, { ...P, sure: true });
           }
-        } else this.hurt(m, damage, src);
+        } else this.hurt(m, damage, src, P);
         break;
       default:
-        this.hurt(m, damage, src);
+        this.hurt(m, damage, src, P);
     }
   }
 }

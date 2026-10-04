@@ -4,6 +4,7 @@ import type { MonsterDef, BossDef } from "../data/monsters";
 import { fmt, txt } from "../ui";
 import type { Path } from "./path";
 import type { BattleScene } from "../scenes/BattleScene";
+import { PERK, perkMult, type Perk } from "../../../shared/perks.ts";
 
 export interface HitOpts {
   crit?: boolean;
@@ -11,6 +12,8 @@ export interface HitOpts {
   sure?: boolean;
   color?: string;
   quiet?: boolean;
+  /** Perks of the unit that hit. */
+  perks?: readonly Perk[];
 }
 
 /** A walking enemy (regular monster or boss). */
@@ -146,12 +149,13 @@ export class Monster {
       if (!opts.quiet) this.scene.floater(this.pos.x, this.pos.y - 20, "BLOCK", "#9fb4ff", 20);
       return false;
     }
-    if (!opts.sure && this.has("dodge") && Math.random() < 0.15) {
+    const perks = opts.perks ?? [];
+    if (!opts.sure && this.has("dodge") && !perks.includes("true_strike") && Math.random() < 0.15) {
       this.scene.floater(this.pos.x, this.pos.y - 20, "MISS", "#dddddd", 20);
       return false;
     }
-    let dmg = amount * (1 + this.curse);
-    if (this.has("armored")) dmg *= 0.7;
+    let dmg = amount * (1 + this.curse) * perkMult(perks, this);
+    if (this.has("armored") && !perks.includes("armor_breaker")) dmg *= 0.7;
     this.hp -= dmg;
     if (!opts.quiet) {
       this.flashUntil = now + 0.06;
@@ -160,6 +164,7 @@ export class Monster {
     this.label.setText(fmt(Math.max(0, this.hp)));
     if (this.hp <= 0) {
       this.die();
+      if (perks.includes("plunder")) this.scene.gainMana(PERK.plunder, this.pos.x, this.pos.y - 40);
       return true;
     }
     return false;

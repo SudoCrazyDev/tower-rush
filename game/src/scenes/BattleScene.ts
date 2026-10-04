@@ -5,6 +5,7 @@ import { ARENAS, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "../data/monsters";
 import { MAX_RANK, RARITY_ORDER, UNIT_BY_ID, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
 import { raceLabel } from "../../../shared/races.ts";
+import { chills, withPerk, type Perk } from "../../../shared/perks.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import {
   EFFECTS, buffBonus, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
@@ -53,6 +54,7 @@ interface Shot {
   def: UnitDef;
   rank: number;
   damage: number;
+  perks: readonly Perk[];
   target: Monster;
   aim: Pt;
   speed: number;
@@ -676,7 +678,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: beam, alpha: 0, duration: 260, onComplete: () => beam.destroy() });
     this.vfx(HIT_VFX[unit.def.element], center.x, center.y, e.ultimateRadius * 1.6);
     this.floater(center.x, center.y - 70, "ULTIMATE!", "#ffd93b", 30);
-    for (const m of this.nearby(center, e.ultimateRadius)) this.applyHit({ def: unit.def, rank: unit.rank, damage }, m);
+    for (const m of this.nearby(center, e.ultimateRadius)) this.applyHit({ def: unit.def, rank: unit.rank, damage, perks: unit.perks }, m);
   }
 
   private powerUp(id: string) {
@@ -759,9 +761,14 @@ export class BattleScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  /** Buff units speed up their four neighbours. */
+  /** Buff units speed up their four neighbours and hand them their perk. */
   private recomputeBuffs() {
-    for (const u of this.board) if (u) u.haste = 0;
+    for (const u of this.board) {
+      if (!u) continue;
+      u.haste = 0;
+      u.perks = [];
+      withPerk(u.perks, u.def.perk);
+    }
     this.board.forEach((u, i) => {
       if (!u || u.def.arch !== "buff") return;
       const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
@@ -769,7 +776,10 @@ export class BattleScene extends Phaser.Scene {
       const n = [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1];
       for (const j of n) {
         const v = this.board[j];
-        if (v && v.def.arch !== "buff") v.haste += bonus;
+        if (v && v.def.arch !== "buff") {
+          v.haste += bonus;
+          withPerk(v.perks, u.def.perk);
+        }
       }
     });
   }
@@ -821,7 +831,7 @@ export class BattleScene extends Phaser.Scene {
     const img = this.add.image(from.x, from.y, tex).setDepth(2000);
     img.setScale((def.proj === "spark" ? 40 : 56) / img.width);
     sfx("shoot", def.proj);
-    this.shots.push({ img, unit, def, rank: unit.rank, damage, target, aim: target.pos, speed: def.arch === "sniper" ? EFFECTS.sniper.shotSpeed : 1100 });
+    this.shots.push({ img, unit, def, rank: unit.rank, damage, perks: unit.perks, target, aim: target.pos, speed: def.arch === "sniper" ? EFFECTS.sniper.shotSpeed : 1100 });
   }
 
   private chainLightning(unit: Unit, first: Monster, damage: number, from: Pt) {
@@ -854,7 +864,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
     hit.forEach((m, i) => {
       this.vfx("lightning_strike", m.pos.x, m.pos.y, 80);
-      m.damage(damage * Math.pow(EFFECTS.chain.falloff, i));
+      m.damage(damage * Math.pow(EFFECTS.chain.falloff, i), { perks: unit.perks });
     });
   }
 
@@ -894,14 +904,15 @@ export class BattleScene extends Phaser.Scene {
     return this.monsters.filter((m) => !m.gone && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
-  private applyHit(s: Pick<Shot, "def" | "rank" | "damage">, m: Monster) {
-    const { def, rank, damage } = s;
+  private applyHit(s: Pick<Shot, "def" | "rank" | "damage" | "perks">, m: Monster) {
+    const { def, rank, damage, perks } = s;
     const e = EFFECTS;
     const now = this.now;
     const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
     const pos = m.pos;
     const isBoss = !!m.boss;
-    const frostproof = m.has("frostproof");
+    const P = { perks };
+    const chilled = chills(perks, m);
     let vfxSize = 70;
 
     switch (def.arch) {
@@ -909,76 +920,76 @@ export class BattleScene extends Phaser.Scene {
       case "burn": {
         const splash = this.nearby(pos, splashRadius(def.arch, rank), m);
         const burnDps = def.arch === "burn" ? damage * e.burn.burnDps : 0;
-        m.damage(damage);
-        for (const o of splash) o.damage(damage * e[def.arch].splash, { sure: true, quiet: true });
+        m.damage(damage, P);
+        for (const o of splash) o.damage(damage * e[def.arch].splash, { ...P, sure: true, quiet: true });
         if (burnDps) for (const o of [m, ...splash]) o.burn = { dps: Math.max(o.burn.until > now ? o.burn.dps : 0, burnDps), until: now + e.burn.burnTime };
         vfxSize = 130 + rank * 6;
         break;
       }
       case "pierce": {
-        m.damage(damage);
+        m.damage(damage, P);
         const behind = this.nearby(pos, e.pierce.range, m)
           .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
           .slice(0, pierceTargets(rank));
         for (const o of behind) {
-          o.damage(damage * e.pierce.damage, { sure: true });
+          o.damage(damage * e.pierce.damage, { ...P, sure: true });
           this.vfx("hit_impact", o.pos.x, o.pos.y, 50);
         }
         break;
       }
       case "slow":
-        m.damage(damage);
-        if (!frostproof || def.element !== "ice") {
+        m.damage(damage, P);
+        if (chilled || def.element !== "ice") {
           m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, slowAmount(rank, rarityIdx, isBoss));
           m.slowUntil = now + e.slow.duration;
         }
         break;
       case "freeze":
-        m.damage(damage);
-        if (!frostproof && Math.random() < freezeChance(rank, rarityIdx)) {
+        m.damage(damage, P);
+        if (chilled && Math.random() < freezeChance(rank, rarityIdx)) {
           m.frozenUntil = now + (isBoss ? e.freeze.bossDuration : e.freeze.duration);
           this.floater(pos.x, pos.y - 30, "FROZEN", "#7fd8ff", 22);
           sfx("freeze");
         }
         break;
       case "stun":
-        m.damage(damage);
+        m.damage(damage, P);
         if (Math.random() < stunChance(rank, rarityIdx)) {
           m.stunUntil = now + (isBoss ? e.stun.bossDuration : e.stun.duration);
           this.floater(pos.x, pos.y - 30, "STUN", "#ffd93b", 22);
         }
         break;
       case "poison":
-        m.damage(damage);
+        m.damage(damage, P);
         m.poison.push({ dps: damage * e.poison.dps, until: now + e.poison.duration });
         while (m.poison.length > e.poison.maxStacks) m.poison.shift();
         break;
       case "crit": {
         const crit = Math.random() < critChance(rank);
-        m.damage(crit ? damage * critMult(rank) : damage, { crit });
+        m.damage(crit ? damage * critMult(rank) : damage, { ...P, crit });
         if (crit) vfxSize = 110;
         break;
       }
       case "curse":
-        m.damage(damage);
+        m.damage(damage, P);
         m.curse = Math.min(e.curse.max, m.curse + curseStep(rank, rarityIdx));
         break;
       case "execute":
         if (Math.random() < executeChance(rank, rarityIdx)) {
-          if (isBoss) m.damage(damage * e.execute.bossMult, { crit: true, color: "#ff7ad9" });
+          if (isBoss) m.damage(damage * e.execute.bossMult, { ...P, crit: true, color: "#ff7ad9" });
           else {
             this.floater(pos.x, pos.y - 30, "EXECUTE", "#ff7ad9", 26);
-            m.damage(m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, { sure: true });
+            m.damage(m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, { ...P, sure: true });
           }
           vfxSize = 130;
-        } else m.damage(damage);
+        } else m.damage(damage, P);
         break;
       case "sniper":
-        m.damage(damage, { crit: true, color: "#ffffff" });
+        m.damage(damage, { ...P, crit: true, color: "#ffffff" });
         vfxSize = 120;
         break;
       default:
-        m.damage(damage);
+        m.damage(damage, P);
     }
     this.vfx(HIT_VFX[def.element], pos.x, pos.y, vfxSize);
     sfx("hit", def.element);

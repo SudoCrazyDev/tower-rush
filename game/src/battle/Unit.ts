@@ -3,6 +3,7 @@ import { animKey, hasAnim, sheetScale } from "../assets";
 import { ELEMENT_COLOR, MAX_RANK, unitStats, type UnitDef } from "../data/units";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { EFFECTS, manaPerPulse } from "../../../shared/effects.ts";
+import { withPerk, type Perk } from "../../../shared/perks.ts";
 import { NAVY } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
 
@@ -25,6 +26,8 @@ export class Unit {
   alive = 0;
   /** Attack speed bonus from neighbouring buff units (0.25 = +25%). */
   haste = 0;
+  /** Its own perk plus those from neighbouring buff units. */
+  perks: Perk[] = [];
   frozenUntil = 0;
   pulse = 0;
   dragging = false;
@@ -40,6 +43,7 @@ export class Unit {
     this.rank = rank;
     this.slot = slot;
     this.awakened = rank >= MAX_RANK && canAwaken(def.id);
+    withPerk(this.perks, def.perk);
     const p = scene.slotPos(slot);
     if (this.awakened) {
       this.aura = scene.add.graphics();
