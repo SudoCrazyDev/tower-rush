@@ -111,9 +111,11 @@ export class LobbyScene extends Phaser.Scene {
     if (WIDE) {
       button(this, deckX, 640, 340, 110, "DECK", "blue", () => this.scene.start("Deck"));
       button(this, deckX, 790, 340, 110, "SHOP", "green", () => this.scene.start("Shop"));
+      button(this, deckX, 940, 340, 110, "PVP", "red", () => this.scene.start("PvpMenu"));
     } else {
-      button(this, 200, 1530, 300, 110, "DECK", "blue", () => this.scene.start("Deck"));
-      button(this, 552, 1530, 300, 110, "SHOP", "green", () => this.scene.start("Shop"));
+      button(this, 140, 1530, 236, 110, "DECK", "blue", () => this.scene.start("Deck"));
+      button(this, 376, 1530, 216, 110, "PVP", "red", () => this.scene.start("PvpMenu"));
+      button(this, 612, 1530, 236, 110, "SHOP", "green", () => this.scene.start("Shop"));
     }
     eventStrip(this);
     // Static shapes become cached images (see bake.ts).

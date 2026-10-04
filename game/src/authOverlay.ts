@@ -27,7 +27,7 @@ const CSS = `
 
 type Mode = "start" | "signin" | "register";
 
-function ensureCss() {
+export function ensureCss() {
   if (document.getElementById("tr-auth-css")) return;
   const style = document.createElement("style");
   style.id = "tr-auth-css";

@@ -1,4 +1,4 @@
-import { applyConfig, defaultConfig, validateConfig, type GameConfig } from "../../shared/config.ts";
+import { applyConfig, defaultConfig, validateConfig, withPvpDefaults, type GameConfig } from "../../shared/config.ts";
 import { withEffectDefaults } from "../../shared/effects.ts";
 import { withRaces } from "../../shared/races.ts";
 import { withStyles } from "../../shared/units.ts";
@@ -32,6 +32,7 @@ function upgrade(cfg: GameConfig): GameConfig {
     heroes: withRaces(cfg.heroes ?? d.heroes, d.heroes),
     economy: { ...d.economy, ...cfg.economy },
     effects: withEffectDefaults(cfg.effects),
+    pvp: withPvpDefaults(cfg.pvp),
     dropWeights: { ...d.dropWeights, ...cfg.dropWeights },
   };
 }

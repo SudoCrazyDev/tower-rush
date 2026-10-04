@@ -1,6 +1,11 @@
 # Multiplayer: infrastructure and tech-stack plan
 
-Draft, 2026-10-04. Covers ROADMAP section 5 (PvP and co-op). Nothing here is built yet.
+Draft, 2026-10-04. Covers ROADMAP section 5 (PvP and co-op).
+
+**Update:** PvP is built, and the design changed from this draft: sends instead of "kills go to
+the opponent", and each client runs its own board while the server relays (the Free plan can't
+run every match on the server). See [PVP.md](PVP.md). The rest still applies to co-op and
+to moving the solo battle onto the shared sim.
 Decisions marked **(recommended)** are my pick; the open questions at the end are yours.
 
 ## Where the code is today

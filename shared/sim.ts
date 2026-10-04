@@ -315,7 +315,7 @@ export class Sim {
   readonly units: (SimUnit | null)[];
   readonly hero: HeroDef | null;
   readonly maxTime: number;
-  private readonly rand: () => number;
+  protected readonly rand: () => number;
 
   now = 0;
   wave = 0;
@@ -326,6 +326,8 @@ export class Sim {
   fx: SimFx[] = [];
   boss: SimMonster | null = null;
   over = false;
+  /** Cast the hero by itself whenever it is ready (PvP lets the player switch this off). */
+  autoHero = true;
   outcome: SimResult["outcome"] | null = null;
 
   private uid = 0;
@@ -337,7 +339,7 @@ export class Sim {
   private introTimer = 1.5;
   private healTimer = 0;
   private sampleTimer = 0;
-  private heroReadyAt = 0;
+  protected heroReadyAt = 0;
   private rageUntil = 0;
   private hasteUntil = 0;
   private stormUntil = 0;
@@ -412,7 +414,17 @@ export class Sim {
 
   // ---------------------------------------------------------------- setup helpers
 
-  private recomputeBuffs() {
+  /** Card level of a unit on this board (the Playground uses one level for every card). */
+  protected levelOf(_id: string) {
+    return this.setup.cardLevel;
+  }
+
+  /** In-battle power-ups bought for a unit. */
+  protected powerOf(_id: string) {
+    return this.setup.powerUp;
+  }
+
+  protected recomputeBuffs() {
     for (const u of this.units) {
       if (!u) continue;
       u.haste = 0;
@@ -421,7 +433,7 @@ export class Sim {
     }
     this.units.forEach((u, i) => {
       if (!u || u.def.arch !== "buff") return;
-      const mult = boostMult(this.setup.cardLevel, this.setup.powerUp) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
       const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
       const col = i % 5;
       for (const j of [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1]) {
@@ -484,7 +496,7 @@ export class Sim {
     this.waveState = "spawning";
   }
 
-  private spawn(q: { def?: MonsterDef; boss?: BossDef }, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
+  protected spawn(q: { def?: MonsterDef; boss?: BossDef }, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
     const path = at?.path ?? this.paths[this.rand() < 0.5 ? 0 : 1];
     const n = this.wave;
     this.spawned++;
@@ -504,7 +516,7 @@ export class Sim {
     return m;
   }
 
-  private flow(dt: number) {
+  protected flow(dt: number) {
     const kind = this.setup.scenario.kind;
     if (kind === "dummies") return;
     if (this.waveState === "intro") {
@@ -575,7 +587,7 @@ export class Sim {
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     this.updateStorm(dt);
     this.updateShots(dt);
-    if (this.hero && now >= this.heroReadyAt) this.castHero();
+    if (this.hero && this.autoHero && now >= this.heroReadyAt) this.castHero();
 
     this.sampleTimer -= dt;
     if (this.sampleTimer <= 0) {
@@ -593,7 +605,7 @@ export class Sim {
     return this.result();
   }
 
-  private finish(outcome: SimResult["outcome"]) {
+  protected finish(outcome: SimResult["outcome"]) {
     if (this.over) return;
     this.over = true;
     this.outcome = outcome;
@@ -643,11 +655,11 @@ export class Sim {
     });
   }
 
-  private log(text: string, kind: SimEvent["kind"]) {
+  protected log(text: string, kind: SimEvent["kind"]) {
     if (this.events.length < 400) this.events.push({ t: this.now, text, kind });
   }
 
-  private mark(kind: SimFx["kind"], x: number, y: number, color: string, extra: Partial<SimFx> = {}) {
+  protected mark(kind: SimFx["kind"], x: number, y: number, color: string, extra: Partial<SimFx> = {}) {
     if (this.fx.length < 300) this.fx.push({ t: this.now, kind, x, y, color, ...extra });
   }
 
@@ -729,7 +741,7 @@ export class Sim {
     }
   }
 
-  private leak(m: SimMonster) {
+  protected leak(m: SimMonster) {
     m.dead = m.gone = m.leaked = true;
     this.leaks++;
     const lost = Math.min(this.lives, m.boss ? ECONOMY.lives : 1);
@@ -800,11 +812,11 @@ export class Sim {
     return this.hero?.power === "rage" && this.now < this.rageUntil ? 1 + this.hero.amount : 1;
   }
 
-  /** Same rules as the game's auto-cast. */
-  private castHero() {
+  /** Same rules as the game's auto-cast. Returns whether it fired. */
+  protected castHero() {
     const h = this.hero!;
     const targets = this.monsters.filter((m) => !m.gone && m.intro <= 0);
-    if (h.power !== "mana" && !targets.length) return;
+    if (h.power !== "mana" && !targets.length) return false;
     this.heroReadyAt = this.now + h.cooldown;
     this.heroCasts++;
     const now = this.now;
@@ -847,6 +859,7 @@ export class Sim {
     }
     this.log(`Hero: ${h.ability}`, "hero");
     this.mark("text", 375, 640, "#ffd93b", { text: h.ability.toUpperCase() });
+    return true;
   }
 
   private updateStorm(dt: number) {

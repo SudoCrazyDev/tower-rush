@@ -4,6 +4,9 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 export interface Bindings {
   DB: D1Database;
+  /** PvP queue (one instance) and one room per match; see pvp.ts. */
+  MATCHMAKER: DurableObjectNamespace<import("./pvp.ts").Matchmaker>;
+  MATCH: DurableObjectNamespace<import("./pvp.ts").MatchRoom>;
   AUTH_LIMIT: RateLimit;
   ADMIN_LIMIT: RateLimit;
   ADMIN_USERNAME: string;

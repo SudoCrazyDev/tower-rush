@@ -7,6 +7,7 @@ Everything runs on Cloudflare:
 | API (`server/src`, Hono) | Worker `tower-rush` | `wrangler.jsonc` |
 | Game and admin panel (built files) | The same Worker's static assets: game at `/`, admin at `/admin/` | `npm run build` → `dist/` |
 | Database | D1 database `tower-rush` | `server/migrations/*.sql` |
+| PvP rooms | Durable Objects `Matchmaker` (one) and `MatchRoom` (one per match), in the same Worker | `wrangler.jsonc` (`durable_objects`, `migrations`); [PVP.md](PVP.md) |
 | Art (250 MB) | R2 bucket `tower-rush-assets` at `https://assets.depedtoolkit.com/` | `game/vite.config.ts`, `admin/vite.config.ts` |
 
 Live: **https://tower-rush.philiplouis0717.workers.dev** (admin: `/admin/`).

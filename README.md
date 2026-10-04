@@ -49,6 +49,10 @@ served from `game/public/assets`; production loads it from R2.
 - **Mail.** Send announcements and gifts (gold, gems, a chest) to one player or everyone;
   they arrive in the game's inbox (lobby **MAIL**). Gifts are claimed once, messages can
   expire, and a sent message can be recalled.
+- **PvP.** Ranked, Mirror and Casual matches: both players get the same waves on a fixed
+  clock and spend mana to send monsters to each other (Bloons TD Battles style, with income).
+  Matchmaking falls back to a bot after a few seconds. Rules, sends and rewards are on the
+  admin **PvP** page, with a bot-vs-bot test and the recent matches. See [PVP.md](PVP.md).
 - **Offers & events.** Schedule limited-time events (battle gold/gem multipliers, a chest
   discount) and sell bundles in the shop's SPECIALS shelf, each with an optional per-player
   limit, trophy gate and sale window (its own dates or an event's). Sales per offer are
@@ -70,11 +74,13 @@ Player endpoints (`/api`, Bearer token from the auth calls):
 `POST /heroes/:id/buy` ·
 `POST /shop/chests/:id/buy` · `POST /shop/gift` · `POST /daily/login` ·
 `POST /daily/quests/:id/claim` · `POST /daily/bonus` · `POST /battles` ·
-`POST /battles/:id/finish` · `GET /leaderboard?by=trophies|wave`
+`POST /battles/:id/finish` · `GET /leaderboard?by=trophies|wave` ·
+`GET /pvp/queue?mode=` and `GET /pvp/match/:id` (WebSockets; the token goes in the
+subprotocol list) · `POST /pvp/matches/:id/finish` (bot matches)
 
 Admin endpoints (`/api/admin`, Bearer token from `POST /login`):
 `GET /stats` · `GET|PUT /config` · `GET /config/versions[/:id]` ·
 `POST /config/versions/:id/restore` · `POST /config/reset` · `GET /users` ·
 `GET|PATCH|DELETE /users/:id` · `PUT|DELETE /users/:id/cards/:card` ·
 `POST /users/:id/ban | unban | reset | password | logout` · `GET|POST /admins` ·
-`DELETE /admins/:id` · `POST /me/password` · `GET /audit`
+`DELETE /admins/:id` · `POST /me/password` · `GET /audit` · `GET /pvp/matches`

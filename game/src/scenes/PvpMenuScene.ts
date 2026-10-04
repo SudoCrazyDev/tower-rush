@@ -1,0 +1,159 @@
+import Phaser from "phaser";
+import { BASE } from "../assets";
+import { music, sfx } from "../audio";
+import { W, H, WIDE, txt, button, iconButton, modal, NAVY, toast } from "../ui";
+import { profile } from "../save";
+import { joinQueue, MatchConn, type Search } from "../pvpnet";
+import { askCode } from "../codePrompt";
+import { CHALLENGE_RULES, PVP, PVP_MODES, PVP_MODE_INFO, type PvpMode, type ServerMsg } from "../../../shared/pvp.ts";
+
+const MODE_COLOR: Record<PvpMode, "yellow" | "blue" | "green"> = { ranked: "yellow", mirror: "blue", casual: "green" };
+
+/**
+ * PvP: pick Ranked, Mirror or Casual and search for an opponent (a bot after a few seconds),
+ * or play a friend: open a challenge and share its code, or join one with a friend's code.
+ */
+export class PvpMenuScene extends Phaser.Scene {
+  private leave: (() => void) | null = null;
+
+  constructor() {
+    super("PvpMenu");
+  }
+
+  preload() {
+    if (!this.textures.exists("loc:pvp_versus_background")) this.load.image("loc:pvp_versus_background", `${BASE}locations/pvp_versus_background.webp`);
+  }
+
+  create() {
+    music("lobby");
+    this.leave = null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.leave?.());
+    const bg = this.add.image(W / 2, H / 2, "loc:pvp_versus_background");
+    bg.setScale(Math.max(W / bg.width, H / bg.height));
+    this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.45);
+    iconButton(this, 60, 60, "back", 80, () => this.scene.start("Lobby"));
+    txt(this, W / 2, WIDE ? 110 : 150, "PVP", WIDE ? 96 : 84, "#ffd93b");
+    txt(this, W / 2, WIDE ? 190 : 230, "Same waves for both. Spend mana to send monsters to your opponent.", WIDE ? 28 : 22, "#fff4c2").setWordWrapWidth(W - 80);
+    this.modeCards();
+  }
+
+  private modeCards() {
+    PVP_MODES.forEach((mode, i) => {
+      const info = PVP_MODE_INFO[mode];
+      const [x, y] = WIDE ? [W / 2 + (i - 1) * 520, H / 2 + 60] : [W / 2, 470 + i * 330];
+      const [w, h] = WIDE ? [480, 600] : [640, 290];
+      const g = this.add.graphics();
+      g.fillStyle(NAVY, 0.88).fillRoundedRect(-w / 2, -h / 2, w, h, 32);
+      g.lineStyle(6, 0xf2b630, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 32);
+      const parts: Phaser.GameObjects.GameObject[] = [g];
+      parts.push(txt(this, 0, -h / 2 + 56, info.name.toUpperCase(), WIDE ? 56 : 48, "#ffd27a"));
+      parts.push(txt(this, 0, WIDE ? -60 : -30, info.text, WIDE ? 28 : 24, "#ffffff").setWordWrapWidth(w - 60));
+      const extra =
+        mode === "ranked" ? `Win +${PVP.rules.trophyWin}  ·  Lose −${PVP.rules.trophyLoss} trophies` : mode === "mirror" ? `All cards at level ${PVP.rules.mirrorLevel}` : "Practice without risk";
+      parts.push(txt(this, 0, WIDE ? 40 : 30, extra, WIDE ? 24 : 22, "#c9d2ff"));
+      parts.push(button(this, 0, h / 2 - (WIDE ? 90 : 62), WIDE ? 340 : 300, WIDE ? 110 : 86, "PLAY", MODE_COLOR[mode], () => this.search({ mode })));
+      this.add.container(x, y, parts);
+    });
+    if (!WIDE) txt(this, W / 2, H - 60, `Trophies: ${profile.trophies}`, 30, "#ffd93b");
+    // Friends: no trophies either way.
+    const y = WIDE ? 1215 : 1335;
+    const gap = WIDE ? 230 : 172;
+    button(this, W / 2 - gap, y, WIDE ? 420 : 330, WIDE ? 110 : 96, "CHALLENGE A FRIEND", "blue", () => this.pickChallenge(), WIDE ? 34 : 28);
+    button(this, W / 2 + gap, y, WIDE ? 420 : 330, WIDE ? 110 : 96, "JOIN WITH CODE", "grey", async () => {
+      const code = await askCode();
+      if (code && this.sys.isActive()) this.search({ join: code });
+    }, WIDE ? 34 : 28);
+  }
+
+  /** Choose the rules for a friend challenge. */
+  private pickChallenge() {
+    const m = modal(this, 620, 720, "CHALLENGE A FRIEND", () => {});
+    m.add(txt(this, m.cx, m.cy - 195, "Friendly match: no trophies won or lost.", 24, "#c9d2ff"));
+    PVP_MODES.forEach((mode, i) => {
+      const y = m.cy - 95 + i * 150;
+      m.add(button(this, m.cx, y, 440, 96, mode === "ranked" ? "REAL LEVELS" : PVP_MODE_INFO[mode].name.toUpperCase(), MODE_COLOR[mode], () => {
+        m.close();
+        this.search({ challenge: mode });
+      }, 36));
+      m.add(txt(this, m.cx, y + 64, CHALLENGE_RULES[mode], 22, "#ffffff"));
+    });
+  }
+
+  /** Searching overlay; leaves the queue (or closes the challenge) when cancelled or when the scene changes. */
+  private search(search: Search) {
+    const heading = "mode" in search ? PVP_MODE_INFO[search.mode].name.toUpperCase() : "challenge" in search ? "FRIEND CHALLENGE" : `JOINING ${search.join}`;
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.88).setInteractive().setDepth(100);
+    const title = txt(this, W / 2, H / 2 - 160, heading, 56, "#ffd27a").setDepth(101);
+    const status = txt(this, W / 2, H / 2 - 60, "join" in search ? "Connecting..." : "challenge" in search ? "Opening a challenge..." : "Searching for an opponent...", 34).setDepth(101);
+    const timer = txt(this, W / 2, H / 2 + 10, "0:00", 44, "#c9d2ff").setDepth(101);
+    const ring = this.add.graphics().setDepth(101).setPosition(W / 2, H / 2 + 130);
+    ring.lineStyle(10, 0xffd93b, 1).beginPath().arc(0, 0, 44, 0, Math.PI * 1.4).strokePath();
+    this.tweens.add({ targets: ring, angle: 360, repeat: -1, duration: 900 });
+    const started = Date.now();
+    /** A challenge counts down to its expiry instead of up. */
+    let expiresAt = 0;
+    const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    const tick = this.time.addEvent({ delay: 250, loop: true, callback: () => {
+      if (expiresAt) timer.setText(`Expires in ${clock(Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)))}`);
+      else timer.setText(clock(Math.floor((Date.now() - started) / 1000)));
+    } });
+    const parts: Phaser.GameObjects.GameObject[] = [shade, title, status, timer, ring];
+    const close = () => {
+      tick.remove();
+      parts.forEach((p) => p.destroy());
+    };
+    const cancel = button(this, W / 2, H / 2 + 300, 320, 96, "CANCEL", "red", () => {
+      this.leave?.();
+      this.leave = null;
+      close();
+    }).setDepth(101);
+    parts.push(cancel);
+
+    this.leave = joinQueue(search, (e) => {
+      if (!this.sys.isActive()) return;
+      switch (e.t) {
+        case "code": {
+          // Show the code big, with a copy button; the spinner moves under it.
+          expiresAt = e.expiresAt;
+          status.setText("Share this code with your friend:");
+          timer.setY(H / 2 + 120).setFontSize(28);
+          ring.setY(H / 2 + 300).setScale(0.6);
+          const code = txt(this, W / 2, H / 2 + 30, e.code, 110, "#ffd93b").setDepth(101);
+          const copy = button(this, W / 2, H / 2 + 210, 300, 84, "COPY CODE", "green", () => {
+            navigator.clipboard?.writeText(e.code).then(() => toast(this, "Code copied", "#7dff7a"), () => toast(this, "Couldn't copy; type it instead"));
+          }).setDepth(101);
+          cancel.setY(H / 2 + 400);
+          parts.push(code, copy);
+          break;
+        }
+        case "queued":
+          status.setText(e.players > 1 ? `Searching... (${e.players} in queue)` : "Searching for an opponent...");
+          break;
+        case "bot":
+          this.leave = null;
+          sfx("wave");
+          this.scene.start("Pvp", { setup: e.setup, you: 0, offset: e.now - Date.now() });
+          break;
+        case "matched": {
+          this.leave = null;
+          status.setText("Opponent found!");
+          sfx("wave");
+          cancel.destroy();
+          // The room answers with the match setup; anything after it is handed to the match scene.
+          const conn = new MatchConn(e.matchId);
+          const early: ServerMsg[] = [];
+          conn.on = (msg) => {
+            if (msg.t !== "setup") return void early.push(msg);
+            this.scene.start("Pvp", { setup: msg.setup, you: msg.you, conn, early, offset: msg.now - Date.now() });
+          };
+          break;
+        }
+        case "closed":
+          this.leave = null;
+          close();
+          toast(this, e.reason);
+          break;
+      }
+    });
+  }
+}

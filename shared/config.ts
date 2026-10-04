@@ -13,6 +13,7 @@ import { DEFAULT_LEAGUES, LEAGUES, type LeagueDef } from "./leagues.ts";
 import { DEFAULT_EFFECTS, EFFECTS, effectProblems, type Effects } from "./effects.ts";
 import { RACE_IDS, withRaces } from "./races.ts";
 import { DEFAULT_EVENTS, DEFAULT_OFFERS, EVENTS, OFFERS, offerProblems, type EventDef, type OfferDef } from "./offers.ts";
+import { DEFAULT_PVP, PVP, pvpProblems, type PvpConfig } from "./pvp.ts";
 
 export interface GameConfig {
   units: UnitDef[];
@@ -34,6 +35,8 @@ export interface GameConfig {
   economy: Economy;
   /** Archetype effect numbers (slow %, crit chance, chain jumps...). */
   effects: Effects;
+  /** PvP rules, sends and matchmaking (see PVP.md). */
+  pvp: PvpConfig;
   dropWeights: Record<Rarity, number>;
 }
 
@@ -52,8 +55,14 @@ export function defaultConfig(): GameConfig {
     offers: DEFAULT_OFFERS,
     economy: DEFAULT_ECONOMY,
     effects: DEFAULT_EFFECTS,
+    pvp: DEFAULT_PVP,
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5 },
   });
+}
+
+/** Configs saved before PvP existed (or before a newer rule) get the defaults filled in. */
+export function withPvpDefaults(p: Partial<PvpConfig> | undefined): PvpConfig {
+  return structuredClone({ rules: { ...DEFAULT_PVP.rules, ...p?.rules }, sends: p?.sends ?? DEFAULT_PVP.sends });
 }
 
 function replace<T>(target: T[], items: T[]) {
@@ -76,6 +85,9 @@ export function applyConfig(cfg: GameConfig) {
   replace(OFFERS, cfg.offers);
   Object.assign(ECONOMY, structuredClone(cfg.economy));
   Object.assign(EFFECTS, structuredClone(cfg.effects));
+  const pvp = withPvpDefaults(cfg.pvp);
+  PVP.rules = pvp.rules;
+  PVP.sends = pvp.sends;
   for (const r of RARITIES) RARITY_STATS[r].dropWeight = cfg.dropWeights[r];
   indexUnits();
   indexMonsters();
@@ -224,6 +236,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   for (const id of e.starterDeck) if (!e.starterCards.includes(id)) errs.push(`starter deck unit "${id}" must also be in starterCards`);
 
   errs.push(...effectProblems(cfg.effects));
+  errs.push(...pvpProblems(withPvpDefaults(cfg.pvp)));
   for (const r of RARITIES) num(cfg.dropWeights?.[r], `dropWeights.${r}`);
   return errs;
 }

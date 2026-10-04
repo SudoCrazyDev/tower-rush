@@ -19,6 +19,7 @@ import { MailPage } from "./pages/Mail";
 import { OffersPage } from "./pages/Offers";
 import { AnalyticsPage } from "./pages/Analytics";
 import { PlaygroundPage } from "./pages/Playground";
+import { PvpPage } from "./pages/Pvp";
 
 function useHashRoute() {
   const [hash, setHash] = useState(location.hash.slice(1) || "/");
@@ -44,6 +45,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/economy", label: "Economy" },
   { path: "/daily", label: "Daily & quests" },
   { path: "/leagues", label: "Leagues" },
+  { path: "/pvp", label: "PvP" },
   { path: "/playground", label: "Playground" },
   { path: "/versions", label: "Versions" },
   { path: "/users", label: "Players", group: "People" },
@@ -153,6 +155,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     case "/heroes": page = <HeroesPage />; break;
     case "/daily": page = <DailyPage />; break;
     case "/leagues": page = <LeaguesPage />; break;
+    case "/pvp": page = <PvpPage />; break;
     case "/arenas": page = <ArenasPage />; break;
     case "/shop": page = <ShopPage />; break;
     case "/offers": page = <OffersPage />; break;

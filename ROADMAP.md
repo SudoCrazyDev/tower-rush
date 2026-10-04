@@ -98,10 +98,15 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   later: retention by league or by guest vs registered, revenue (gems spent) per day, CSV export.
 
 ### 5. Multiplayer (biggest item)
-- Rush Royale's core modes are PvP (two boards, monsters you kill get sent to the opponent)
-  and co-op (shared waves). Needs a realtime server (WebSockets), matchmaking, and ideally a
-  deterministic, server-validated simulation, which would also fix the anti-cheat gap below.
-  Art waiting for it: 12 emotes, `pvp_versus_background`, and the PvP/co-op/friends/clan/chat icons.
+- ~~**PvP**~~ done (2026-10-04, [PVP.md](PVP.md)): Ranked, Mirror and Casual. Both players
+  get the same waves on a fixed clock and spend mana to send monsters to each other, which
+  raises their income (Bloons TD Battles style). Matchmaking and match rooms are Durable
+  Objects; each client simulates its own board with the shared seeded sim and the room relays
+  sends and snapshots. A bot steps in after 10 s. Emotes and the versus screen use the
+  waiting art. Ideas for later: server-side replay checks of ranked matches (logs are already
+  stored), PvP seasons, win rate per card on Analytics.
+- Co-op (shared waves), friends, clans and chat are still to do. Art waiting for them: the
+  co-op/friends/clan/chat icons.
 
 ### 6. Release prep
 - ~~Hosting~~ done (2026-10-04, [DEPLOY.md](DEPLOY.md)): all on Cloudflare (Workers Free plan).

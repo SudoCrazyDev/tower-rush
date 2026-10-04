@@ -152,6 +152,33 @@ admin.get("/offers/sales", async (c) =>
   ),
 );
 
+// ---------------------------------------------------------------- pvp
+
+/** Recent PvP matches, plus counts for the last day. */
+admin.get("/pvp/matches", async (c) => {
+  const db = c.env.DB;
+  const day = Date.now() - 86400_000;
+  const [rows, summary] = await Promise.all([
+    all(
+      db,
+      `SELECT m.id, m.mode, json_extract(m.setup, '$.friendly') AS friendly, m.p1, m.p2, a.display_name AS name1, b.display_name AS name2,
+              json_extract(m.setup, '$.players[1].name') AS botName, json_extract(m.setup, '$.arena') AS arena,
+              m.started_at AS startedAt, m.finished_at AS finishedAt, m.winner, m.reason,
+              m.trophies1, m.trophies2, m.log1 IS NOT NULL AS hasLog1, m.log2 IS NOT NULL AS hasLog2
+       FROM pvp_matches m LEFT JOIN users a ON a.id = m.p1 LEFT JOIN users b ON b.id = m.p2
+       ORDER BY m.started_at DESC LIMIT 50`,
+    ),
+    one(
+      db,
+      `SELECT COUNT(*) AS matches, SUM(p2 IS NULL) AS botMatches, SUM(finished_at IS NULL) AS unfinished,
+              AVG(CASE WHEN finished_at IS NOT NULL THEN finished_at - started_at END) AS avgMs
+       FROM pvp_matches WHERE started_at > ?`,
+      day,
+    ),
+  ]);
+  return c.json({ rows, summary });
+});
+
 // ---------------------------------------------------------------- users
 
 admin.get("/users", async (c) => {

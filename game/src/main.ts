@@ -6,6 +6,8 @@ import { ShopScene } from "./scenes/ShopScene";
 import { HeroScene } from "./scenes/HeroScene";
 import { LeaderboardScene } from "./scenes/LeaderboardScene";
 import { BattleScene } from "./scenes/BattleScene";
+import { PvpMenuScene } from "./scenes/PvpMenuScene";
+import { PvpScene } from "./scenes/PvpScene";
 import { W, H } from "./ui";
 import { RES } from "./display";
 import { setOnBanned, setToken } from "./api";
@@ -41,7 +43,7 @@ async function start() {
     render: { antialias: true, roundPixels: false },
     // ?timer drives the loop with setTimeout, for testing in background tabs.
     fps: { target: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
-    scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene],
+    scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene, PvpMenuScene, PvpScene],
   });
   if (RES !== 1) {
     // The canvas is RES times the game size: every scene's camera zooms from the top-left
