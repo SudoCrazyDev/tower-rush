@@ -159,7 +159,7 @@ export class Monster {
     this.hp -= dmg;
     if (!opts.quiet) {
       this.flashUntil = now + 0.06;
-      if (opts.crit) this.scene.floater(this.pos.x, this.pos.y - 24, fmt(dmg) + "!", opts.color ?? "#ffd93b", 28);
+      if (opts.crit) this.scene.critFloater(this.pos.x, this.pos.y - 24, fmt(dmg) + "!", opts.color ?? "#ffd93b");
     }
     this.label.setText(fmt(Math.max(0, this.hp)));
     if (this.hp <= 0) {

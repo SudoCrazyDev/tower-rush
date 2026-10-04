@@ -39,6 +39,8 @@ export class Unit {
   /** Shown while a neighbouring buff unit speeds this one up: icon and the bonus. */
   private buffBadge: Phaser.GameObjects.Container | null = null;
   private buffRing: Phaser.GameObjects.Graphics | null = null;
+  /** When the last callout went up, so rapid-fire units don't stack them. */
+  private calloutAt = -1;
 
   constructor(scene: BattleScene, def: UnitDef, rank: number, slot: number) {
     this.scene = scene;
@@ -133,6 +135,27 @@ export class Unit {
       this.buffBadge.setScale(1.4);
       scene.tweens.add({ targets: this.buffBadge, scale: 1, duration: 260, ease: "Back.Out" });
     }
+  }
+
+  /** Pops a label over the unit when one of its hits lands big (crit, execute). */
+  callout(text: string, color: string) {
+    const scene = this.scene;
+    if (scene.now - this.calloutAt < 0.35 || this.dragging) return;
+    this.calloutAt = scene.now;
+    const { x, y } = scene.slotPos(this.slot);
+    const burst = scene.add.graphics().setPosition(x, y - 10).setDepth(99 + y);
+    burst.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 0.5).fillCircle(0, 0, 52).setScale(0.4);
+    scene.tweens.add({ targets: burst, scale: 1.3, alpha: 0, duration: 320, ease: "Cubic.Out", onComplete: () => burst.destroy() });
+    const t = txt(scene, x, y - 78, text, 26, color).setDepth(600).setScale(0.3);
+    scene.tweens.chain({
+      targets: t,
+      tweens: [
+        { scale: 1.15, duration: 140, ease: "Back.Out" },
+        { scale: 1, duration: 80 },
+        { y: y - 112, alpha: 0, delay: 260, duration: 420, ease: "Cubic.In" },
+      ],
+      onComplete: () => t.destroy(),
+    });
   }
 
   setBuffVisible(on: boolean) {

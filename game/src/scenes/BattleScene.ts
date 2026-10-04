@@ -245,6 +245,12 @@ export class BattleScene extends Phaser.Scene {
     floatText(this, x, y, text, color, size);
   }
 
+  /** A big hit number that punches in before it rises (crits, executes). */
+  critFloater(x: number, y: number, text: string, color: string, size = 36) {
+    const t = floatText(this, x, y, text, color, size).setDepth(520).setScale(1.8);
+    this.tweens.add({ targets: t, scale: 1, duration: 180, ease: "Back.Out" });
+  }
+
   vfx(name: string, x: number, y: number, px: number, depth = 2100) {
     const key = animKey("vfx", name);
     if (!this.anims.exists(key)) return;
@@ -678,7 +684,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: beam, alpha: 0, duration: 260, onComplete: () => beam.destroy() });
     this.vfx(HIT_VFX[unit.def.element], center.x, center.y, e.ultimateRadius * 1.6);
     this.floater(center.x, center.y - 70, "ULTIMATE!", "#ffd93b", 30);
-    for (const m of this.nearby(center, e.ultimateRadius)) this.applyHit({ def: unit.def, rank: unit.rank, damage, perks: unit.perks }, m);
+    for (const m of this.nearby(center, e.ultimateRadius)) this.applyHit({ unit, def: unit.def, rank: unit.rank, damage, perks: unit.perks }, m);
   }
 
   private powerUp(id: string) {
@@ -910,8 +916,8 @@ export class BattleScene extends Phaser.Scene {
     return this.monsters.filter((m) => !m.gone && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
-  private applyHit(s: Pick<Shot, "def" | "rank" | "damage" | "perks">, m: Monster) {
-    const { def, rank, damage, perks } = s;
+  private applyHit(s: Pick<Shot, "unit" | "def" | "rank" | "damage" | "perks">, m: Monster) {
+    const { unit, def, rank, damage, perks } = s;
     const e = EFFECTS;
     const now = this.now;
     const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
@@ -973,7 +979,10 @@ export class BattleScene extends Phaser.Scene {
       case "crit": {
         const crit = Math.random() < critChance(rank);
         m.damage(crit ? damage * critMult(rank) : damage, { ...P, crit });
-        if (crit) vfxSize = 110;
+        if (crit) {
+          vfxSize = 110;
+          unit.callout(`CRIT ×${+critMult(rank).toFixed(1)}`, "#ffd93b");
+        }
         break;
       }
       case "curse":
@@ -982,6 +991,7 @@ export class BattleScene extends Phaser.Scene {
         break;
       case "execute":
         if (Math.random() < executeChance(rank, rarityIdx)) {
+          unit.callout(isBoss ? `×${e.execute.bossMult}` : "EXECUTE", "#ff7ad9");
           if (isBoss) m.damage(damage * e.execute.bossMult, { ...P, crit: true, color: "#ff7ad9" });
           else {
             this.floater(pos.x, pos.y - 30, "EXECUTE", "#ff7ad9", 26);
