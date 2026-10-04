@@ -12,6 +12,19 @@ import { W, H } from "./ui";
 import { RES } from "./display";
 import { setOnBanned, setToken } from "./api";
 import { showBlocker } from "./authOverlay";
+import { BASE } from "./assets";
+
+// Art from the R2 bucket loads with CORS. A browser that once fetched the same URL without
+// CORS (a plain <img>, or before the bucket always sent the header) keeps that copy for a
+// day, and the CORS load of it fails as a green "missing" box. A query of our own gives
+// these loads their own cache entries.
+if (/^https?:/.test(BASE)) {
+  const load = Phaser.Loader.File.prototype.load;
+  Phaser.Loader.File.prototype.load = function (this: Phaser.Loader.File) {
+    if (typeof this.url === "string" && this.url.startsWith(BASE) && !this.url.includes("?")) this.url += "?cors";
+    return load.call(this);
+  };
+}
 
 setOnBanned((reason) =>
   showBlocker("Account banned", reason ? `Reason: ${reason}` : "This account has been suspended.", {
