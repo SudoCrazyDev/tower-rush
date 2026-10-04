@@ -30,6 +30,22 @@ const HIT_VFX: Record<Element, string> = {
   arcane: "arcane_vortex",
 };
 
+const AUTO_CAST_KEY = "tower-rush-autocast";
+function loadAutoCast() {
+  try {
+    return localStorage.getItem(AUTO_CAST_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function saveAutoCast(on: boolean) {
+  try {
+    localStorage.setItem(AUTO_CAST_KEY, on ? "1" : "0");
+  } catch {
+    // Not remembered.
+  }
+}
+
 interface Shot {
   img: Phaser.GameObjects.Image;
   unit: Unit;
@@ -105,6 +121,8 @@ export class BattleScene extends Phaser.Scene {
   /** Unit ids whose awakened sheets have been requested this battle. */
   private awakenedRequested = new Set<string>();
   private heroBtn: { root: Phaser.GameObjects.Container; pie: Phaser.GameObjects.Graphics; time: Phaser.GameObjects.Text; glow: Phaser.GameObjects.Graphics; r: number } | null = null;
+  /** Cast the hero ability by itself whenever it is ready (remembered between battles). */
+  private autoCast = loadAutoCast();
 
   constructor() {
     super("Battle");
@@ -360,6 +378,34 @@ export class BattleScene extends Phaser.Scene {
     pressable(root, () => this.castHero());
     this.tweens.add({ targets: glow, scale: { from: 0.92, to: 1.08 }, yoyo: true, repeat: -1, duration: 500, ease: "Sine.InOut" });
     this.heroBtn = { root, pie, time, glow, r };
+    // Auto-cast switch: beside the button in the side panel, tucked under it on phones.
+    hud(this.autoCastSwitch(WIDE ? x + size * 0.5 + 80 : x, WIDE ? y : y + size * 0.5 + 6).setDepth(3020));
+  }
+
+  private autoCastSwitch(x: number, y: number) {
+    const [tw, th] = WIDE ? [92, 40] : [72, 30];
+    const track = this.add.graphics();
+    const knob = this.add.graphics();
+    const label = txt(this, 0, WIDE ? -th - 4 : 0, "AUTO", WIDE ? 24 : 16, "#ffffff");
+    const draw = () => {
+      const on = this.autoCast;
+      track.clear().fillStyle(NAVY, 1).fillRoundedRect(-tw / 2 - 3, -th / 2 - 3, tw + 6, th + 6, (th + 6) / 2);
+      track.fillStyle(on ? 0x59d64a : 0x3b4270, 1).fillRoundedRect(-tw / 2, -th / 2, tw, th, th / 2);
+      const kx = on ? tw / 2 - th / 2 : -tw / 2 + th / 2;
+      knob.clear().fillStyle(0xffffff, 1).fillCircle(kx, 0, th / 2 - 4);
+      // On phones the label sits in the track, on the side the knob isn't.
+      if (!WIDE) label.setX(on ? -tw / 2 + (tw - th) / 2 + 2 : tw / 2 - (tw - th) / 2 - 2);
+      label.setColor(on ? "#ffffff" : "#c9d2ff");
+    };
+    draw();
+    const root = this.add.container(x, y, [track, knob, label]);
+    root.setSize(tw + 10, th + (WIDE ? th + 10 : 10));
+    pressable(root, () => {
+      this.autoCast = !this.autoCast;
+      saveAutoCast(this.autoCast);
+      draw();
+    });
+    return root;
   }
 
   private refreshHeroButton() {
@@ -409,13 +455,15 @@ export class BattleScene extends Phaser.Scene {
     return this.hero?.power === "rage" && this.now < this.rageUntil ? 1 + this.hero.amount : 1;
   }
 
-  castHero() {
+  castHero(auto = false) {
     const h = this.hero;
     if (!h || this.over || this.paused) return;
-    if (this.now < this.heroReadyAt) return void sfx("error");
+    if (this.now < this.heroReadyAt) return void (auto || sfx("error"));
     const targets = this.monsters.filter((m) => !m.gone && m.intro <= 0);
-    const needsTargets = h.power !== "mana" && h.power !== "haste" && h.power !== "rage";
+    // Auto-cast also holds haste/rage until there is something to fight.
+    const needsTargets = h.power !== "mana" && (auto || (h.power !== "haste" && h.power !== "rage"));
     if (needsTargets && !targets.length) {
+      if (auto) return;
       sfx("error");
       toast(this, "No monsters to hit yet");
       return;
@@ -1158,6 +1206,7 @@ export class BattleScene extends Phaser.Scene {
     for (const u of this.board) u?.update(dt, now);
     this.updateStorm(dt);
     this.updateShots(dt);
+    if (this.autoCast && this.hero && now >= this.heroReadyAt) this.castHero(true);
     this.refreshHeroButton();
     this.updateBossBar();
     this.refreshHud();
