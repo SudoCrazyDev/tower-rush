@@ -18,6 +18,7 @@ import { AdminsPage, AuditPage } from "./pages/Admins";
 import { MailPage } from "./pages/Mail";
 import { OffersPage } from "./pages/Offers";
 import { AnalyticsPage } from "./pages/Analytics";
+import { PlaygroundPage } from "./pages/Playground";
 
 function useHashRoute() {
   const [hash, setHash] = useState(location.hash.slice(1) || "/");
@@ -43,6 +44,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/economy", label: "Economy" },
   { path: "/daily", label: "Daily & quests" },
   { path: "/leagues", label: "Leagues" },
+  { path: "/playground", label: "Playground" },
   { path: "/versions", label: "Versions" },
   { path: "/users", label: "Players", group: "People" },
   { path: "/mail", label: "Mail" },
@@ -143,6 +145,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
   let page;
   switch (current) {
     case "/analytics": page = <AnalyticsPage />; break;
+    case "/playground": page = <PlaygroundPage />; break;
     case "/units": page = <UnitsPage />; break;
     case "/monsters": page = <MonstersPage />; break;
     case "/bosses": page = <BossesPage />; break;

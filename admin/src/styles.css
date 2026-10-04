@@ -223,3 +223,61 @@ td.nowrap { white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button.on { background: var(--brand); color: var(--brand-ink); }
 table.retention td { min-width: 64px; }
+/* playground */
+.note { margin: -6px 0 12px; font-size: 13px; color: var(--muted); }
+.panel.controls { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; }
+.panel.controls label { margin-bottom: 4px; }
+.panel.controls .toggle { height: 32px; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; }
+.stepper input { width: 64px; }
+.stepper .btn { padding: 4px 9px; font-size: 14px; }
+.seg.small button { font-size: 12px; padding: 4px 9px; }
+.unit-head { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.unit-head h2 { margin: 0 0 2px; }
+.stats.tight { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.stats.tight .stat { padding: 10px 12px; }
+.stats.tight .stat-value { font-size: 20px; }
+.good { color: var(--ok); font-weight: 600; }
+.bad { color: var(--err); font-weight: 600; }
+button.link { font: inherit; background: none; border: none; color: var(--brand); cursor: pointer; padding: 0 6px 0 0; text-decoration: underline; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+tr.selected td { background: color-mix(in srgb, var(--gold) 18%, transparent); }
+tr.baseline td { font-style: italic; color: var(--muted); }
+.dual-bar { display: grid; gap: 2px; }
+.dual-bar > div { height: 6px; border-radius: 999px; background: var(--gold); min-width: 1px; }
+.dual-bar > div + div { background: var(--brand); opacity: .7; }
+.bar-row.share { grid-template-columns: 24px 170px 1fr 44px; }
+.two-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 14px; }
+.event-log { max-height: 260px; overflow: auto; font-size: 12px; display: grid; gap: 2px; }
+.ev.boss { color: #c0392b; }
+.ev.hero { color: var(--brand); }
+.ev.leak { color: var(--err); font-weight: 600; }
+.ev.kill { color: var(--ok); font-weight: 600; }
+@media (prefers-color-scheme: dark) { .ev.boss { color: #ff8a80; } .ev.hero { color: #a9b2ff; } }
+
+/* board editor */
+.board { display: grid; grid-template-columns: repeat(5, 64px); gap: 6px; }
+.tile { position: relative; width: 64px; height: 64px; border-radius: 12px; border: 2px solid var(--line); background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 20px; }
+.tile:hover { border-color: var(--brand); }
+.tile.empty { border-style: dashed; }
+.tile.r-common { border-color: #9aa5b8; }
+.tile.r-rare { border-color: #3d8bff; }
+.tile.r-epic { border-color: #a24bff; }
+.tile.r-legendary { border-color: #ffb21e; }
+.tile.r-mythic { border-color: #ff3b6b; }
+.tile-rank { position: absolute; bottom: -2px; right: -2px; background: #14183a; color: #fff4c2; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+.tile-dmg { position: absolute; top: -2px; left: -2px; background: var(--gold); color: #14183a; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 8px; }
+
+/* arena view */
+.arena-view { display: grid; justify-items: center; gap: 6px; }
+.arena-view .toolbar { justify-content: center; margin: 0; }
+.arena-stage { position: relative; border-radius: 12px; overflow: hidden; background: #14183a; max-width: 100%; }
+.arena-stage canvas { display: block; }
+.arena-hud { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; font-weight: 700; }
+.arena-hud span { background: rgba(10,12,30,.72); color: #fff4c2; padding: 2px 7px; border-radius: 8px; }
+.arena-hud span.bad { color: #ff8080; }
+.arena-boss { position: absolute; top: 34px; left: 12%; right: 12%; text-align: center; color: #fff; font-size: 12px; font-weight: 700; text-shadow: 0 1px 2px #000; }
+.arena-boss .bar { height: 10px; background: rgba(10,12,30,.7); margin-top: 2px; }
+.arena-over { position: absolute; left: 10px; right: 10px; bottom: 12px; background: rgba(10,12,30,.85); color: #7dff7a; border-radius: 10px; padding: 8px; text-align: center; font-weight: 700; }
+.arena-over.bad { color: #ff8080; }
