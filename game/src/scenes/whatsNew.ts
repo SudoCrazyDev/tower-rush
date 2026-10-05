@@ -39,7 +39,7 @@ function show(scene: Phaser.Scene) {
   const m = modal(scene, 720, 1060, `NEW IN ${RELEASE.version}`);
   m.add(txt(scene, m.cx, m.cy - 420, `${RELEASE.title.toUpperCase()}: ${BOOK.title.toUpperCase()}`, 38, "#ffd93b"));
   m.add(txt(scene, m.cx, m.cy - 370, RELEASE.tagline, 26, "#c9d2ff"));
-  m.add(txt(scene, m.cx, m.cy - 320, "Three stories, played in order. Tap STORY in the lobby.", 22, "#ffffff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy - 320, "Three stories, played in order. Swipe to STORIES in the lobby.", 22, "#ffffff").setWordWrapWidth(600));
   BOOK.stories.slice(0, 3).forEach((s, i) => {
     const x = m.cx + (i - 1) * 210;
     const key = `story:covers/${s.cover}`;

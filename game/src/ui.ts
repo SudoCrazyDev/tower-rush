@@ -47,12 +47,33 @@ export function pressable<T extends Phaser.GameObjects.GameObject & Phaser.GameO
   obj.setInteractive({ useHandCursor: true });
   obj.on("pointerdown", () => scene.tweens.add({ targets: obj, scaleX: base.x * 0.92, scaleY: base.y * 0.92, duration: 60 }));
   obj.on("pointerout", () => scene.tweens.add({ targets: obj, scaleX: base.x, scaleY: base.y, duration: 80 }));
-  obj.on("pointerup", () => {
+  obj.on("pointerup", (p: Phaser.Input.Pointer) => {
     scene.tweens.add({ targets: obj, scaleX: base.x, scaleY: base.y, duration: 80 });
+    // A swipe that starts and ends on it isn't a tap.
+    if (p.getDistance() > 40) return;
     sfx("click");
     onClick();
   });
   return obj;
+}
+
+/**
+ * Horizontal swipes that start inside `area` call `fn(1)` for the next page (swiped left) or
+ * `fn(-1)` for the previous one. A swipe that starts on something outside `root` (a dialog on
+ * top, say) is ignored.
+ */
+export function onSwipe(scene: Phaser.Scene, area: Phaser.Geom.Rectangle, root: () => Phaser.GameObjects.GameObject | undefined, fn: (dir: 1 | -1) => void) {
+  const within = (o: Phaser.GameObjects.GameObject | null, r?: Phaser.GameObjects.GameObject): boolean => !!o && !!r && (o === r || within(o.parentContainer, r));
+  let armed = false;
+  scene.input.on("pointerdown", (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+    armed = area.contains(p.x, p.y) && (!over[0] || within(over[0], root()));
+  });
+  scene.input.on("pointerup", (p: Phaser.Input.Pointer) => {
+    if (!armed) return;
+    armed = false;
+    const dx = p.upX - p.downX;
+    if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(p.upY - p.downY) * 1.2) fn(dx < 0 ? 1 : -1);
+  });
 }
 
 export interface Button extends Phaser.GameObjects.Container {

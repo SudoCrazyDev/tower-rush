@@ -398,7 +398,7 @@ Story 3 doesn't give a new unit. Its ending is the cliffhanger. The final chapte
 ---
 
 ## 7. Screens and UI
-- **Lobby:** a STORY button (a book icon), with a "NEW" dot until Story 1 is started.
+- **Lobby:** the middle card is a carousel with two pages, ARENA and STORIES (tabs above it, or swipe the card). The Stories page is a carousel of books (one story cover at a time, arrows to flip, PLAY / CONTINUE / REPLAY). The STORIES tab has a "!" until Story 1 is started. PLAY opens that story's chapters as a second carousel (swipe, arrows or tap a neighbour; page dots turn gold as chapters are won).
 - **Story screen:** titled **Book 1: The Chosen**, with 3 story covers, then a chapter path for the chosen story (3 nodes with
   stars and locks) and a Play button.
 - **Event deck picker (Story 2):** a grid of the 9 cards; tap to pick 5. Each card shows its

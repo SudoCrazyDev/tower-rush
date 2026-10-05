@@ -4,12 +4,12 @@ import { music, sfx } from "../audio";
 import { claimPlay, releasePlay } from "../play";
 import { profile, startStory, cardLevel } from "../save";
 import { UNIT_BY_ID } from "../data/units";
-import { W, H, WIDE, txt, button, iconButton, modal, pressable, cardView, attempt, toast } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, modal, pressable, cardView, attempt, onSwipe } from "../ui";
 import { cover, topBar } from "./LobbyScene";
-import { loadStoryImages, plate, starRow, storyPanels } from "./storyUi";
+import { plate, starRow, storyPanels } from "./storyUi";
 import { effectSummary, unitEffectSummary } from "../../../shared/effects.ts";
 import { rarityIndex } from "../../../shared/units.ts";
-import { BOOK, chapterLock, deckChecks, storyById, storyFinished, storyLock, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
+import { BOOK, chapterLock, chapterWon, deckChecks, storyById, storyFinished, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
 
 const PICK_KEY = "tower-rush-story-pick";
 /** The last Event deck picked for each chapter on this device. */
@@ -30,121 +30,135 @@ function savePick(chapter: string, pick: string[]) {
   }
 }
 
-const storyStars = (s: StoryDef) => s.chapters.reduce((n, c) => n + (profile.story.chapters[c.id]?.stars ?? 0), 0);
-
 /**
- * Story mode (v1.2): the book's story covers, then a story's chapter path. Play checks the
- * deck (Event deck pick for Story 2, deck rules for Story 3), shows the chapter's panels and
- * starts the battle on the server, which hands back the deck and card levels to use.
+ * Story mode (v1.2): one story's chapters as a carousel (swipe, the arrows, or tap a neighbour);
+ * the lobby's Stories page is the carousel of books before it. Play checks the deck (Event deck
+ * pick for Story 2, deck rules for Story 3), shows the chapter's panels and starts the battle on
+ * the server, which hands back the deck and card levels to use.
  */
 export class StoryScene extends Phaser.Scene {
-  private story: StoryDef | null = null;
+  private story?: StoryDef;
   private starting = false;
+  /** The chapter in the middle of the carousel. */
+  private focus = 0;
+  private strip!: Phaser.GameObjects.Container;
+  private cards: Phaser.GameObjects.Container[] = [];
+  private gap = 0;
+  private dots!: Phaser.GameObjects.Graphics;
+  private dotsY = 0;
+  private prev!: Phaser.GameObjects.Image;
+  private next!: Phaser.GameObjects.Image;
 
   constructor() {
     super("Story");
   }
 
   init(data: { story?: string }) {
-    this.story = (data.story && storyById(data.story)) || null;
+    this.story = (data.story && storyById(data.story)) || BOOK.stories.find((s) => !storyFinished(profile.story, s)) || BOOK.stories[BOOK.stories.length - 1];
     this.starting = false;
+    this.cards = [];
+    // Open on the chapter to play next (the last one once they're all won).
+    const next = this.story?.chapters.findIndex((c) => !chapterWon(profile.story, c.id)) ?? 0;
+    this.focus = next < 0 ? this.story!.chapters.length - 1 : next;
   }
 
   preload() {
     if (!this.textures.exists("story:story_background")) this.load.image("story:story_background", `${BASE}story/story_background.webp`);
-    for (const s of BOOK.stories) if (!this.textures.exists(`story:covers/${s.cover}`)) this.load.image(`story:covers/${s.cover}`, `${BASE}story/covers/${s.cover}.webp`);
+    for (const c of this.story?.chapters ?? []) {
+      const p = c.intro[0]?.image;
+      if (p && !this.textures.exists(`story:panels/${p}`)) this.load.image(`story:panels/${p}`, `${BASE}story/panels/${p}.webp`);
+    }
   }
 
   create() {
+    const s = this.story;
+    if (!s || !s.chapters.length) return void this.scene.start("Lobby");
     music("lobby");
     cover(this, "story:story_background", 0.45);
     topBar(this);
-    if (this.story) this.storyView(this.story);
-    else this.bookView();
-  }
-
-  // ---------------------------------------------------------------- book: the story covers
-
-  private bookView() {
-    iconButton(this, 50, 130, "back", 76, () => this.scene.start("Lobby"));
-    txt(this, W / 2, 130, BOOK.title.toUpperCase(), 46, "#fff4c2");
-    txt(this, W / 2, 186, "Three stories, played in order.", 24, "#c9d2ff");
-    const n = BOOK.stories.length;
-    const cw = Math.min(WIDE ? 340 : 226, (W - 60) / n - 16);
-    const ch = cw * (1168 / 880);
-    const y = WIDE ? H / 2 : 230 + ch / 2 + 20;
-    BOOK.stories.forEach((s, i) => {
-      const x = W / 2 + (i - (n - 1) / 2) * (cw + 20);
-      const lock = storyLock(profile.story, profile.trophies, s);
-      const img = this.add.image(0, 0, `story:covers/${s.cover}`).setDisplaySize(cw, ch);
-      const frame = this.add.graphics();
-      frame.lineStyle(6, storyFinished(profile.story, s) ? 0xffd93b : 0xf2b630, 1).strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 14);
-      const parts: Phaser.GameObjects.GameObject[] = [img, frame];
-      if (lock) {
-        img.setTint(0x444455);
-        const pad = this.add.image(0, -20, "ui:padlock");
-        pad.setScale((cw * 0.4) / pad.width);
-        parts.push(pad, txt(this, 0, cw * 0.3, lock, Math.round(cw * 0.085), "#ffb0b0").setWordWrapWidth(cw - 20));
-      }
-      parts.push(txt(this, 0, ch / 2 + 34, `${i + 1}. ${s.title}`, Math.round(cw * 0.11), "#fff4c2").setWordWrapWidth(cw + 10));
-      parts.push(txt(this, 0, ch / 2 + 84, `★ ${storyStars(s)} / ${s.chapters.length * 3}`, Math.round(cw * 0.1), "#ffd93b"));
-      const c = this.add.container(x, y, parts).setSize(cw, ch);
-      pressable(c, () => {
-        if (lock) return void (sfx("error"), toast(this, lock));
-        this.scene.restart({ story: s.id });
-      });
-    });
-    const badges = profile.story.badges;
-    if (badges.includes("the_chosen")) txt(this, W / 2, H - 120, "★ THE CHOSEN ★\nYou finished Book 1. To be continued…", 30, "#ffd93b");
-  }
-
-  // ---------------------------------------------------------------- a story: its chapter path
-
-  private storyView(s: StoryDef) {
-    iconButton(this, 50, 130, "back", 76, () => this.scene.restart({}));
+    iconButton(this, 50, 130, "back", 76, () => this.scene.start("Lobby", { mode: "story", story: s.id }));
     txt(this, W / 2, 130, s.title.toUpperCase(), 46, "#fff4c2");
-    txt(this, W / 2, 190, s.blurb, 24, "#c9d2ff").setWordWrapWidth(W - 160);
-    const rowW = Math.min(700, W - 40);
-    const rowH = 250;
-    const top = 290;
-    // A path line behind the chapter nodes.
-    const path = this.add.graphics();
-    path.lineStyle(10, 0xf2b630, 0.6).lineBetween(W / 2, top + rowH / 2, W / 2, top + (s.chapters.length - 0.5) * (rowH + 30));
-    loadStoryImages(
-      this,
-      s.chapters.flatMap((c) => (c.intro[0] ? [`panels/${c.intro[0].image}`] : [])),
-      () => {
-        s.chapters.forEach((c, i) => this.chapterRow(s, c, i, W / 2, top + rowH / 2 + i * (rowH + 30), rowW, rowH));
-      },
-    );
+    txt(this, W / 2, 196, s.blurb, 24, "#c9d2ff").setWordWrapWidth(W - 160);
+
+    const cw = WIDE ? 620 : 560;
+    const ch = 780;
+    const cy = WIDE ? H / 2 + 40 : 930;
+    this.gap = cw + (WIDE ? 60 : 24);
+    this.strip = this.add.container(W / 2, cy);
+    s.chapters.forEach((c, i) => {
+      const card = this.chapterCard(s, c, i, cw, ch).setX(i * this.gap);
+      this.strip.add(card);
+      this.cards.push(card);
+    });
+    this.dots = this.add.graphics();
+    this.dotsY = cy + ch / 2 + 46;
+    const ax = WIDE ? cw / 2 + 90 : W / 2 - 42;
+    this.prev = iconButton(this, W / 2 - ax, cy, "back", 84, () => this.go(this.focus - 1));
+    this.next = iconButton(this, W / 2 + ax, cy, "back", 84, () => this.go(this.focus + 1)).setFlipX(true);
+    onSwipe(this, new Phaser.Geom.Rectangle(0, cy - ch / 2, W, ch), () => this.strip, (d) => this.go(this.focus + d));
+    this.go(this.focus, false);
+
+    const last = BOOK.stories[BOOK.stories.length - 1];
+    if (s === last && profile.story.badges.includes("the_chosen")) txt(this, W / 2, this.dotsY + (WIDE ? 70 : 110), "★ THE CHOSEN ★\nYou finished Book 1. To be continued…", 28, "#ffd93b");
   }
 
-  private chapterRow(s: StoryDef, c: StoryChapter, i: number, x: number, y: number, w: number, h: number) {
+  /** Bring chapter `i` to the middle; its neighbours shrink and dim to the sides. */
+  private go(i: number, animate = true) {
+    const n = this.cards.length;
+    if (i < 0 || i >= n) return;
+    this.focus = i;
+    const x = W / 2 - i * this.gap;
+    if (animate) this.tweens.add({ targets: this.strip, x, duration: 280, ease: "Cubic.Out" });
+    else this.strip.setX(x);
+    this.cards.forEach((card, j) => {
+      const to = { scale: j === i ? 1 : 0.86, alpha: j === i ? 1 : 0.55 };
+      if (animate) this.tweens.add({ targets: card, ...to, duration: 280, ease: "Cubic.Out" });
+      else card.setScale(to.scale).setAlpha(to.alpha);
+    });
+    this.prev.setVisible(i > 0);
+    this.next.setVisible(i < n - 1);
+    // Page dots: gold for chapters won, the current one bigger.
+    const s = this.story!;
+    this.dots.clear();
+    s.chapters.forEach((c, j) => {
+      const dx = W / 2 + (j - (n - 1) / 2) * 40;
+      this.dots.fillStyle(chapterWon(profile.story, c.id) ? 0xffd93b : 0xc9d2ff, j === i ? 1 : 0.5).fillCircle(dx, this.dotsY, j === i ? 13 : 9);
+    });
+  }
+
+  /** One chapter: its first panel, title, best stars, waves and deck, and PLAY (or what unlocks it). */
+  private chapterCard(s: StoryDef, c: StoryChapter, i: number, cw: number, ch: number) {
     const lock = chapterLock(profile.story, profile.trophies, c.id);
     const best = profile.story.chapters[c.id]?.stars ?? 0;
-    const parts: Phaser.GameObjects.GameObject[] = [plate(this, w, h, best ? 0xffd93b : 0xf2b630)];
-    const tw = Math.min(300, w * 0.42);
-    const th = (tw * 752) / 1344;
-    const left = -w / 2 + 20 + tw / 2;
-    if (c.intro[0] && this.textures.exists(`story:panels/${c.intro[0].image}`)) {
-      const img = this.add.image(left, -h / 2 + 24 + th / 2, `story:panels/${c.intro[0].image}`).setDisplaySize(tw, th);
+    const parts: Phaser.GameObjects.GameObject[] = [plate(this, cw, ch, best ? 0xffd93b : lock ? 0x8a8fa8 : 0xf2b630, 0.9)];
+    const iw = cw - 40;
+    const ih = (iw * 752) / 1344;
+    const iy = -ch / 2 + 20 + ih / 2;
+    const key = `story:panels/${c.intro[0]?.image}`;
+    if (c.intro[0] && this.textures.exists(key)) {
+      const img = this.add.image(0, iy, key).setDisplaySize(iw, ih);
       if (lock) img.setTint(0x444455);
       parts.push(img);
     }
-    parts.push(starRow(this, left, h / 2 - 24, best, 40));
-    const tx = left + tw / 2 + 24;
-    parts.push(txt(this, tx, -h / 2 + 36, `CHAPTER ${i + 1}`, 22, "#c9d2ff", [0, 0.5]));
-    parts.push(txt(this, tx, -h / 2 + 76, c.title, 32, "#fff4c2", [0, 0.5]).setWordWrapWidth(w / 2 + 40));
-    const deckLine = c.eventDeck ? `Event deck: pick ${c.eventDeck.pick} of ${c.eventDeck.units.length}` : c.rules ? "Your deck, with rules" : "Your own deck";
-    parts.push(txt(this, tx, -h / 2 + 118, `${c.waves.length} waves · ${deckLine}`, 20, "#c9d2ff", [0, 0.5]).setWordWrapWidth(w / 2 + 40));
-    const bx = (tx + w / 2) / 2;
     if (lock) {
-      parts.push(this.add.image(bx, 40, "ui:padlock").setDisplaySize(56, 56));
-      parts.push(txt(this, bx, 90, lock, 20, "#ffb0b0").setWordWrapWidth(w / 2 - 40));
-    } else {
-      parts.push(button(this, bx, 60, 220, 86, best ? "REPLAY" : "PLAY", best ? "blue" : "green", () => this.play(s, c)));
+      const pad = this.add.image(0, iy, "ui:padlock");
+      pad.setScale(100 / Math.max(pad.width, pad.height));
+      parts.push(pad);
     }
-    this.add.container(x, y, parts);
+    const y = iy + ih / 2;
+    parts.push(txt(this, 0, y + 40, `CHAPTER ${i + 1} OF ${s.chapters.length}`, 24, "#ffd27a"));
+    parts.push(txt(this, 0, y + 92, c.title, 38, "#fff4c2").setWordWrapWidth(cw - 40));
+    parts.push(starRow(this, 0, y + 170, best, 52));
+    const deckLine = c.eventDeck ? `Event deck: pick ${c.eventDeck.pick} of ${c.eventDeck.units.length}` : c.rules ? "Your deck, with rules" : "Your own deck";
+    parts.push(txt(this, 0, y + 240, `${c.waves.length} waves · ${deckLine}`, 22, "#c9d2ff").setWordWrapWidth(cw - 60));
+    if (lock) parts.push(txt(this, 0, ch / 2 - 80, lock, 26, "#ffb0b0").setWordWrapWidth(cw - 60));
+    else parts.push(button(this, 0, ch / 2 - 80, 320, 104, best ? "REPLAY" : "PLAY", best ? "blue" : "green", () => (i === this.focus ? this.play(s, c) : this.go(i)), 48));
+    const card = this.add.container(0, 0, parts).setSize(cw, ch);
+    // Tapping a neighbour brings it to the middle.
+    card.setInteractive().on("pointerup", (p: Phaser.Input.Pointer) => {
+      if (i !== this.focus && p.getDistance() < 40) this.go(i);
+    });
+    return card;
   }
 
   // ---------------------------------------------------------------- play
