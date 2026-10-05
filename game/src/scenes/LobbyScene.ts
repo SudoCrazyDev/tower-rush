@@ -354,8 +354,8 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   /** The card's ornate frame, with a border around the art window at the top (the art goes in at index 1, under it). */
-  private cardFrame(group: Phaser.GameObjects.Container, locked: boolean, art = true) {
-    const { frame, trim } = ornateFrame(this, 600, 660, locked, art ? { x: -270, y: -320, w: 540, h: 470 } : undefined);
+  private cardFrame(group: Phaser.GameObjects.Container, locked: boolean) {
+    const { frame, trim } = ornateFrame(this, 600, 660, locked, { x: -270, y: -320, w: 540, h: 470 });
     group.add([frame, trim]);
   }
 
@@ -401,13 +401,14 @@ export class LobbyScene extends Phaser.Scene {
     const s = BOOK.stories[bookIdx];
     const lock = storyLock(profile.story, profile.trophies, s);
     const done = storyFinished(profile.story, s);
-    this.cardFrame(group, !!lock, false);
-    group.add(txt(this, 0, -290, `${BOOK.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
-    this.closeButton(group);
-    // The cover, framed like a book; greyed with a padlock while locked.
+    // The cover sits in the frame's art window; greyed with a padlock while locked.
     const ch = 400;
     const cw = ch * (880 / 1168);
     const coverY = -58;
+    const { frame, trim } = ornateFrame(this, 600, 660, !!lock, { x: -cw / 2, y: coverY - ch / 2, w: cw, h: ch });
+    group.add([frame, trim]);
+    group.add(txt(this, 0, -290, `${BOOK.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
+    this.closeButton(group);
     const key = `story:covers/${s.cover}`;
     const show = () => {
       if (!group.active || !this.textures.exists(key)) return;
@@ -415,9 +416,6 @@ export class LobbyScene extends Phaser.Scene {
       if (lock) img.setTint(0x55556a);
       group.addAt(img, 1);
     };
-    const edge = this.add.graphics();
-    edge.lineStyle(6, done ? 0xffd93b : lock ? 0x8a8fa8 : 0xf2b630, 1).strokeRoundedRect(-cw / 2, coverY - ch / 2, cw, ch, 12);
-    group.add(edge);
     if (this.textures.exists(key)) show();
     else loadStoryImages(this, [`covers/${s.cover}`], show);
     if (lock) {
