@@ -455,3 +455,27 @@ player.get("/leaderboard", P, async (c) => {
   const rank = mine && mine.value > 0 && !mine.banned ? (await count(db, `SELECT COUNT(*) + 1 AS n FROM users WHERE banned = 0 AND ${v} > ?`, mine.value)) : null;
   return c.json({ by, rows, total, me: { id: c.get("playerId"), rank } });
 });
+
+/** Longest waves survived in one arena (profile.arenaBest), for the arena info dialog. */
+const ARENA_TOP_SIZE = 20;
+
+player.get("/arenas/:id/top", P, async (c) => {
+  const db = c.env.DB;
+  const a = ARENA_BY_ID[param(c, "id")];
+  if (!a) fail(404, "Unknown arena");
+  // Arena ids are plain identifiers from the config, but the path goes in as a bound value anyway.
+  const v = "json_extract(profile, '$.arenaBest.' || ?1)";
+  const rows = await all(
+    db,
+    `SELECT id, display_name AS name, ${v} AS wave, json_extract(profile, '$.trophies') AS trophies,
+            json_extract(profile, '$.hero') AS hero, RANK() OVER (ORDER BY ${v} DESC) AS rank
+     FROM users WHERE banned = 0 AND ${v} > 0
+     ORDER BY rank, id LIMIT ?2`,
+    a.id,
+    ARENA_TOP_SIZE,
+  );
+  const mine = await one<{ wave: number | null }>(db, `SELECT ${v} AS wave FROM users WHERE id = ?2`, a.id, c.get("playerId"));
+  const wave = mine?.wave ?? 0;
+  const rank = wave > 0 ? await count(db, `SELECT COUNT(*) + 1 AS n FROM users WHERE banned = 0 AND ${v} > ?2`, a.id, wave) : null;
+  return c.json({ arena: a.id, rows, me: { id: c.get("playerId"), wave, rank } });
+});

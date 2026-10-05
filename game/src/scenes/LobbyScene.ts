@@ -14,7 +14,8 @@ import { music } from "../audio";
 import { bakeAll } from "../bake";
 import { pointAt, tutorialDue } from "../tutorial";
 import { ambientVideo, coverFit } from "../backdrop";
-import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, attempt, pressable, badge } from "../ui";
+import { arenaInfo } from "./arenaInfo";
+import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, pressable, badge } from "../ui";
 
 /** The login reward pops up by itself once per session. */
 let loginShown = false;
@@ -74,6 +75,8 @@ function eventStrip(scene: Phaser.Scene) {
 
 export class LobbyScene extends Phaser.Scene {
   private arena!: ArenaDef;
+  private card?: Phaser.GameObjects.Container;
+  private saveTimer?: Phaser.Time.TimerEvent;
   /** Waiting to hear whether a battle can start here. */
   private starting = false;
 
@@ -86,6 +89,9 @@ export class LobbyScene extends Phaser.Scene {
     const unlocked = arenaForTrophies(profile.trophies);
     const chosen = profile.arena ? ARENA_BY_ID[profile.arena] : null;
     this.arena = chosen && chosen.trophies <= profile.trophies ? chosen : unlocked;
+    this.card = undefined;
+    this.saveTimer = undefined;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.flushArena());
 
     cover(this, WIDE ? "loc:lobby_landscape" : "loc:lobby_portrait", 0, WIDE ? "lobby_landscape" : "lobby_portrait");
     topBar(this);
@@ -170,52 +176,94 @@ export class LobbyScene extends Phaser.Scene {
     }
   }
 
+  /** The arena card. Arrow taps redraw just the card, so the background video keeps playing. */
   private drawArenaCard() {
+    this.card?.destroy();
     const a = this.arena;
-    const key = `loc:arena_${a.id}`;
+    const locked = a.trophies > profile.trophies;
     const y = WIDE ? 680 : 760;
     const group = this.add.container(W / 2, y);
+    this.card = group;
     const frame = this.add.graphics();
     frame.fillStyle(NAVY, 0.85).fillRoundedRect(-300, -330, 600, 660, 36);
-    frame.lineStyle(8, 0xf2b630, 1).strokeRoundedRect(-300, -330, 600, 660, 36);
+    frame.lineStyle(8, locked ? 0x8a8fa8 : 0xf2b630, 1).strokeRoundedRect(-300, -330, 600, 660, 36);
     group.add(frame);
 
+    this.arenaArt(group, a, locked);
+    // Warm up the neighbours so the next arrow tap shows its art straight away.
+    const idx = ARENAS.indexOf(a);
+    for (const n of [ARENAS[idx - 1], ARENAS[idx + 1]]) if (n) this.loadArenaArt(n);
+
+    group.add(txt(this, 0, -290, `ARENA ${idx + 1}`, 28, "#ffd27a"));
+    group.add(iconButton(this, 248, -282, "info", 64, () => arenaInfo(this, a)));
+    group.add(txt(this, 0, 186, a.name, 46));
+    group.add(txt(this, 0, 236, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
+    const battle = button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.battle(a.id), 54);
+    group.add(battle);
+    if (locked) battle.setEnabled(false);
+
+    const step = (d: number) => {
+      const next = ARENAS[ARENAS.indexOf(this.arena) + d];
+      if (!next) return;
+      this.arena = next;
+      this.drawArenaCard();
+      this.saveArena();
+    };
+    if (idx > 0) group.add(iconButton(this, -250, -60, "back", 76, () => step(-1)));
+    if (idx < ARENAS.length - 1) group.add(iconButton(this, 250, -60, "back", 76, () => step(1)).setFlipX(true));
+  }
+
+  /** The middle of the arena (the board) inside the card window, greyed with a padlock while locked. */
+  private arenaArt(group: Phaser.GameObjects.Container, a: ArenaDef, locked: boolean) {
+    const key = `loc:arena_${a.id}`;
+    if (locked) {
+      const shade = this.add.graphics();
+      shade.fillStyle(0x000000, 0.55).fillRect(-270, -320, 540, 470);
+      const lock = this.add.image(0, -110, "ui:padlock");
+      lock.setScale(130 / Math.max(lock.width, lock.height));
+      const need = txt(this, 22, 0, `Requires ${fmt(a.trophies)}`, 34, "#ffd27a");
+      const cup = this.add.image(need.x - need.width / 2 - 26, 0, "item:trophy").setDisplaySize(46, 46);
+      const more = txt(this, 0, 48, `${fmt(a.trophies - profile.trophies)} more trophies to unlock`, 22, "#ffffff");
+      group.add([shade, lock, need, cup, more]);
+    }
     const show = () => {
-      // Show the middle of the arena (the board) inside the card window.
+      if (!group.active || !this.textures.exists(key)) return;
       const img = this.add.image(0, 0, key);
       const s = 540 / img.width;
       img.setScale(s).setCrop(0, 380, img.width, 470 / s);
       img.setY(-320 - 380 * s + (img.height * s) / 2);
+      if (locked) img.setTint(0x9a9a9a);
       group.addAt(img, 1);
     };
     if (this.textures.exists(key)) show();
-    else {
-      this.load.image(key, `${BASE}locations/arena_${a.id}.webp`);
-      this.load.once("complete", show);
-      this.load.start();
-    }
+    else this.loadArenaArt(a, show);
+  }
 
-    const idx = ARENAS.indexOf(a);
-    group.add(txt(this, 0, -290, `ARENA ${idx + 1}`, 28, "#ffd27a"));
-    group.add(txt(this, 0, 190, a.name, 46));
-    group.add(txt(this, 0, 240, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
-    group.add(button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.battle(a.id), 54));
+  private loadArenaArt(a: ArenaDef, done?: () => void) {
+    const key = `loc:arena_${a.id}`;
+    if (this.textures.exists(key)) return;
+    if (done) this.load.once(`filecomplete-image-${key}`, done);
+    this.load.image(key, `${BASE}locations/arena_${a.id}.webp`);
+    this.load.start();
+  }
 
-    const step = (d: number) => {
-      const next = ARENAS[idx + d];
-      if (!next) return;
-      if (next.trophies > profile.trophies) {
-        this.toast(`Unlocks at ${next.trophies} trophies`);
-        return;
-      }
-      attempt(this, () => setArena(next.id)).then((ok) => ok && this.scene.restart());
-    };
-    if (idx > 0) group.add(iconButton(this, -250, -60, "back", 76, () => step(-1)));
-    if (idx < ARENAS.length - 1) {
-      const fwd = iconButton(this, 250, -60, "back", 76, () => step(1)).setFlipX(true);
-      if (ARENAS[idx + 1].trophies > profile.trophies) fwd.setTint(0x777777);
-      group.add(fwd);
-    }
+  /**
+   * Remember the chosen arena (locked ones aren't). Kept locally right away and sent once the
+   * player stops flipping through them, or when they leave the lobby.
+   */
+  private saveArena() {
+    const a = this.arena;
+    if (a.trophies > profile.trophies || a.id === profile.arena) return;
+    profile.arena = a.id;
+    this.saveTimer?.remove();
+    this.saveTimer = this.time.delayedCall(800, () => this.flushArena());
+  }
+
+  private flushArena() {
+    if (!this.saveTimer) return;
+    this.saveTimer.remove();
+    this.saveTimer = undefined;
+    if (profile.arena) setArena(profile.arena).catch(() => {});
   }
 
   /** Start a battle, unless another device is in one and the player keeps it there. */
@@ -226,11 +274,6 @@ export class LobbyScene extends Phaser.Scene {
     this.starting = false;
     if (ok && this.sys.isActive()) this.scene.start("Battle", { arena });
     else if (ok) releasePlay();
-  }
-
-  private toast(msg: string) {
-    const t = txt(this, W / 2, 1180, msg, 32, "#ffb0b0").setDepth(100);
-    this.tweens.add({ targets: t, alpha: 0, delay: 1200, duration: 300, onComplete: () => t.destroy() });
   }
 
   private settings() {

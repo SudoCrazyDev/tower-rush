@@ -182,6 +182,16 @@ export interface Leaderboard {
 
 export const getLeaderboard = (by: Leaderboard["by"]) => get<Leaderboard>(`/leaderboard?by=${by}`);
 
+/** Longest waves survived in one arena. */
+export interface ArenaTop {
+  arena: string;
+  rows: { rank: number; id: number; name: string; wave: number; trophies: number; hero: string | null }[];
+  /** The signed-in player's best wave there and place (null when they haven't played it). */
+  me: { id: number; wave: number; rank: number | null };
+}
+
+export const getArenaTop = (arena: string) => get<ArenaTop>(`/arenas/${encodeURIComponent(arena)}/top`);
+
 export async function startBattle(arena: string) {
   return (await post<{ battleId: number }>("/battles", { arena })).battleId;
 }
