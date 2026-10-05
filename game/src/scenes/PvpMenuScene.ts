@@ -1,12 +1,13 @@
 import Phaser from "phaser";
 import { BASE } from "../assets";
 import { music, sfx } from "../audio";
-import { W, H, WIDE, txt, button, iconButton, modal, NAVY, toast } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, modal, NAVY, toast, fmt, pressable } from "../ui";
 import { profile } from "../save";
 import { joinQueue, MatchConn, type Search } from "../pvpnet";
 import { askCode } from "../codePrompt";
+import { rankedModal, tierBadge } from "./ranked";
 import { claimPlay, onPlayLost, releasePlay } from "../play";
-import { CHALLENGE_RULES, PVP, PVP_MODES, PVP_MODE_INFO, type PvpMode, type ServerMsg } from "../../../shared/pvp.ts";
+import { CHALLENGE_RULES, PVP, PVP_MODES, PVP_MODE_INFO, tierFor, type PvpMode, type ServerMsg } from "../../../shared/pvp.ts";
 
 const MODE_COLOR: Record<PvpMode, "yellow" | "blue" | "green"> = { ranked: "yellow", mirror: "blue", casual: "green" };
 
@@ -59,13 +60,20 @@ export class PvpMenuScene extends Phaser.Scene {
       const parts: Phaser.GameObjects.GameObject[] = [g];
       parts.push(txt(this, 0, -h / 2 + 56, info.name.toUpperCase(), WIDE ? 56 : 48, "#ffd27a"));
       parts.push(txt(this, 0, WIDE ? -60 : -30, info.text, WIDE ? 28 : 24, "#ffffff").setWordWrapWidth(w - 60));
+      const tier = tierFor(profile.ranked.rating);
       const extra =
-        mode === "ranked" ? `Win +${PVP.rules.trophyWin}  ·  Lose −${PVP.rules.trophyLoss} trophies` : mode === "mirror" ? `All cards at level ${PVP.rules.mirrorLevel}` : "Practice without risk";
-      parts.push(txt(this, 0, WIDE ? 40 : 30, extra, WIDE ? 24 : 22, "#c9d2ff"));
+        mode === "ranked" ? `${tier.name}  ·  Rating ${fmt(profile.ranked.rating)}` : mode === "mirror" ? `All cards at level ${PVP.rules.mirrorLevel}` : "Practice without risk";
+      parts.push(txt(this, 0, WIDE ? 40 : 30, extra, WIDE ? 24 : 22, mode === "ranked" ? tier.color : "#c9d2ff"));
+      if (mode === "ranked") {
+        // Tier badge: opens the ranked ladder.
+        const badge = tierBadge(this, w / 2 - 56, -h / 2 + 56, 72, tier);
+        pressable(badge, () => rankedModal(this));
+        parts.push(badge);
+      }
       parts.push(button(this, 0, h / 2 - (WIDE ? 90 : 62), WIDE ? 340 : 300, WIDE ? 110 : 86, "PLAY", MODE_COLOR[mode], () => this.search({ mode })));
       this.add.container(x, y, parts);
     });
-    if (!WIDE) txt(this, W / 2, H - 60, `Trophies: ${profile.trophies}`, 30, "#ffd93b");
+    if (!WIDE) txt(this, W / 2, H - 60, `Trophies: ${fmt(profile.trophies)}  ·  Ranked rating: ${fmt(profile.ranked.rating)}`, 30, "#ffd93b");
     // Friends: no trophies either way. Practice: no rewards at all.
     const y = WIDE ? 1215 : 1335;
     const gap = WIDE ? 450 : 172;

@@ -164,7 +164,7 @@ admin.get("/pvp/matches", async (c) => {
       `SELECT m.id, m.mode, json_extract(m.setup, '$.friendly') AS friendly, json_extract(m.setup, '$.practice') AS practice, m.p1, m.p2, a.display_name AS name1, b.display_name AS name2,
               json_extract(m.setup, '$.players[1].name') AS botName, json_extract(m.setup, '$.arena') AS arena,
               m.started_at AS startedAt, m.finished_at AS finishedAt, m.winner, m.reason,
-              m.trophies1, m.trophies2, m.log1 IS NOT NULL AS hasLog1, m.log2 IS NOT NULL AS hasLog2
+              m.trophies1, m.trophies2, m.rating1, m.rating2, m.log1 IS NOT NULL AS hasLog1, m.log2 IS NOT NULL AS hasLog2
        FROM pvp_matches m LEFT JOIN users a ON a.id = m.p1 LEFT JOIN users b ON b.id = m.p2
        ORDER BY m.started_at DESC LIMIT 50`,
     ),

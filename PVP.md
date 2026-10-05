@@ -68,17 +68,47 @@ also raises the sender's income for the rest of the match ("eco").
 
 ## Modes
 
-| Mode | Deck | Card levels | Hero | Trophies |
-|---|---|---|---|---|
-| **Ranked** | your deck | your real levels | yours | win `+trophyWin`, loss `−trophyLoss`, scaled by the trophy gap |
-| **Mirror** | one random deck, the **same for both** players | everyone at `mirrorLevel` | one random hero, the same for both | none |
-| **Casual** | your deck | every card at level 1 | yours | none |
+| Mode | Deck | Card levels | Hero | Trophies | Ranked rating |
+|---|---|---|---|---|---|
+| **Ranked** | your deck | your real levels | yours | win `+trophyWin`, loss `−trophyLoss`, scaled by the trophy gap | Elo, see below |
+| **Mirror** | one random deck, the **same for both** players | everyone at `mirrorLevel` | one random hero, the same for both | none | none |
+| **Casual** | your deck | every card at level 1 | yours | none | none |
 
 - Every mode pays gold to both players: `winCoins` to the winner, `lossCoins` to the loser.
 - A match also counts toward daily quests the way a solo battle does (battles, summons,
   merges...).
 - Mirror tests pure skill with an unfamiliar deck. Casual is your own deck without the
   level advantage.
+
+## Ranked rating and tiers
+
+Ranked has a ladder of its own, separate from trophies. Trophies also come from solo battles
+and gate arenas, heroes and leagues; the ranked rating only moves in ranked PvP.
+
+- **Rating.** Everyone starts at `ratingStart` (1000), stored in the profile as
+  `ranked: { rating, peak, played, wins, losses }`.
+- **Change per match (Elo).** `K × (score − expected)`, where the score is 1 for a win, 0.5 for
+  a draw and 0 for a loss, and `expected = 1 / (1 + 10^((theirs − mine) / 400))`.
+  - It uses both ratings as they were when the match started (`Loadout.rating`).
+  - An even match moves ±K/2. Beating a higher-rated player gains more, and losing to a
+    lower-rated one costs more.
+  - A win is always at least +1 and a loss at least −1. The rating never goes below 0.
+- **Placement.** For a player's first `ratingPlacementGames` (10) ranked matches, K is
+  `ratingPlacementK` (64) instead of `ratingK` (32), so new players find their level fast.
+- **Bots.** A bot match counts. The bot gets a rating near the player's (±40).
+- **Not rated:** friendly, practice, Mirror and Casual matches.
+- **Tiers** (`pvp.tiers`, edited on the admin PvP page): Rookie 0, Contender 1100,
+  Veteran 1250, Elite 1400, Legend 1600.
+  - A player's tier is the highest one whose rating they've reached, so they can drop back down.
+  - Tiers have no rewards (leagues still pay the trophy promotion rewards).
+- **Where it shows.**
+  - PvP menu: the tier and rating on the Ranked card. Tap the badge for the ladder.
+  - Versus screen: each player's tier and rating.
+  - Results: the rating change, the new tier, and "RANKED UP" or "Dropped to" when the tier changes.
+  - Leaderboard: the **RANKED** tab (`/api/leaderboard?by=rating`), for players with at
+    least one ranked match.
+  - Admin: rating changes in the match list (`pvp_matches.rating1/2`, migration 0005), and
+    the rating on the user page.
 
 ## Friend challenges
 
@@ -100,8 +130,9 @@ also raises the sender's income for the rest of the match ("eco").
 
 ## Matchmaking
 
-- **Queues.** Each mode has its own queue. Ranked pairs players by trophies, starting from a
-  band of `matchBand` and widening by `matchBandGrowth` every second.
+- **Queues.** Each mode has its own queue. Ranked pairs players by **ranked rating**, starting
+  from a band of `matchBand` (100) and widening by `matchBandGrowth` (25) every second. The
+  other modes just pair the closest trophies.
 - **Bot fallback.**
   - After `botAfterSeconds` (10 s) without an opponent, the player gets a bot.
   - The bot plays the same rules: it summons when it can, merges pairs, buys power-ups, and
@@ -156,7 +187,8 @@ allowance covers a few hundred matches a day.
 | Board simulation | `shared/pvpsim.ts` (`PvpBoard`, extends `Sim` from `shared/sim.ts`) |
 | Bot | `shared/pvpbot.ts` |
 | Matchmaker and match rooms | `server/src/pvp.ts` (Durable Objects), routes under `/api/pvp` |
-| Match records | D1 table `pvp_matches` (migration 0003) |
+| Match records | D1 table `pvp_matches` (migration 0003; rating changes 0005) |
+| Ranked rating and tiers | `ratingChange`, `tierFor` in `shared/pvp.ts`; paid in `pay()` in `server/src/pvp.ts`; badges and ladder in `game/src/scenes/ranked.ts` |
 | Game: mode select, search, friend codes, versus, the match | `game/src/scenes/PvpMenuScene.ts`, `game/src/codePrompt.ts`, `game/src/scenes/PvpScene.ts` |
 | Admin | **PvP** page (rules and the send list) |
 
@@ -165,5 +197,5 @@ allowance covers a few hundred matches a day.
 - Server-side replay of ranked matches (Paid plan), then flag mismatches.
 - Emotes: 12 icons exist in the art pack.
 - Spectating, and friend challenges by code.
-- PvP seasons with their own trophy track.
+- Ranked seasons: a soft reset of the ranked rating, with rewards for the tier reached.
 - Win rate per card and per send on the admin Analytics page.

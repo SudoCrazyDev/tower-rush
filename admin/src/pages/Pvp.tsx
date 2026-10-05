@@ -3,7 +3,7 @@ import { useConfig } from "../config";
 import { api, ASSETS } from "../api";
 import { Num, PageHead, Select, Stat, Text, Toggle, fmtDate, timeAgo } from "../components";
 import { applyConfig, withPvpDefaults, type GameConfig } from "../../../shared/config.ts";
-import { pvpArena, type Loadout, type PvpRules, type SendDef } from "../../../shared/pvp.ts";
+import { pvpArena, tiersByRating, type Loadout, type PvpRules, type RankTier, type SendDef } from "../../../shared/pvp.ts";
 import { PvpBoard } from "../../../shared/pvpsim.ts";
 import { PvpBot } from "../../../shared/pvpbot.ts";
 
@@ -49,11 +49,20 @@ const RULES: { title: string; fields: Partial<Record<keyof PvpRules, RuleField>>
     },
   },
   {
+    title: "Ranked rating",
+    fields: {
+      ratingStart: { label: "Starting rating", int: true, step: 50 },
+      ratingK: { label: "Most rating per match (K)", int: true, hint: "an even match moves half of this" },
+      ratingPlacementK: { label: "K during placement", int: true },
+      ratingPlacementGames: { label: "Placement matches", int: true },
+    },
+  },
+  {
     title: "Matchmaking",
     fields: {
       botAfterSeconds: { label: "Bot after (seconds)", int: true },
       challengeMinutes: { label: "Friend challenge code lasts (minutes)", step: 0.5 },
-      matchBand: { label: "Ranked: starting trophy band", int: true, step: 10 },
+      matchBand: { label: "Ranked: starting rating band", int: true, step: 10 },
       matchBandGrowth: { label: "Band widens per second", int: true, step: 5 },
     },
   },
@@ -96,7 +105,7 @@ export function PvpPage() {
     <>
       <PageHead
         title="PvP"
-        desc="Both players get the same waves on a fixed clock and can spend mana on sends: extra monsters for the other board, which also raise the sender's income. Modes: Ranked (own deck, real levels, trophies), Mirror (one random deck and hero for both, same level) and Casual (own deck, every card level 1). See PVP.md."
+        desc="Both players get the same waves on a fixed clock and can spend mana on sends: extra monsters for the other board, which also raise the sender's income. Modes: Ranked (own deck, real levels, trophies and a ranked rating of its own), Mirror (one random deck and hero for both, same level) and Casual (own deck, every card level 1). See PVP.md."
       />
       <div className="two-col">
         {RULES.map((group) => (
@@ -181,9 +190,72 @@ export function PvpPage() {
         killer only part of its mana (see Mana and sends).
       </p>
 
+      <Tiers tiers={p.tiers} before={before.tiers} edit={(fn) => editPvp((x) => fn(x.tiers))} />
+
       <BotTest draft={draft} />
       <RecentMatches />
     </>
+  );
+}
+
+/** Ranked tiers: names for bands of ranked rating (separate from the trophy leagues). */
+function Tiers({ tiers, before, edit }: { tiers: RankTier[]; before: RankTier[]; edit: (fn: (t: RankTier[]) => void) => void }) {
+  const changed = (t: RankTier, k: keyof RankTier) => {
+    const b = before.find((x) => x.id === t.id);
+    return !b || b[k] !== t[k] ? "changed" : "";
+  };
+  const order = tiers.map((t, i) => ({ t, i })).sort((a, b) => a.t.rating - b.t.rating);
+  const add = () =>
+    edit((list) => {
+      let n = list.length + 1;
+      while (list.some((t) => t.id === `tier_${n}`)) n++;
+      const top = Math.max(0, ...tiersByRating(list).map((t) => t.rating));
+      list.push({ id: `tier_${n}`, name: "New Tier", rating: top + 200, color: "#ffffff" });
+    });
+  return (
+    <section className="panel" style={{ marginTop: 24 }}>
+      <h2>Ranked tiers</h2>
+      <p className="muted small">
+        A player's tier is the highest one whose rating they've reached. Ranked rating is separate from trophies: it only
+        moves in ranked matches (Elo: beating a higher-rated player gains more) and ranked matchmaking pairs on it. One tier must start at 0.
+      </p>
+      <div className="table-wrap">
+        <table className="grid">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Rating from</th>
+              <th>Colour</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.map(({ t, i }) => (
+              <tr key={i}>
+                <td className={changed(t, "name")}>
+                  <Text value={t.name} width={140} onChange={(v) => edit((x) => void (x[i].name = v))} />
+                  <div className="id">{t.id}</div>
+                </td>
+                <td className={changed(t, "rating")}>
+                  <Num value={t.rating} min={0} step={50} onChange={(v) => edit((x) => void (x[i].rating = Math.round(v)))} />
+                </td>
+                <td className={changed(t, "color")}>
+                  <input type="color" value={t.color} onChange={(e) => edit((x) => void (x[i].color = e.target.value))} />
+                </td>
+                <td>
+                  <button className="btn small ghost" disabled={tiers.length <= 1} onClick={() => edit((x) => void x.splice(i, 1))}>
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button className="btn small" style={{ marginTop: 10 }} onClick={add}>
+        Add tier
+      </button>
+    </section>
   );
 }
 
@@ -275,6 +347,8 @@ interface MatchRow {
   reason: string | null;
   trophies1: number | null;
   trophies2: number | null;
+  rating1: number | null;
+  rating2: number | null;
   hasLog1: number;
   hasLog2: number;
 }
@@ -307,6 +381,7 @@ function RecentMatches() {
               <th>Arena</th>
               <th>Result</th>
               <th>Trophies</th>
+              <th>Rating</th>
               <th>Length</th>
               <th>Logs</th>
             </tr>
@@ -326,6 +401,9 @@ function RecentMatches() {
                 </td>
                 <td>
                   {trophies(m.trophies1)} {m.p2 ? `/ ${trophies(m.trophies2)}` : ""}
+                </td>
+                <td>
+                  {trophies(m.rating1)} {m.p2 ? `/ ${trophies(m.rating2)}` : ""}
                 </td>
                 <td>{m.finishedAt ? `${((m.finishedAt - m.startedAt) / 60000).toFixed(1)} min` : "—"}</td>
                 <td className="muted small">{[m.hasLog1 && "P1", m.hasLog2 && "P2"].filter(Boolean).join(", ") || "—"}</td>

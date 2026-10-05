@@ -4,6 +4,7 @@ import { HEROES, HERO_BY_ID } from "./heroes.ts";
 import { freshDaily, utcDay, type DailyState, type LoginState, type Reward } from "./daily.ts";
 import { unpaidLeagues } from "./leagues.ts";
 import type { OfferDef } from "./offers.ts";
+import { PVP } from "./pvp.ts";
 import { RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, upgradeCost, maxCardLevel, type Rarity } from "./units.ts";
 
 export interface CardState {
@@ -11,10 +12,22 @@ export interface CardState {
   copies: number;
 }
 
+/** Ranked PvP standing: a rating of its own, separate from trophies (see PVP.md). */
+export interface RankedStats {
+  rating: number;
+  /** Highest rating reached. */
+  peak: number;
+  /** Ranked matches finished (fewer than ratingPlacementGames = still placing). */
+  played: number;
+  wins: number;
+  losses: number;
+}
+
 export interface Profile {
   coins: number;
   gems: number;
   trophies: number;
+  ranked: RankedStats;
   /** Best wave in any arena (the wave leaderboard). */
   bestWave: number;
   /** Best wave reached in each arena, by arena id. */
@@ -48,6 +61,7 @@ export function newProfile(): Profile {
     coins: ECONOMY.startingCoins,
     gems: ECONOMY.startingGems,
     trophies: 0,
+    ranked: { rating: PVP.rules.ratingStart, peak: PVP.rules.ratingStart, played: 0, wins: 0, losses: 0 },
     bestWave: 0,
     arenaBest: {},
     cards,

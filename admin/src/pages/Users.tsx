@@ -6,6 +6,8 @@ import { ARCHETYPES, ARCHS, ELEMENTS, ELEMENT_COLOR, RARITIES, RARITY_STATS, max
 import { RACE_IDS, RACES, type Race } from "../../../shared/races.ts";
 import type { Profile } from "../../../shared/profile.ts";
 import { leagueFor } from "../../../shared/leagues.ts";
+import { tierFor } from "../../../shared/pvp.ts";
+import { withPvpDefaults } from "../../../shared/config.ts";
 
 interface UserRow {
   id: number;
@@ -194,6 +196,14 @@ export function UserDetail({ id }: { id: number }) {
         <Stat2 icon="coins" label="Gold" value={profile.coins} />
         <Stat2 icon="gems" label="Gems" value={profile.gems} />
         <Stat2 icon="trophy" label="Trophies" value={profile.trophies} sub={saved?.leagues.length ? leagueFor(profile.trophies, saved.leagues).name : undefined} />
+        {profile.ranked && (
+          <Stat2
+            icon="trophy"
+            label="Ranked rating"
+            value={profile.ranked.rating}
+            sub={`${saved ? `${tierFor(profile.ranked.rating, withPvpDefaults(saved.pvp).tiers).name} · ` : ""}${profile.ranked.wins}W ${profile.ranked.losses}L · peak ${profile.ranked.peak}`}
+          />
+        )}
         <Stat2 icon="hourglass_speedup" label="Best wave" value={profile.bestWave} sub={Object.entries(profile.arenaBest ?? {}).map(([a, w]) => `${a} ${w}`).join(" · ") || undefined} />
         <Stat2 icon="card_pack" label="Cards owned" value={owned.length} />
       </div>

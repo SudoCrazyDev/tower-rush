@@ -30,6 +30,7 @@ import {
   loadoutFor,
   normalizeCode,
   pvpArena,
+  ratingChange,
   trophyChange,
   waveAt,
   waveStart,
@@ -57,19 +58,40 @@ interface Stats {
   heroCasts?: number;
 }
 
-/** Pay one player's side of a result: gold, trophies (ranked) and any league promotions. */
-async function pay(db: D1Database, userId: number, coins: number, trophies: number): Promise<Promotion[]> {
+/** A ranked result for one player's rating: did they win (null = draw), and their and the opponent's rating going in. */
+interface Rated {
+  won: boolean | null;
+  mine: number;
+  theirs: number;
+}
+
+/**
+ * Pay one player's side of a result: gold, trophies (ranked), ranked rating and any league
+ * promotions. Returns the promotions and the rating change.
+ */
+async function pay(db: D1Database, userId: number, coins: number, trophies: number, rated: Rated | null) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const u = await getUser(db, userId);
-    if (!u) return [];
+    if (!u) break;
     const p = readProfile(u);
     refreshDaily(p);
     p.coins += coins;
     p.trophies = Math.max(0, p.trophies + trophies);
+    let rating = 0;
+    if (rated) {
+      const s = p.ranked;
+      // K depends on how many ranked matches they had played; the gap uses the ratings the match started with.
+      rating = ratingChange(rated.won, rated.mine, rated.theirs, s.played);
+      s.rating = Math.max(0, s.rating + rating);
+      s.peak = Math.max(s.peak, s.rating);
+      s.played++;
+      if (rated.won === true) s.wins++;
+      else if (rated.won === false) s.losses++;
+    }
     const promotions = payPromotions(p);
-    if (await writeProfile(db, u, p)) return promotions;
+    if (await writeProfile(db, u, p)) return { promotions, rating };
   }
-  return [];
+  return { promotions: [] as Promotion[], rating: 0 };
 }
 
 /** Daily quest progress from a finished match, capped to what a match of this length could do. */
@@ -96,16 +118,18 @@ async function questProgress(db: D1Database, userId: number, stats: Stats, secon
   }
 }
 
-/** Gold and trophies for each side of a result. */
+/** Gold and trophies for each side of a result, and what each side's rating change is based on (ranked only). */
 function rewards(setup: MatchSetup, winner: 0 | 1 | null) {
   const r = PVP.rules;
   const [a, b] = setup.players;
+  const ranked = setup.mode === "ranked" && !setup.friendly && !setup.practice;
   const coin = (i: 0 | 1) => (setup.practice ? 0 : winner === null ? r.drawCoins : winner === i ? r.winCoins : r.lossCoins);
-  const trophies: [number, number] =
-    setup.mode === "ranked" && !setup.friendly && !setup.practice
-      ? [trophyChange(winner === null ? null : winner === 0, a.trophies, b.trophies), trophyChange(winner === null ? null : winner === 1, b.trophies, a.trophies)]
-      : [0, 0];
-  return { trophies, coins: [coin(0), coin(1)] as [number, number] };
+  const won = (i: 0 | 1) => (winner === null ? null : winner === i);
+  const trophies: [number, number] = ranked ? [trophyChange(won(0), a.trophies, b.trophies), trophyChange(won(1), b.trophies, a.trophies)] : [0, 0];
+  const ra = a.rating ?? r.ratingStart;
+  const rb = b.rating ?? r.ratingStart;
+  const rated: [Rated | null, Rated | null] = ranked ? [{ won: won(0), mine: ra, theirs: rb }, { won: won(1), mine: rb, theirs: ra }] : [null, null];
+  return { trophies, coins: [coin(0), coin(1)] as [number, number], rated };
 }
 
 /** Write a finished match and pay both players (a bot is player 1 with no account). */
@@ -114,24 +138,29 @@ async function settle(db: D1Database, setup: MatchSetup, users: [number, number 
   // Mark it finished first: of two settles at once, only one gets past this.
   const claimed = await run(db, "UPDATE pvp_matches SET finished_at = ? WHERE id = ? AND finished_at IS NULL", now, setup.id);
   if (!claimed.meta.changes) return null;
-  const { trophies, coins } = rewards(setup, winner);
+  const { trophies, coins, rated } = rewards(setup, winner);
   const promotions: [Promotion[], Promotion[]] = [[], []];
+  const ratings: [number, number] = [0, 0];
   for (const i of [0, 1] as const) {
     const id = users[i];
-    if (id !== null) promotions[i] = await pay(db, id, coins[i], trophies[i]);
+    if (id !== null) ({ promotions: promotions[i], rating: ratings[i] } = await pay(db, id, coins[i], trophies[i], rated[i]));
   }
+  // A bot has no account; its rating change is shown as the mirror of the player's.
+  if (users[1] === null) ratings[1] = -ratings[0];
   await run(
     db,
-    "UPDATE pvp_matches SET winner = ?, reason = ?, trophies1 = ?, trophies2 = ?, coins1 = ?, coins2 = ? WHERE id = ?",
+    "UPDATE pvp_matches SET winner = ?, reason = ?, trophies1 = ?, trophies2 = ?, coins1 = ?, coins2 = ?, rating1 = ?, rating2 = ? WHERE id = ?",
     winner,
     reason,
     trophies[0],
     trophies[1],
     coins[0],
     coins[1],
+    ratings[0],
+    ratings[1],
     setup.id,
   );
-  const result: MatchResult = { winner, reason, trophies, coins };
+  const result: MatchResult = { winner, reason, trophies, coins, ratings };
   return { result, promotions };
 }
 
@@ -276,6 +305,8 @@ interface Waiting {
   userId: number;
   mode: PvpMode;
   trophies: number;
+  /** Ranked rating: what ranked pairs on (the other modes pair on trophies). */
+  rating: number;
   since: number;
   /** Friend challenges: when the code stops working. */
   expires?: number;
@@ -304,11 +335,12 @@ export class Matchmaker extends DurableObject<Bindings> {
     const [client, server] = Object.values(new WebSocketPair());
     server.accept();
     const response = new Response(null, { status: 101, webSocket: client, headers: { "Sec-WebSocket-Protocol": PROTOCOL } });
-    const trophies = readProfile(u).trophies;
+    const { trophies, ranked } = readProfile(u);
+    const rating = ranked.rating;
     // Accepting a challenge: pair with whoever holds the code (once the socket is open).
     if (join) {
       const host = this.hosts.get(join);
-      const w: Waiting = { ws: server, userId, mode: host?.mode ?? "casual", trophies, since: Date.now() };
+      const w: Waiting = { ws: server, userId, mode: host?.mode ?? "casual", trophies, rating, since: Date.now() };
       const problem = !host || host.expires! < Date.now() ? "No open challenge with that code" : host.userId === userId ? "That's your own challenge" : null;
       setTimeout(() => {
         if (problem || !host) return this.drop(w, problem ?? "");
@@ -324,7 +356,7 @@ export class Matchmaker extends DurableObject<Bindings> {
     const mode = req.headers.get("x-mode") as PvpMode;
     // Practice: a bot straight away (once the socket is open).
     if (req.headers.get("x-bot") === "1") {
-      const w: Waiting = { ws: server, userId, mode, trophies, since: Date.now() };
+      const w: Waiting = { ws: server, userId, mode, trophies, rating, since: Date.now() };
       setTimeout(() => {
         this.bot(w, true).catch((e) => {
           console.error("practice match failed", e);
@@ -337,7 +369,7 @@ export class Matchmaker extends DurableObject<Bindings> {
       // One open challenge per player.
       for (const h of this.hosts.values()) if (h.userId === userId) this.drop(h, "Replaced by a new challenge");
       const expires = Date.now() + PVP.rules.challengeMinutes * 60_000;
-      const w: Waiting = { ws: server, userId, mode, trophies, since: Date.now(), expires };
+      const w: Waiting = { ws: server, userId, mode, trophies, rating, since: Date.now(), expires };
       const code = newCode(this.hosts);
       this.hosts.set(code, w);
       server.addEventListener("close", () => {
@@ -353,7 +385,7 @@ export class Matchmaker extends DurableObject<Bindings> {
     }
     // One queue spot per player: a second tab replaces the first.
     for (const w of this.queue.filter((w) => w.userId === userId)) this.drop(w, "Queued from somewhere else");
-    const w: Waiting = { ws: server, userId, mode, trophies, since: Date.now() };
+    const w: Waiting = { ws: server, userId, mode, trophies, rating, since: Date.now() };
     this.queue.push(w);
     server.addEventListener("close", () => {
       this.queue = this.queue.filter((x) => x !== w);
@@ -386,6 +418,8 @@ export class Matchmaker extends DurableObject<Bindings> {
     const r = PVP.rules;
     const now = Date.now();
     const band = (w: Waiting) => r.matchBand + r.matchBandGrowth * ((now - w.since) / 1000);
+    // Ranked pairs by ranked rating, within both players' bands; the other modes just take the closest trophies.
+    const apart = (a: Waiting, b: Waiting) => (a.mode === "ranked" ? Math.abs(a.rating - b.rating) : Math.abs(a.trophies - b.trophies));
     // Pair the longest-waiting players first.
     const waiting = [...this.queue].sort((a, b) => a.since - b.since);
     const used = new Set<Waiting>();
@@ -394,9 +428,9 @@ export class Matchmaker extends DurableObject<Bindings> {
       let best: Waiting | null = null;
       for (const b of waiting) {
         if (b === a || used.has(b) || b.mode !== a.mode || b.userId === a.userId) continue;
-        const gap = Math.abs(a.trophies - b.trophies);
+        const gap = apart(a, b);
         if (a.mode === "ranked" && (gap > band(a) || gap > band(b))) continue;
-        if (!best || gap < Math.abs(a.trophies - best.trophies)) best = b;
+        if (!best || gap < apart(a, best)) best = b;
       }
       if (best) {
         used.add(a).add(best);

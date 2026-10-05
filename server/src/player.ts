@@ -427,32 +427,39 @@ player.post("/battles/:id/finish", P, async (c) => {
 
 // ---------------------------------------------------------------- leaderboard
 
-/** Ranked by trophies or by best wave. Players with 0 aren't ranked; ties share a rank. */
+/**
+ * Ranked by trophies, best wave or ranked PvP rating. Players with 0 (or, on the rating board,
+ * no ranked matches yet) aren't ranked; ties share a rank.
+ */
 const BOARDS = {
-  trophies: "json_extract(profile, '$.trophies')",
-  wave: "json_extract(profile, '$.bestWave')",
+  trophies: { v: "json_extract(profile, '$.trophies')", on: "json_extract(profile, '$.trophies') > 0" },
+  wave: { v: "json_extract(profile, '$.bestWave')", on: "json_extract(profile, '$.bestWave') > 0" },
+  rating: { v: "json_extract(profile, '$.ranked.rating')", on: "json_extract(profile, '$.ranked.played') > 0" },
 } as const;
+type BoardId = keyof typeof BOARDS;
 const LEADERBOARD_SIZE = 100;
 
 player.get("/leaderboard", P, async (c) => {
   const db = c.env.DB;
-  const by = c.req.query("by") === "wave" ? "wave" : "trophies";
-  const v = BOARDS[by];
+  const q = c.req.query("by") as BoardId;
+  const by: BoardId = q in BOARDS ? q : "trophies";
+  const { v, on } = BOARDS[by];
   const [rows, total, mine] = await Promise.all([
     all(
       db,
       `SELECT id, display_name AS name, json_extract(profile, '$.trophies') AS trophies,
               json_extract(profile, '$.bestWave') AS bestWave, json_extract(profile, '$.hero') AS hero,
+              json_extract(profile, '$.ranked.rating') AS rating,
               RANK() OVER (ORDER BY ${v} DESC) AS rank
-       FROM users WHERE banned = 0 AND ${v} > 0
+       FROM users WHERE banned = 0 AND ${on}
        ORDER BY rank, id LIMIT ?`,
       LEADERBOARD_SIZE,
     ),
-    count(db, `SELECT COUNT(*) AS n FROM users WHERE banned = 0 AND ${v} > 0`),
+    count(db, `SELECT COUNT(*) AS n FROM users WHERE banned = 0 AND ${on}`),
     // The caller's own place, even when they're outside the list.
-    one<{ value: number; banned: number }>(db, `SELECT ${v} AS value, banned FROM users WHERE id = ?`, c.get("playerId")),
+    one<{ value: number; ok: number; banned: number }>(db, `SELECT ${v} AS value, ${on} AS ok, banned FROM users WHERE id = ?`, c.get("playerId")),
   ]);
-  const rank = mine && mine.value > 0 && !mine.banned ? (await count(db, `SELECT COUNT(*) + 1 AS n FROM users WHERE banned = 0 AND ${v} > ?`, mine.value)) : null;
+  const rank = mine && mine.ok && !mine.banned ? (await count(db, `SELECT COUNT(*) + 1 AS n FROM users WHERE banned = 0 AND ${on} AND ${v} > ?`, mine.value)) : null;
   return c.json({ by, rows, total, me: { id: c.get("playerId"), rank } });
 });
 

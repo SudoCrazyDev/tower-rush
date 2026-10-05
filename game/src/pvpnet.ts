@@ -97,7 +97,7 @@ export class MatchConn {
 }
 
 export interface BotFinish {
-  result: { winner: 0 | 1 | null; trophies: [number, number]; coins: [number, number] };
+  result: { winner: 0 | 1 | null; trophies: [number, number]; coins: [number, number]; ratings?: [number, number] };
   promotions: Promotion[];
   profile: Profile | null;
 }

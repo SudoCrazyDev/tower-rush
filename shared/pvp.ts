@@ -12,7 +12,7 @@ export type PvpMode = "ranked" | "mirror" | "casual";
 export const PVP_MODES: PvpMode[] = ["ranked", "mirror", "casual"];
 
 export const PVP_MODE_INFO: Record<PvpMode, { name: string; text: string }> = {
-  ranked: { name: "Ranked", text: "Your deck at your card levels. Win trophies." },
+  ranked: { name: "Ranked", text: "Your deck at your card levels. Climb the ranked ladder and win trophies." },
   mirror: { name: "Mirror", text: "Both players get the same random deck and hero, same levels." },
   casual: { name: "Casual", text: "Your deck with every card at level 1. No trophies." },
 };
@@ -71,17 +71,38 @@ export interface PvpRules {
   winCoins: number;
   lossCoins: number;
   drawCoins: number;
+  // ranked rating (Elo, separate from trophies; see PVP.md)
+  /** Rating every player starts at. */
+  ratingStart: number;
+  /** Most rating one match can move (Elo K) once placed. */
+  ratingK: number;
+  /** K for a player's first `ratingPlacementGames` ranked matches, so new players find their level fast. */
+  ratingPlacementK: number;
+  ratingPlacementGames: number;
   // matchmaking
   botAfterSeconds: number;
   /** Minutes a friend challenge code stays open. */
   challengeMinutes: number;
+  /** Ranked: how far apart in rating two players can be paired at first, and how much that widens per second of waiting. */
   matchBand: number;
   matchBandGrowth: number;
+}
+
+/** A ranked tier: a name for a band of ranked rating, from `rating` up to the next tier. */
+export interface RankTier {
+  id: string;
+  name: string;
+  /** Rating needed to be in this tier. */
+  rating: number;
+  /** Badge colour ("#rrggbb"). */
+  color: string;
 }
 
 export interface PvpConfig {
   rules: PvpRules;
   sends: SendDef[];
+  /** Ranked tiers, any order (one must start at 0). */
+  tiers: RankTier[];
 }
 
 const S = (id: string, name: string, monster: string, count: number, hpMult: number, cost: number, income: number, unlockWave: number, cooldown: number, stock: number, leakDamage = 1): SendDef => ({
@@ -123,10 +144,14 @@ export const DEFAULT_PVP: PvpConfig = {
     winCoins: 60,
     lossCoins: 20,
     drawCoins: 35,
+    ratingStart: 1000,
+    ratingK: 32,
+    ratingPlacementK: 64,
+    ratingPlacementGames: 10,
     botAfterSeconds: 10,
     challengeMinutes: 5,
-    matchBand: 150,
-    matchBandGrowth: 40,
+    matchBand: 100,
+    matchBandGrowth: 25,
   },
   sends: [
     // No cooldowns: mana is the only limit, Bloons TD Battles style spam.
@@ -137,6 +162,13 @@ export const DEFAULT_PVP: PvpConfig = {
     S("healers", "Healers", "troll_healer", 3, 1.2, 200, 8, 8, 0, 2, 2),
     S("splitters", "Splitters", "gelatinous_cube", 4, 1.2, 260, 8, 10, 0, 1, 2),
     S("champion", "Champion", "boss", 1, 0.4, 600, 0, 15, 0, 1, 6),
+  ],
+  tiers: [
+    { id: "rookie", name: "Rookie", rating: 0, color: "#a9b4c8" },
+    { id: "contender", name: "Contender", rating: 1100, color: "#6fd68a" },
+    { id: "veteran", name: "Veteran", rating: 1250, color: "#5cb4ff" },
+    { id: "elite", name: "Elite", rating: 1400, color: "#c48bff" },
+    { id: "legend", name: "Legend", rating: 1600, color: "#ffb340" },
   ],
 };
 
@@ -165,6 +197,8 @@ export const normalizeCode = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g
 export interface Loadout {
   name: string;
   trophies: number;
+  /** Ranked rating at the start of the match (missing on matches from before ratings). */
+  rating?: number;
   deck: string[];
   /** Card level per deck unit. */
   levels: Record<string, number>;
@@ -278,10 +312,16 @@ export function mirrorLoadout(seed: number) {
 }
 
 /** The loadout a player brings to a mode (the server builds it from the stored profile). */
-export function loadoutFor(mode: PvpMode, p: { deck: string[]; cards: Record<string, { level: number }>; hero: string | null; trophies: number }, name: string, seed: number): Loadout {
-  if (mode === "mirror") return { name, trophies: p.trophies, ...mirrorLoadout(seed) };
+export function loadoutFor(
+  mode: PvpMode,
+  p: { deck: string[]; cards: Record<string, { level: number }>; hero: string | null; trophies: number; ranked?: { rating: number } },
+  name: string,
+  seed: number,
+): Loadout {
+  const rating = p.ranked?.rating ?? PVP.rules.ratingStart;
+  if (mode === "mirror") return { name, trophies: p.trophies, rating, ...mirrorLoadout(seed) };
   const levels = Object.fromEntries(p.deck.map((id) => [id, mode === "ranked" ? (p.cards[id]?.level ?? 1) : 1]));
-  return { name, trophies: p.trophies, deck: [...p.deck], levels, hero: p.hero };
+  return { name, trophies: p.trophies, rating, deck: [...p.deck], levels, hero: p.hero };
 }
 
 const BOT_NAMES = ["Grizzle", "Moxie", "Tarn", "Pip", "Bramble", "Kestrel", "Odo", "Vex", "Juniper", "Rook", "Sable", "Wren", "Hob", "Marlo", "Quill", "Fennick"];
@@ -291,7 +331,8 @@ export function botLoadout(mode: PvpMode, player: Loadout, seed: number): Loadou
   const r = rand(seed ^ 0x2545f491);
   const name = BOT_NAMES[Math.floor(r() * BOT_NAMES.length)] + Math.floor(10 + r() * 90);
   const trophies = Math.max(0, player.trophies + Math.round((r() - 0.5) * 120));
-  if (mode === "mirror") return { ...player, name, trophies, bot: true };
+  const rating = Math.max(0, (player.rating ?? PVP.rules.ratingStart) + Math.round((r() - 0.5) * 80));
+  if (mode === "mirror") return { ...player, name, trophies, rating, bot: true };
   const pool = UNITS.filter((u) => u.enabled && u.arch !== "mana");
   const deck: string[] = [];
   // Rarer cards as trophies climb, like a real player's collection.
@@ -302,7 +343,7 @@ export function botLoadout(mode: PvpMode, player: Loadout, seed: number): Loadou
   const levels = Object.fromEntries(deck.map((id) => [id, mode === "casual" ? 1 : Math.max(1, Math.round(avg + (r() - 0.6) * 2))]));
   const heroes = HEROES.filter((h) => h.enabled && h.trophies <= player.trophies);
   const hero = heroes.length ? heroes[Math.floor(r() * heroes.length)].id : null;
-  return { name, trophies, deck, levels, hero, bot: true };
+  return { name, trophies, rating, deck, levels, hero, bot: true };
 }
 
 // ---------------------------------------------------------------- rewards
@@ -314,6 +355,34 @@ export function trophyChange(won: boolean | null, mine: number, theirs: number) 
   const gap = Math.max(-1, Math.min(1, ((theirs - mine) / 100) * (r.trophyGapStep / Math.max(1, r.trophyWin))));
   return won ? Math.round(r.trophyWin * (1 + gap * 0.5)) : -Math.round(r.trophyLoss * (1 - gap * 0.5));
 }
+
+/**
+ * Ranked rating change (Elo): K × (score − expected score), where the expected score comes
+ * from the rating gap. Beating a higher-rated player pays more; a win always moves at least
+ * +1 and a loss at least −1. `played` is how many ranked matches the player had finished before.
+ */
+export function ratingChange(won: boolean | null, mine: number, theirs: number, played: number) {
+  const r = PVP.rules;
+  const expected = 1 / (1 + 10 ** ((theirs - mine) / 400));
+  const score = won === null ? 0.5 : won ? 1 : 0;
+  const k = played < r.ratingPlacementGames ? r.ratingPlacementK : r.ratingK;
+  const d = Math.round(k * (score - expected));
+  return won === true ? Math.max(1, d) : won === false ? Math.min(-1, d) : d;
+}
+
+/** Tiers from lowest to highest rating. */
+export const tiersByRating = (list = PVP.tiers) => [...list].sort((a, b) => a.rating - b.rating);
+
+/** The tier a rating is in (the lowest tier if it's below every gate). */
+export function tierFor(rating: number, list = PVP.tiers): RankTier {
+  const sorted = tiersByRating(list);
+  let best = sorted[0];
+  for (const t of sorted) if (t.rating <= rating) best = t;
+  return best;
+}
+
+/** The next tier up, or null at the top. */
+export const nextTier = (rating: number, list = PVP.tiers) => tiersByRating(list).find((t) => t.rating > rating) ?? null;
 
 // ---------------------------------------------------------------- network messages
 
@@ -358,6 +427,8 @@ export interface MatchResult {
   /** Per player. */
   trophies: [number, number];
   coins: [number, number];
+  /** Ranked rating change per player (0 outside ranked; missing from older servers). */
+  ratings?: [number, number];
 }
 
 // ---------------------------------------------------------------- validation
@@ -391,6 +462,19 @@ export function pvpProblems(cfg: PvpConfig | undefined): string[] {
     if (s.count < 1 || s.stock < 1) errs.push(`${w}: count and stock must be at least 1`);
   }
   if (!cfg.sends.some((s) => s.enabled)) errs.push("At least one send must be enabled");
+  if (r.ratingK < 1 || r.ratingPlacementK < 1) errs.push("pvp rating K values must be at least 1");
+  if (!Array.isArray(cfg.tiers) || !cfg.tiers.length) return [...errs, "pvp.tiers must list at least one tier"];
+  const tierIds = new Set<string>();
+  for (const t of cfg.tiers) {
+    const w = `Tier ${t.id}`;
+    if (!/^[a-z0-9_]+$/.test(t.id ?? "")) errs.push(`${w}: id must be lowercase letters, digits or _`);
+    if (tierIds.has(t.id)) errs.push(`Duplicate tier id "${t.id}"`);
+    tierIds.add(t.id);
+    if (!t.name) errs.push(`${w}: name is required`);
+    if (typeof t.rating !== "number" || !Number.isFinite(t.rating) || t.rating < 0) errs.push(`${w}: rating must be a number ≥ 0`);
+    if (!/^#[0-9a-fA-F]{6}$/.test(t.color ?? "")) errs.push(`${w}: color must be #rrggbb`);
+  }
+  if (!cfg.tiers.some((t) => t.rating === 0)) errs.push("One ranked tier must start at rating 0");
   return errs;
 }
 

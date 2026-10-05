@@ -62,7 +62,7 @@ export function defaultConfig(): GameConfig {
 
 /** Configs saved before PvP existed (or before a newer rule) get the defaults filled in. */
 export function withPvpDefaults(p: Partial<PvpConfig> | undefined): PvpConfig {
-  return structuredClone({ rules: { ...DEFAULT_PVP.rules, ...p?.rules }, sends: p?.sends ?? DEFAULT_PVP.sends });
+  return structuredClone({ rules: { ...DEFAULT_PVP.rules, ...p?.rules }, sends: p?.sends ?? DEFAULT_PVP.sends, tiers: p?.tiers ?? DEFAULT_PVP.tiers });
 }
 
 function replace<T>(target: T[], items: T[]) {
@@ -88,6 +88,7 @@ export function applyConfig(cfg: GameConfig) {
   const pvp = withPvpDefaults(cfg.pvp);
   PVP.rules = pvp.rules;
   PVP.sends = pvp.sends;
+  PVP.tiers = pvp.tiers;
   for (const r of RARITIES) RARITY_STATS[r].dropWeight = cfg.dropWeights[r];
   indexUnits();
   indexMonsters();

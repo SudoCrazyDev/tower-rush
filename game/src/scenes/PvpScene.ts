@@ -21,7 +21,8 @@ import { HERO_BY_ID } from "../../../shared/heroes.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { LEAGUES } from "../../../shared/leagues.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "../../../shared/path.ts";
-import { PVP, matchModeName, type BoardSnap, type MatchResult, type MatchSetup, type SendDef, type ServerMsg } from "../../../shared/pvp.ts";
+import { tierBadge } from "./ranked";
+import { PVP, matchModeName, tierFor, type BoardSnap, type MatchResult, type MatchSetup, type SendDef, type ServerMsg } from "../../../shared/pvp.ts";
 import { PvpBoard, SIM_DT } from "../../../shared/pvpsim.ts";
 import { PvpBot, botSkill } from "../../../shared/pvpbot.ts";
 import type { SimFx, SimMonster, SimShot, SimUnit } from "../../../shared/sim.ts";
@@ -531,8 +532,16 @@ export class PvpScene extends Phaser.Scene {
     const side = (p: (typeof this.setup.players)[number], y: number, x: number, label: string) => {
       c.add(txt(this, x, y - 140, label, 26, "#c9d2ff"));
       c.add(txt(this, x, y - 96, p.name, 52, "#fff4c2"));
-      c.add(this.add.image(x - 70, y - 40, "item:trophy").setDisplaySize(46, 46));
-      c.add(txt(this, x - 40, y - 40, String(p.trophies), 32, "#ffd93b", [0, 0.5]));
+      if (this.rated()) {
+        // Ranked: the ranked rating and tier, not trophies.
+        const rating = p.rating ?? PVP.rules.ratingStart;
+        const tier = tierFor(rating);
+        c.add(tierBadge(this, x - 120, y - 40, 50, tier));
+        c.add(txt(this, x - 86, y - 40, `${tier.name}  ${fmt(rating)}`, 32, tier.color, [0, 0.5]));
+      } else {
+        c.add(this.add.image(x - 70, y - 40, "item:trophy").setDisplaySize(46, 46));
+        c.add(txt(this, x - 40, y - 40, String(p.trophies), 32, "#ffd93b", [0, 0.5]));
+      }
       const gap = WIDE ? 120 : 132;
       p.deck.forEach((id, i) => c.add(cardView(this, x + (i - 2) * gap, y + 60, WIDE ? 104 : 116, id, { level: p.levels[id] })));
       if (p.hero && this.textures.exists(`hero_portrait:${p.hero}`)) {
@@ -1134,7 +1143,7 @@ export class PvpScene extends Phaser.Scene {
     this.board.end("done");
     const shown: Outcome = outcome === "left" ? "loss" : outcome;
     const res = finishBotMatch(this.setup.id, { result: outcome, seconds: this.board.now, stats: this.stats(), log: this.log() })
-      .then((r) => ({ trophies: r.result.trophies[0], coins: r.result.coins[0], promotions: r.promotions }))
+      .then((r) => ({ trophies: r.result.trophies[0], coins: r.result.coins[0], rating: r.result.ratings?.[0] ?? 0, promotions: r.promotions }))
       .catch(() => null);
     this.results(shown, res);
   }
@@ -1146,10 +1155,15 @@ export class PvpScene extends Phaser.Scene {
     if (!this.board.over) this.board.end("done");
     this.sendLog();
     const outcome: Outcome = r.winner === null ? "draw" : r.winner === this.you ? "win" : "loss";
-    this.results(outcome, Promise.resolve({ trophies: r.trophies[this.you], coins: r.coins[this.you], promotions }), r.reason);
+    this.results(outcome, Promise.resolve({ trophies: r.trophies[this.you], coins: r.coins[this.you], rating: r.ratings?.[this.you] ?? 0, promotions }), r.reason);
   }
 
-  private results(outcome: Outcome, reward: Promise<{ trophies: number; coins: number; promotions: Promotion[] } | null>, reason?: MatchResult["reason"]) {
+  /** A match that moves trophies and ranked rating. */
+  private rated() {
+    return this.setup.mode === "ranked" && !this.setup.friendly && !this.setup.practice;
+  }
+
+  private results(outcome: Outcome, reward: Promise<{ trophies: number; coins: number; rating: number; promotions: Promotion[] } | null>, reason?: MatchResult["reason"]) {
     sfx(outcome === "win" ? "win" : "lose");
     this.time.delayedCall(600, () => {
       this.mini.setVisible(false);
@@ -1181,12 +1195,29 @@ export class PvpScene extends Phaser.Scene {
         saving.destroy();
         if (this.setup.practice) return void m.add(txt(this, m.cx, m.cy + 40, "Practice match: no rewards", 30, "#c9d2ff"));
         const rows: [string, string, string][] = [["item:coins", `+${fmt(r.coins)}`, "#ffd93b"]];
-        if (this.setup.mode === "ranked" && !this.setup.friendly) rows.push(["item:trophy", `${r.trophies >= 0 ? "+" : ""}${r.trophies}`, r.trophies >= 0 ? "#ffd93b" : "#ff8080"]);
+        if (this.rated()) rows.push(["item:trophy", `${r.trophies >= 0 ? "+" : ""}${r.trophies}`, r.trophies >= 0 ? "#ffd93b" : "#ff8080"]);
+        const step = this.rated() ? 80 : 90;
         rows.forEach(([icon, value, color], i) => {
-          const y = m.cy - 10 + i * 90;
-          m.add(this.add.image(m.cx - 90, y, icon).setDisplaySize(70, 70));
-          m.add(txt(this, m.cx - 30, y, value, 44, color, [0, 0.5]));
+          const y = m.cy - 30 + i * step;
+          m.add(this.add.image(m.cx - 90, y, icon).setDisplaySize(64, 64));
+          m.add(txt(this, m.cx - 30, y, value, 42, color, [0, 0.5]));
         });
+        if (this.rated()) {
+          // Ranked rating: the change, the new rating and tier, and a tier change if there was one.
+          const before = this.me.rating ?? PVP.rules.ratingStart;
+          const after = Math.max(0, before + r.rating);
+          const [was, now] = [tierFor(before), tierFor(after)];
+          const y = m.cy - 30 + rows.length * step;
+          m.add(tierBadge(this, m.cx - 90, y, 60, now));
+          m.add(txt(this, m.cx - 30, y, `${r.rating >= 0 ? "+" : ""}${r.rating}`, 42, r.rating >= 0 ? "#7fe08a" : "#ff8080", [0, 0.5]));
+          m.add(txt(this, m.cx, y + 50, `${now.name}  ·  Rating ${fmt(after)}`, 24, now.color));
+          if (was.id !== now.id) {
+            const up = now.rating > was.rating;
+            const banner = txt(this, m.cx, y + 92, up ? `RANKED UP TO ${now.name.toUpperCase()}!` : `Dropped to ${now.name}`, up ? 30 : 24, up ? "#ffd93b" : "#ff8080");
+            m.add(banner);
+            if (up) this.tweens.add({ targets: banner, scale: { from: 1.4, to: 1 }, duration: 400, ease: "Back.Out" });
+          }
+        }
         promotions = [...r.promotions];
       });
     });

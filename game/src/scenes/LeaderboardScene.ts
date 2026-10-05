@@ -3,6 +3,8 @@ import { getLeaderboard, type Leaderboard } from "../save";
 import { HERO_BY_ID } from "../data/heroes";
 import { leagueFor } from "../../../shared/leagues.ts";
 import { leagueBadge } from "./leagues";
+import { tierBadge } from "./ranked";
+import { PVP, tierFor } from "../../../shared/pvp.ts";
 import { RES } from "../display";
 import { W, H, WIDE, txt, button, iconButton, NAVY, fmt } from "../ui";
 import { cover, topBar } from "./LobbyScene";
@@ -14,7 +16,7 @@ const ROW_H = 92;
 const TOP = 300;
 const MEDAL = [0xffd93b, 0xd7dde8, 0xe0954a];
 
-/** Top players by trophies or best wave, with the player's own place pinned at the bottom. */
+/** Top players by trophies, best wave or ranked PvP rating, with the player's own place pinned at the bottom. */
 export class LeaderboardScene extends Phaser.Scene {
   private by: Board = "trophies";
 
@@ -36,9 +38,11 @@ export class LeaderboardScene extends Phaser.Scene {
     const tabs: [Board, string][] = [
       ["trophies", "TROPHIES"],
       ["wave", "BEST WAVE"],
+      ["rating", "RANKED"],
     ];
+    const tw = WIDE ? 270 : 230;
     tabs.forEach(([by, label], i) =>
-      button(this, W / 2 + (i - 0.5) * 290, 220, 270, 84, label, by === this.by ? "yellow" : "grey", () => by !== this.by && this.scene.restart({ by }), 32),
+      button(this, W / 2 + (i - (tabs.length - 1) / 2) * (tw + 16), 220, tw, 84, label, by === this.by ? "yellow" : "grey", () => by !== this.by && this.scene.restart({ by }), WIDE ? 32 : 28),
     );
 
     const status = txt(this, W / 2, H / 2, "Loading...", 34, "#c9d2ff");
@@ -65,7 +69,7 @@ export class LeaderboardScene extends Phaser.Scene {
     g.fillStyle(NAVY, 0.8).fillRoundedRect(left, TOP - 20, panelW, bottom - TOP + 20, 28);
 
     if (!board.rows.length) {
-      txt(this, W / 2, TOP + 160, "Nobody is ranked yet.\nPlay a battle to be the first!", 32, "#c9d2ff");
+      txt(this, W / 2, TOP + 160, `Nobody is ranked yet.\nPlay ${board.by === "rating" ? "a ranked PvP match" : "a battle"} to be the first!`, 32, "#c9d2ff");
     }
     const list = this.add.container(0, TOP);
     board.rows.forEach((r, i) => list.add(this.row(r, i * ROW_H + ROW_H / 2, left, panelW, r.id === board.me.id)));
@@ -90,10 +94,10 @@ export class LeaderboardScene extends Phaser.Scene {
     const f = this.add.graphics();
     f.fillStyle(0x2a2f6a, 0.95).fillRoundedRect(left, fy - 50, panelW, 100, 24);
     f.lineStyle(4, 0xffd93b, 1).strokeRoundedRect(left, fy - 50, panelW, 100, 24);
-    const value = board.by === "wave" ? "best wave" : "trophies";
+    const value = board.by === "wave" ? "best wave" : board.by === "rating" ? "ranked PvP rating" : "trophies";
     const rank = board.me.rank;
     txt(this, W / 2, fy - 14, rank ? `Your rank: #${fmt(rank)} of ${fmt(board.total)}` : "You're not ranked yet", 32, "#fff4c2");
-    txt(this, W / 2, fy + 24, rank ? `Ranked by ${value}` : `Play a battle to get ranked by ${value}`, 22, "#c9d2ff");
+    txt(this, W / 2, fy + 24, rank ? `Ranked by ${value}` : `Play ${board.by === "rating" ? "a ranked PvP match" : "a battle"} to get ranked by ${value}`, 22, "#c9d2ff");
     // Jump to your row if it's in the list.
     const mineAt = board.rows.findIndex((r) => r.id === board.me.id);
     if (mineAt > 3) list.y = Phaser.Math.Clamp(TOP - (mineAt * ROW_H - viewH / 2), minY, TOP);
@@ -122,14 +126,21 @@ export class LeaderboardScene extends Phaser.Scene {
     const hero = r.hero && HERO_BY_ID[r.hero] ? `hero_portrait:${r.hero}` : null;
     if (hero && this.textures.exists(hero)) parts.push(this.add.image(ax, y, hero).setDisplaySize(46, 46));
     parts.push(this.add.image(ax, y, "ui:avatar_frame").setDisplaySize(74, 74));
-    // League badge on the avatar's corner.
-    parts.push(leagueBadge(this, ax + 28, y + 22, 36, leagueFor(r.trophies)));
+    // League badge on the avatar's corner (the ranked tier on the ranked board).
+    const rating = r.rating ?? PVP.rules.ratingStart;
+    parts.push(this.by === "rating" ? tierBadge(this, ax + 28, y + 22, 36, tierFor(rating)) : leagueBadge(this, ax + 28, y + 22, 36, leagueFor(r.trophies)));
 
     const name = r.name.length > 18 ? `${r.name.slice(0, 17)}…` : r.name;
     parts.push(txt(this, ax + 52, y, isMe ? `${name} (you)` : name, WIDE ? 32 : 28, isMe ? "#fff4c2" : "#ffffff", [0, 0.5]));
 
     // The ranked value, with the other one small underneath.
     const vx = left + w - 40;
+    if (this.by === "rating") {
+      const tier = tierFor(rating);
+      parts.push(txt(this, vx, y - 12, fmt(rating), 32, tier.color, [1, 0.5]));
+      parts.push(txt(this, vx, y + 22, tier.name, 18, "#8f9ad0", [1, 0.5]));
+      return parts;
+    }
     const [main, icon, sub] =
       this.by === "wave" ? [`Wave ${fmt(r.bestWave)}`, "ui:wave_horn", `${fmt(r.trophies)} trophies`] : [fmt(r.trophies), "item:trophy", `best wave ${fmt(r.bestWave)}`];
     const mainT = txt(this, vx, y - 12, main, 32, "#ffd93b", [1, 0.5]);

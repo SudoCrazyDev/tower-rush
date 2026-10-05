@@ -172,8 +172,9 @@ export async function deleteMail(id: number) {
 }
 
 export interface Leaderboard {
-  by: "trophies" | "wave";
-  rows: { rank: number; id: number; name: string; trophies: number; bestWave: number; hero: string | null }[];
+  by: "trophies" | "wave" | "rating";
+  /** `rating` is the ranked PvP rating (null for an account that predates it). */
+  rows: { rank: number; id: number; name: string; trophies: number; bestWave: number; rating: number | null; hero: string | null }[];
   /** Ranked players on this board. */
   total: number;
   /** The signed-in player's place (null when they have 0 on this board). */
