@@ -6,6 +6,7 @@ document and a promo kit for social media.
 | Version | Title | Status | Design doc | Promo kit |
 |---|---|---|---|---|
 | v1.1.0 | **Supporting Cast Arrival** | Live (2026-10-06) | [README.md](v1.1-supporting-cast-arrival/README.md) | [PROMO.md](v1.1-supporting-cast-arrival/PROMO.md) |
+| v1.2.0 | **Stories** | Design (Stories 1–2; Story 3 being written; on hold for art; promo rendered with placeholders) | [README.md](v1.2-stories/README.md) | [PROMO.md](v1.2-stories/PROMO.md) |
 
 ## Conventions
 
