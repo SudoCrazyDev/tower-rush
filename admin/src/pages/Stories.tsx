@@ -125,6 +125,14 @@ export function StoriesPage() {
                           <>
                             Event deck, pick {c.eventDeck.pick} of {c.eventDeck.units.length} at level{" "}
                             <Num value={c.eventDeck.level} min={1} width={50} onChange={(v) => editChapter(si, ci, (x) => void (x.eventDeck!.level = Math.round(v)))} />
+                            , at least{" "}
+                            <Num
+                              value={c.eventDeck.minRoles?.Mercenary ?? 0}
+                              min={0}
+                              width={44}
+                              onChange={(v) => editChapter(si, ci, (x) => void (x.eventDeck!.minRoles = { ...x.eventDeck!.minRoles, Mercenary: Math.round(v) }))}
+                            />{" "}
+                            Mercenary
                           </>
                         ) : c.rules ? (
                           <>

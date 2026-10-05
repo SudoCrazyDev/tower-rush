@@ -51,6 +51,17 @@ export interface EventDeck {
   units: string[];
   pick: number;
   level: number;
+  /** The pick needs at least this many units of each role, e.g. { Mercenary: 1 }. */
+  minRoles?: Record<string, number>;
+}
+
+/** What's wrong with an Event deck pick so far, or null when it's ready. */
+export function eventPickProblem(ed: EventDeck, pick: string[]): string | null {
+  for (const [role, n] of Object.entries(ed.minRoles ?? {})) {
+    const have = pick.filter((id) => UNIT_BY_ID[id]?.role === role).length;
+    if (have < n) return `Pick at least ${n} ${role}${n > 1 ? "s" : ""}`;
+  }
+  return pick.length === ed.pick ? null : `Pick ${ed.pick} units`;
 }
 
 /** A first-clear reward: gold, gems, a chest, plus cards and a profile badge. */
@@ -249,7 +260,7 @@ const CHAORRUPTION: StoryDef = {
       art: "arena_corrupted_candy_kingdom",
       corruption: 0.85,
       hpScale: 1.7,
-      eventDeck: { units: KNIGHTS, pick: 5, level: 6 },
+      eventDeck: { units: KNIGHTS, pick: 5, level: 6, minRoles: { Mercenary: 1 } },
       intro: [panel("s2_p1_road", "Muse is safe, but the corruption keeps spreading.", "The Knights of the Candy Crown ride out with a band of hired swords.")],
       waves: [
         w("gummy_bear 10, candy_corn_runner 4", { bark: say("pentagonal_knight", "Form up! Mercenaries on the edges.") }),
@@ -274,7 +285,7 @@ const CHAORRUPTION: StoryDef = {
       tint: "#b8ffb0",
       corruption: 0.9,
       hpScale: 1.85,
-      eventDeck: { units: KNIGHTS, pick: 5, level: 7 },
+      eventDeck: { units: KNIGHTS, pick: 5, level: 7, minRoles: { Mercenary: 1 } },
       intro: [panel("s2_p2_marsh", "The road sinks into the Sour Marsh.", "Something huge stirs under the sour green water.")],
       waves: [
         w("sprinkle_swarm 8, gummy_bear 6", { bark: say("pentagonal_knight", "Watch your footing. This marsh eats boots.") }),
@@ -303,7 +314,7 @@ const CHAORRUPTION: StoryDef = {
       art: "arena_jawbreaker_core",
       corruption: 1,
       hpScale: 2,
-      eventDeck: { units: KNIGHTS, pick: 5, level: 8 },
+      eventDeck: { units: KNIGHTS, pick: 5, level: 8, minRoles: { Mercenary: 1 } },
       intro: [panel("s2_p3_crater", "At the heart of the chaos: the Chaos Jawbreaker.", "Its core is cracking with violet light.")],
       waves: [
         w("sprinkle_swarm 10, sour_shard 4", { bark: say("pentagonal_knight", "There it is. The source of it all.") }),
@@ -538,6 +549,8 @@ export function chapterDeck(
     if (p.length !== ed.pick || new Set(p).size !== ed.pick || !p.every((id) => ed.units.includes(id) && UNIT_BY_ID[id]?.enabled)) {
       return { problem: `Pick ${ed.pick} different units from the Event deck` };
     }
+    const why = eventPickProblem(ed, p);
+    if (why) return { problem: why };
     return { deck: [...p], levels: Object.fromEntries(p.map((id) => [id, ed.level])) };
   }
   const deck = [...own.deck];
@@ -600,6 +613,11 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
         if (c.eventDeck.units.length < c.eventDeck.pick) errs.push(`${wc}: Event deck has fewer units than it picks`);
         for (const id of c.eventDeck.units) if (!ids.units.has(id)) errs.push(`${wc}: unknown Event deck unit "${id}"`);
         num(c.eventDeck.level, `${wc} Event deck level`, 1);
+        for (const [role, n] of Object.entries(c.eventDeck.minRoles ?? {})) {
+          num(n, `${wc} Event deck minimum ${role}`, 0);
+          if (c.eventDeck.units.filter((id) => UNIT_BY_ID[id]?.role === role).length < n) errs.push(`${wc}: Event deck has fewer ${role} units than it requires`);
+        }
+        if (Object.values(c.eventDeck.minRoles ?? {}).reduce((a, b) => a + b, 0) > c.eventDeck.pick) errs.push(`${wc}: Event deck requires more units than it picks`);
       }
       if (c.rules) for (const id of c.rules.requiredUnits) if (!ids.units.has(id)) errs.push(`${wc}: unknown required unit "${id}"`);
     }

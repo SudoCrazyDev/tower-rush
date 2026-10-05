@@ -4,12 +4,12 @@ import { music, sfx } from "../audio";
 import { claimPlay, releasePlay } from "../play";
 import { profile, startStory, cardLevel } from "../save";
 import { UNIT_BY_ID } from "../data/units";
-import { W, H, WIDE, txt, button, iconButton, modal, pressable, cardView, attempt, onSwipe } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, modal, pressable, cardView, attempt, onSwipe, ornateFrame } from "../ui";
 import { cover, topBar } from "./LobbyScene";
-import { plate, starRow, storyPanels } from "./storyUi";
+import { starRow, storyPanels } from "./storyUi";
 import { effectSummary, unitEffectSummary } from "../../../shared/effects.ts";
 import { rarityIndex } from "../../../shared/units.ts";
-import { BOOK, chapterLock, chapterWon, deckChecks, storyById, storyFinished, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
+import { BOOK, chapterLock, chapterWon, deckChecks, eventPickProblem, storyById, storyFinished, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
 
 const PICK_KEY = "tower-rush-story-pick";
 /** The last Event deck picked for each chapter on this device. */
@@ -130,10 +130,11 @@ export class StoryScene extends Phaser.Scene {
   private chapterCard(s: StoryDef, c: StoryChapter, i: number, cw: number, ch: number) {
     const lock = chapterLock(profile.story, profile.trophies, c.id);
     const best = profile.story.chapters[c.id]?.stars ?? 0;
-    const parts: Phaser.GameObjects.GameObject[] = [plate(this, cw, ch, best ? 0xffd93b : lock ? 0x8a8fa8 : 0xf2b630, 0.9)];
-    const iw = cw - 40;
+    const iw = cw - 56;
     const ih = (iw * 752) / 1344;
-    const iy = -ch / 2 + 20 + ih / 2;
+    const iy = -ch / 2 + 26 + ih / 2;
+    const { frame, trim } = ornateFrame(this, cw, ch, !!lock, { x: -iw / 2, y: iy - ih / 2, w: iw, h: ih });
+    const parts: Phaser.GameObjects.GameObject[] = [frame];
     const key = `story:panels/${c.intro[0]?.image}`;
     if (c.intro[0] && this.textures.exists(key)) {
       const img = this.add.image(0, iy, key).setDisplaySize(iw, ih);
@@ -145,6 +146,7 @@ export class StoryScene extends Phaser.Scene {
       pad.setScale(100 / Math.max(pad.width, pad.height));
       parts.push(pad);
     }
+    parts.push(trim);
     const y = iy + ih / 2;
     parts.push(txt(this, 0, y + 40, `CHAPTER ${i + 1} OF ${s.chapters.length}`, 24, "#ffd27a"));
     parts.push(txt(this, 0, y + 92, c.title, 38, "#fff4c2").setWordWrapWidth(cw - 40));
@@ -205,15 +207,17 @@ export class StoryScene extends Phaser.Scene {
     const info = txt(this, cx, top + mh - 250, "Tap a card to pick it. Knights help their neighbours;\nMercenaries hit hard but bother them.", 22, "#ffffff").setWordWrapWidth(620);
     const count = txt(this, cx, top + mh - 170, "", 26, "#ffd93b");
     const play = button(this, cx, top + mh - 90, 360, 96, "TO BATTLE!", "green", () => {
-      if (picked.size !== ed.pick) return;
+      if (eventPickProblem(ed, [...picked])) return void sfx("error");
       savePick(c.id, [...picked]);
       m.close();
       onPlay([...picked]);
     });
     const marks = new Map<string, Phaser.GameObjects.GameObject[]>();
     const refresh = () => {
-      count.setText(`Picked ${picked.size} / ${ed.pick}`);
-      play.setEnabled(picked.size === ed.pick);
+      const why = picked.size === ed.pick ? eventPickProblem(ed, [...picked]) : null;
+      const needs = Object.entries(ed.minRoles ?? {}).map(([role, n]) => `at least ${n} ${role}${n > 1 ? "s" : ""}`);
+      count.setText(why ?? `Picked ${picked.size} / ${ed.pick}${needs.length ? ` · ${needs.join(", ")}` : ""}`).setColor(why ? "#ff8080" : "#ffd93b");
+      play.setEnabled(!eventPickProblem(ed, [...picked]));
       for (const [id, objs] of marks) for (const o of objs) (o as Phaser.GameObjects.Image).setVisible(picked.has(id));
     };
     ed.units.forEach((id, i) => {

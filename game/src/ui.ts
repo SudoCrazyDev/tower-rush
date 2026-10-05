@@ -76,6 +76,39 @@ export function onSwipe(scene: Phaser.Scene, area: Phaser.Geom.Rectangle, root: 
   });
 }
 
+/**
+ * A card's ornate frame: a layered gold rim with blue gems on the corners and sides (grey while
+ * locked), centred on 0,0. `art` is the art window to edge in gold; `trim` (that edge and the
+ * gems) goes above the art and `frame` below it.
+ */
+export function ornateFrame(scene: Phaser.Scene, w: number, h: number, locked: boolean, art?: { x: number; y: number; w: number; h: number }) {
+  const [dark, gold, light] = locked ? [0x3e4252, 0x8a8fa8, 0xd0d4e0] : [0x6b3f08, 0xf2b630, 0xfff0a8];
+  const frame = scene.add.graphics();
+  frame.fillStyle(NAVY, 0.92).fillRoundedRect(-w / 2, -h / 2, w, h, 36);
+  frame.lineStyle(16, dark, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 36);
+  frame.lineStyle(9, gold, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 36);
+  frame.lineStyle(2, light, 0.9).strokeRoundedRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, 38);
+  frame.lineStyle(2, dark, 1).strokeRoundedRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20, 28);
+  const trim = scene.add.graphics();
+  if (art) {
+    trim.lineStyle(10, dark, 1).strokeRoundedRect(art.x - 2, art.y - 2, art.w + 4, art.h + 4, 14);
+    trim.lineStyle(5, gold, 1).strokeRoundedRect(art.x - 2, art.y - 2, art.w + 4, art.h + 4, 14);
+    trim.lineStyle(2, light, 0.8).strokeRoundedRect(art.x + 2, art.y + 2, art.w - 4, art.h - 4, 11);
+  }
+  const V = Phaser.Math.Vector2;
+  const diamond = (x: number, y: number, r: number) => {
+    const pts = [new V(x, y - r * 1.3), new V(x + r, y), new V(x, y + r * 1.3), new V(x - r, y)];
+    const grow = (k: number) => pts.map((p) => new V(x + (p.x - x) * k, y + (p.y - y) * k));
+    trim.fillStyle(dark, 1).fillPoints(grow(1.35), true);
+    trim.fillStyle(gold, 1).fillPoints(grow(1.15), true);
+    trim.fillStyle(locked ? 0x9aa0b8 : 0x3f8cff, 1).fillPoints(pts, true);
+    trim.fillStyle(0xffffff, 0.75).fillPoints([pts[0], new V(x + r * 0.35, y - r * 0.2), new V(x, y), new V(x - r * 0.35, y - r * 0.2)], true);
+  };
+  for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) diamond(x * (w / 2 - 8), y * (h / 2 - 8), 13);
+  for (const x of [-1, 1]) diamond((x * w) / 2, h * 0.09, 11);
+  return { frame, trim };
+}
+
 export interface Button extends Phaser.GameObjects.Container {
   label: Phaser.GameObjects.Text;
   setEnabled(on: boolean): Button;

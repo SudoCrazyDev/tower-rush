@@ -236,7 +236,8 @@ the hook for Story 3 (6.1).
 
 ### 5.2 The Event deck
 - The player **can't use their own deck**. Before each chapter they **pick 5 of the 9 Event
-  units** (the normal deck size).
+  units** (the normal deck size), with **at least 1 Mercenary** (`minRoles` in the config;
+  the server rejects a pick without one).
 - **Fixed levels:** every Event unit is at a set story level (chapter 1: Lv 6, chapter 2:
   Lv 7, chapter 3: Lv 8, all config values). Card levels and gems don't matter here.
 - The player's **hero** still comes along. (Open question: lock this to one story hero too?)
