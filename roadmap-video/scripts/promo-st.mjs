@@ -3,8 +3,8 @@
 //
 // Art that doesn't exist yet is drawn as a placeholder. Once a unit, monster or boss has art
 // in game/public/assets (portraits/, monsters/ or bosses/ as <id>.webp), or the Event frame
-// (cards/frame_event.webp) or Candy Palace arena (locations/arena_candy_palace.webp) exists,
-// re-run this script and the graphics pick it up.
+// (cards/frame_event.webp), Candy Palace arena (locations/arena_candy_palace.webp) or a Story 3
+// arena (locations/<arena id>.webp) exists, re-run this script and the graphics pick it up.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
@@ -14,7 +14,6 @@ mkdirSync(`${pub}/portraits`, { recursive: true });
 
 const copy = (from, to) => cpSync(`${art}/${from}`, `${pub}/${to}`);
 copy("ui/logo.webp", "logo.webp");
-copy("ui/padlock.webp", "padlock.webp");
 copy("cards/frame_epic.webp", "frame_epic.webp");
 copy("locations/arena_candy_land.webp", "arena_candy_land.webp");
 
@@ -25,6 +24,7 @@ const optional = (from, to) => {
 };
 const eventFrame = optional("cards/frame_event.webp", "frame_event.webp");
 const palace = optional("locations/arena_candy_palace.webp", "arena_candy_palace.webp");
+const arenas = ["arena_upside_down_village", "arena_hollow_woods", "arena_first_rift"].filter((id) => optional(`locations/${id}.webp`, `${id}.webp`));
 
 const ids = [
   "princess_muse", "pentagonal_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight",
@@ -32,10 +32,13 @@ const ids = [
   "gummy_bear", "candy_corn_runner", "jelly_bean_blob", "cotton_candy_puff", "chocolate_golem",
   "peppermint_turtle", "licorice_medic", "candy_pinata", "sprinkle_swarm", "sour_shard", "chaos_taffy",
   "gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker",
+  "corrupted_villager", "corrupted_courier", "corrupted_farmer", "corrupted_fisherman", "corrupted_lumberjack",
+  "corrupted_herbalist", "corrupted_merchant", "chaos_eye",
+  "corrupted_fae", "corrupted_bear", "portal_wizard",
 ];
 const portraits = ids.filter((id) => ["portraits", "monsters", "bosses"].some((dir) => optional(`${dir}/${id}.webp`, `portraits/${id}.webp`)));
-writeFileSync("src/promo/stories-art.json", JSON.stringify({ portraits, eventFrame, palace }, null, 2) + "\n");
-console.log(`Art found for ${portraits.length}/${ids.length}; event frame: ${eventFrame}; palace: ${palace}. The rest use placeholders.`);
+writeFileSync("src/promo/stories-art.json", JSON.stringify({ portraits, eventFrame, palace, arenas }, null, 2) + "\n");
+console.log(`Art found for ${portraits.length}/${ids.length}; event frame: ${eventFrame}; palace: ${palace}; Story 3 arenas: ${arenas.length}/3. The rest use placeholders.`);
 
 const out = "../docs/features/v1.2-stories/promo";
 mkdirSync(out, { recursive: true });

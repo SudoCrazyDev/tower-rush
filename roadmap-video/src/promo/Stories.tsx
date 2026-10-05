@@ -3,10 +3,12 @@ import { AbsoluteFill, Img, staticFile } from "remotion";
 import { loadFont as loadLilita } from "@remotion/google-fonts/LilitaOne";
 import { loadFont as loadNunito } from "@remotion/google-fonts/Nunito";
 import {
+  BOOK,
   BOSSES,
   CANDY_FOLK,
   CHAOS_BORN,
   EVENT_DECK,
+  HAS_ARENA,
   HAS_ART,
   HAS_EVENT_FRAME,
   HAS_PALACE,
@@ -19,6 +21,8 @@ import {
   PINK_LIGHT,
   ROGUE,
   STORIES,
+  STORY3_RULES,
+  VILLAGERS,
   VIOLET,
   VIOLET_DARK,
   type Foe,
@@ -174,10 +178,10 @@ function UnitCard({ u, w, name = true }: { u: StoryUnit; w: number; name?: boole
 }
 
 /** A round token for a monster or boss, with a violet corruption glow. */
-function FoeToken({ f, w, label = true }: { f: Foe; w: number; label?: boolean }) {
+function FoeToken({ f, w, label = true, fs = w * 0.15, labelW = w * 1.5 }: { f: Foe; w: number; label?: boolean; fs?: number; labelW?: number }) {
   const art = HAS_ART.has(f.id);
   return (
-    <div style={{ width: w, display: "flex", flexDirection: "column", alignItems: "center", gap: w * 0.05 }}>
+    <div style={{ width: w, display: "flex", flexDirection: "column", alignItems: "center", gap: fs / 3 }}>
       <div
         style={{
           position: "relative",
@@ -195,8 +199,8 @@ function FoeToken({ f, w, label = true }: { f: Foe; w: number; label?: boolean }
       >
         {art ? <Img src={staticFile(`st/portraits/${f.id}.webp`)} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <StoryGlyph glyph={f.glyph} size={w * 0.72} />}
       </div>
-      {label && <div style={{ ...chunky(w * 0.15), width: w * 1.5 }}>{f.name}</div>}
-      {label && <div style={{ ...body(w * 0.12, "#d9c2ff"), textAlign: "center", marginTop: -w * 0.04 }}>{f.trait}</div>}
+      {label && <div style={{ ...chunky(fs), width: labelW }}>{f.name}</div>}
+      {label && <div style={{ ...body(fs * 0.8, "#d9c2ff"), textAlign: "center", width: labelW, marginTop: -fs * 0.27 }}>{f.trait}</div>}
     </div>
   );
 }
@@ -230,6 +234,9 @@ const Logo = ({ w }: { w: number }) => <Img src={staticFile("st/logo.webp")} sty
 
 const Tagline = ({ size }: { size: number }) => <div style={{ ...chunky(size, PINK_LIGHT), fontStyle: "italic" }}>The Candy Kingdom is falling to chaos.</div>;
 
+/** Names the story set: Book 1, The Chosen. */
+const BookLine = ({ size }: { size: number }) => <div style={chunky(size, GOLD)}>{BOOK.toUpperCase()}</div>;
+
 function Panel({ children, border = GOLD, pad = 30, style }: { children: React.ReactNode; border?: string; pad?: number; style?: React.CSSProperties }) {
   return (
     <div style={{ background: `${PANEL}ee`, border: `6px solid ${border}`, borderRadius: 30, boxShadow: `0 10px 0 ${NAVY}`, padding: pad, ...style }}>
@@ -238,9 +245,28 @@ function Panel({ children, border = GOLD, pad = 30, style }: { children: React.R
   );
 }
 
-/** A story's cover: number, title, its key unit and the reward. Story 3 is locked. */
+/** Story 3's cover picture: the upside-down village (the arena art once it exists). */
+function VillageScene({ w }: { w: number }) {
+  const id = "arena_upside_down_village";
+  const art = HAS_ARENA.has(id);
+  return (
+    <div style={{ position: "relative", width: w, height: w, filter: `drop-shadow(0 ${w * 0.04}px 0 ${NAVY})` }}>
+      <div style={{ position: "absolute", inset: 0, borderRadius: w * 0.13, border: `${w * 0.06}px solid #c24dff`, boxShadow: `inset 0 0 0 ${w * 0.018}px ${NAVY}, 0 0 0 ${w * 0.018}px ${NAVY}`, overflow: "hidden", background: "#2a1450" }}>
+        {art ? (
+          <Img src={staticFile(`st/${id}.webp`)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <StoryGlyph glyph="upside_village" size={w * 0.9} />
+          </div>
+        )}
+      </div>
+      {!art && <Tbd w={w} />}
+    </div>
+  );
+}
+
+/** A story's cover: number, title, its key picture, and the reward (or Story 3's cliffhanger). */
 function StoryCover({ s, w }: { s: StoryDef; w: number }) {
-  const locked = s.n === 3;
   const unit = s.n === 1 ? MUSE : s.n === 2 ? PENTAGONAL : null;
   return (
     <div
@@ -248,8 +274,8 @@ function StoryCover({ s, w }: { s: StoryDef; w: number }) {
         width: w,
         height: w * 1.38,
         borderRadius: w * 0.09,
-        border: `${w * 0.03}px solid ${locked ? "#4a5290" : s.color}`,
-        background: locked ? `linear-gradient(${NAVY}, #0b0d26)` : `linear-gradient(160deg, ${s.color}55 0%, ${PANEL} 55%, ${NAVY} 100%)`,
+        border: `${w * 0.03}px solid ${s.color}`,
+        background: `linear-gradient(160deg, ${s.color}55 0%, ${PANEL} 55%, ${NAVY} 100%)`,
         boxShadow: `0 ${w * 0.035}px 0 ${NAVY}, 0 0 0 ${w * 0.012}px ${NAVY}`,
         display: "flex",
         flexDirection: "column",
@@ -258,12 +284,14 @@ function StoryCover({ s, w }: { s: StoryDef; w: number }) {
         gap: w * 0.03,
       }}
     >
-      <div style={chunky(w * 0.09, locked ? "#7f8bc9" : GOLD)}>STORY {s.n}</div>
-      <div style={{ ...chunky(w * 0.13, locked ? "#7f8bc9" : "#fff"), minHeight: w * 0.28, display: "flex", alignItems: "center" }}>{s.title}</div>
-      <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-        {locked ? <Img src={staticFile("st/padlock.webp")} style={{ width: w * 0.42 }} /> : <UnitCard u={unit!} w={w * 0.56} name={false} />}
-      </div>
-      <div style={{ ...body(w * 0.065, locked ? "#7f8bc9" : PINK_LIGHT), textAlign: "center" }}>{locked ? "Coming soon" : `Reward: ${s.reward}`}</div>
+      <div style={chunky(w * 0.09, GOLD)}>STORY {s.n}</div>
+      <div style={{ ...chunky(w * 0.13), minHeight: w * 0.28, display: "flex", alignItems: "center" }}>{s.title}</div>
+      <div style={{ flex: 1, display: "flex", alignItems: "center" }}>{unit ? <UnitCard u={unit} w={w * 0.56} name={false} /> : <VillageScene w={w * 0.56} />}</div>
+      {s.cliffhanger ? (
+        <div style={{ ...body(w * 0.062, "#e2c8ff"), textAlign: "center", fontStyle: "italic" }}>"{s.cliffhanger}"</div>
+      ) : (
+        <div style={{ ...body(w * 0.065, PINK_LIGHT), textAlign: "center" }}>Reward: {s.reward}</div>
+      )}
     </div>
   );
 }
@@ -288,8 +316,9 @@ export const StKeyArt = () => (
         <Logo w={340} />
         <Ribbon text="v1.2 UPDATE" size={40} />
         <Title size={150} />
+        <BookLine size={46} />
         <Tagline size={44} />
-        <div style={{ ...body(30), textAlign: "center" }}>Story mode is here. Two connected stories, three new cards, and new candy monsters and bosses.</div>
+        <div style={{ ...body(30), textAlign: "center" }}>Story mode is here. Three connected stories, three new cards, and new monsters and bosses.</div>
       </div>
       <Covers w={300} gap={30} />
     </AbsoluteFill>
@@ -305,6 +334,7 @@ export const StSquare = () => (
         <Ribbon text="v1.2" size={40} />
       </div>
       <Title size={120} />
+      <BookLine size={40} />
       <Covers w={290} gap={24} />
       <Tagline size={40} />
     </AbsoluteFill>
@@ -318,6 +348,7 @@ export const StStory = () => (
       <Logo w={400} />
       <Ribbon text="v1.2 UPDATE" size={44} />
       <Title size={170} />
+      <BookLine size={52} />
       <Tagline size={44} />
       <Covers w={300} gap={22} />
       <Button text="PLAY NOW" size={60} />
@@ -370,36 +401,43 @@ export const StBanner = () => (
 export const StInfoPath = () => (
   <AbsoluteFill>
     <Backdrop corrupt={0.5} dim={0.6} cracks={false} />
-    <AbsoluteFill style={{ alignItems: "center", padding: "48px 56px", gap: 22 }}>
-      <Title size={96} brand />
-      <div style={{ ...body(32, PINK_LIGHT), textAlign: "center" }}>Three canon stories, played in order.</div>
-      {STORIES.map((s) => {
-        const locked = s.n === 3;
-        return (
-          <Panel key={s.n} border={locked ? "#4a5290" : s.color} pad={22} style={{ width: "100%" }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-              <div style={{ ...chunky(48, locked ? "#7f8bc9" : "#fff"), textAlign: "left" }}>
-                {s.n}. {s.title}
-              </div>
-              <div style={body(26, locked ? "#7f8bc9" : GOLD)}>{locked ? "🔒 Coming soon" : s.deck}</div>
+    <AbsoluteFill style={{ alignItems: "center", padding: "40px 56px", gap: 18 }}>
+      <Title size={84} brand />
+      <BookLine size={44} />
+      <div style={{ ...body(30, PINK_LIGHT), textAlign: "center", marginTop: -10 }}>Three canon stories, played in order.</div>
+      {STORIES.map((s) => (
+        <Panel key={s.n} border={s.color} pad={20} style={{ width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <div style={{ ...chunky(46), textAlign: "left" }}>
+              {s.n}. {s.title}
             </div>
-            {!locked && (
-              <>
-                <div style={{ display: "flex", gap: 14, marginTop: 16 }}>
-                  {s.chapters.map((c, i) => (
-                    <div key={c.title} style={{ flex: 1, background: NAVY, borderRadius: 18, border: `4px solid ${s.color}88`, padding: "12px 14px" }}>
-                      <div style={body(20, "#9fb2ff")}>CHAPTER {i + 1} · {c.waves} WAVES</div>
-                      <div style={{ ...body(25), marginTop: 4 }}>{c.title}</div>
-                      <div style={{ ...body(21, "#d9c2ff"), marginTop: 6 }}>👑 {c.boss}</div>
-                    </div>
-                  ))}
+            <div style={body(26, GOLD)}>{s.deck}</div>
+          </div>
+          <div style={{ display: "flex", gap: 14, marginTop: 14 }}>
+            {s.chapters.map((c, i) => {
+              const arena = c.arena && HAS_ARENA.has(c.arena) ? c.arena : null;
+              return (
+                <div
+                  key={c.title}
+                  style={{
+                    flex: 1,
+                    background: arena ? `linear-gradient(${NAVY}dd, ${NAVY}dd), url(${staticFile(`st/${arena}.webp`)}) center / cover` : NAVY,
+                    borderRadius: 18,
+                    border: `4px solid ${s.color}88`,
+                    padding: "10px 14px",
+                  }}
+                >
+                  <div style={body(20, "#9fb2ff")}>CHAPTER {i + 1} · {c.waves} WAVES</div>
+                  <div style={{ ...body(24), marginTop: 2 }}>{c.title}</div>
+                  <div style={{ ...body(20, "#d9c2ff"), marginTop: 4 }}>👑 {c.boss}</div>
                 </div>
-                <div style={{ ...body(27, PINK_LIGHT), marginTop: 14 }}>🎁 Reward: {s.reward}</div>
-              </>
-            )}
-          </Panel>
-        );
-      })}
+              );
+            })}
+          </div>
+          <div style={{ ...body(25, PINK_LIGHT), marginTop: 12 }}>🎁 Reward: {s.reward}</div>
+          {s.cliffhanger && <div style={{ ...body(24, "#e2c8ff"), marginTop: 4, fontStyle: "italic" }}>"{s.cliffhanger}" To be continued...</div>}
+        </Panel>
+      ))}
       <div style={{ ...body(26, "#cfe0ff"), textAlign: "center" }}>Finish a story to unlock the next. Win chapters for up to 3 stars.</div>
       <Footer />
     </AbsoluteFill>
@@ -471,14 +509,14 @@ export const StInfoMuse = () => {
 /** Story 2's Event deck: Knights vs Mercenaries, and the status effects. */
 export const StInfoDeck = () => {
   const row = (u: StoryUnit) => (
-    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 14, background: NAVY, borderRadius: 18, padding: "8px 12px", border: `3px solid ${SIDE_COLOR[u.side]}66` }}>
-      <UnitCard u={u} w={112} name={false} />
+    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, background: NAVY, borderRadius: 18, padding: "6px 12px", border: `3px solid ${SIDE_COLOR[u.side]}66` }}>
+      <UnitCard u={u} w={92} name={false} />
       <div style={{ flex: 1 }}>
-        <div style={{ ...body(25), color: "#fff" }}>
+        <div style={{ ...body(23), color: "#fff" }}>
           {u.name} {u.rarity === "epic" && <span style={{ color: GOLD }}>★</span>}
         </div>
-        <div style={body(19, "#9fb2ff")}>{u.stats}</div>
-        <div style={body(20, "#e8ecff")}>{u.effect}</div>
+        <div style={body(18, "#9fb2ff")}>{u.stats}</div>
+        <div style={{ ...body(19, "#e8ecff"), lineHeight: 1.18 }}>{u.effect}</div>
       </div>
     </div>
   );
@@ -487,39 +525,53 @@ export const StInfoDeck = () => {
   return (
     <AbsoluteFill>
       <Backdrop corrupt={0.9} dim={0.65} cracks={false} />
-      <AbsoluteFill style={{ alignItems: "center", padding: "40px 40px", gap: 14 }}>
-        <div style={chunky(36, PINK_LIGHT)}>STORY 2 · CHAORRUPTION</div>
-        <div style={chunky(70)}>THE EVENT DECK</div>
-        <div style={{ ...body(26, "#cfe0ff"), textAlign: "center" }}>Your deck stays home. Pick 5 of 9. Everyone plays at the same level.</div>
+      <AbsoluteFill style={{ alignItems: "center", padding: "34px 40px", gap: 12 }}>
+        <div style={chunky(32, PINK_LIGHT)}>STORY 2 · CHAORRUPTION</div>
+        <div style={chunky(62)}>THE EVENT DECK</div>
+        <div style={{ ...body(24, "#cfe0ff"), textAlign: "center" }}>Your deck stays home. Pick 5 of 9. Everyone plays at the same level.</div>
         <div style={{ display: "flex", gap: 18, width: "100%" }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={chunky(38, KNIGHT)}>KNIGHTS</div>
-            <div style={{ ...body(19, "#cfe0ff"), textAlign: "center" }}>Fight for each other</div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={chunky(34, KNIGHT)}>KNIGHTS</div>
+            <div style={{ ...body(18, "#cfe0ff"), textAlign: "center", marginTop: -6 }}>Fight for each other</div>
             {knights.map(row)}
-            <Panel border={GOLD} pad={14} style={{ marginTop: 6 }}>
-              <div style={chunky(26, GOLD)}>PLACEMENT IS THE PUZZLE</div>
-              <div style={{ ...body(20), marginTop: 6 }}>Keep Mercenaries away from your best unit, or put an Aegis Knight next to them.</div>
+            <Panel border={GOLD} pad={12} style={{ marginTop: 4 }}>
+              <div style={chunky(24, GOLD)}>PLACEMENT IS THE PUZZLE</div>
+              <div style={{ ...body(19), marginTop: 4 }}>Keep Mercenaries away from your best unit, or put an Aegis Knight next to them.</div>
             </Panel>
           </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={chunky(38, MERC)}>MERCENARIES</div>
-            <div style={{ ...body(19, "#cfe0ff"), textAlign: "center" }}>Fight for themselves</div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={chunky(34, MERC)}>MERCENARIES</div>
+            <div style={{ ...body(18, "#cfe0ff"), textAlign: "center", marginTop: -6 }}>Fight for themselves</div>
             {mercs.map(row)}
-            <Panel border={VIOLET} pad={14} style={{ marginTop: 6 }}>
-              <div style={chunky(26, "#d9c2ff")}>NEW: STATUS EFFECTS</div>
+            <Panel border={VIOLET} pad={12} style={{ marginTop: 4 }}>
+              <div style={chunky(24, "#d9c2ff")}>NEW: STATUS EFFECTS</div>
               {[
                 ["Rally", "+100% attack speed", GOLD],
                 ["Irritation", "attacks miss", "#ff8a8a"],
                 ["Fatigue", "attacks slower", "#b8c0e0"],
                 ["Shellshock", "stunned briefly", "#ffd0a0"],
               ].map(([n, t, c]) => (
-                <div key={n} style={{ ...body(21), marginTop: 4 }}>
+                <div key={n} style={{ ...body(20), marginTop: 2 }}>
                   <span style={{ color: c }}>{n}</span>: {t}
                 </div>
               ))}
             </Panel>
           </div>
         </div>
+        <Panel border={STORIES[2].color} pad={18} style={{ width: "100%", display: "flex", alignItems: "center", gap: 18, marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <UnitCard u={PENTAGONAL} w={110} name={false} />
+            <UnitCard u={ROGUE} w={110} name={false} />
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ ...chunky(26, "#e2c8ff"), textAlign: "left" }}>STORY 3 · THE BEGINNING: DECK RULES</div>
+            <div style={body(20)}>
+              Your own deck, with rules. <span style={{ color: GOLD }}>Required:</span> {STORY3_RULES.required.join(" + ")}.{" "}
+              <span style={{ color: "#ff8a8a" }}>Banned:</span> {STORY3_RULES.banned.join(" and ")} units.
+            </div>
+            <div style={body(19, "#9fb2ff")}>The two knights fight at least at story level (Lv 6 to 8). The rift's wards turn legends away.</div>
+          </div>
+        </Panel>
         <div style={{ marginTop: "auto" }}>
           <Footer />
         </div>
@@ -590,45 +642,42 @@ export const StInfoKnights = () => {
           {card(PENTAGONAL, "RALLY", "Surround it with fast attackers.")}
           {card(ROGUE, "IRRITATION", "Keep it on an edge, away from your carry.")}
         </div>
-        <div style={{ ...body(26, "#cfe0ff"), textAlign: "center" }}>Fight beside them in Chaorruption, then keep them. Both drop from chests afterwards.</div>
+        <div style={{ ...body(26, "#cfe0ff"), textAlign: "center" }}>Fight beside them in Chaorruption, then keep them. Both drop from chests afterwards, and Story 3 needs them both.</div>
         <Footer />
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-/** The bestiary: candy folk, chaos-born and bosses. */
-export const StInfoBestiary = () => (
-  <AbsoluteFill>
-    <Backdrop corrupt={1} dim={0.65} cracks={false} />
-    <AbsoluteFill style={{ alignItems: "center", padding: "40px 40px", gap: 14 }}>
-      <div style={chunky(36, PINK_LIGHT)}>v1.2 STORIES</div>
-      <div style={chunky(70)}>THE CORRUPTED</div>
-      <div style={chunky(30, "#d9c2ff")}>CANDY FOLK</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 170px)", columnGap: 70, rowGap: 14 }}>
-        {CANDY_FOLK.map((f) => (
-          <FoeToken key={f.id} f={f} w={170} />
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 40, width: "100%", justifyContent: "center", marginTop: 4 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <div style={chunky(30, "#d9c2ff")}>CHAOS-BORN</div>
-          <div style={{ display: "flex", gap: 60 }}>
-            {CHAOS_BORN.map((f) => (
-              <FoeToken key={f.id} f={f} w={150} />
-            ))}
-          </div>
+/** The bestiary: candy folk, chaos-born, corrupted villagers and bosses. */
+export const StInfoBestiary = () => {
+  const slot = 124;
+  const grid = (foes: Foe[], w: number, sw = slot) => (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${foes.length}, ${sw}px)`, columnGap: 0, justifyItems: "center" }}>
+      {foes.map((f) => (
+        <FoeToken key={f.id} f={f} w={w} fs={sw > slot ? 22 : 20} labelW={sw - 4} />
+      ))}
+    </div>
+  );
+  const heading = (t: string, c = "#d9c2ff") => <div style={chunky(28, c)}>{t}</div>;
+  return (
+    <AbsoluteFill>
+      <Backdrop corrupt={1} dim={0.65} cracks={false} />
+      <AbsoluteFill style={{ alignItems: "center", padding: "36px 40px", gap: 16 }}>
+        <div style={chunky(32, PINK_LIGHT)}>v1.2 STORIES · {BOOK.toUpperCase()}</div>
+        <div style={chunky(64)}>THE CORRUPTED</div>
+        {heading("CANDY FOLK · STORY 1")}
+        {grid(CANDY_FOLK, 108)}
+        {heading("CHAOS-BORN · STORY 2")}
+        {grid(CHAOS_BORN, 120, 190)}
+        {heading("CORRUPTED VILLAGERS · STORY 3")}
+        {grid(VILLAGERS, 108)}
+        {heading("BOSSES", GOLD)}
+        {grid(BOSSES, 112)}
+        <div style={{ marginTop: "auto" }}>
+          <Footer />
         </div>
-      </div>
-      <div style={chunky(30, GOLD)}>BOSSES</div>
-      <div style={{ display: "flex", gap: 46 }}>
-        {BOSSES.map((f) => (
-          <FoeToken key={f.id} f={f} w={150} />
-        ))}
-      </div>
-      <div style={{ marginTop: "auto" }}>
-        <Footer />
-      </div>
+      </AbsoluteFill>
     </AbsoluteFill>
-  </AbsoluteFill>
-);
+  );
+};

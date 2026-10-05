@@ -19,6 +19,34 @@ const ChaosEyes = ({ y = 100, gap = 22 }: { y?: number; gap?: number }) => (
   </g>
 );
 
+/** A violet chaos tentacle curling up from (x, y); `d` = 1 curls right, -1 curls left. */
+const Tentacle = ({ x, y, h = 50, d = 1, w = 12 }: { x: number; y: number; h?: number; d?: number; w?: number }) => {
+  const path = `M${x} ${y} Q${x - d * h * 0.4} ${y - h * 0.5} ${x + d * h * 0.1} ${y - h * 0.8} Q${x + d * h * 0.45} ${y - h * 1.05} ${x + d * h * 0.25} ${y - h * 0.7}`;
+  return (
+    <g>
+      <path d={path} fill="none" stroke={N} strokeWidth={w + 8} strokeLinecap="round" />
+      <path d={path} fill="none" stroke="#8b3dff" strokeWidth={w} strokeLinecap="round" />
+    </g>
+  );
+};
+
+/** A small staring chaos eye. */
+const Eye = ({ x, y, r = 12 }: { x: number; y: number; r?: number }) => (
+  <g>
+    <ellipse cx={x} cy={y} rx={r * 1.4} ry={r} fill="#f4e6ff" stroke={N} strokeWidth={4} />
+    <circle cx={x} cy={y} r={r * 0.6} fill="#8b3dff" stroke={N} strokeWidth={3} />
+    <circle cx={x} cy={y} r={r * 0.25} fill={N} />
+  </g>
+);
+
+/** A plain human head with corrupted eyes, for the villagers. */
+const Head = ({ y = 82, skin = "#f2c6a0" }: { y?: number; skin?: string }) => (
+  <g>
+    <circle cx={100} cy={y} r={36} fill={skin} {...S} />
+    <ChaosEyes y={y + 2} gap={14} />
+  </g>
+);
+
 const Heart = ({ x, y, s = 1, fill = "#ff4fa3" }: { x: number; y: number; s?: number; fill?: string }) => (
   <path transform={`translate(${x} ${y}) scale(${s})`} d="M0 10 C-18 -4 -12 -20 0 -10 C12 -20 18 -4 0 10Z" fill={fill} {...T} />
 );
@@ -259,6 +287,168 @@ const G: Record<Glyph, () => React.ReactElement> = {
       <circle cx={100} cy={100} r={28} fill="#8b3dff" {...T} />
       <path d="M100 18 L92 54 L110 70 L96 100 M170 70 L140 86 L132 112 M40 140 L70 124 L76 100" fill="none" stroke="#e9d2ff" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
       <path d="M100 18 L92 54 L110 70 L96 100 M170 70 L140 86 L132 112 M40 140 L70 124 L76 100" fill="none" stroke={N} strokeWidth={2} />
+    </g>
+  ),
+  villager: () => (
+    <g>
+      <path d="M46 186 Q44 120 100 118 Q156 120 154 186Z" fill="#c9a26b" {...S} />
+      <path d="M80 122 L100 150 L120 122" fill="none" {...T} />
+      <Head />
+      <path d="M64 70 Q100 30 136 70" fill="#7a4a2a" {...T} />
+      <Tentacle x={150} y={182} h={60} d={1} />
+    </g>
+  ),
+  courier: () => (
+    <g>
+      <path d="M50 186 Q48 124 100 122 Q152 124 150 186Z" fill="#4f8dff" {...S} />
+      <path d="M62 126 L148 176" stroke="#7a4a2a" strokeWidth={10} strokeLinecap="round" />
+      <rect x={120} y={146} width={50} height={38} rx={8} fill="#c9a26b" {...S} />
+      <Head y={84} />
+      <path d="M62 70 Q100 38 138 70 L146 76 L60 76Z" fill="#e8344a" {...T} />
+      <path d="M28 110 L50 110 M22 132 L46 132" stroke="#9fb2ff" strokeWidth={8} strokeLinecap="round" />
+    </g>
+  ),
+  farmer: () => (
+    <g>
+      <path d="M150 30 L150 186" stroke="#7a4a2a" strokeWidth={10} strokeLinecap="round" />
+      <path d="M136 30 L136 56 Q150 66 164 56 L164 30 M150 30 L150 60" fill="none" stroke="#dfe6ff" strokeWidth={6} strokeLinecap="round" />
+      <path d="M44 186 Q42 122 96 120 Q146 122 144 186Z" fill="#3fa0c6" {...S} />
+      <Head y={86} />
+      <path d="M40 72 L152 72 L130 60 Q100 30 70 60Z" fill="#ffd93b" {...S} />
+      <path d="M50 150 L60 140 L70 150 L60 146Z" fill={N} />
+      <path d="M70 168 L80 158 L90 168 L80 164Z" fill={N} />
+    </g>
+  ),
+  fisherman: () => (
+    <g>
+      <path d="M40 186 Q38 118 100 116 Q162 118 160 186Z" fill="#ffb02e" {...S} />
+      <path d="M100 116 L100 186" stroke={N} strokeWidth={5} />
+      <circle cx={70} cy={160} r={7} fill="#e8ecff" {...T} />
+      <circle cx={134} cy={146} r={6} fill="#e8ecff" {...T} />
+      <Head y={80} />
+      <path d="M54 70 Q100 24 146 70 L162 84 L40 84Z" fill="#ffb02e" {...S} />
+      <path d="M20 120 L60 150 M20 150 L60 120 M28 108 L28 170" stroke="#b8c0e0" strokeWidth={4} />
+    </g>
+  ),
+  lumberjack: () => (
+    <g>
+      <path d="M28 190 Q24 112 100 108 Q176 112 172 190Z" fill="#e8344a" {...S} />
+      <path d="M60 112 L60 190 M100 108 L100 190 M140 112 L140 190 M28 150 L172 150" stroke={N} strokeWidth={4} opacity={0.5} />
+      <circle cx={100} cy={74} r={38} fill="#f2c6a0" {...S} />
+      <path d="M64 82 Q100 150 136 82 Q120 96 100 96 Q80 96 64 82Z" fill="#7a4a2a" {...T} />
+      <ChaosEyes y={66} gap={15} />
+      <Tentacle x={88} y={118} h={30} d={-1} w={8} />
+      <Tentacle x={114} y={118} h={30} d={1} w={8} />
+      <path d="M170 20 L176 120" stroke="#7a4a2a" strokeWidth={10} strokeLinecap="round" />
+      <path d="M174 26 Q206 30 202 62 Q186 54 176 58Z" fill="#dfe6ff" {...T} />
+    </g>
+  ),
+  herbalist: () => (
+    <g>
+      <path d="M48 186 Q46 120 100 118 Q154 120 152 186Z" fill="#5fd46a" {...S} />
+      <Head y={84} />
+      <path d="M60 80 Q60 34 100 34 Q140 34 140 80 Q130 56 100 56 Q70 56 60 80Z" fill="#2f7a3a" {...T} />
+      <path d="M118 150 L176 150 L168 186 L126 186Z" fill="#c9a26b" {...S} />
+      <path d="M130 150 Q128 124 140 116 M150 150 Q154 120 166 114 M140 150 Q140 132 152 124" fill="none" stroke="#c24dff" strokeWidth={7} strokeLinecap="round" />
+      <circle cx={140} cy={116} r={7} fill="#e9d2ff" stroke={N} strokeWidth={3} />
+      <circle cx={166} cy={114} r={7} fill="#e9d2ff" stroke={N} strokeWidth={3} />
+    </g>
+  ),
+  merchant: () => (
+    <g>
+      <rect x={110} y={96} width={70} height={84} rx={14} fill="#a86a3a" {...S} />
+      <path d="M44 186 Q42 122 96 120 Q146 122 144 186Z" fill="#9b3dcc" {...S} />
+      <Head y={84} />
+      <path d="M58 64 Q100 34 142 64 L142 72 L58 72Z" fill="#33263f" {...T} />
+      {[
+        [126, 92],
+        [150, 84],
+        [168, 98],
+      ].map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r={13} fill="#ffd93b" {...T} />
+          <text x={x} y={y + 6} textAnchor="middle" fontSize={16} fontWeight={900} fill={N}>$</text>
+        </g>
+      ))}
+    </g>
+  ),
+  chaos_eye: () => (
+    <g>
+      <Tentacle x={100} y={186} h={70} d={-1} w={16} />
+      <circle cx={100} cy={90} r={66} fill="#f4e6ff" {...S} />
+      <circle cx={100} cy={90} r={38} fill="#8b3dff" {...T} />
+      <ellipse cx={100} cy={90} rx={10} ry={26} fill={N} />
+      <path d="M44 70 L62 76 M52 120 L68 112 M156 70 L138 76 M150 122 L134 112" stroke="#e8344a" strokeWidth={4} strokeLinecap="round" />
+      <circle cx={82} cy={70} r={9} fill="#fff" opacity={0.8} />
+    </g>
+  ),
+  fae: () => (
+    <g>
+      <path d="M96 100 Q30 30 22 80 Q16 120 70 116 L60 132 Q20 150 40 172 Q66 176 92 120Z" fill="#e9d2ff" {...S} />
+      <path d="M104 100 Q170 30 178 80 Q184 120 130 116 L140 132 Q180 150 160 172 Q134 176 108 120Z" fill="#e9d2ff" {...S} />
+      <path d="M40 60 L60 92 M164 66 L146 92 M50 156 L70 140" stroke="#8b3dff" strokeWidth={6} strokeLinecap="round" />
+      <path d="M78 186 Q80 120 100 118 Q120 120 122 186Z" fill="#ff9ad5" {...S} />
+      <circle cx={100} cy={86} r={30} fill="#d8f0c8" {...S} />
+      <ChaosEyes y={88} gap={12} />
+      <path d="M74 66 Q86 46 100 60 Q114 46 126 66" fill="#c24dff" {...T} />
+    </g>
+  ),
+  bear: () => (
+    <g>
+      <circle cx={52} cy={48} r={24} fill="#8a5a3c" {...S} />
+      <circle cx={148} cy={48} r={24} fill="#8a5a3c" {...S} />
+      <ellipse cx={100} cy={104} rx={74} ry={70} fill="#8a5a3c" {...S} />
+      <ellipse cx={100} cy={128} rx={36} ry={28} fill="#c9a26b" {...T} />
+      <ChaosEyes y={88} gap={26} />
+      <path d="M78 136 L88 128 L100 140 L112 128 L122 136" fill="none" {...T} />
+      <Eye x={60} y={54} r={8} />
+      <Eye x={140} y={54} r={8} />
+      <Tentacle x={84} y={154} h={40} d={-1} w={9} />
+      <Tentacle x={116} y={154} h={40} d={1} w={9} />
+    </g>
+  ),
+  portal_wizard: () => (
+    <g>
+      <ellipse cx={100} cy={112} rx={86} ry={86} fill="none" stroke="#8b3dff" strokeWidth={14} />
+      <ellipse cx={100} cy={112} rx={86} ry={86} fill="none" stroke="#3fc6ff" strokeWidth={5} strokeDasharray="18 14" />
+      <path d="M52 190 Q56 120 100 116 Q144 120 148 190Z" fill="#3a0f73" {...S} />
+      <path d="M100 116 L100 190" stroke="#c24dff" strokeWidth={6} />
+      <circle cx={100} cy={96} r={28} fill="#d9c2ff" {...S} />
+      <path d="M86 112 Q100 160 114 112Z" fill="#e8ecff" {...T} />
+      <ChaosEyes y={94} gap={11} />
+      <path d="M58 76 L142 76 L126 66 L104 6 L86 40 L74 66Z" fill="#3a0f73" {...S} />
+      <circle cx={104} cy={12} r={8} fill="#3fc6ff" {...T} />
+      <path d="M160 70 L160 170" stroke="#7a4a2a" strokeWidth={8} strokeLinecap="round" />
+      <circle cx={160} cy={62} r={14} fill="#3fc6ff" {...T} />
+    </g>
+  ),
+  upside_village: () => (
+    <g>
+      <rect x={6} y={6} width={188} height={188} rx={22} fill="#2a1450" />
+      {/* houses hanging from the sky, roofs pointing down */}
+      {[
+        [40, 0],
+        [100, 18],
+        [156, 4],
+      ].map(([x, dy], i) => (
+        <g key={i}>
+          <rect x={x - 22} y={14 + dy} width={44} height={34} fill="#e8d6b0" {...T} />
+          <path d={`M${x - 28} ${48 + dy} L${x + 28} ${48 + dy} L${x} ${76 + dy}Z`} fill="#e8344a" {...T} />
+          <rect x={x - 7} y={18 + dy} width={14} height={16} fill="#7a4a2a" stroke={N} strokeWidth={3} />
+        </g>
+      ))}
+      {/* trees */}
+      <path d="M22 150 L22 104 M178 150 L178 110" stroke="#7a4a2a" strokeWidth={8} strokeLinecap="round" />
+      <circle cx={22} cy={100} r={16} fill="#2f7a3a" {...T} />
+      <circle cx={178} cy={106} r={14} fill="#2f7a3a" {...T} />
+      {/* chaos ground with tentacles and eyes */}
+      <path d="M6 168 Q50 150 100 162 Q150 174 194 156 L194 180 Q194 194 180 194 L20 194 Q6 194 6 180Z" fill="#3a0f73" {...T} />
+      <Tentacle x={52} y={170} h={64} d={1} />
+      <Tentacle x={136} y={172} h={74} d={-1} w={14} />
+      <Tentacle x={164} y={170} h={40} d={1} w={9} />
+      <Eye x={92} y={128} r={14} />
+      <Eye x={48} y={128} r={7} />
+      <Eye x={150} y={116} r={8} />
     </g>
   ),
 };

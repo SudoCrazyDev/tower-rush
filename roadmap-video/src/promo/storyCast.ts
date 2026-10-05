@@ -3,7 +3,8 @@
  * docs/features/v1.2-stories/README.md.
  *
  * Art: `promo-st.mjs` writes `stories-art.json` with the ids that have a portrait in
- * game/public/assets/portraits (copied to public/st/). Anything missing is drawn as a
+ * game/public/assets/portraits, monsters or bosses (copied to public/st/), plus the Event frame
+ * and the new arenas. Anything missing is drawn as a
  * placeholder glyph, so the graphics re-render with real art as soon as it exists.
  */
 import ART from "./stories-art.json";
@@ -11,6 +12,8 @@ import ART from "./stories-art.json";
 export const HAS_ART = new Set<string>(ART.portraits);
 export const HAS_EVENT_FRAME: boolean = ART.eventFrame;
 export const HAS_PALACE: boolean = ART.palace;
+/** Story 3 arenas with real art (arena_upside_down_village, arena_hollow_woods, arena_first_rift). */
+export const HAS_ARENA = new Set<string>(ART.arenas);
 
 export const PINK = "#ff6fb5";
 export const PINK_LIGHT = "#ffc2e2";
@@ -46,7 +49,19 @@ export type Glyph =
   | "witch"
   | "plum"
   | "hydra"
-  | "jawbreaker";
+  | "jawbreaker"
+  | "villager"
+  | "courier"
+  | "farmer"
+  | "fisherman"
+  | "lumberjack"
+  | "herbalist"
+  | "merchant"
+  | "chaos_eye"
+  | "fae"
+  | "bear"
+  | "portal_wizard"
+  | "upside_village";
 
 export interface StoryUnit {
   id: string;
@@ -95,7 +110,7 @@ export interface Foe {
   trait: string;
   color: string;
   boss?: boolean;
-  story: 1 | 2;
+  story: 1 | 2 | 3;
 }
 
 export const CANDY_FOLK: Foe[] = [
@@ -115,18 +130,35 @@ export const CHAOS_BORN: Foe[] = [
   { id: "chaos_taffy", name: "Chaos Taffy", glyph: "taffy", trait: "Tethers: Fatigue", color: "#c24dff", story: 2 },
 ];
 
+/** Story 3's chaos-corrupted villagers (humans, not candy). */
+export const VILLAGERS: Foe[] = [
+  { id: "corrupted_villager", name: "Villager", glyph: "villager", trait: "Basic", color: "#c9a26b", story: 3 },
+  { id: "corrupted_courier", name: "Courier", glyph: "courier", trait: "Fast", color: "#4f8dff", story: 3 },
+  { id: "corrupted_farmer", name: "Farmer", glyph: "farmer", trait: "Splits: 3 crows", color: "#ffd93b", story: 3 },
+  { id: "corrupted_fisherman", name: "Fisherman", glyph: "fisherman", trait: "Armored", color: "#ffb02e", story: 3 },
+  { id: "corrupted_lumberjack", name: "Lumberjack", glyph: "lumberjack", trait: "Tank", color: "#e8344a", story: 3 },
+  { id: "corrupted_herbalist", name: "Herbalist", glyph: "herbalist", trait: "Heals", color: "#5fd46a", story: 3 },
+  { id: "corrupted_merchant", name: "Merchant", glyph: "merchant", trait: "Extra mana", color: "#ffd93b", story: 3 },
+  { id: "chaos_eye", name: "Chaos Eye", glyph: "chaos_eye", trait: "Dodges", color: VIOLET, story: 3 },
+];
+
 export const BOSSES: Foe[] = [
   { id: "gummy_warlord", name: "Gummy Warlord", glyph: "warlord", trait: "Summons gummies", color: "#ff5a5a", boss: true, story: 1 },
   { id: "licorice_witch", name: "Licorice Witch", glyph: "witch", trait: "Binds 2 units", color: "#33263f", boss: true, story: 1 },
   { id: "sugar_plum_tyrant", name: "Sugar Plum Tyrant", glyph: "plum", trait: "Shield, then haste", color: "#9b3dcc", boss: true, story: 1 },
   { id: "sour_gummy_hydra", name: "Sour Gummy Hydra", glyph: "hydra", trait: "Splits when hit hard", color: "#b6ff3b", boss: true, story: 2 },
   { id: "chaos_jawbreaker", name: "Chaos Jawbreaker", glyph: "jawbreaker", trait: "4 layers · chaos core", color: VIOLET, boss: true, story: 2 },
+  { id: "corrupted_fae", name: "Chaos Corrupted Fae", glyph: "fae", trait: "Dodges · Charm", color: "#ff9ad5", boss: true, story: 3 },
+  { id: "corrupted_bear", name: "Chaos Corrupted Bear", glyph: "bear", trait: "Tank · roar", color: "#8a5a3c", boss: true, story: 3 },
+  { id: "portal_wizard", name: "Chaos Corrupted Portal Wizard", glyph: "portal_wizard", trait: "Portals · blinks", color: "#3fc6ff", boss: true, story: 3 },
 ];
 
 export interface Chapter {
   title: string;
   waves: number;
   boss: string;
+  /** Arena asset id, used as the chapter's background once its art exists. */
+  arena?: string;
 }
 
 export interface StoryDef {
@@ -135,6 +167,8 @@ export interface StoryDef {
   blurb: string;
   deck: string;
   reward: string;
+  /** The story's last line, shown instead of the reward on its cover. */
+  cliffhanger?: string;
   color: string;
   chapters: Chapter[];
 }
@@ -166,8 +200,30 @@ export const STORIES: StoryDef[] = [
       { title: "The Jawbreaker's Core", waves: 20, boss: "Chaos Jawbreaker" },
     ],
   },
-  { n: 3, title: "???", blurb: "Coming soon.", deck: "?", reward: "?", color: "#4a5290", chapters: [] },
+  {
+    n: 3,
+    title: "The Beginning",
+    blurb: "A human village turned upside down: the first case of corruption.",
+    deck: "Own deck + rules",
+    reward: "Gems, Legendary chest, \"The Chosen\" badge",
+    cliffhanger: "The Chaos Corruption has already begun.",
+    color: "#c24dff",
+    chapters: [
+      { title: "The Upside-Down Village", waves: 10, boss: "Chaos Corrupted Fae", arena: "arena_upside_down_village" },
+      { title: "The Hollow Woods", waves: 15, boss: "Chaos Corrupted Bear", arena: "arena_hollow_woods" },
+      { title: "The First Rift", waves: 20, boss: "Chaos Corrupted Portal Wizard", arena: "arena_first_rift" },
+    ],
+  },
 ];
+
+/** The set of stories in v1.2. */
+export const BOOK = "Book 1: The Chosen";
+
+/** Story 3's deck rules (the player's own deck must pass them). */
+export const STORY3_RULES = {
+  required: ["Pentagonal Knight", "Rogue Knight"],
+  banned: ["Legendary", "Mythic"],
+};
 
 /** Muse's Last Call bonus from ★1 to ★7. */
 export const MUSE_SCALE = { speed: ["+5%", "+17%"], damage: ["+3%", "+9%"] };

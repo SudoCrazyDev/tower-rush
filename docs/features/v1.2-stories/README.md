@@ -4,7 +4,7 @@
 |---|---|
 | **Version** | 1.2.0 |
 | **Title** | Stories |
-| **Status** | Design. Stories 1 and 2 are planned here; Story 3 is still being written. Nothing is built yet (on hold until there's art). Promo graphics are rendered with placeholders. |
+| **Status** | Design. Book 1 (*The Chosen*): all 3 stories are planned here. **Art is done** (2026-10-06, 394 credits; see `assets/README.md`). Code isn't built yet. |
 | **Written** | 2026-10-05 |
 | **Scope** | New Story mode (menu, chapters, dialogue), Event rarity, 10 new units, candy monsters and bosses, a unit debuff system, new arenas, admin panel, simulator |
 | **Promo kit** | [PROMO.md](PROMO.md) and [`promo/`](promo): key art, posts, a header banner and 5 infographics (placeholder art until the real art exists) |
@@ -15,14 +15,14 @@
 
 ## 1. Summary
 
-Tower Rush gets its first **Story mode**: three canon stories that connect, played in order.
-A story stays locked until the one before it is finished.
+Tower Rush gets its first **Story mode**: **Book 1, *The Chosen***, three canon stories that
+connect, played in order. A story stays locked until the one before it is finished.
 
 | # | Story | Deck | Final boss | Reward |
 |---|---|---|---|---|
 | 1 | **Saving the Muse** | The player's own deck | Corrupted royal (see 4.4) | **Princess Muse**, the first card of the new **Event** rarity |
 | 2 | **Chaorruption** | An **Event deck**: pick 5 of 9 units | **Chaos Jawbreaker** | **Pentagonal Knight** and **Rogue Knight** (Epic) |
-| 3 | *(still being written)* | | | |
+| 3 | **The Beginning** | Own deck with **rules**: both Story 2 knights required, no Legendary or Mythic | **Chaos Corrupted Portal Wizard** | Gems, Legendary chest, "The Chosen" badge, and a cliffhanger |
 
 **Corruption** is the series' enemy. It's shown as **violet** chaos: a purple tint, a dark
 violet glow and crackling sparks on corrupted candy people.
@@ -39,8 +39,9 @@ example `princess_muse`.
 | **Story-only Mercenaries** (3) | Berserker Sellsword · Powder Grenadier · Hired Blade |
 | **Candy folk** (8) | Gummy Bear · Candy Corn Runner · Jelly Bean Blob · Cotton Candy Puff · Chocolate Golem · Peppermint Turtle · Licorice Medic · Candy Piñata |
 | **Chaos-born** (3) | Sprinkle Swarm · Sour Shard · Chaos Taffy |
-| **Bosses** (5) | Gummy Warlord · Licorice Witch · Sugar Plum Tyrant · Sour Gummy Hydra · Chaos Jawbreaker |
-| **Arenas** | Candy Land (existing) · Candy Palace (new) · Corrupted Candy Kingdom (new) · Jawbreaker Core (new) |
+| **Corrupted villagers** (8) | Villager · Courier · Farmer · Fisherman · Lumberjack · Herbalist · Merchant · Chaos Eye |
+| **Bosses** (8) | Gummy Warlord · Licorice Witch · Sugar Plum Tyrant · Sour Gummy Hydra · Chaos Jawbreaker · Chaos Corrupted Fae · Chaos Corrupted Bear · Chaos Corrupted Portal Wizard |
+| **Arenas** | Candy Land (existing) · Candy Palace (new) · Corrupted Candy Kingdom (new) · Jawbreaker Core (new) · Upside-Down Village (new) · Hollow Woods (new) · The First Rift (new) |
 | **Statuses** | Last Call (Muse) · Rally · Irritation · Fatigue · Shellshock · Wages |
 
 ---
@@ -65,7 +66,7 @@ Decisions (2026-10-05):
    Knight and Rogue Knight for the whole story, then keeps them. The other 7 are story-only.
 4. **Story 1 unlocks at 500 trophies** (Candy Land), tuned for a typical deck at that point.
 5. **Levelling Muse:** the first clear gives **1 card** (Muse herself). Every **replay** of a
-   Story 1 chapter drops **1–3 Muse copies** (see 8.2).
+   Story 1 chapter drops **1–3 Muse copies** (see 9.2).
 6. **Names:** **Rogue** Knight and **Chaorruption** (chaos + corruption) are confirmed.
 
 **No dependency on v1.1.** Muse builds on the existing `buff` archetype (no attack, boosts
@@ -111,7 +112,7 @@ with a fixed script instead of `pick()`.
 ### 3.4 Rewards
 - **First clear** of each chapter pays a one-time reward. Chapter 3 of each story pays the
   story's unit reward.
-- **Replays** pay a small amount of gold, plus a chance of **Event copies** for Muse (8.2).
+- **Replays** pay a small amount of gold, plus a chance of **Event copies** for Muse (9.2).
 - **Trophies:** story battles don't change trophies or count for leaderboards.
 - **Daily quests:** "Win a story chapter" is added to the quest pool.
 
@@ -144,7 +145,7 @@ candy gates through the town to the palace and frees her. To thank them, she joi
 - The player's **own equipped deck and hero**, at their own card levels.
 - Unlocks at **500 trophies**, the same as the Candy Land arena.
 - Monster HP is tuned for a typical deck at 500–750 trophies: about card level 5 and 2–3
-  awakenable units. The simulator checks it (section 10).
+  awakenable units. The simulator checks it (section 10.5).
 
 ### 4.3 Candy monsters (new)
 Each candy monster mirrors one of the existing **traits**, so players can read them without a
@@ -224,7 +225,8 @@ Muse is safe, but the corruption keeps spreading. The kingdom's surviving **Knig
 Candy Crown** and a band of hired **mercenaries** set out to find the source. They cross a
 kingdom gone violet, through the rotten Sour Marsh, to the heart of the chaos: the **Chaos
 Jawbreaker**, an ancient jawbreaker whose core is cracking with violet light. Each layer the
-player breaks off reveals more of the truth. The final crack opens a hook for Story 3.
+player breaks off reveals more of the truth. The final crack shows a human village far away:
+the hook for Story 3 (6.1).
 
 | Chapter | Title | Arena | Boss |
 |---|---|---|---|
@@ -325,12 +327,86 @@ levelled the usual way. Their numbers are the same as in 5.4, scaled by card lev
 
 ---
 
-## 6. Screens and UI
+## 6. Story 3: The Beginning
+
+### 6.1 Plot
+The Jawbreaker's shattered core holds one last image: a quiet **human village** far beyond the
+Candy Kingdom. The knights follow it there and find the village **turned upside down**.
+Houses hang from the sky, trees grow into the clouds, and purple chaos tentacles and staring
+eyes push up through the ground. This is the **first case of corruption**, from before it
+reached the candy folk. The villagers have been corrupted: fishermen, farmers and lumberjacks,
+violet-eyed and wrapped in tentacles. The knights fight through the village and the woods to
+a portal at its centre, where the **Portal Wizard** waits.
+
+**Ending (cliffhanger):** the wizard falls, but he laughs as he goes: *"You're too late. The
+Chaos Corruption has already begun."* The last panel shows the portal closing on many more
+violet eyes. **To be continued.**
+
+| Chapter | Title | Arena | Boss |
+|---|---|---|---|
+| 1 | **The Upside-Down Village** | **Upside-Down Village** (new) | **Chaos Corrupted Fae** |
+| 2 | **The Hollow Woods** | **Hollow Woods** (new) | **Chaos Corrupted Bear** |
+| 3 | **The First Rift** | **The First Rift** (new) | **Chaos Corrupted Portal Wizard** |
+
+### 6.2 Deck rules (new feature: story deck rules)
+The player uses **their own deck and hero**, but the deck must pass two rules before Play
+unlocks:
+1. **Required:** **Pentagonal Knight** and **Rogue Knight** (the Story 2 rewards) are both
+   equipped.
+2. **Banned:** no **Legendary** or **Mythic** units. Common, Rare, Epic and Event (Muse) are
+   allowed.
+
+- **Story reason:** the rift's chaos wards turn legends away. Only the **Chosen**, the two
+  knights who broke the Jawbreaker, can lead the way in. That's where Book 1's name comes from.
+- **Level floor:** the two knights are earned at the end of Story 2, so they're about level 1.
+  In Story 3 they fight at **at least** the story level (chapter 1: Lv 6, chapter 2: Lv 7,
+  chapter 3: Lv 8, the same as Story 2's Event deck). If the player has levelled them higher,
+  their own level is used. Every other card uses the player's own level.
+- **Built as a general system:** a chapter can have `requiredUnits`, `bannedRarities` and
+  `levelFloor` settings in `stories.ts`, so later stories can use their own deck rules without
+  new code.
+- **Server check:** the server checks the equipped deck against the chapter's rules at chapter
+  start and rejects a deck that fails, the same way it builds the Event deck in Story 2.
+
+### 6.3 Chaos-corrupted villagers (new)
+Humans this time, not candy. Unlike the candy folk, their purple tentacles and staring eyes
+are **drawn into the art**, so the corruption looks heavier than in the Candy Kingdom. Code can
+still add the violet glow and sparks on top.
+
+| Monster | Trait | Pitch |
+|---|---|---|
+| **Corrupted Villager** | none (basic) | A farmhand in a smock, staggering. |
+| **Corrupted Courier** | fast | A messenger boy still clutching his satchel. |
+| **Corrupted Farmer** | splitter (3 crows burst out) | Pitchfork and straw hat; crows nest in his coat. |
+| **Corrupted Fisherman** | armored | Oilskin coat crusted with barnacles, dragging a net. |
+| **Corrupted Lumberjack** | tank | A huge woodsman with an axe; tentacles in his beard. |
+| **Corrupted Herbalist** | healer | Carries a basket of violet glowing herbs. |
+| **Corrupted Merchant** | rich (pays extra mana) | A pedlar with a pack full of coins. |
+| **Chaos Eye** | dodge (floats) | A single huge floating eye with a tentacle tail: pure chaos. |
+
+### 6.4 Bosses (new)
+| Boss | Power | Notes |
+|---|---|---|
+| **Chaos Corrupted Fae** | `dodge` + **Charm**: every few seconds, 2 units get **Irritation** | A woodland fairy with torn violet wings. Reuses the Story 2 debuff system. |
+| **Chaos Corrupted Bear** | Tank; a **roar** below 50% HP that **Shellshocks** 3 units, then `haste` | A giant bear with eyes along its back and tentacles from its jaw. |
+| **Chaos Corrupted Portal Wizard** | **Portals:** opens a portal partway along the path that monsters step out of (`summon` mid-path), and **blinks** forward along the path once per phase | Three phases. Needs one extra **portal** clip. The final boss of Book 1. |
+
+### 6.5 Reward
+Story 3 doesn't give a new unit. Its ending is the cliffhanger. The final chapter pays gems, a
+**Legendary chest** and a **"The Chosen" badge** on the profile for finishing Book 1 (9.1).
+
+---
+
+## 7. Screens and UI
 - **Lobby:** a STORY button (a book icon), with a "NEW" dot until Story 1 is started.
-- **Story screen:** 3 story covers, then a chapter path for the chosen story (3 nodes with
+- **Story screen:** titled **Book 1: The Chosen**, with 3 story covers, then a chapter path for the chosen story (3 nodes with
   stars and locks) and a Play button.
 - **Event deck picker (Story 2):** a grid of the 9 cards; tap to pick 5. Each card shows its
   side (Knight or Mercenary) and its effect.
+- **Deck check (Story 3):** before Play, a checklist: "Pentagonal Knight equipped ✓", "Rogue
+  Knight equipped ✗", "No Legendary or Mythic ✗ (Dragon Lord)". Play stays greyed out until
+  every line passes, and an **Edit deck** button jumps to the deck screen. Knights raised by the
+  level floor show "Lv 6 (story)".
 - **Battle HUD:** "Wave 7 / 15" instead of the endless counter, plus barks and status badges.
 - **Results:** a Victory screen with stars and the first-clear reward; the unit reward gets a
   card-reveal moment (pink for Muse).
@@ -339,7 +415,7 @@ levelled the usual way. Their numbers are the same as in 5.4, scaled by card lev
 
 ---
 
-## 7. PvP and other modes
+## 8. PvP and other modes
 - **Muse** is allowed in PvP and solo. The 3×3 area uses the same board in both.
 - **Pentagonal and Rogue Knight** are allowed everywhere once earned.
 - **Story 2 Event units:** story only, never in PvP.
@@ -347,15 +423,16 @@ levelled the usual way. Their numbers are the same as in 5.4, scaled by card lev
 
 ---
 
-## 8. Economy
+## 9. Economy
 
-### 8.1 First-clear rewards (starting numbers)
+### 9.1 First-clear rewards (starting numbers)
 | | Chapter 1 | Chapter 2 | Chapter 3 |
 |---|---|---|---|
 | Story 1 | 500 gold | 1,000 gold, 20 gems | **Princess Muse**, 50 gems, Epic chest |
 | Story 2 | 1,000 gold, 20 gems | 1,500 gold, 30 gems | **Pentagonal Knight + Rogue Knight**, 80 gems, Legendary chest |
+| Story 3 | 1,500 gold, 30 gems | 2,000 gold, 40 gems | 100 gems, Legendary chest, **"The Chosen"** profile badge |
 
-### 8.2 Levelling Muse (Event cards)
+### 9.2 Levelling Muse (Event cards)
 - **First clear** of Story 1, chapter 3: **1 Muse card** (unlocks her, level 1).
 - **Replays** of any Story 1 chapter: gold, plus **1–3 Muse copies** each time (3 stars makes 2–3
   more likely). These are config values.
@@ -365,9 +442,9 @@ levelled the usual way. Their numbers are the same as in 5.4, scaled by card lev
 
 ---
 
-## 9. Build plan (for later; nothing is built yet)
+## 10. Build plan (for later; nothing is built yet)
 
-### 9.1 Shared logic (`shared/`)
+### 10.1 Shared logic (`shared/`)
 - `units.ts`: add the `event` rarity (no drop weight) and an `area` setting for buffs (`adjacent` | `square3`). Add
   Muse, the 2 knights and the 9 Event units, with a `storyOnly` flag. Add the `role` label
   ("Barkeeper", "Knight", "Mercenary").
@@ -375,36 +452,37 @@ levelled the usual way. Their numbers are the same as in 5.4, scaled by card lev
   numbers; Lantern mana; Hired Blade wages.
 - `sim.ts`: unit statuses (miss chance, speed changes, stun) built on the existing unit
   timers; area buffs; scripted waves with a win at the last wave; the Jawbreaker layers;
-  the tether trait.
-- New `stories.ts`: the stories, chapters, wave scripts, barks, panels, rewards and Event deck
-  levels. All of it lives in the game config, so it can be edited from the admin panel.
+  the tether trait; the Story 3 boss powers (Charm, roar, mid-path portals and blink).
+- New `stories.ts`: the stories, chapters, wave scripts, barks, panels, rewards, Event deck
+  levels and deck rules (`requiredUnits`, `bannedRarities`, `levelFloor`). All of it lives in the game config, so it can be edited from the admin panel.
 - `profile.ts`: `profile.story` progress.
 
-### 9.2 Server (`server/src/`)
+### 10.2 Server (`server/src/`)
 - Story chapter start and result endpoints (`play.ts`-style checks), the server-built Event
-  deck, first-clear and replay rewards.
+  deck, the Story 3 deck-rule check and level floor, first-clear and replay rewards.
 
-### 9.3 Game (`game/src/`)
-- `StoryScene` (covers, chapter path, panels), the Event deck picker, the HUD wave counter
+### 10.3 Game (`game/src/`)
+- `StoryScene` (covers, chapter path, panels), the Event deck picker, the Story 3 deck check, the HUD wave counter
   and barks, status badges, corruption tint and glow on monsters, Muse's area ring, and the
   victory and reveal screens.
 
-### 9.4 Admin (`admin/`)
+### 10.4 Admin (`admin/`)
 - A **Stories** page to edit chapters, wave scripts, rewards and Event deck levels. Rarity
   colours get an Event entry. Playground support for the new statuses.
 
-### 9.5 Balance and testing
+### 10.5 Balance and testing
 - Simulator: Story 1 with starter-level decks and with 500-trophy decks (target: chapter 3 is
   won by about 60% of typical decks on the first try); Story 2 with random 5-of-9 picks (every
-  pick should be winnable; good placement should be needed for 3 stars).
+  pick should be winnable; good placement should be needed for 3 stars); Story 3 with legal
+  decks of Epics and below plus both knights at the floor level.
 - Muse vs Lute Bard in the same slot: Muse should come out ahead only with 6+ units in her area.
 - PvP bot-vs-bot with Pentagonal and Rogue Knight decks: no deck above 55% win rate.
 
 ---
 
-## 10. Art needed and Higgsfield cost
+## 11. Art needed and Higgsfield cost
 
-### 10.1 Prices
+### 11.1 Prices
 These come from your own Higgsfield transactions for the original pack (2026-10-02), using the
 same pipeline (`assets/README.md`):
 
@@ -427,7 +505,7 @@ What each asset needs, to match the existing art:
 | **Boss** | image + walk, attack, death, intro (480p) + walk, attack (720p) + banner | **11.6** |
 | **Arena** | 752×1344 background + ambient loop (720p) | **3.9** |
 
-### 10.2 What to create
+### 11.2 What to create
 
 **Story 1: Saving the Muse**
 | Asset | Count | Credits |
@@ -455,24 +533,37 @@ What each asset needs, to match the existing art:
 ¹ *Made as an **image edit of the Candy Land background**, so the board and path stay in the
 same place and the arena measurements carry over.*
 
+**Story 3: The Beginning**
+| Asset | Count | Credits |
+|---|---|---|
+| Corrupted villagers | 8 | 50.4 |
+| Bosses: Corrupted Fae, Corrupted Bear, Portal Wizard (+ portal clip) | 3 | 36.0 |
+| Arenas: Upside-Down Village², Hollow Woods², The First Rift² | 3 | 11.7 |
+| Story panels (including the cliffhanger) | 5 | 7.5 |
+| **Subtotal** | | **107.1** |
+
+² *Image edits of an existing background, like the Corrupted Candy Kingdom, so the path stays
+in the same place.*
+
 **Story mode UI and launch**
 | Asset | Count | Credits |
 |---|---|---|
 | Story screen background | 1 | 1.5 |
-| Story covers (all 3; Story 3 as a locked silhouette) | 3 | 4.5 |
+| Story covers (all 3) | 3 | 4.5 |
 | STORY lobby icon | 1 | 0.25 |
 | Promo key art | 2 | 3.0 |
 | **Subtotal** | | **9.25** |
 
-### 10.3 Totals
+### 11.3 Totals
 
 | | Assets | Credits |
 |---|---|---|
 | Story 1 | 1 unit, 8 monsters, 3 bosses, 1 arena, 7 other images | 111 |
 | Story 2 | 9 units, 3 monsters, 2 bosses, 2 arenas, 9 other images | 163 |
+| Story 3 | 8 monsters, 3 bosses, 3 arenas, 6 other images | 107 |
 | UI and promo | 7 images | 9 |
-| **Raw total** | **10 units, 11 monsters, 5 bosses, 3 arenas, about 67 images and 118 clips** | **284** |
-| **+30% for retries and rejected takes** | | **≈ 370** |
+| **Raw total** | **10 units, 19 monsters, 8 bosses, 6 arenas, about 90 images and 164 clips** | **391** |
+| **+30% for retries and rejected takes** | | **≈ 510** |
 
 Ways to change it:
 - **Awakened forms for the 2 knights:** about **+17 credits**.
@@ -480,22 +571,24 @@ Ways to change it:
   **+90 credits**. Not recommended.
 - **Animated story panels** (480p each): about **+16 credits** for all 10.
 - **A launch trailer** (Seedance 2.5): **+30–90 credits** per shot.
-- **Story 1 only** (ship it as 1.2.0 and Story 2 in 1.2.x): about **155 credits** with retries.
+- **Story 1 only** (ship it as 1.2.0 and Stories 2–3 in 1.2.x): about **155 credits** with retries.
+- **Story 3 alone:** about **140 credits** with retries.
 
-Your Higgsfield balance is **0 credits** (Free plan) right now. A **500-credit top-up** (about
-**$25**, credits expire after 90 days) covers Stories 1 and 2 with room for retries.
-Higgsfield shows the exact price at checkout. 370 credits is about **$19**.
+**Actual (2026-10-06):** all of Book 1 was generated for **394 credits** (balance 1,731 → 1,337),
+under the estimate because no retries were needed. Arena bases, for the path layout: Candy Palace,
+Corrupted Candy Kingdom and Jawbreaker Core use **Candy Land**; Upside-Down Village uses **Winter
+Village**; Hollow Woods and The First Rift use **Mushroom Forest**.
 
-### 10.4 Compared with the OpenAI API (checked 2026-10-05)
+### 11.4 Compared with the OpenAI API (checked 2026-10-05)
 
 Higgsfield's image model *is* OpenAI's (GPT Image 2.5), so the question is only the price,
 plus video.
 
 | | OpenAI API | Higgsfield |
 |---|---|---|
-| Images (57 high, 5 medium, 5 low quality) | about $0.21 / $0.05 / $0.01 each (GPT Image 2, 1024px): **≈ $16** with retries | 1.5 / 0.5 / 0.25 credits: **≈ $5** |
+| Images (Stories 1–2: 57 high, 5 medium, 5 low quality) | about $0.21 / $0.05 / $0.01 each (GPT Image 2, 1024px): **≈ $16** with retries | 1.5 / 0.5 / 0.25 credits: **≈ $5** |
 | Animation clips (118) | **Not available.** The Sora video API was reported shut down on 2026-09-24. It cost at least 4s × $0.10 = $0.40 a clip, 720p only (≈ $60). | Seedance 1.5 Pro, 1.2–2.4 credits a clip: **≈ $14** |
-| **Total** | Can't make the animations | **≈ 370 credits ≈ $19** |
+| **Total (Stories 1–2)** | Can't make the animations | **≈ 370 credits ≈ $19** |
 
 **Decision: stay on Higgsfield.** It's about 3× cheaper for images, it's the only option for
 the animations, and using the same models keeps the new art matching the existing pack.
@@ -503,7 +596,7 @@ Sources: OpenAI's pricing page, and CostGoat's OpenAI image and Sora pricing pag
 
 ---
 
-## 11. Risks
+## 12. Risks
 
 | Risk | Mitigation |
 |---|---|
@@ -511,14 +604,18 @@ Sources: OpenAI's pricing page, and CostGoat's OpenAI image and Sora pricing pag
 | Debuffs feel unfair ("my units miss!") | Clear badges and "MISS" pops, short durations, Aegis Knight as the counter, and a one-time tip. |
 | Rally +100% is too strong in PvP | 2s duration, a very slow knight, a PvP-only multiplier if needed. |
 | A sixth rarity breaks code that assumes 5 | Event has no drop weight; check every `RARITIES` loop (drop weights, admin filters, PvP Mirror). |
+| Story 3's deck rules feel bad with level 1 knights, or force players to drop their best cards | Cards can't be sold, so everyone who reaches Story 3 owns both knights; the level floor makes level 1 copies usable; the deck check shows exactly what to change. |
 | Art is blocked (no credits), as for v1.1 | Build the engine work first: story mode, statuses and area buffs work with placeholder art from existing monsters. |
 
 ---
 
-## 12. Open questions
+## 13. Open questions
 1. In Story 2, does the player keep **their own hero**, or is there a story hero?
 2. Wave counts **10 / 15 / 20** per chapter: OK?
 3. Order of release: **v1.1 Supporting Cast** or **v1.2 Stories** first, once there are credits?
-   (Stories is about 370 credits; Supporting Cast is 8 units, about 120.)
+   (Stories is about 510 credits; Supporting Cast is 8 units, about 120.)
 4. **Names:** the unit, monster and boss names in sections 4 and 5 are working names.
-5. **Story 3:** coming from you. The Jawbreaker's core should reveal the hook.
+5. **Story 3 level floor:** run the two knights at story levels (Lv 6/7/8) when they're lower,
+   or tune the monsters for level 1 knights instead?
+6. **Story 3 reward:** gems, chest and the "The Chosen" badge, or should it also give a unit?
+7. **Muse in Story 3:** allowed (she's Event, not Legendary or Mythic). OK?

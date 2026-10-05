@@ -54,3 +54,25 @@ in `sprites/vfx/` were re-keyed with `../game/tools/rekey.py` (fits the backgrou
 - `keyimg.py` keys a still into `units/<unit>.png` (the same soft key as `tospritesheet.py`).
 - `stillsheet.py <unit>...` builds placeholder idle/skill sheets (`sprites/units*/`) and the card
   portrait (`cards/portraits/`) from the keyed still, until real Seedance clips exist.
+
+## v1.2 Stories, Book 1 (2026-10-06)
+All art for Book 1 (*The Chosen*, Stories 1–3), about 394 credits. References: `style/style_anchor_v2.png`
+plus `_green/bee_keeper.png` (units), `_green/orc_brute.png` (monsters), `_green/lich_king.png` (bosses).
+- `_green/v12/`: green-screen stills (10 units, 19 monsters, 8 bosses), keyed into `units/`, `monsters/`, `bosses/`.
+- Clips: units idle/attack/skill (+ HD idle/attack), monsters walk/death (+ HD walk), bosses
+  walk/attack/death/intro (+ HD walk/attack). Extras: `bosses/chaos_jawbreaker_crack`, `bosses/portal_wizard_portal`.
+  Muse's "attack" clip is her buff pulse; Aegis Knight's is a shield pulse.
+- `cards/portraits/` (10), `cards/frame_event.png` (Event rarity), `ui/boss_banners/` (8),
+  `ui/icon_story.png`, `ui/status_{irritation,fatigue,shellshock,rally}.png`.
+- Arenas (image edits, so the path and grid match the base arena's layout):
+  `arena_candy_palace`, `arena_corrupted_candy_kingdom`, `arena_jawbreaker_core` (base: candy_land),
+  `arena_upside_down_village` (base: winter_village), `arena_hollow_woods`, `arena_first_rift`
+  (base: mushroom_forest), each with a `_loop.mp4` ambient clip.
+- `story/`: 15 panels (`panels/s<story>_p<n>_*.png`), 3 covers, story screen background,
+  Candy King dialogue portrait, key art.
+- Corrupted villagers have their tentacles and eyes drawn into the art (not a code overlay).
+- Scripts: `v12get.sh`/`v12try.sh` download jobs listed in `_v12_pending.tsv`; `v12build.sh`
+  keys stills and builds sheets; `v12sheet.py` makes review contact sheets.
+- Weak spots worth a re-roll if they bother you: some death clips end with debris still on screen
+  (jelly_bean_blob, corrupted_farmer), sprinkle_swarm's walk changes shape over the loop, and
+  chaos_jawbreaker_crack ends as an open hole (better used as the final shatter).
