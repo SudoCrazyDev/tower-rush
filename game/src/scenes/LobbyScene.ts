@@ -284,13 +284,13 @@ export class LobbyScene extends Phaser.Scene {
     if (mode === "arena") {
       const a = this.arena;
       this.arenaArt(group, a, a.trophies > profile.trophies);
-      group.add(txt(this, 0, 180, "ARENA", 60));
+      this.namePlate(group, "ARENA");
       group.add(txt(this, 0, 236, `${a.name} · Best wave ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
     } else {
       this.storiesArt(group);
       const total = BOOK.stories.reduce((n, s) => n + storyStars(s), 0);
       const max = BOOK.stories.reduce((n, s) => n + s.chapters.length * 3, 0);
-      group.add(txt(this, 0, 180, "STORIES", 60));
+      this.namePlate(group, "STORIES");
       group.add(txt(this, 0, 236, `${BOOK.title} · ★ ${total} / ${max}`, 26, "#c9d2ff"));
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
@@ -353,11 +353,45 @@ export class LobbyScene extends Phaser.Scene {
     if (!tutorialDue("battle")) group.add(iconButton(this, -248, -282, "close", 60, () => this.open(false)));
   }
 
-  private cardFrame(group: Phaser.GameObjects.Container, locked: boolean) {
+  /**
+   * The card's frame: a layered gold rim with blue gems, and (with `art`) a gold border around
+   * the art window at the top, drawn over the art (the art goes in at index 1, under it).
+   */
+  private cardFrame(group: Phaser.GameObjects.Container, locked: boolean, art = true) {
+    const [dark, gold, light] = locked ? [0x3e4252, 0x8a8fa8, 0xd0d4e0] : [0x6b3f08, 0xf2b630, 0xfff0a8];
     const frame = this.add.graphics();
-    frame.fillStyle(NAVY, 0.85).fillRoundedRect(-300, -330, 600, 660, 36);
-    frame.lineStyle(8, locked ? 0x8a8fa8 : 0xf2b630, 1).strokeRoundedRect(-300, -330, 600, 660, 36);
+    frame.fillStyle(NAVY, 0.92).fillRoundedRect(-300, -330, 600, 660, 36);
+    frame.lineStyle(16, dark, 1).strokeRoundedRect(-300, -330, 600, 660, 36);
+    frame.lineStyle(9, gold, 1).strokeRoundedRect(-300, -330, 600, 660, 36);
+    frame.lineStyle(2, light, 0.9).strokeRoundedRect(-302, -332, 604, 664, 38);
+    frame.lineStyle(2, dark, 1).strokeRoundedRect(-290, -320, 580, 640, 28);
     group.add(frame);
+    const trim = this.add.graphics();
+    if (art) {
+      trim.lineStyle(10, dark, 1).strokeRoundedRect(-272, -322, 544, 474, 14);
+      trim.lineStyle(5, gold, 1).strokeRoundedRect(-272, -322, 544, 474, 14);
+      trim.lineStyle(2, light, 0.8).strokeRoundedRect(-268, -318, 536, 466, 11);
+    }
+    // Gems on the corners and the middle of the sides, like the dialog panels.
+    const diamond = (x: number, y: number, r: number) => {
+      const pts = [new Phaser.Math.Vector2(x, y - r * 1.3), new Phaser.Math.Vector2(x + r, y), new Phaser.Math.Vector2(x, y + r * 1.3), new Phaser.Math.Vector2(x - r, y)];
+      trim.fillStyle(dark, 1).fillPoints(pts.map((p) => new Phaser.Math.Vector2(x + (p.x - x) * 1.35, y + (p.y - y) * 1.35)), true);
+      trim.fillStyle(gold, 1).fillPoints(pts.map((p) => new Phaser.Math.Vector2(x + (p.x - x) * 1.15, y + (p.y - y) * 1.15)), true);
+      trim.fillStyle(locked ? 0x9aa0b8 : 0x3f8cff, 1).fillPoints(pts, true);
+      trim.fillStyle(0xffffff, 0.75).fillPoints([pts[0], new Phaser.Math.Vector2(x + r * 0.35, y - r * 0.2), new Phaser.Math.Vector2(x, y), new Phaser.Math.Vector2(x - r * 0.35, y - r * 0.2)], true);
+    };
+    for (const [x, y] of [[-292, -322], [292, -322], [-292, 322], [292, 322]]) diamond(x, y, 13);
+    for (const x of [-300, 300]) diamond(x, 60, 11);
+    group.add(trim);
+  }
+
+  /** A gold-edged plate behind a mode card's title, sitting on the bottom of the art window. */
+  private namePlate(group: Phaser.GameObjects.Container, label: string) {
+    const g = this.add.graphics();
+    g.fillStyle(0x6b3f08, 1).fillRoundedRect(-196, 140, 392, 82, 22);
+    g.fillStyle(0xf2b630, 1).fillRoundedRect(-190, 146, 380, 70, 18);
+    g.fillStyle(0x2a1d5c, 1).fillRoundedRect(-184, 152, 368, 58, 14);
+    group.add([g, txt(this, 0, 180, label, 52)]);
   }
 
   /** The arena page: the arena's board, best wave and BATTLE, with arrows to the other arenas. */
@@ -393,7 +427,7 @@ export class LobbyScene extends Phaser.Scene {
     const s = BOOK.stories[bookIdx];
     const lock = storyLock(profile.story, profile.trophies, s);
     const done = storyFinished(profile.story, s);
-    this.cardFrame(group, !!lock);
+    this.cardFrame(group, !!lock, false);
     group.add(txt(this, 0, -290, `${BOOK.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
     this.closeButton(group);
     // The cover, framed like a book; greyed with a padlock while locked.
