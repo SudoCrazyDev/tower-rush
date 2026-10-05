@@ -6,6 +6,7 @@ import { loadConfig, loadMe } from "../save";
 import { showAuth, showBlocker } from "../authOverlay";
 import { unlockAudio } from "../audio";
 import { ambientVideo, coverFit } from "../backdrop";
+import { ELEMENTS } from "../data/units";
 
 /** Loads the index, then every image the menus need (battle sheets load per battle). */
 export class BootScene extends Phaser.Scene {
@@ -93,6 +94,7 @@ export class BootScene extends Phaser.Scene {
     for (let i = 0; i < index.atlas.buttons; i++) this.load.image(`button:${i}`, `${BASE}ui/button_${i}.webp`);
     for (let i = 0; i < index.atlas.icons; i++) this.load.image(`icon:${i}`, `${BASE}ui/icon_${i}.webp`);
     for (let i = 0; i < (index.atlas.leagues ?? 0); i++) this.load.image(`league:${i}`, `${BASE}ui/league_${i}.webp`);
+    for (const e of ELEMENTS) this.load.image(`element:${e}`, `${BASE}ui/element_${e}.webp`);
 
     this.load.start();
   }

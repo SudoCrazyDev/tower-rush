@@ -132,7 +132,7 @@ function groupsFor(by: GroupBy): Group[] {
       key: e,
       title: ELEMENT_GROUPS[e][0],
       sub: ELEMENT_GROUPS[e][1],
-      icon: `item:essence_${e}`,
+      icon: `element:${e}`,
       accent: ELEMENT_COLOR[e],
       match: (u) => u.element === e,
     }));
@@ -324,14 +324,12 @@ export class DeckScene extends Phaser.Scene {
     let x = cx - rowW / 2 + dot / 2;
     for (const e of ELEMENTS) {
       const face = bakedImage(this);
-      const icon = this.add.image(0, 0, `item:essence_${e}`);
-      icon.setScale((dot * 0.8) / Math.max(icon.width, icon.height));
+      const icon = this.add.image(0, 0, `element:${e}`).setDisplaySize(dot, dot);
       const c = this.add.container(x, y2, [face, icon]).setSize(dot, dot);
       const paint = (on: boolean, dim: boolean) => {
         face.draw((g) => {
           g.fillStyle(0x000000, 0.4).fillCircle(2, 4, dot / 2 + 2);
-          g.fillStyle(on ? BRASS : 0x1a0c04, 1).fillCircle(0, 0, dot / 2 + 3);
-          g.fillStyle(on ? ELEMENT_COLOR[e] : 0x4a2812, on ? 0.6 : 1).fillCircle(0, 0, dot / 2 - 2);
+          if (on) g.fillStyle(BRASS, 1).fillCircle(0, 0, dot / 2 + 4);
         });
         icon.setAlpha(dim ? 0.35 : 1);
         c.setScale(on ? 1.08 : 1);

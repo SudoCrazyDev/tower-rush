@@ -172,7 +172,31 @@ index["locations"] = ids("locations")
 for i in index["locations"]:
     jobs.append(lambda i=i: fit(f"{SRC}/locations/{i}.png", f"{OUT}/locations/{i}.webp", 1344))
 
-# merge_rank_pips / element_icons have touching sprites, so the game draws those itself.
+# Element badges: six round icons on a dark glow (fire, ice, lightning, nature, poison, arcane).
+# The glow touches every badge, so cut each one out with a circle at its known spot.
+ELEMENT_ORDER = ["fire", "ice", "lightning", "nature", "poison", "arcane"]
+
+
+@task
+def element_badges():
+    dsts = [f"{OUT}/ui/element_{e}.webp" for e in ELEMENT_ORDER]
+    if not any(need(d) for d in dsts):
+        return
+    im = Image.open(f"{SRC}/ui/element_icons.png").convert("RGBA")
+    k = im.width / 1024  # positions measured on the 1024px original
+    r = 79.5 * k
+    side = int(np.ceil(2 * r)) + 4
+    yy, xx = np.mgrid[0:side, 0:side] + 0.5 - side / 2
+    mask = np.clip(r - np.hypot(xx, yy) + 0.5, 0, 1)  # 1px anti-aliased edge
+    for i, dst in enumerate(dsts):
+        cx, cy = (94.5 + i * 167.1) * k, 340 * k
+        x0, y0 = round(cx - side / 2), round(cy - side / 2)
+        a = np.asarray(im.crop((x0, y0, x0 + side, y0 + side))).copy()
+        a[..., 3] = (a[..., 3] * mask).astype(np.uint8)
+        save(Image.fromarray(a).resize((128, 128), Image.LANCZOS), dst, 90)
+
+
+# merge_rank_pips has touching sprites, so the game draws those itself.
 # --- animation sheets --------------------------------------------------------
 FRAME = {"units": 192, "units_awakened": 192, "heroes": 192, "monsters": 160, "bosses": 256, "vfx": 192}
 index["anims"] = {}

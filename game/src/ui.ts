@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BUTTON, ICON, type ButtonColor } from "./assets";
-import { UNIT_BY_ID, RARITY_STATS, ELEMENT_COLOR } from "./data/units";
+import { UNIT_BY_ID, RARITY_STATS } from "./data/units";
 import { sfx, audioSettings, setAudio } from "./audio";
 import { LAYOUT, RES } from "./display";
 import { RACES, raceCss, raceLabel, type Race } from "../../shared/races.ts";
@@ -122,11 +122,8 @@ export function cardView(
   const art = opts.awakened && scene.textures.exists(`portrait_awakened:${id}`) ? `portrait_awakened:${id}` : `portrait:${id}`;
   const portrait = scene.add.image(0, 0, art).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
   const parts: Phaser.GameObjects.GameObject[] = [frame, portrait];
-  // Element gem in the corner.
-  const gem = scene.add.graphics();
-  gem.fillStyle(ELEMENT_COLOR[def.element], 1).fillCircle(size * 0.36, -size * 0.36, size * 0.075);
-  gem.lineStyle(Math.max(2, size * 0.02), NAVY, 1).strokeCircle(size * 0.36, -size * 0.36, size * 0.075);
-  parts.push(gem);
+  // Element badge in the corner (an icon, so it doesn't read as a notification dot).
+  parts.push(scene.add.image(size * 0.35, -size * 0.35, `element:${def.element}`).setDisplaySize(size * 0.24, size * 0.24));
   if (opts.level !== undefined) {
     const lv = txt(scene, 0, size * 0.39, `LV ${opts.level}`, Math.round(size * 0.15));
     parts.push(lv);
