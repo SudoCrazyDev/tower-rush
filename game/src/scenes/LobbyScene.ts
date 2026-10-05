@@ -97,6 +97,12 @@ export class LobbyScene extends Phaser.Scene {
     cover(this, WIDE ? "loc:lobby_landscape" : "loc:lobby_portrait", 0, WIDE ? "lobby_landscape" : "lobby_portrait");
     topBar(this);
     iconButton(this, W - 44, 120, "settings", 70, () => this.settings());
+    // What's new: the latest release popup, any time (under settings; under the quests on phones).
+    const [nx, ny, ns] = WIDE ? [W - 44, 215, 80] : [54, 420, 64];
+    const book = this.add.image(nx, ny, "item:spell_book");
+    book.setScale(ns / Math.max(book.width, book.height));
+    pressable(book, () => whatsNew(this, true));
+    txt(this, nx, ny + ns * 0.58, "NEW", 20, "#ffd93b");
 
     // Wide: logo on the left, arena in the middle, deck on the right. Phone: stacked.
     const side = W * 0.2;

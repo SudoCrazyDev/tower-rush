@@ -29,15 +29,17 @@ export function whatsNew(scene: Phaser.Scene, force = false) {
   const cast = Object.values(UNIT_BY_ID).filter((u) => isSupport(u.arch) && u.enabled);
   if (!cast.length) return;
   sfx("upgrade");
-  const m = modal(scene, 680, 1060, `NEW IN ${RELEASE.version}`);
+  const m = modal(scene, 720, 1060, `NEW IN ${RELEASE.version}`);
   m.add(txt(scene, m.cx, m.cy - 420, RELEASE.title.toUpperCase(), 44, "#ffd93b"));
   m.add(txt(scene, m.cx, m.cy - 370, RELEASE.tagline, 26, "#c9d2ff"));
   m.add(txt(scene, m.cx, m.cy - 320, "Support units never attack. They copy, swap, brew and rally.", 22, "#ffffff").setWordWrapWidth(600));
+  // Two columns of up to four cards, each with its name and job.
   cast.slice(0, 8).forEach((u, i) => {
-    const y = m.cy - 230 + i * 104;
-    m.add(cardView(scene, m.cx - 230, y, 92, u.id));
-    m.add(txt(scene, m.cx - 160, y - 16, u.name, 28, "#fff4c2", [0, 0.5]));
-    m.add(txt(scene, m.cx - 160, y + 18, SUPPORT_TEXT[u.arch as keyof typeof SUPPORT_TEXT], 20, "#c9d2ff", [0, 0.5]));
+    const x = m.cx + (i < 4 ? -330 : 10);
+    const y = m.cy - 200 + (i % 4) * 128;
+    m.add(cardView(scene, x + 46, y, 92, u.id));
+    m.add(txt(scene, x + 104, y - 22, u.name, 24, "#fff4c2", [0, 0.5]));
+    m.add(txt(scene, x + 104, y + 16, SUPPORT_TEXT[u.arch as keyof typeof SUPPORT_TEXT], 17, "#c9d2ff", [0, 0.5]).setWordWrapWidth(210));
   });
   const gift = RELEASE_GIFTS.find((g) => g.version === RELEASE.version);
   const got = gift?.cards.filter((id) => UNIT_BY_ID[id]?.enabled && profile.cards[id]).map((id) => UNIT_BY_ID[id].name);
