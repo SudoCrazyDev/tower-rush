@@ -13,6 +13,7 @@ import { ARENAS, ARENA_BY_ID } from "../../shared/arenas.ts";
 import { ECONOMY, battleRewards } from "../../shared/economy.ts";
 import { needsAttention } from "../../shared/mail.ts";
 import { inbox, mark, message, unclaim } from "./mail.ts";
+import { deviceOf, holdsPlay, releasePlay, setPlayBattle } from "./play.ts";
 
 export const player = new Hono<AppEnv>();
 
@@ -335,6 +336,9 @@ player.post("/battles", P, async (c) => {
   const m = await me(c);
   const a = ARENA_BY_ID[(await body(c)).arena];
   if (!a || a.trophies > m.p.trophies) fail(400, "Arena is locked");
+  // The game claims the play slot first (see play.ts); without it, another device is playing.
+  const device = deviceOf(c);
+  if (!(await holdsPlay(c.env.DB, m.u.id, device))) fail(409, "playing elsewhere");
   const r = await run(
     c.env.DB,
     "INSERT INTO battles (user_id, arena, deck, hero, started_at) VALUES (?, ?, ?, ?, ?)",
@@ -344,6 +348,7 @@ player.post("/battles", P, async (c) => {
     m.p.hero,
     Date.now(),
   );
+  await setPlayBattle(c.env.DB, m.u.id, device!, r.meta.last_row_id);
   return c.json({ battleId: r.meta.last_row_id });
 });
 
@@ -355,9 +360,9 @@ player.post("/battles/:id/finish", P, async (c) => {
   const db = c.env.DB;
   const id = numParam(c, "id");
   const playerId = c.get("playerId");
-  const b = await one<{ id: number; arena: string; started_at: number; finished_at: number | null }>(
+  const b = await one<{ id: number; arena: string; started_at: number; finished_at: number | null; cutoff: number | null }>(
     db,
-    "SELECT id, arena, started_at, finished_at FROM battles WHERE id = ? AND user_id = ?",
+    "SELECT id, arena, started_at, finished_at, cutoff FROM battles WHERE id = ? AND user_id = ?",
     id,
     playerId,
   );
@@ -368,7 +373,8 @@ player.post("/battles/:id/finish", P, async (c) => {
   if (b.finished_at || !claimed.meta.changes) fail(409, "Battle already finished");
 
   const req = await body(c);
-  const elapsed = (now - b.started_at) / 1000;
+  // Taken over by another device: only the play up to then counts.
+  const elapsed = (Math.min(now, b.cutoff ?? now) - b.started_at) / 1000;
   const maxWave = Math.floor(elapsed / 3) + 1; // waves can't be cleared faster than ~3s even at 2x
   const int = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   const wave = int(req.wave, maxWave);
@@ -415,6 +421,7 @@ player.post("/battles/:id/finish", P, async (c) => {
     rewards.trophies,
     b.id,
   );
+  await releasePlay(db, playerId, deviceOf(c));
   return c.json({ rewards, boosts: { coinMult: boosts.coinMult, gemMult: boosts.gemMult }, wave, ...r });
 });
 

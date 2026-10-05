@@ -16,6 +16,7 @@ import { one, run } from "./db.ts";
 import { ensureConfig } from "./config-store.ts";
 import { body, fail, param, type AppEnv, type Bindings, type Ctx } from "./http.ts";
 import { requirePlayer } from "./auth.ts";
+import { deviceOf, holdsPlay, releasePlay } from "./play.ts";
 import { getUser, readProfile, writeProfile } from "./users.ts";
 import { payPromotions, refreshDaily, type Promotion } from "../../shared/profile.ts";
 import { addQuestProgress } from "../../shared/daily.ts";
@@ -208,6 +209,8 @@ pvp.get("/queue", async (c) => {
   const mode = (c.req.query("mode") ?? "") as PvpMode;
   if (!join && !PVP_MODES.includes(mode)) fail(400, "Unknown mode");
   const bot = c.req.query("bot") === "1";
+  // The game claims the play slot first (see play.ts); without it, another device is playing.
+  if (!(await holdsPlay(c.env.DB, userId, deviceOf(c)))) fail(409, "playing elsewhere");
   if (!join && !host && !bot) await settleAbandoned(c.env.DB, userId);
   const extra: Record<string, string> = join ? { "x-join": join } : { "x-mode": mode, ...(host ? { "x-host": "1" } : {}), ...(bot ? { "x-bot": "1" } : {}) };
   return forward(c, c.env.MATCHMAKER.get(c.env.MATCHMAKER.idFromName("main")), userId, extra);
@@ -244,6 +247,7 @@ pvp.post("/matches/:id/finish", requirePlayer, async (c) => {
   if (!r) fail(409, "Match already finished");
   await run(db, "UPDATE pvp_matches SET log1 = ? WHERE id = ?", logJson(req.log), setup.id);
   if (!setup.practice) await questProgress(db, userId, req.stats ?? {}, seconds);
+  await releasePlay(db, userId, deviceOf(c));
   const u = await getUser(db, userId);
   return c.json({ result: r.result, promotions: r.promotions[0], profile: u ? readProfile(u) : null });
 });

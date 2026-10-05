@@ -16,6 +16,7 @@ import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
 import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, type BattleResult } from "../save";
+import { onPlayLost, releasePlay } from "../play";
 import { music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT } from "../ui";
 import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
@@ -80,6 +81,7 @@ export class BattleScene extends Phaser.Scene {
   lives = 0;
   /** Server-side battle record; null if the server couldn't be reached at start. */
   private battleId: Promise<number | null> = Promise.resolve(null);
+  private pauseMenu: ReturnType<typeof modal> | null = null;
   wave = 0;
   kills = 0;
   bossesKilled = 0;
@@ -219,7 +221,17 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-H", () => this.castHero());
     music("battle");
     this.load.on(Phaser.Loader.Events.COMPLETE, this.onAwakenedArt, this);
+    // Another device started a battle: this one ends, saving what it has.
+    onPlayLost(() => {
+      if (this.over) return;
+      this.pauseMenu?.close();
+      this.anims.resumeAll();
+      this.paused = false;
+      this.endGame("Continued on another device");
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      onPlayLost(null);
+      releasePlay();
       this.load.off(Phaser.Loader.Events.COMPLETE, this.onAwakenedArt, this);
       this.anims.globalTimeScale = 1;
       this.tweens.timeScale = 1;
@@ -886,7 +898,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.over) return;
     this.paused = true;
     this.anims.pauseAll();
-    const m = modal(this, 560, 560, "PAUSED");
+    const m = (this.pauseMenu = modal(this, 560, 560, "PAUSED"));
     const resume = () => {
       m.close();
       this.paused = false;
@@ -1329,9 +1341,12 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- end
 
-  private endGame() {
+  /** `why`: shown under the headline when the battle didn't end by itself. */
+  private endGame(why?: string) {
     if (this.over) return;
     this.over = true;
+    this.pauseMenu = null;
+    releasePlay();
     // Left mid-tutorial (surrendered): it still only runs once.
     if (this.tutorialHold) setTutorialDone("battle");
     music(null);
@@ -1348,6 +1363,7 @@ export class BattleScene extends Phaser.Scene {
       banner.setScale(460 / banner.width);
       const headline = txt(this, m.cx, m.cy - 290, "GAME OVER", 40);
       m.add([banner, headline]);
+      if (why) m.add(txt(this, m.cx, m.cy - 212, why, 24, "#ffd27a"));
       m.add(txt(this, m.cx, m.cy - 150, `Wave ${stats.wave}`, 64, "#fff4c2"));
       m.add(txt(this, m.cx, m.cy - 100, `${stats.kills} monsters  ·  ${stats.bosses} bosses`, 26, "#c9d2ff"));
       const saving = txt(this, m.cx, m.cy + 90, "Saving...", 36, "#c9d2ff");

@@ -13,6 +13,7 @@ import { loadMe } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { rewardPopup } from "./daily";
 import { MatchConn, finishBotMatch } from "../pvpnet";
+import { onPlayLost, releasePlay } from "../play";
 import { ARENA_BY_ID, ARENAS, type ArenaDef } from "../../../shared/arenas.ts";
 import { BOSS_BY_ID } from "../../../shared/monsters.ts";
 import { ELEMENT_COLOR, maxRank, UNIT_BY_ID, maxPowerUp, powerUpCost } from "../../../shared/units.ts";
@@ -125,6 +126,8 @@ export class PvpScene extends Phaser.Scene {
   private reported = false;
   private done = false;
   private logSent = false;
+  /** Surrendered because another device started playing. */
+  private lostElsewhere = false;
 
   constructor() {
     super("Pvp");
@@ -151,7 +154,7 @@ export class PvpScene extends Phaser.Scene {
     this.heroBtn = null;
     this.versus = null;
     this.dragging = -1;
-    this.reported = this.done = this.logSent = false;
+    this.reported = this.done = this.logSent = this.lostElsewhere = false;
     this.lastSnap = this.hudAt = this.oppSnapAt = 0;
   }
 
@@ -229,7 +232,18 @@ export class PvpScene extends Phaser.Scene {
       this.conn.onStatus = (on) => !on && !this.done && toast(this, "Reconnecting...");
       for (const m of this.early.splice(0)) this.onServer(m);
     }
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.conn?.close());
+    // Another device started playing: this match is surrendered.
+    onPlayLost(() => {
+      if (this.done) return;
+      this.lostElsewhere = true;
+      this.surrender();
+      toast(this, "Continued on another device");
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.conn?.close();
+      onPlayLost(null);
+      releasePlay();
+    });
   }
 
   private makeAnims() {
@@ -1116,6 +1130,7 @@ export class PvpScene extends Phaser.Scene {
   private endBot(outcome: Outcome | "left") {
     if (this.done) return;
     this.done = true;
+    releasePlay();
     this.board.end("done");
     const shown: Outcome = outcome === "left" ? "loss" : outcome;
     const res = finishBotMatch(this.setup.id, { result: outcome, seconds: this.board.now, stats: this.stats(), log: this.log() })
@@ -1127,6 +1142,7 @@ export class PvpScene extends Phaser.Scene {
   private endOnline(r: MatchResult, promotions: Promotion[]) {
     if (this.done) return;
     this.done = true;
+    releasePlay();
     if (!this.board.over) this.board.end("done");
     this.sendLog();
     const outcome: Outcome = r.winner === null ? "draw" : r.winner === this.you ? "win" : "loss";
@@ -1141,8 +1157,9 @@ export class PvpScene extends Phaser.Scene {
       const banner = this.add.image(m.cx, m.cy - 280, outcome === "win" ? "ui:banner_victory" : "ui:banner_defeat");
       banner.setScale(460 / banner.width);
       m.add([banner, txt(this, m.cx, m.cy - 270, outcome === "win" ? "VICTORY" : outcome === "draw" ? "DRAW" : "DEFEAT", 44)]);
-      const why =
-        reason === "left" ? (outcome === "win" ? "Your opponent surrendered" : "You surrendered") : reason === "disconnect" ? (outcome === "win" ? "Your opponent left" : "Disconnected") : reason === "maxWave" ? "Decided by HP after the last wave" : "";
+      const why = this.lostElsewhere
+        ? "Continued on another device"
+        : reason === "left" ? (outcome === "win" ? "Your opponent surrendered" : "You surrendered") : reason === "disconnect" ? (outcome === "win" ? "Your opponent left" : "Disconnected") : reason === "maxWave" ? "Decided by HP after the last wave" : "";
       m.add(txt(this, m.cx, m.cy - 150, `vs ${this.them.name}`, 34, "#fff4c2"));
       if (why) m.add(txt(this, m.cx, m.cy - 105, why, 22, "#c9d2ff"));
       const saving = txt(this, m.cx, m.cy + 40, "Saving...", 32, "#c9d2ff");
@@ -1185,12 +1202,16 @@ export class PvpScene extends Phaser.Scene {
     }));
     m.add(button(this, m.cx, m.cy + 80, 340, 96, "SURRENDER", "red", () => {
       m.close();
-      if (this.opp) this.endBot("left");
-      else {
-        this.conn?.send({ t: "leave" });
-        this.sendLog();
-      }
+      this.surrender();
     }));
+  }
+
+  private surrender() {
+    if (this.opp) this.endBot("left");
+    else {
+      this.conn?.send({ t: "leave" });
+      this.sendLog();
+    }
   }
 }
 

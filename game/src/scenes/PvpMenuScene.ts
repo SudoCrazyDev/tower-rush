@@ -5,6 +5,7 @@ import { W, H, WIDE, txt, button, iconButton, modal, NAVY, toast } from "../ui";
 import { profile } from "../save";
 import { joinQueue, MatchConn, type Search } from "../pvpnet";
 import { askCode } from "../codePrompt";
+import { claimPlay, onPlayLost, releasePlay } from "../play";
 import { CHALLENGE_RULES, PVP, PVP_MODES, PVP_MODE_INFO, type PvpMode, type ServerMsg } from "../../../shared/pvp.ts";
 
 const MODE_COLOR: Record<PvpMode, "yellow" | "blue" | "green"> = { ranked: "yellow", mirror: "blue", casual: "green" };
@@ -16,6 +17,8 @@ const MODE_COLOR: Record<PvpMode, "yellow" | "blue" | "green"> = { ranked: "yell
  */
 export class PvpMenuScene extends Phaser.Scene {
   private leave: (() => void) | null = null;
+  /** Waiting to hear whether PvP can start here. */
+  private claiming = false;
 
   constructor() {
     super("PvpMenu");
@@ -28,7 +31,14 @@ export class PvpMenuScene extends Phaser.Scene {
   create() {
     music("lobby");
     this.leave = null;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.leave?.());
+    this.claiming = false;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      // Still searching (not heading into a match): give up the queue and the play slot.
+      if (!this.leave) return;
+      this.leave();
+      onPlayLost(null);
+      releasePlay();
+    });
     const bg = this.add.image(W / 2, H / 2, "loc:pvp_versus_background");
     bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.45);
@@ -98,8 +108,18 @@ export class PvpMenuScene extends Phaser.Scene {
     });
   }
 
+  /** Search, unless another device is playing and the player keeps it there. */
+  private async search(search: Search) {
+    if (this.claiming || this.leave) return;
+    this.claiming = true;
+    const ok = await claimPlay("pvp");
+    this.claiming = false;
+    if (ok && this.sys.isActive()) this.searching(search);
+    else if (ok) releasePlay();
+  }
+
   /** Searching overlay; leaves the queue (or closes the challenge) when cancelled or when the scene changes. */
-  private search(search: Search) {
+  private searching(search: Search) {
     const heading =
       "mode" in search
         ? PVP_MODE_INFO[search.mode].name.toUpperCase()
@@ -127,12 +147,22 @@ export class PvpMenuScene extends Phaser.Scene {
     const close = () => {
       tick.remove();
       parts.forEach((p) => p.destroy());
+      onPlayLost(null);
+      releasePlay();
     };
     const cancel = button(this, W / 2, H / 2 + 300, 320, 96, "CANCEL", "red", () => {
       this.leave?.();
       this.leave = null;
       close();
     }).setDepth(101);
+    // Another device started playing: stop searching here.
+    onPlayLost(() => {
+      if (!this.leave || !this.sys.isActive()) return;
+      this.leave();
+      this.leave = null;
+      close();
+      toast(this, "Playing on another device");
+    });
     parts.push(cancel);
 
     this.leave = joinQueue(search, (e) => {

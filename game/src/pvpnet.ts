@@ -3,7 +3,7 @@
  * WebSockets to the server's Durable Objects. The session token goes in the subprotocol
  * list, since browsers can't set headers on a WebSocket.
  */
-import { getToken, post } from "./api";
+import { deviceId, getToken, post } from "./api";
 import type { ClientMsg, MatchSetup, PvpMode, ServerMsg } from "../../shared/pvp.ts";
 import type { Profile, Promotion } from "../../shared/profile.ts";
 
@@ -33,7 +33,7 @@ export function joinQueue(search: Search, on: (e: QueueEvent) => void) {
       : "bot" in search
         ? `mode=${search.bot}&bot=1`
         : "challenge" in search ? `mode=${search.challenge}&challenge=host` : `mode=${search.mode}`;
-  const ws = socket(`/pvp/queue?${query}`);
+  const ws = socket(`/pvp/queue?${query}&device=${deviceId}`);
   let done = false;
   ws.onmessage = (e) => {
     const msg = JSON.parse(String(e.data)) as QueueEvent;

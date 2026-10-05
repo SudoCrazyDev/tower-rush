@@ -9,6 +9,7 @@ import { leagueBadge, leagueModal } from "./leagues";
 import { inboxModal, mailIcon } from "./inbox";
 import { leagueFor } from "../../../shared/leagues.ts";
 import { showAuth } from "../authOverlay";
+import { claimPlay, releasePlay } from "../play";
 import { music } from "../audio";
 import { bakeAll } from "../bake";
 import { pointAt, tutorialDue } from "../tutorial";
@@ -73,6 +74,8 @@ function eventStrip(scene: Phaser.Scene) {
 
 export class LobbyScene extends Phaser.Scene {
   private arena!: ArenaDef;
+  /** Waiting to hear whether a battle can start here. */
+  private starting = false;
 
   constructor() {
     super("Lobby");
@@ -196,7 +199,7 @@ export class LobbyScene extends Phaser.Scene {
     group.add(txt(this, 0, -290, `ARENA ${idx + 1}`, 28, "#ffd27a"));
     group.add(txt(this, 0, 190, a.name, 46));
     group.add(txt(this, 0, 240, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
-    group.add(button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.scene.start("Battle", { arena: a.id }), 54));
+    group.add(button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.battle(a.id), 54));
 
     const step = (d: number) => {
       const next = ARENAS[idx + d];
@@ -213,6 +216,16 @@ export class LobbyScene extends Phaser.Scene {
       if (ARENAS[idx + 1].trophies > profile.trophies) fwd.setTint(0x777777);
       group.add(fwd);
     }
+  }
+
+  /** Start a battle, unless another device is in one and the player keeps it there. */
+  private async battle(arena: string) {
+    if (this.starting) return;
+    this.starting = true;
+    const ok = await claimPlay("battle");
+    this.starting = false;
+    if (ok && this.sys.isActive()) this.scene.start("Battle", { arena });
+    else if (ok) releasePlay();
   }
 
   private toast(msg: string) {
