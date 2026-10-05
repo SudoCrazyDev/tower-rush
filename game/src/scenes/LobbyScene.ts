@@ -30,8 +30,9 @@ let refreshedFor = "";
 /** The lobby carousel's pages: the arenas, then the story books. */
 type Mode = "arena" | "story";
 const MODES: Mode[] = ["arena", "story"];
-const MODE_LABEL: Record<Mode, string> = { arena: "ARENA", story: "STORIES" };
 let mode: Mode = "arena";
+/** Whether the mode card is open (its arenas or books showing) rather than the ARENA / STORIES cards. */
+let opened = false;
 /** The middle of the carousel card. */
 const CARD_Y = WIDE ? 680 : 790;
 /** The book (story) showing on the Stories page; -1 picks the one the player is on. */
@@ -99,7 +100,7 @@ function eventStrip(scene: Phaser.Scene) {
 export class LobbyScene extends Phaser.Scene {
   private arena!: ArenaDef;
   private card?: Phaser.GameObjects.Container;
-  private tabs?: Phaser.GameObjects.Container;
+
   private saveTimer?: Phaser.Time.TimerEvent;
   /** Waiting to hear whether a battle can start here. */
   private starting = false;
@@ -109,7 +110,10 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   init(data: { mode?: Mode; story?: string }) {
-    if (data.mode) mode = data.mode;
+    if (data.mode) {
+      mode = data.mode;
+      opened = true;
+    }
     const i = data.story ? BOOK.stories.findIndex((s) => s.id === data.story) : -1;
     if (i >= 0) bookIdx = i;
   }
@@ -120,8 +124,9 @@ export class LobbyScene extends Phaser.Scene {
     const chosen = profile.arena ? ARENA_BY_ID[profile.arena] : null;
     this.arena = chosen && chosen.trophies <= profile.trophies ? chosen : unlocked;
     this.card = undefined;
-    this.tabs = undefined;
-    if (!BOOK.stories.length || tutorialDue("battle")) mode = "arena";
+    if (!BOOK.stories.length) mode = "arena";
+    // New players go straight to the first arena's BATTLE.
+    if (tutorialDue("battle")) [mode, opened] = ["arena", true];
     if (bookIdx < 0 || bookIdx >= BOOK.stories.length) bookIdx = currentStory();
     this.saveTimer = undefined;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.flushArena());
@@ -144,9 +149,12 @@ export class LobbyScene extends Phaser.Scene {
     if (WIDE) txt(this, side, 620, `Welcome, ${account.name}!`, 40, "#fff4c2");
 
     this.drawCard();
-    this.modeTabs();
-    // Swipe the card for the other page.
-    onSwipe(this, new Phaser.Geom.Rectangle(W / 2 - 330, CARD_Y - 340, 660, 740), () => this.card, (d) => this.setMode(MODES.indexOf(mode) + d, d));
+    // Swipe the card: the other mode card, or (once one is open) the next arena or book.
+    onSwipe(this, new Phaser.Geom.Rectangle(W / 2 - 330, CARD_Y - 340, 660, 740), () => this.card, (d) => {
+      if (!opened) this.setMode(MODES.indexOf(mode) + d, d);
+      else if (mode === "arena") this.stepArena(d);
+      else this.stepBook(d);
+    });
 
     // Deck preview.
     const deckX = WIDE ? W - side : W / 2;
@@ -220,58 +228,129 @@ export class LobbyScene extends Phaser.Scene {
     }
   }
 
-  /** Switch the carousel page (ARENA / STORIES), sliding the new card in from that side. */
+  /** Show the other mode card (ARENA / STORIES), sliding it in from that side. */
   private setMode(i: number, dir: number) {
     const next = MODES[i];
     if (!next || next === mode) return;
     if (next === "story" && !BOOK.stories.length) return;
     mode = next;
-    this.drawCard(dir * 420);
-    this.modeTabs();
+    this.drawCard({ slide: dir * 420 });
   }
 
-  /** The ARENA / STORIES tabs above the card; the lit one is the page showing. */
-  private modeTabs() {
-    this.tabs?.destroy();
-    const tw = 230;
-    const c = this.add.container(W / 2, CARD_Y - 370);
-    this.tabs = c;
-    MODES.forEach((m, i) => {
-      if (m === "story" && !BOOK.stories.length) return;
-      const on = m === mode;
-      const x = (i - 0.5) * (tw + 16);
-      const g = this.add.graphics();
-      g.fillStyle(on ? 0xf2b630 : NAVY, on ? 1 : 0.8).fillRoundedRect(-tw / 2, -32, tw, 64, 32);
-      g.lineStyle(4, on ? 0xfff4c2 : 0xf2b630, on ? 1 : 0.7).strokeRoundedRect(-tw / 2, -32, tw, 64, 32);
-      const tab = this.add.container(x, 0, [g, txt(this, 0, -1, MODE_LABEL[m], 30, on ? "#ffffff" : "#c9d2ff")]).setSize(tw, 64);
-      c.add(tab);
-      if (!on) pressable(tab, () => this.setMode(i, i > MODES.indexOf(mode) ? 1 : -1));
-      if (m === "story" && storyIsNew(profile)) c.add(badge(this, x + tw / 2 - 10, -26, "!"));
-    });
+  /** Open the mode card (its arenas or books) or close it back to the mode cards, with a card flip. */
+  private open(on: boolean) {
+    opened = on;
+    this.drawCard({ flip: true });
   }
 
   /**
-   * The carousel card for the page showing. Redraws just the card, so the background video keeps
-   * playing; `slide` brings it in from that many pixels to the side.
+   * The card in the middle: a mode card, or the open mode's arena or book. Redraws just the card,
+   * so the background video keeps playing; `slide` brings it in from that many pixels to the side
+   * and `flip` turns it over.
    */
-  private drawCard(slide = 0) {
+  private drawCard(anim: { slide?: number; flip?: boolean } = {}) {
     const old = this.card;
-    if (old && slide) {
+    const { slide = 0, flip = false } = anim;
+    if (old && (slide || flip)) {
       const off = (o: Phaser.GameObjects.GameObject) => {
         o.disableInteractive();
         if (o instanceof Phaser.GameObjects.Container) o.list.forEach(off);
       };
       off(old);
-      this.tweens.add({ targets: old, x: old.x - slide, alpha: 0, duration: 200, ease: "Sine.In", onComplete: () => old.destroy() });
+      const out = flip ? { scaleX: 0 } : { x: old.x - slide, alpha: 0 };
+      this.tweens.add({ targets: old, ...out, duration: flip ? 130 : 200, ease: "Sine.In", onComplete: () => old.destroy() });
     } else old?.destroy();
     const group = this.add.container(W / 2, CARD_Y);
     this.card = group;
-    if (mode === "story") this.storyCard(group);
+    if (!opened) this.modeCard(group);
+    else if (mode === "story") this.storyCard(group);
     else this.arenaCard(group);
-    if (slide) {
+    if (flip && old) {
+      group.setScale(0, 1);
+      this.tweens.add({ targets: group, scaleX: 1, delay: 130, duration: 170, ease: "Sine.Out" });
+    } else if (slide) {
       group.setX(W / 2 + slide).setAlpha(0);
       this.tweens.add({ targets: group, x: W / 2, alpha: 1, duration: 240, ease: "Sine.Out" });
     }
+  }
+
+  /**
+   * A mode card: ARENA (the arena you're on) or STORIES (the book covers). Tap it to open it;
+   * arrows, a swipe or the dots show the other one.
+   */
+  private modeCard(group: Phaser.GameObjects.Container) {
+    this.cardFrame(group, false);
+    const i = MODES.indexOf(mode);
+    if (mode === "arena") {
+      const a = this.arena;
+      this.arenaArt(group, a, a.trophies > profile.trophies);
+      group.add(txt(this, 0, 180, "ARENA", 60));
+      group.add(txt(this, 0, 236, `${a.name} · Best wave ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
+    } else {
+      this.storiesArt(group);
+      const total = BOOK.stories.reduce((n, s) => n + storyStars(s), 0);
+      const max = BOOK.stories.reduce((n, s) => n + s.chapters.length * 3, 0);
+      group.add(txt(this, 0, 180, "STORIES", 60));
+      group.add(txt(this, 0, 236, `${BOOK.title} · ★ ${total} / ${max}`, 26, "#c9d2ff"));
+      if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
+    }
+    const hint = txt(this, 0, 296, mode === "arena" ? "TAP TO PICK AN ARENA" : "TAP TO OPEN THE BOOKS", 26, "#ffd93b");
+    group.add(hint);
+    this.tweens.add({ targets: hint, alpha: 0.35, yoyo: true, repeat: -1, duration: 750 });
+    // Page dots under the card.
+    const modes = BOOK.stories.length ? MODES : (["arena"] as Mode[]);
+    if (modes.length > 1) {
+      const dots = this.add.graphics();
+      modes.forEach((_, j) => dots.fillStyle(0xfff4c2, j === i ? 1 : 0.4).fillCircle((j - (modes.length - 1) / 2) * 36, 368, j === i ? 12 : 8));
+      group.add(dots);
+      if (i > 0) group.add(iconButton(this, -250, -60, "back", 76, () => this.setMode(i - 1, -1)));
+      if (i < modes.length - 1) group.add(iconButton(this, 250, -60, "back", 76, () => this.setMode(i + 1, 1)).setFlipX(true));
+    }
+    group.setSize(600, 660);
+    pressable(group, () => this.open(true));
+  }
+
+  /** The STORIES card's art: the story background with the book covers fanned out on it. */
+  private storiesArt(group: Phaser.GameObjects.Container) {
+    const covers = BOOK.stories.slice(0, 3);
+    loadStoryImages(this, ["story_background", ...covers.map((s) => `covers/${s.cover}`)], () => {
+      if (!group.active) return;
+      const parts: Phaser.GameObjects.GameObject[] = [];
+      const bg = this.add.image(0, 0, "story:story_background");
+      const s = Math.max(540 / bg.width, 470 / bg.height);
+      const cw = 540 / s;
+      const ch = 470 / s;
+      bg.setScale(s).setCrop((bg.width - cw) / 2, (bg.height - ch) / 2, cw, ch).setY(-85);
+      parts.push(bg);
+      // Side covers first, the middle one on top.
+      const order = covers.map((_, j) => j).sort((a, b) => Math.abs(b - (covers.length - 1) / 2) - Math.abs(a - (covers.length - 1) / 2));
+      for (const j of order) {
+        const off = j - (covers.length - 1) / 2;
+        const img = this.add.image(off * 136, -80 + Math.abs(off) * 24, `story:covers/${covers[j].cover}`).setDisplaySize(226, 300).setAngle(off * 12);
+        if (storyLock(profile.story, profile.trophies, covers[j])) img.setTint(0x77778a);
+        parts.push(img);
+      }
+      group.addAt(parts, 1);
+    });
+  }
+
+  private stepArena(d: number) {
+    const next = ARENAS[ARENAS.indexOf(this.arena) + d];
+    if (!next) return;
+    this.arena = next;
+    this.drawCard({ slide: d * 120 });
+    this.saveArena();
+  }
+
+  private stepBook(d: number) {
+    if (!BOOK.stories[bookIdx + d]) return;
+    bookIdx += d;
+    this.drawCard({ slide: d * 120 });
+  }
+
+  /** The ✕ on an open card, back to the mode cards (not for new players before their first battle). */
+  private closeButton(group: Phaser.GameObjects.Container) {
+    if (!tutorialDue("battle")) group.add(iconButton(this, -248, -282, "close", 60, () => this.open(false)));
   }
 
   private cardFrame(group: Phaser.GameObjects.Container, locked: boolean) {
@@ -294,21 +373,15 @@ export class LobbyScene extends Phaser.Scene {
 
     group.add(txt(this, 0, -290, `ARENA ${idx + 1}`, 28, "#ffd27a"));
     group.add(iconButton(this, 248, -282, "info", 64, () => arenaInfo(this, a)));
+    this.closeButton(group);
     group.add(txt(this, 0, 186, a.name, 46));
     group.add(txt(this, 0, 236, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
     const battle = button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.battle(a.id), 54);
     group.add(battle);
     if (locked) battle.setEnabled(false);
 
-    const step = (d: number) => {
-      const next = ARENAS[ARENAS.indexOf(this.arena) + d];
-      if (!next) return;
-      this.arena = next;
-      this.drawCard(d * 120);
-      this.saveArena();
-    };
-    if (idx > 0) group.add(iconButton(this, -250, -60, "back", 76, () => step(-1)));
-    if (idx < ARENAS.length - 1) group.add(iconButton(this, 250, -60, "back", 76, () => step(1)).setFlipX(true));
+    if (idx > 0) group.add(iconButton(this, -250, -60, "back", 76, () => this.stepArena(-1)));
+    if (idx < ARENAS.length - 1) group.add(iconButton(this, 250, -60, "back", 76, () => this.stepArena(1)).setFlipX(true));
   }
 
   /**
@@ -322,6 +395,7 @@ export class LobbyScene extends Phaser.Scene {
     const done = storyFinished(profile.story, s);
     this.cardFrame(group, !!lock);
     group.add(txt(this, 0, -290, `${BOOK.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
+    this.closeButton(group);
     // The cover, framed like a book; greyed with a padlock while locked.
     const ch = 400;
     const cw = ch * (880 / 1168);
@@ -356,13 +430,8 @@ export class LobbyScene extends Phaser.Scene {
     group.add(play);
     if (lock) play.setEnabled(false);
 
-    const step = (d: number) => {
-      if (!BOOK.stories[bookIdx + d]) return;
-      bookIdx += d;
-      this.drawCard(d * 120);
-    };
-    if (bookIdx > 0) group.add(iconButton(this, -250, coverY, "back", 76, () => step(-1)));
-    if (bookIdx < n - 1) group.add(iconButton(this, 250, coverY, "back", 76, () => step(1)).setFlipX(true));
+    if (bookIdx > 0) group.add(iconButton(this, -250, coverY, "back", 76, () => this.stepBook(-1)));
+    if (bookIdx < n - 1) group.add(iconButton(this, 250, coverY, "back", 76, () => this.stepBook(1)).setFlipX(true));
   }
 
   /** The middle of the arena (the board) inside the card window, greyed with a padlock while locked. */
