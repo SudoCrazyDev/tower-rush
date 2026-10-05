@@ -18,7 +18,9 @@ export type Race =
   | "construct"
   | "sylvan"
   | "fae"
-  | "celestial";
+  | "celestial"
+  | "candy"
+  | "chaos";
 
 export const RACES: Record<Race, { label: string; color: number }> = {
   human: { label: "Human", color: 0xf2c79b },
@@ -37,6 +39,9 @@ export const RACES: Record<Race, { label: string; color: number }> = {
   sylvan: { label: "Sylvan", color: 0x6bd34a },
   fae: { label: "Fae", color: 0xff9ae6 },
   celestial: { label: "Celestial", color: 0xffe27a },
+  // v1.2 Stories: the Candy Kingdom's people, and what the corruption breeds.
+  candy: { label: "Candy", color: 0xff9ad5 },
+  chaos: { label: "Chaos", color: 0xb06cff },
 };
 export const RACE_IDS = Object.keys(RACES) as Race[];
 

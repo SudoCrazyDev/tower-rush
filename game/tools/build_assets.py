@@ -157,7 +157,12 @@ STATIC = [
     ("ui/emotes", "emotes", 128),
     ("ui/stats", "stats", 96),
     ("vfx", "vfx", 128),
+    # v1.2 Story mode: book covers, illustrated panels and dialogue portraits.
+    ("story/covers", "story/covers", 768),
+    ("story/panels", "story/panels", 1344),
+    ("story/portraits", "story/portraits", 256),
 ]
+jobs.append(lambda: fit(f"{SRC}/story/story_background.png", f"{OUT}/story/story_background.webp", 1344))
 for folder, out, size in STATIC:
     index[out] = ids(folder)
     for i in index[out]:

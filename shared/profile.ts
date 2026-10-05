@@ -5,7 +5,8 @@ import { freshDaily, utcDay, type DailyState, type LoginState, type Reward } fro
 import { unpaidLeagues } from "./leagues.ts";
 import type { OfferDef } from "./offers.ts";
 import { PVP } from "./pvp.ts";
-import { RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, upgradeCost, maxCardLevel, type Rarity } from "./units.ts";
+import { CHEST_RARITIES, RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, canDrop, rarityIndex, upgradeCost, maxCardLevel, type ChestRarity, type Rarity } from "./units.ts";
+import { BOOK, REPLAY_CARDS_PER_DAY, findChapter, newStoryProgress, storyFinished, type StoryProgress } from "./stories.ts";
 
 export interface CardState {
   level: number;
@@ -51,6 +52,8 @@ export interface Profile {
   tutorial: string[];
   /** Releases whose launch gift this account has had ("1.1.0"). */
   releases: string[];
+  /** Story mode progress (v1.2). */
+  story: StoryProgress;
 }
 
 /** Cards every player gets once when a feature release goes live (docs/features). */
@@ -97,6 +100,7 @@ export function newProfile(): Profile {
     offers: {},
     tutorial: [],
     releases: [],
+    story: newStoryProgress(),
   };
 }
 
@@ -171,8 +175,8 @@ export interface ChestLoot {
   cards: { id: string; copies: number; isNew: boolean }[];
 }
 
-function rollRarity(min: Rarity, rand: () => number): Rarity {
-  const pool = RARITY_ORDER.filter((r) => RARITY_ORDER.indexOf(r) >= RARITY_ORDER.indexOf(min));
+function rollRarity(min: ChestRarity, rand: () => number): ChestRarity {
+  const pool = CHEST_RARITIES.filter((r) => CHEST_RARITIES.indexOf(r) >= CHEST_RARITIES.indexOf(min));
   const total = pool.reduce((s, r) => s + RARITY_STATS[r].dropWeight, 0);
   let x = rand() * total;
   for (const r of pool) {
@@ -187,16 +191,18 @@ export function rollChest(p: Profile, chest: ChestDef, rand: () => number = Math
   const counts = new Map<string, number>();
   for (let i = 0; i < chest.rolls; i++) {
     let rarity = rollRarity(i === 0 ? chest.guarantee : "common", rand);
-    let options = UNITS.filter((u) => u.enabled && u.rarity === rarity);
+    // Story units never drop; story rewards only once the player has earned one.
+    const drops = (r: Rarity) => UNITS.filter((u) => u.rarity === r && canDrop(u, (id) => !!p.cards[id]));
+    let options = drops(rarity);
     // If an admin disabled every unit of this rarity, fall back to the nearest one below.
-    while (!options.length && RARITY_ORDER.indexOf(rarity) > 0) {
-      rarity = RARITY_ORDER[RARITY_ORDER.indexOf(rarity) - 1];
-      options = UNITS.filter((u) => u.enabled && u.rarity === rarity);
+    while (!options.length && CHEST_RARITIES.indexOf(rarity) > 0) {
+      rarity = CHEST_RARITIES[CHEST_RARITIES.indexOf(rarity) - 1];
+      options = drops(rarity);
     }
     if (!options.length) continue;
     const u = options[Math.floor(rand() * options.length)];
     // Common cards come in bigger stacks.
-    const copies = Math.max(1, Math.round((5 - RARITY_ORDER.indexOf(rarity)) * (0.5 + rand())));
+    const copies = Math.max(1, Math.round((5 - rarityIndex(rarity)) * (0.5 + rand())));
     counts.set(u.id, (counts.get(u.id) ?? 0) + copies);
   }
   const coins = Math.round(chest.coinsMin + rand() * (chest.coinsMax - chest.coinsMin));
@@ -227,3 +233,79 @@ export function rollChests(p: Profile, chest: ChestDef, count: number, rand: () 
 }
 
 export const chestById = (id: string) => CHESTS.find((c) => c.id === id);
+
+/** Give one copy of a card: a new card at level 1, or a copy toward the next level. */
+export function giveCard(p: Profile, id: string, copies = 1) {
+  if (!UNIT_BY_ID[id]) return;
+  if (p.cards[id]) p.cards[id].copies += copies;
+  else p.cards[id] = { level: 1, copies: copies - 1 };
+}
+
+/** What a story chapter win paid (the profile already has it). */
+export interface StoryWin {
+  firstClear: boolean;
+  stars: number;
+  /** Best stars before this win (0 = never won). */
+  bestBefore: number;
+  coins: number;
+  gems: number;
+  chest: string | null;
+  loot: ChestLoot | null;
+  /** Cards given: the first-clear unit reward, or Event copies from a replay. */
+  cards: { id: string; copies: number; isNew: boolean }[];
+  badge: string | null;
+  /** The story is finished with this win (its ending panels play). */
+  storyDone: boolean;
+}
+
+/**
+ * Pay a chapter win: the first clear pays the chapter's reward (gold, gems, chest, cards, badge),
+ * later wins the replay reward plus, for stories with replay cards (Princess Muse), 1-3 copies on
+ * the first REPLAY_CARDS_PER_DAY replays of the UTC day (3 stars makes more copies likelier).
+ */
+export function grantStoryWin(p: Profile, chapterId: string, stars: number, day: string, rand: () => number = Math.random): StoryWin {
+  const f = findChapter(chapterId)!;
+  const prog = p.story;
+  const before = prog.chapters[chapterId];
+  const firstClear = !before;
+  const wasDone = storyFinished(prog, f.story);
+  prog.chapters[chapterId] = { stars: Math.max(stars, before?.stars ?? 0), clearedAt: before?.clearedAt ?? Date.now() };
+  const r = firstClear ? f.chapter.reward : { ...f.chapter.replay, cards: [] as string[], badge: null };
+  p.coins += r.coins;
+  p.gems += r.gems;
+  const chest = r.chest ? chestById(r.chest) : undefined;
+  const loot = chest ? rollChest(p, chest, rand) : null;
+  const cards: StoryWin["cards"] = [];
+  for (const id of r.cards) {
+    cards.push({ id, copies: 1, isNew: !p.cards[id] });
+    giveCard(p, id);
+  }
+  if (!firstClear && f.story.replayCards.length) {
+    if (prog.replays.day !== day) prog.replays = { day, n: 0 };
+    if (prog.replays.n < REPLAY_CARDS_PER_DAY) {
+      prog.replays.n++;
+      for (const id of f.story.replayCards) {
+        const x = rand();
+        const copies = stars >= 3 ? (x < 0.2 ? 1 : x < 0.6 ? 2 : 3) : x < 0.6 ? 1 : x < 0.9 ? 2 : 3;
+        cards.push({ id, copies, isNew: !p.cards[id] });
+        giveCard(p, id, copies);
+      }
+    }
+  }
+  if (r.badge && !prog.badges.includes(r.badge)) prog.badges.push(r.badge);
+  return {
+    firstClear,
+    stars,
+    bestBefore: before?.stars ?? 0,
+    coins: r.coins,
+    gems: r.gems,
+    chest: r.chest,
+    loot,
+    cards,
+    badge: firstClear ? r.badge : null,
+    storyDone: !wasDone && storyFinished(prog, f.story),
+  };
+}
+
+/** Whether the book has any story the player hasn't started yet that they can start (lobby NEW dot). */
+export const storyIsNew = (p: Profile) => BOOK.stories.length > 0 && !p.story.started.includes(BOOK.stories[0].id) && p.trophies >= BOOK.stories[0].trophies;

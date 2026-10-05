@@ -1,7 +1,11 @@
 import { useConfig } from "../config";
 import { Num, PageHead } from "../components";
 import { ARCHETYPES, RARITIES } from "../../../shared/units.ts";
-import { EFFECT_ARCHS, EFFECT_FIELDS, effectSummary, withEffectDefaults, type EffectArch, type EffectField } from "../../../shared/effects.ts";
+import { EFFECT_ARCHS, EFFECT_FIELDS, EFFECT_LABELS, effectSummary, withEffectDefaults, type EffectArch, type EffectField } from "../../../shared/effects.ts";
+import type { Arch } from "../../../shared/units.ts";
+
+/** Effect blocks are archetypes, except the v1.2 Knight and Mercenary effects (EFFECT_LABELS). */
+const isArch = (a: EffectArch): a is EffectArch & Arch => a in ARCHETYPES;
 
 /** Ranks and rarities the preview shows: as summoned, mid-merge and fully merged. */
 const PREVIEW: [number, number][] = [
@@ -21,7 +25,7 @@ export function EffectsPage() {
       c.effects = withEffectDefaults(c.effects);
       (c.effects[a] as Record<string, number>)[k] = v;
     });
-  const usedBy = (a: EffectArch) => draft.units.filter((u) => u.arch === a).length;
+  const usedBy = (a: EffectArch) => draft.units.filter((u) => u.arch === a || u.effect === a).length;
 
   return (
     <>
@@ -40,7 +44,7 @@ export function EffectsPage() {
               <h2>
                 {a} <span className="muted small">· {usedBy(a)} units</span>
               </h2>
-              <p className="muted small">{ARCHETYPES[a].label}</p>
+              <p className="muted small">{isArch(a) ? ARCHETYPES[a].label : EFFECT_LABELS[a]}</p>
               <table className="kv">
                 <tbody>
                   {fields.map(([k, f]) => (
@@ -59,14 +63,14 @@ export function EffectsPage() {
                   ))}
                 </tbody>
               </table>
-              {effectSummary(a, 1, 0, e) && (
+              {isArch(a) && effectSummary(a, 1, 0, e) && (
                 <div className="effect-preview">
                   {PREVIEW.map(([rank, rarity]) => (
                     <div key={rank}>
                       <span className="muted">
                         Rank {rank}, <span className={`rarity ${RARITIES[rarity]}`}>{RARITIES[rarity]}</span>:
                       </span>{" "}
-                      {effectSummary(a, rank, rarity, e)}
+                      {isArch(a) && effectSummary(a, rank, rarity, e)}
                     </div>
                   ))}
                 </div>

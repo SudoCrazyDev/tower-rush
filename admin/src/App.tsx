@@ -20,6 +20,7 @@ import { OffersPage } from "./pages/Offers";
 import { AnalyticsPage } from "./pages/Analytics";
 import { PlaygroundPage } from "./pages/Playground";
 import { PvpPage } from "./pages/Pvp";
+import { StoriesPage } from "./pages/Stories";
 
 function useHashRoute() {
   const [hash, setHash] = useState(location.hash.slice(1) || "/");
@@ -40,6 +41,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/effects", label: "Effects" },
   { path: "/heroes", label: "Heroes" },
   { path: "/arenas", label: "Arenas" },
+  { path: "/stories", label: "Stories" },
   { path: "/shop", label: "Shop & prices" },
   { path: "/offers", label: "Offers & events" },
   { path: "/economy", label: "Economy" },
@@ -157,6 +159,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     case "/leagues": page = <LeaguesPage />; break;
     case "/pvp": page = <PvpPage />; break;
     case "/arenas": page = <ArenasPage />; break;
+    case "/stories": page = <StoriesPage />; break;
     case "/shop": page = <ShopPage />; break;
     case "/offers": page = <OffersPage />; break;
     case "/economy": page = <EconomyPage />; break;

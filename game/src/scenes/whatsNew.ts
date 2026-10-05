@@ -1,13 +1,12 @@
 import Phaser from "phaser";
+import { BASE } from "../assets";
 import { UNIT_BY_ID } from "../data/units";
-import { RELEASE_GIFTS } from "../../../shared/profile.ts";
-import { SUPPORT_TEXT, isSupport } from "../../../shared/support.ts";
-import { profile } from "../save";
+import { BOOK } from "../../../shared/stories.ts";
 import { sfx } from "../audio";
 import { button, cardView, modal, txt } from "../ui";
 
 /** The release the "What's new" popup describes (see docs/features). */
-export const RELEASE = { version: "1.1.0", title: "Supporting Cast Arrival", tagline: "Not every hero swings a sword." };
+export const RELEASE = { version: "1.2.0", title: "Stories", tagline: "The Candy Kingdom is falling to chaos." };
 const SEEN_KEY = "tower-rush-whats-new";
 
 function seen() {
@@ -26,23 +25,34 @@ export function whatsNew(scene: Phaser.Scene, force = false) {
   } catch {
     // Shown again next time.
   }
-  const cast = Object.values(UNIT_BY_ID).filter((u) => isSupport(u.arch) && u.enabled);
-  if (!cast.length) return;
+  if (!BOOK.stories.length) return;
+  const covers = BOOK.stories.map((s) => `story:covers/${s.cover}`).filter((k) => !scene.textures.exists(k));
+  if (covers.length) {
+    for (const s of BOOK.stories) scene.load.image(`story:covers/${s.cover}`, `${BASE}story/covers/${s.cover}.webp`);
+    scene.load.once(Phaser.Loader.Events.COMPLETE, () => scene.sys.isActive() && show(scene));
+    scene.load.start();
+  } else show(scene);
+}
+
+function show(scene: Phaser.Scene) {
   sfx("upgrade");
   const m = modal(scene, 720, 1060, `NEW IN ${RELEASE.version}`);
-  m.add(txt(scene, m.cx, m.cy - 420, RELEASE.title.toUpperCase(), 44, "#ffd93b"));
+  m.add(txt(scene, m.cx, m.cy - 420, `${RELEASE.title.toUpperCase()}: ${BOOK.title.toUpperCase()}`, 38, "#ffd93b"));
   m.add(txt(scene, m.cx, m.cy - 370, RELEASE.tagline, 26, "#c9d2ff"));
-  m.add(txt(scene, m.cx, m.cy - 320, "Support units never attack. They copy, swap, brew and rally.", 22, "#ffffff").setWordWrapWidth(600));
-  // Two columns of up to four cards, each with its name and job.
-  cast.slice(0, 8).forEach((u, i) => {
-    const x = m.cx + (i < 4 ? -330 : 10);
-    const y = m.cy - 200 + (i % 4) * 128;
-    m.add(cardView(scene, x + 46, y, 92, u.id));
-    m.add(txt(scene, x + 104, y - 22, u.name, 24, "#fff4c2", [0, 0.5]));
-    m.add(txt(scene, x + 104, y + 16, SUPPORT_TEXT[u.arch as keyof typeof SUPPORT_TEXT], 17, "#c9d2ff", [0, 0.5]).setWordWrapWidth(210));
+  m.add(txt(scene, m.cx, m.cy - 320, "Three stories, played in order. Tap STORY in the lobby.", 22, "#ffffff").setWordWrapWidth(600));
+  BOOK.stories.slice(0, 3).forEach((s, i) => {
+    const x = m.cx + (i - 1) * 210;
+    const key = `story:covers/${s.cover}`;
+    if (scene.textures.exists(key)) m.add(scene.add.image(x, m.cy - 140, key).setDisplaySize(180, 239));
+    m.add(txt(scene, x, m.cy + 4, s.title, 22, "#fff4c2").setWordWrapWidth(200));
   });
-  const gift = RELEASE_GIFTS.find((g) => g.version === RELEASE.version);
-  const got = gift?.cards.filter((id) => UNIT_BY_ID[id]?.enabled && profile.cards[id]).map((id) => UNIT_BY_ID[id].name);
-  if (got?.length) m.add(txt(scene, m.cx, m.cy + 330, `Launch gift: ${got.join(" + ")} added to your cards!`, 24, "#7dff7a").setWordWrapWidth(600));
+  // The rewards: the first Event card, then the two knights.
+  const rewards = ["princess_muse", "pentagonal_knight", "rogue_knight"].filter((id) => UNIT_BY_ID[id]);
+  rewards.forEach((id, i) => {
+    const x = m.cx + (i - (rewards.length - 1) / 2) * 200;
+    m.add(cardView(scene, x, m.cy + 150, 120, id));
+    m.add(txt(scene, x, m.cy + 232, UNIT_BY_ID[id].name, 20, "#ffffff"));
+  });
+  m.add(txt(scene, m.cx, m.cy + 290, "Earn Princess Muse, the first EVENT card, and the Chosen knights.", 22, "#ff9df0").setWordWrapWidth(600));
   m.add(button(scene, m.cx, m.cy + 420, 320, 96, "LET'S GO!", "green", () => m.close()));
 }

@@ -16,8 +16,8 @@ export type SupportArch = "mime" | "portal" | "mirror" | "lucky" | "hourglass" |
 export const SUPPORT_ARCHS: SupportArch[] = ["mime", "portal", "mirror", "lucky", "hourglass", "echo", "herald", "brewer"];
 
 export const isSupport = (arch: Arch): arch is SupportArch => (SUPPORT_ARCHS as Arch[]).includes(arch);
-/** Units with no attack of their own: buff units and support units. */
-export const noAttack = (arch: Arch) => arch === "buff" || isSupport(arch);
+/** Units with no attack of their own: buff units, support units, Muse's aura and the Aegis Knight. */
+export const noAttack = (arch: Arch) => arch === "buff" || arch === "aura" || arch === "aegis" || isSupport(arch);
 /** Support units the player drags onto another unit (or, for the Portal Imp, an empty tile). */
 export const isActiveSupport = (arch: Arch) => arch === "mime" || arch === "portal";
 

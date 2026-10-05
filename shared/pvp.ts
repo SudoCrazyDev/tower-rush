@@ -3,7 +3,7 @@
  * matchmaking numbers. Part of the game config (`pvp`), edited on the admin PvP page.
  * See PVP.md.
  */
-import { UNITS } from "./units.ts";
+import { UNITS, deckable } from "./units.ts";
 import { HEROES } from "./heroes.ts";
 import { ARENAS } from "./arenas.ts";
 import { MONSTER_BY_ID } from "./monsters.ts";
@@ -302,7 +302,7 @@ export function pvpArena(seed: number) {
 /** Mirror mode: one random deck and hero from the seed, everyone at the same level. */
 export function mirrorLoadout(seed: number) {
   const r = rand(seed ^ 0x51ed270b);
-  const pool = UNITS.filter((u) => u.enabled).map((u) => u.id);
+  const pool = UNITS.filter((u) => deckable(u)).map((u) => u.id);
   const deck: string[] = [];
   while (deck.length < 5 && pool.length) deck.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
   const heroes = HEROES.filter((h) => h.enabled);
@@ -333,7 +333,7 @@ export function botLoadout(mode: PvpMode, player: Loadout, seed: number): Loadou
   const trophies = Math.max(0, player.trophies + Math.round((r() - 0.5) * 120));
   const rating = Math.max(0, (player.rating ?? PVP.rules.ratingStart) + Math.round((r() - 0.5) * 80));
   if (mode === "mirror") return { ...player, name, trophies, rating, bot: true };
-  const pool = UNITS.filter((u) => u.enabled && u.arch !== "mana");
+  const pool = UNITS.filter((u) => deckable(u) && u.arch !== "mana");
   const deck: string[] = [];
   // Rarer cards as trophies climb, like a real player's collection.
   const rarest = player.trophies < 400 ? 1 : player.trophies < 1500 ? 2 : player.trophies < 3000 ? 3 : 4;

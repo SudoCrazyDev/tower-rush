@@ -2,9 +2,10 @@
  * The whole editable game balance as one JSON document. The server stores versions of
  * it, the admin panel edits it, and the game applies it at boot with applyConfig().
  */
-import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
+import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, UNIT_EFFECTS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
 import { PERK_IDS } from "./perks.ts";
-import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, type MonsterDef, type BossDef } from "./monsters.ts";
+import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
+import { BOOK, DEFAULT_BOOK, storyProblems, type BookDef } from "./stories.ts";
 import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts";
 import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type ChestDef } from "./economy.ts";
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
@@ -37,6 +38,8 @@ export interface GameConfig {
   effects: Effects;
   /** PvP rules, sends and matchmaking (see PVP.md). */
   pvp: PvpConfig;
+  /** Story mode (v1.2): the book, its stories, chapters and wave scripts. */
+  book: BookDef;
   dropWeights: Record<Rarity, number>;
 }
 
@@ -56,7 +59,8 @@ export function defaultConfig(): GameConfig {
     economy: DEFAULT_ECONOMY,
     effects: DEFAULT_EFFECTS,
     pvp: DEFAULT_PVP,
-    dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5 },
+    book: DEFAULT_BOOK,
+    dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5, event: 0 },
   });
 }
 
@@ -73,8 +77,8 @@ function replace<T>(target: T[], items: T[]) {
 /** Swap the live tables for the ones in `cfg` (in place, so existing imports see them). */
 export function applyConfig(cfg: GameConfig) {
   replace(UNITS, withAddedUnits(withStyles(withRaces(cfg.units, DEFAULT_UNITS), DEFAULT_UNITS), DEFAULT_UNITS));
-  replace(MONSTERS, withRaces(cfg.monsters, DEFAULT_MONSTERS));
-  replace(BOSSES, withRaces(cfg.bosses, DEFAULT_BOSSES));
+  replace(MONSTERS, withAdded(withRaces(cfg.monsters, DEFAULT_MONSTERS), DEFAULT_MONSTERS, ADDED_MONSTERS));
+  replace(BOSSES, withAdded(withRaces(cfg.bosses, DEFAULT_BOSSES), DEFAULT_BOSSES, ADDED_BOSSES));
   replace(ARENAS, cfg.arenas);
   replace(CHESTS, cfg.chests);
   replace(HEROES, withRaces(cfg.heroes, DEFAULT_HEROES));
@@ -89,7 +93,9 @@ export function applyConfig(cfg: GameConfig) {
   PVP.rules = pvp.rules;
   PVP.sends = pvp.sends;
   PVP.tiers = pvp.tiers;
-  for (const r of RARITIES) RARITY_STATS[r].dropWeight = cfg.dropWeights[r];
+  Object.assign(BOOK, structuredClone(cfg.book ?? DEFAULT_BOOK));
+  // Event cards never drop, whatever a config says.
+  for (const r of RARITIES) RARITY_STATS[r].dropWeight = r === "event" ? 0 : (cfg.dropWeights[r] ?? 0);
   indexUnits();
   indexMonsters();
   indexArenas();
@@ -133,6 +139,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     oneOf(u.perk, PERK_IDS, `${w} perk`);
     num(u.damage, `${w} damage`);
     num(u.speed, `${w} speed`);
+    if (u.effect !== undefined) oneOf(u.effect, UNIT_EFFECTS, `${w} effect`);
   }
   const monsterIds = ids(cfg.monsters, "monster");
   for (const m of cfg.monsters) {
@@ -151,7 +158,10 @@ export function validateConfig(cfg: GameConfig): string[] {
     num(b.hp, `${w} hp`, 0.01);
     num(b.speed, `${w} speed`);
     oneOf(b.power, BOSS_POWERS, `${w} power`);
-    if (b.power === "summon" && !monsterIds.has(b.minion ?? "")) errs.push(`${w}: summon power needs a valid minion`);
+    if (b.rage !== undefined) oneOf(b.rage, BOSS_POWERS, `${w} rage power`);
+    if ([b.power, b.rage].some((p) => p && MINION_POWERS.includes(p)) && !monsterIds.has(b.minion ?? "")) errs.push(`${w}: ${b.power} power needs a valid minion`);
+    if (b.targets !== undefined) num(b.targets, `${w} targets`, 1);
+    for (const t of b.traits ?? []) oneOf(t, TRAITS, `${w} trait`);
   }
   ids(cfg.arenas, "arena");
   for (const a of cfg.arenas) {
@@ -171,7 +181,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     num(c.coinsMin, `${w} min coins`);
     num(c.coinsMax, `${w} max coins`, c.coinsMin ?? 0);
     oneOf(c.currency, ["coins", "gems"], `${w} currency`);
-    oneOf(c.guarantee, RARITIES, `${w} guarantee`);
+    oneOf(c.guarantee, CHEST_RARITIES, `${w} guarantee`);
   }
   ids(cfg.heroes, "hero");
   for (const h of cfg.heroes) {
@@ -189,6 +199,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   if (!cfg.heroes.some((h) => h.enabled && h.price === 0)) errs.push("At least one enabled hero must be free (price 0)");
 
   const chestIds = new Set(cfg.chests.map((c) => c.id));
+  errs.push(...storyProblems(cfg.book ?? DEFAULT_BOOK, { units: unitIds, monsters: monsterIds, bosses: bossIds, arenas: new Set(cfg.arenas.map((a) => a.id)), chests: chestIds }));
   const reward = (r: Reward, where: string) => {
     num(r?.coins, `${where} gold`);
     num(r?.gems, `${where} gems`);
@@ -239,6 +250,6 @@ export function validateConfig(cfg: GameConfig): string[] {
 
   errs.push(...effectProblems(cfg.effects));
   errs.push(...pvpProblems(withPvpDefaults(cfg.pvp)));
-  for (const r of RARITIES) num(cfg.dropWeights?.[r], `dropWeights.${r}`);
+  for (const r of CHEST_RARITIES) num(cfg.dropWeights?.[r], `dropWeights.${r}`);
   return errs;
 }

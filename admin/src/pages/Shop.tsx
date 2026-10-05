@@ -1,7 +1,7 @@
 import { useConfig } from "../config";
 import { Num, Text, Select, Toggle, Thumb, PageHead } from "../components";
 import { asset } from "../api";
-import { RARITIES } from "../../../shared/units.ts";
+import { CHEST_RARITIES } from "../../../shared/units.ts";
 import type { ChestDef } from "../../../shared/economy.ts";
 
 const CHEST_ART = ["chest_common", "chest_rare", "chest_epic", "chest_legendary"] as const;
@@ -14,7 +14,7 @@ export function ShopPage() {
     const before = saved.chests.find((s) => s.id === ch.id);
     return !before || JSON.stringify(before[k]) !== JSON.stringify(ch[k]) ? "changed" : "";
   };
-  const totalWeight = RARITIES.reduce((s, r) => s + draft.dropWeights[r], 0) || 1;
+  const totalWeight = CHEST_RARITIES.reduce((s, r) => s + draft.dropWeights[r], 0) || 1;
   const e = draft.economy;
   const setE = <K extends keyof typeof e>(k: K, v: (typeof e)[K]) => edit((c) => void (c.economy[k] = v));
 
@@ -54,7 +54,7 @@ export function ShopPage() {
                   <td className={changed(ch, "rolls")}><Num value={ch.rolls} min={1} onChange={(v) => set(i, "rolls", v)} /></td>
                   <td className={changed(ch, "coinsMin")}><Num value={ch.coinsMin} min={0} step={10} onChange={(v) => set(i, "coinsMin", v)} /></td>
                   <td className={changed(ch, "coinsMax")}><Num value={ch.coinsMax} min={0} step={10} onChange={(v) => set(i, "coinsMax", v)} /></td>
-                  <td className={changed(ch, "guarantee")}><Select value={ch.guarantee} options={RARITIES} onChange={(v) => set(i, "guarantee", v)} /></td>
+                  <td className={changed(ch, "guarantee")}><Select value={ch.guarantee} options={CHEST_RARITIES} onChange={(v) => set(i, "guarantee", v)} /></td>
                   <td className={changed(ch, "enabled")}><Toggle value={ch.enabled} onChange={(v) => set(i, "enabled", v)} /></td>
                 </tr>
               ))}
@@ -78,7 +78,7 @@ export function ShopPage() {
           <p className="muted small">Relative weights for each card roll in a chest.</p>
           <table className="kv">
             <tbody>
-              {RARITIES.map((r) => (
+              {CHEST_RARITIES.map((r) => (
                 <tr key={r} className={saved.dropWeights[r] !== draft.dropWeights[r] ? "changed" : ""}>
                   <td className={`rarity ${r}`}>{r}</td>
                   <td><Num value={draft.dropWeights[r]} min={0} step={0.5} onChange={(v) => edit((c) => void (c.dropWeights[r] = v))} /></td>

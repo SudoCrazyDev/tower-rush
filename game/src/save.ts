@@ -10,7 +10,7 @@ export type { Profile, ChestLoot };
 export { CHESTS, type ChestDef } from "../../shared/economy.ts";
 export { giftReadyAt, ownsHero, heroBuyProblem } from "../../shared/profile.ts";
 import type { Reward } from "../../shared/daily.ts";
-import type { Promotion } from "../../shared/profile.ts";
+import type { Promotion, StoryWin } from "../../shared/profile.ts";
 import { needsAttention, type MailMessage } from "../../shared/mail.ts";
 
 export type { MailMessage };
@@ -222,6 +222,34 @@ export interface BattleStats {
 
 export async function finishBattle(battleId: number, stats: BattleStats) {
   const r = await post<BattleResult & { profile: Profile }>(`/battles/${battleId}/finish`, stats);
+  setProfile(r.profile);
+  return r;
+}
+
+// ---------------------------------------------------------------- stories (v1.2)
+
+export interface StoryStart {
+  battleId: number;
+  deck: string[];
+  /** Card level of each deck unit in this chapter (Event deck level, or the level floor). */
+  levels: Record<string, number>;
+}
+
+/** Start a story chapter; `pick` is the Event deck choice for chapters that hand one out. */
+export async function startStory(chapter: string, pick?: string[]) {
+  const r = await post<StoryStart & { profile: Profile }>("/story/start", { chapter, pick });
+  setProfile(r.profile);
+  return { battleId: r.battleId, deck: r.deck, levels: r.levels } as StoryStart;
+}
+
+export interface StoryResult {
+  won: boolean;
+  wave: number;
+  win: StoryWin | null;
+}
+
+export async function finishStory(battleId: number, stats: Omit<BattleStats, "copies" | "swaps" | "brewed"> & { won: boolean; lives: number }) {
+  const r = await post<StoryResult & { profile: Profile }>(`/story/${battleId}/finish`, stats);
   setProfile(r.profile);
   return r;
 }

@@ -112,6 +112,7 @@ table.kv td:nth-child(2) { text-align: right; }
 .rarity.epic { color: #a24bff; }
 .rarity.legendary { color: #e09a00; }
 .rarity.mythic { color: #ff3b6b; }
+.rarity.event { color: #ff8fd8; }
 
 /* chips & toggle */
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }

@@ -5,6 +5,7 @@ import { ECONOMY } from "../../../shared/economy.ts";
 import { EFFECTS, manaPerPulse } from "../../../shared/effects.ts";
 import { withPerk, type Perk } from "../../../shared/perks.ts";
 import { isSupport } from "../../../shared/support.ts";
+import { newStatus } from "../../../shared/statuses.ts";
 import { NAVY, txt } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
 
@@ -42,6 +43,18 @@ export class Unit {
   timer = 0;
   /** Portal rush: attacks faster until then. */
   rushUntil = 0;
+  /** v1.2 statuses: Rally, Irritation, Fatigue, Shellshock (see statuses.ts). */
+  status = newStatus();
+  /** Princess Muse's Last Call on this unit: attack speed and damage bonus. */
+  auraSpeed = 0;
+  auraDamage = 0;
+  /** Hired Blade whose wages weren't paid this wave: no attacks. */
+  sulking = false;
+  /** Timer for a unit effect that goes off every few seconds (Rogue Knight's Irritation). */
+  effectTimer = 0;
+  private statusIcons: Phaser.GameObjects.Container | null = null;
+  private statusDrawn = "";
+  private heart: Phaser.GameObjects.Text | null = null;
   /** Ready / recharge ring at the feet of support units with a timer. */
   private supportRing: Phaser.GameObjects.Graphics | null = null;
   private supportDrawn = "";
@@ -108,6 +121,8 @@ export class Unit {
     this.buffRing?.setPosition(p.x, p.y + 32).setDepth(98 + p.y);
     this.buffBadge?.setPosition(p.x + 36, p.y - 44).setDepth(160 + p.y);
     this.supportRing?.setPosition(p.x, p.y + 34).setDepth(97 + p.y);
+    this.heart?.setPosition(p.x - 40, p.y - 44).setDepth(160 + p.y);
+    this.statusIcons?.setPosition(p.x, p.y - 78).setDepth(170 + p.y);
     this.supportDrawn = "";
     this.drawPips(p.x, p.y);
   }
@@ -141,8 +156,47 @@ export class Unit {
     g.lineStyle(5, 0xc9d2ff, 0.9).strokePoints(pts);
   }
 
+  /** Muse's heart badge on a unit inside her Last Call square. */
+  private showHeart() {
+    const on = this.auraSpeed > 0 || this.auraDamage > 0;
+    if (!on) {
+      this.heart?.destroy();
+      this.heart = null;
+      return;
+    }
+    if (!this.heart) {
+      const p = this.scene.slotPos(this.slot);
+      this.heart = txt(this.scene, p.x - 40, p.y - 44, "♥", 26, "#ff8fd8").setDepth(160 + p.y);
+      this.heart.setScale(1.6);
+      this.scene.tweens.add({ targets: this.heart, scale: 1, duration: 260, ease: "Back.Out" });
+    }
+    this.heart.setVisible(!this.dragging);
+  }
+
+  /** Status icons over the head (Rally, Irritation, Fatigue, Shellshock), redrawn when they change. */
+  drawStatus(now: number) {
+    const s = this.status;
+    const on = [
+      now < s.rallyUntil && "rally",
+      now < s.irritatedUntil && "irritation",
+      (now < s.fatiguedUntil || this.sulking) && "fatigue",
+      now < s.shockedUntil && "shellshock",
+    ].filter(Boolean) as string[];
+    const key = on.join(",") + (this.dragging ? "d" : "");
+    if (key === this.statusDrawn) return;
+    this.statusDrawn = key;
+    this.statusIcons?.destroy();
+    this.statusIcons = null;
+    if (!on.length || this.dragging) return;
+    const scene = this.scene;
+    const p = scene.slotPos(this.slot);
+    const icons = on.map((k, i) => scene.add.image((i - (on.length - 1) / 2) * 34, 0, `ui:status_${k}`).setDisplaySize(34, 34));
+    this.statusIcons = scene.add.container(p.x, p.y - 78, icons).setDepth(170 + p.y);
+  }
+
   /** Show (or clear) the buffed marker after the board's buffs change. */
   showBuff() {
+    this.showHeart();
     const scene = this.scene;
     // Owl charge on an awakened unit shows in teal; any attack-speed bonus in gold.
     const teal = this.haste <= 0 && this.charge > 0;
@@ -205,6 +259,8 @@ export class Unit {
   }
 
   setBuffVisible(on: boolean) {
+    this.heart?.setVisible(on);
+    this.statusIcons?.setVisible(on);
     this.buffBadge?.setVisible(on);
     this.buffRing?.setVisible(on);
     this.supportRing?.setVisible(on);
@@ -255,8 +311,9 @@ export class Unit {
 
   update(dt: number, now: number) {
     if (this.dragging) return;
-    if (now < this.frozenUntil) {
-      this.sprite.setTint(0x7fd8ff);
+    this.drawStatus(now);
+    if (now < this.frozenUntil || now < this.status.shockedUntil) {
+      this.sprite.setTint(now < this.frozenUntil ? 0x7fd8ff : 0xb0a890);
       this.sprite.anims.timeScale = 0;
       return;
     }
@@ -266,11 +323,19 @@ export class Unit {
     }
     this.alive += dt;
 
-    if (this.def.arch === "buff") {
+    if (this.def.effect === "irritate") {
+      this.effectTimer += dt;
+      if (this.effectTimer >= EFFECTS.irritate.every) {
+        this.effectTimer = 0;
+        this.scene.irritateNeighbours(this);
+      }
+    }
+    if (this.def.arch === "buff" || this.def.arch === "aura" || this.def.arch === "aegis") {
       this.pulse -= dt;
       if (this.pulse <= 0) {
         this.pulse = 4;
-        this.playOnce("skill");
+        // Muse's "attack" clip is her buff pulse, the Aegis Knight's a shield pulse.
+        this.playOnce(this.def.arch === "buff" ? "skill" : "attack");
       }
       return;
     }
@@ -302,9 +367,9 @@ export class Unit {
     }
 
     const { speed } = this.stats;
-    const rate = speed * (1 + this.scene.hasteOf(this));
+    const rate = speed * (1 + this.scene.hasteOf(this)) * this.scene.slowOf(this);
     this.cooldown -= dt;
-    if (this.cooldown > 0) return;
+    if (this.cooldown > 0 || this.sulking) return;
     const target = this.scene.pickTarget(this.def.arch === "sniper" ? "strongest" : "first");
     if (!target) return;
     this.cooldown = 1 / rate;
@@ -315,6 +380,8 @@ export class Unit {
   }
 
   destroy() {
+    this.heart?.destroy();
+    this.statusIcons?.destroy();
     this.aura?.destroy();
     this.buffBadge?.destroy();
     this.buffRing?.destroy();

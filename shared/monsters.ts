@@ -1,6 +1,7 @@
 import type { Race } from "./races.ts";
 
-export type Trait = "fast" | "tank" | "armored" | "healer" | "splitter" | "rich" | "dodge" | "frostproof";
+/** `tether` (v1.2): stretches to the nearest unit and gives it Fatigue until killed. */
+export type Trait = "fast" | "tank" | "armored" | "healer" | "splitter" | "rich" | "dodge" | "frostproof" | "tether";
 
 export interface MonsterDef {
   id: string;
@@ -59,16 +60,61 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   M("troll_healer", "Troll Healer", "orc", 1.5, 55, ["healer"], 15, 96),
   M("bomb_goblin", "Bomb Goblin", "goblin", 0.8, 100, ["fast"]),
   M("chest_mimic", "Chest Mimic", "construct", 1.5, 65, ["rich"], 40, 92),
+  // v1.2 Stories, Story 1: candy folk (each mirrors an existing trait). Corruption is drawn in code.
+  M("gummy_bear", "Gummy Bear", "candy", 0.9, 55),
+  M("candy_corn_runner", "Candy Corn Runner", "candy", 0.55, 120, ["fast"], 8, 78),
+  M("jelly_bean_blob", "Jelly Bean Blob", "candy", 0.8, 60, ["splitter"]),
+  M("cotton_candy_puff", "Cotton Candy Puff", "candy", 0.6, 100, ["dodge"], 8, 72),
+  M("chocolate_golem", "Chocolate Golem", "candy", 2.2, 50, ["tank"], 15, 100),
+  M("peppermint_turtle", "Peppermint Turtle", "candy", 2.0, 55, ["armored"], 15, 96),
+  M("licorice_medic", "Licorice Medic", "candy", 1.5, 55, ["healer"], 15, 96),
+  M("candy_pinata", "Candy Piñata", "candy", 1.5, 65, ["rich"], 40, 92),
+  // Story 2: chaos-born.
+  M("sprinkle_swarm", "Sprinkle Swarm", "chaos", 0.5, 125, ["fast", "splitter"], 8, 76),
+  M("sour_shard", "Sour Shard", "chaos", 1.6, 70, ["armored", "dodge"], 12, 92),
+  M("chaos_taffy", "Chaos Taffy", "chaos", 1.4, 50, ["tether"], 14, 96),
+  // Story 3: chaos-corrupted villagers (tentacles and eyes are in the art).
+  M("corrupted_villager", "Corrupted Villager", "human", 0.9, 55),
+  M("corrupted_courier", "Corrupted Courier", "human", 0.55, 120, ["fast"], 8, 78),
+  M("corrupted_farmer", "Corrupted Farmer", "human", 0.9, 60, ["splitter"]),
+  M("corrupted_fisherman", "Corrupted Fisherman", "human", 2.0, 55, ["armored"], 15, 96),
+  M("corrupted_lumberjack", "Corrupted Lumberjack", "human", 2.4, 48, ["tank"], 16, 104),
+  M("corrupted_herbalist", "Corrupted Herbalist", "human", 1.5, 55, ["healer"], 15, 96),
+  M("corrupted_merchant", "Corrupted Merchant", "human", 1.5, 65, ["rich"], 40, 92),
+  M("chaos_eye", "Chaos Eye", "chaos", 0.7, 95, ["dodge"], 8, 76),
 ];
 
-export const TRAITS: Trait[] = ["fast", "tank", "armored", "healer", "splitter", "rich", "dodge", "frostproof"];
+/** Monsters added after configs were already saved: appended to an older saved list. */
+export const ADDED_MONSTERS = [
+  "gummy_bear", "candy_corn_runner", "jelly_bean_blob", "cotton_candy_puff", "chocolate_golem", "peppermint_turtle", "licorice_medic", "candy_pinata",
+  "sprinkle_swarm", "sour_shard", "chaos_taffy",
+  "corrupted_villager", "corrupted_courier", "corrupted_farmer", "corrupted_fisherman", "corrupted_lumberjack", "corrupted_herbalist", "corrupted_merchant", "chaos_eye",
+];
+
+/** What a splitter breaks into: a smaller copy of itself unless listed here. */
+export const SPLITS_INTO: Record<string, string> = { gelatinous_cube: "slime_blob", corrupted_farmer: "chaos_eye" };
+/** Splitters that break into three instead of two. */
+export const SPLIT_COUNT: Record<string, number> = { jelly_bean_blob: 3, corrupted_farmer: 3 };
+
+export const TRAITS: Trait[] = ["fast", "tank", "armored", "healer", "splitter", "rich", "dodge", "frostproof", "tether"];
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */
 export const MONSTERS: MonsterDef[] = structuredClone(DEFAULT_MONSTERS);
 export const MONSTER_BY_ID: Record<string, MonsterDef> = {};
 
-export type BossPower = "summon" | "heal" | "haste" | "shield" | "freeze_units" | "teleport";
-export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "freeze_units", "teleport"];
+/**
+ * v1.2 Stories adds:
+ * - charm: gives a few units Irritation (their attacks can miss)
+ * - roar: below half HP, one roar that Shellshocks (stuns) a few units; after that it rages (haste)
+ * - split: every quarter of its HP lost, minions burst out
+ * - layers: 4 layers (HP bars); each one that breaks stuns units, sheds, speeds the boss up and
+ *   releases minions; the last layer (the core) gives every unit Irritation in pulses
+ * - portal: opens portals along the path that minions step out of, and blinks forward once a phase
+ */
+export type BossPower = "summon" | "heal" | "haste" | "shield" | "freeze_units" | "teleport" | "charm" | "roar" | "split" | "layers" | "portal";
+export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "freeze_units", "teleport", "charm", "roar", "split", "layers", "portal"];
+/** Powers that need a minion. */
+export const MINION_POWERS: BossPower[] = ["summon", "split", "layers", "portal"];
 
 export interface BossDef {
   id: string;
@@ -80,6 +126,14 @@ export interface BossDef {
   /** What the boss does every few seconds. */
   power: BossPower;
   minion?: string;
+  /** Below half HP it uses this power instead (v1.2). */
+  rage?: BossPower;
+  /** Units hit by freeze_units, charm and roar (default 3). */
+  targets?: number;
+  /** Monster traits the boss has too, such as dodge (v1.2). */
+  traits?: Trait[];
+  /** A corrupted story boss: the Lance Knight's bane hits it harder, and it glows violet. */
+  corrupted?: boolean;
 }
 
 export const DEFAULT_BOSSES: BossDef[] = [
@@ -95,7 +149,19 @@ export const DEFAULT_BOSSES: BossDef[] = [
   { id: "fire_dragon", name: "Fire Dragon", race: "dragon", hp: 1.3, speed: 36, power: "haste" },
   { id: "demon_lord", name: "Demon Lord", race: "demon", hp: 1.4, speed: 32, power: "summon", minion: "lava_imp" },
   { id: "void_emperor", name: "Void Emperor", race: "demon", hp: 1.6, speed: 30, power: "teleport" },
+  // v1.2 Stories, Book 1 "The Chosen".
+  { id: "gummy_warlord", name: "Gummy Warlord", race: "candy", hp: 1.0, speed: 34, power: "summon", minion: "gummy_bear", corrupted: true },
+  { id: "licorice_witch", name: "Licorice Witch", race: "candy", hp: 1.1, speed: 34, power: "freeze_units", targets: 2, corrupted: true },
+  { id: "sugar_plum_tyrant", name: "Sugar Plum Tyrant", race: "candy", hp: 1.3, speed: 32, power: "shield", rage: "haste", corrupted: true },
+  { id: "sour_gummy_hydra", name: "Sour Gummy Hydra", race: "chaos", hp: 1.3, speed: 30, power: "split", minion: "jelly_bean_blob", corrupted: true },
+  { id: "chaos_jawbreaker", name: "Chaos Jawbreaker", race: "chaos", hp: 1.6, speed: 26, power: "layers", minion: "sprinkle_swarm", targets: 3, corrupted: true },
+  { id: "corrupted_fae", name: "Chaos Corrupted Fae", race: "fae", hp: 1.1, speed: 38, power: "charm", targets: 2, traits: ["dodge"], corrupted: true },
+  { id: "corrupted_bear", name: "Chaos Corrupted Bear", race: "beast", hp: 1.5, speed: 30, power: "roar", targets: 3, corrupted: true },
+  { id: "portal_wizard", name: "Chaos Corrupted Portal Wizard", race: "human", hp: 1.6, speed: 30, power: "portal", minion: "chaos_eye", corrupted: true },
 ];
+
+/** Bosses added after configs were already saved: appended to an older saved list. */
+export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker", "corrupted_fae", "corrupted_bear", "portal_wizard"];
 
 export const BOSSES: BossDef[] = structuredClone(DEFAULT_BOSSES);
 export const BOSS_BY_ID: Record<string, BossDef> = {};

@@ -1,7 +1,8 @@
 import { applyConfig, defaultConfig, validateConfig, withPvpDefaults, type GameConfig } from "../../shared/config.ts";
 import { withEffectDefaults } from "../../shared/effects.ts";
 import { withRaces } from "../../shared/races.ts";
-import { withAddedUnits, withStyles } from "../../shared/units.ts";
+import { withAdded, withAddedUnits, withStyles } from "../../shared/units.ts";
+import { ADDED_BOSSES, ADDED_MONSTERS } from "../../shared/monsters.ts";
 import { all, audit, one, run } from "./db.ts";
 
 interface VersionRow {
@@ -27,8 +28,8 @@ function upgrade(cfg: GameConfig): GameConfig {
     ...d,
     ...cfg,
     units: withAddedUnits(withStyles(withRaces(cfg.units, d.units), d.units), d.units),
-    monsters: withRaces(cfg.monsters, d.monsters),
-    bosses: withRaces(cfg.bosses, d.bosses),
+    monsters: withAdded(withRaces(cfg.monsters, d.monsters), d.monsters, ADDED_MONSTERS),
+    bosses: withAdded(withRaces(cfg.bosses, d.bosses), d.bosses, ADDED_BOSSES),
     heroes: withRaces(cfg.heroes ?? d.heroes, d.heroes),
     economy: { ...d.economy, ...cfg.economy },
     effects: withEffectDefaults(cfg.effects),

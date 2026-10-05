@@ -1,6 +1,7 @@
 import { one, run } from "./db.ts";
 import { newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
-import { UNIT_BY_ID } from "../../shared/units.ts";
+import { UNIT_BY_ID, deckable } from "../../shared/units.ts";
+import { newStoryProgress } from "../../shared/stories.ts";
 import { HEROES, HERO_BY_ID } from "../../shared/heroes.ts";
 import { questById, utcDay } from "../../shared/daily.ts";
 
@@ -27,9 +28,9 @@ export function readProfile(row: UserRow): Profile {
   const p = { ...newProfile(), ...JSON.parse(row.profile) } as Profile;
   // Cards/deck entries for units that were removed from the config.
   for (const id of Object.keys(p.cards)) if (!UNIT_BY_ID[id]) delete p.cards[id];
-  const valid = p.deck.filter((id) => p.cards[id] && UNIT_BY_ID[id]?.enabled);
+  const valid = p.deck.filter((id) => p.cards[id] && deckable(UNIT_BY_ID[id]));
   if (valid.length !== 5) {
-    const fill = Object.keys(p.cards).filter((id) => UNIT_BY_ID[id]?.enabled && !valid.includes(id));
+    const fill = Object.keys(p.cards).filter((id) => deckable(UNIT_BY_ID[id]) && !valid.includes(id));
     p.deck = [...valid, ...fill].slice(0, 5);
   }
   // Heroes removed from the config, or a selected hero that was disabled.
@@ -40,6 +41,7 @@ export function readProfile(row: UserRow): Profile {
   // Quests removed from the config (or with a lowered target) since they were handed out.
   p.daily.quests = p.daily.quests.filter((s) => questById(s.id));
   for (const s of p.daily.quests) s.progress = Math.min(s.progress, questById(s.id)!.target);
+  p.story = { ...newStoryProgress(), ...p.story };
   return p;
 }
 

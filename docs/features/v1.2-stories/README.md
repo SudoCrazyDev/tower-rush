@@ -4,7 +4,7 @@
 |---|---|
 | **Version** | 1.2.0 |
 | **Title** | Stories |
-| **Status** | Design. Book 1 (*The Chosen*): all 3 stories are planned here. **Art is done** (2026-10-06, 394 credits; see `assets/README.md`). Code isn't built yet. |
+| **Status** | Book 1 (*The Chosen*): all 3 stories. **Art is done** (2026-10-06, 394 credits; see `assets/README.md`). **Code is built** (2026-10-06, see section 10); not balanced or released yet. |
 | **Written** | 2026-10-05 |
 | **Scope** | New Story mode (menu, chapters, dialogue), Event rarity, 10 new units, candy monsters and bosses, a unit debuff system, new arenas, admin panel, simulator |
 | **Promo kit** | [PROMO.md](PROMO.md) and [`promo/`](promo): key art, posts, a header banner and 5 infographics (placeholder art until the real art exists) |
@@ -442,7 +442,30 @@ Story 3 doesn't give a new unit. Its ending is the cliffhanger. The final chapte
 
 ---
 
-## 10. Build plan (for later; nothing is built yet)
+## 10. Build
+
+### 10.0 What was built (2026-10-06)
+The plan below is done, with these differences:
+- **Muse** is her own archetype, `aura` (Last Call over the 3×3 square, `auraBonus` in `effects.ts`),
+  rather than `buff` with an area setting. The **Aegis Knight** is the `aegis` archetype.
+- Knight and Mercenary effects are a `UnitDef.effect` (`rally`, `irritate`, `fatigue`, `shellshock`,
+  `wages`, `oath`, `bane`); their numbers are Effects blocks of the same names (admin Effects page).
+  Unit statuses are in `shared/statuses.ts`, used by both `BattleScene` and the headless `Sim` (PvP, Playground).
+- **Story arenas aren't arena entries.** A chapter has a `layout` (an existing arena whose path and board
+  it uses: candy_land, winter_village, mushroom_forest) and an `art` image, so they never show in the
+  trophy road. Story battles are stored in `battles` with `arena = "story:<chapter id>"`.
+- New boss powers: `charm`, `roar`, `split`, `layers`, `portal`, plus a `rage` power below half HP
+  (Sugar Plum Tyrant: shield, then haste), `targets`, boss `traits` (the Fae dodges) and `corrupted`.
+- New monster trait `tether` (Chaos Taffy). The Corrupted Farmer splits into 3 Chaos Eyes (no crow art).
+- New races: Candy and Chaos. New quest goal `stories` ("Win a story chapter", quest `story_1`; add it
+  to a live config's quest list on the Daily page, as saved quest lists aren't topped up).
+- Open questions answered with the defaults: Story 2 keeps the player's own hero; 10 / 15 / 20 waves;
+  Story 3 level floor 6 / 7 / 8; Muse is allowed in Story 3.
+- Admin: a **Stories** page (chapters, wave scripts, barks, rewards, Event deck level, level floor).
+- Not done yet: the simulator balance pass (10.5), the PvP bot's Muse/Rogue placement, and the R2 upload
+  of the story art (`story/` folder in `game/public/assets`).
+
+The original plan:
 
 ### 10.1 Shared logic (`shared/`)
 - `units.ts`: add the `event` rarity (no drop weight) and an `area` setting for buffs (`adjacent` | `square3`). Add

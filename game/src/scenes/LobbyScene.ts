@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
 import { profile, account, mail, setArena, signOut, loadMe, loadInbox, serverNow } from "../save";
+import { storyIsNew } from "../../../shared/profile.ts";
 import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
 import { dailyCounts, loginModal, questsModal } from "./daily";
@@ -130,16 +131,18 @@ export class LobbyScene extends Phaser.Scene {
       button(this, deckX, 790, 340, 110, "SHOP", "green", () => this.scene.start("Shop"));
       button(this, deckX, 940, 340, 110, "PVP", "red", () => this.scene.start("PvpMenu"));
     } else {
-      button(this, 140, 1530, 236, 110, "DECK", "blue", () => this.scene.start("Deck"));
-      button(this, 376, 1530, 216, 110, "PVP", "red", () => this.scene.start("PvpMenu"));
-      button(this, 612, 1530, 236, 110, "SHOP", "green", () => this.scene.start("Shop"));
+      button(this, 103, 1530, 170, 110, "DECK", "blue", () => this.scene.start("Deck"), 40);
+      button(this, 285, 1530, 170, 110, "STORY", "yellow", () => this.scene.start("Story"), 40);
+      if (storyIsNew(profile)) badge(this, 285 + 70, 1530 - 44, "!");
+      button(this, 467, 1530, 170, 110, "PVP", "red", () => this.scene.start("PvpMenu"), 40);
+      button(this, 649, 1530, 170, 110, "SHOP", "green", () => this.scene.start("Shop"), 40);
     }
     eventStrip(this);
     // Static shapes become cached images (see bake.ts).
     bakeAll(this);
     // New players: point at the first battle, then at the deck once it's done.
     if (tutorialDue("battle")) pointAt(this, { x: W / 2, y: (WIDE ? 680 : 760) + 330 }, "down", "START HERE!", 80);
-    else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: 140, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
+    else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: 103, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
     // After an update: the release popup, once (not for brand-new players mid-tutorial).
     else this.time.delayedCall(700, () => this.sys.isActive() && whatsNew(this));
   }
@@ -168,6 +171,8 @@ export class LobbyScene extends Phaser.Scene {
     tile(at[0], "ui:icon_daily_login", "DAILY", counts.login ? "!" : null, () => loginModal(this, done));
     tile(at[1], "ui:icon_quests", "QUESTS", counts.quests ? String(counts.quests) : null, () => questsModal(this, done));
     tile(at[2], `icon:${ICON.ranks}`, "RANKS", null, () => this.scene.start("Leaderboard"));
+    // Story mode (v1.2): a book tile with a NEW dot until the first story is started (a bottom-row button on phones).
+    if (WIDE) tile([side, 1200], "ui:icon_story", "STORY", storyIsNew(profile) ? "!" : null, () => this.scene.start("Story"));
     // Mail: a small round button under settings on phones (the tile columns are full there).
     const ms = WIDE ? size : 70;
     const mailCount = () => (mail.unread ? String(mail.unread) : null);

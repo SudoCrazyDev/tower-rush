@@ -1,14 +1,16 @@
 import Phaser from "phaser";
 import { ambientVideo } from "../backdrop";
-import { BASE, ensureAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale } from "../assets";
-import { ARENAS, type ArenaDef } from "../data/arenas";
-import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "../data/monsters";
-import { maxRank, RARITY_ORDER, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
+import { BASE, ensureAnim, hasAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale } from "../assets";
+import { ARENAS, ARENA_BY_ID, type ArenaDef } from "../data/arenas";
+import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "../data/monsters";
+import { maxRank, rarityIndex, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
+import { findChapter, starsFor, type StoryChapter, type StoryDef, type StoryLine } from "../../../shared/stories.ts";
+import { clearDebuffs, isKnight, square3 } from "../../../shared/statuses.ts";
 import { raceLabel } from "../../../shared/races.ts";
 import { chills, withPerk, type Perk } from "../../../shared/perks.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import {
-  EFFECTS, buffBonus, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
+  EFFECTS, auraBonus, buffBonus, wagesFor, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
 } from "../../../shared/effects.ts";
 import {
   SUPPORT_TIP, brewMana, canBecome, echoStrength, harvestMana, heraldBonus, isSupport, luckyChance, mimePrep, mirrorInterval, neighbours, noAttack,
@@ -19,7 +21,8 @@ import { questById, questDone, questText } from "../../../shared/daily.ts";
 import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
 import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
-import { cardLevel, profile, startBattle, finishBattle, type BattleResult } from "../save";
+import { cardLevel, profile, startBattle, finishBattle, finishStory, type BattleResult, type StoryResult, type StoryStart } from "../save";
+import { storyResult } from "./storyUi";
 import { onPlayLost, releasePlay } from "../play";
 import { music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT } from "../ui";
@@ -129,6 +132,12 @@ export class BattleScene extends Phaser.Scene {
   private introTimer = 2;
   private healTimer = 0;
   private boss: Monster | null = null;
+  /** Story mode (v1.2): the chapter being played, and the deck and levels the server handed out. */
+  story: { def: StoryDef; chapter: StoryChapter; start: StoryStart } | null = null;
+  /** HP multiplier of the current story wave. */
+  private waveHp = 1;
+  /** Chaos Taffy tethers, redrawn every frame. */
+  private tethers: Phaser.GameObjects.Graphics | null = null;
 
   // HUD
   private manaText!: Phaser.GameObjects.Text;
@@ -164,9 +173,13 @@ export class BattleScene extends Phaser.Scene {
     super("Battle");
   }
 
-  init(data: { arena?: string }) {
-    this.arena = ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0];
-    this.deck = [...profile.deck];
+  init(data: { arena?: string; story?: { chapter: string; start: StoryStart } }) {
+    const f = data.story ? findChapter(data.story.chapter) : null;
+    this.story = f && data.story ? { def: f.story, chapter: f.chapter, start: data.story.start } : null;
+    this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
+    this.deck = this.story ? [...this.story.start.deck] : [...profile.deck];
+    this.waveHp = 1;
+    this.tethers = null;
     this.now = 0;
     this.speedMult = 1;
     this.paused = this.over = false;
@@ -206,7 +219,7 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.setScroll(0, 0);
     const a = this.arena;
     const bar = this.add.graphics();
-    txt(this, W / 2, H / 2 - 60, a.name, 48, "#fff4c2");
+    txt(this, W / 2, H / 2 - 60, this.story?.chapter.title ?? a.name, 48, "#fff4c2");
     const progress = (p: number) => {
       bar.clear().fillStyle(NAVY, 1).fillRoundedRect(W / 2 - 260, H / 2, 520, 36, 18);
       bar.fillStyle(0x59d64a, 1).fillRoundedRect(W / 2 - 254, H / 2 + 6, Math.max(24, 508 * p), 24, 12);
@@ -214,15 +227,24 @@ export class BattleScene extends Phaser.Scene {
     this.load.on("progress", progress);
     this.load.once("complete", () => this.load.off("progress", progress));
 
-    this.load.image(`loc:arena_${a.id}`, `${BASE}locations/arena_${a.id}.webp`);
+    this.load.image(this.artKey, `${BASE}locations/${this.art}.webp`);
     for (const id of this.deck) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${id}_${anim}`);
-    const monsters = new Set(a.monsters);
-    for (const b of a.bosses) if (BOSS_BY_ID[b].minion) monsters.add(BOSS_BY_ID[b].minion!);
-    if (monsters.has("gelatinous_cube")) monsters.add("slime_blob");
+    const waves = this.story?.chapter.waves;
+    const bosses = waves ? [...new Set(waves.flatMap((w) => (w.boss ? [w.boss] : [])))] : a.bosses;
+    const monsters = new Set(waves ? waves.flatMap((w) => w.spawns.map((s) => s.id)) : a.monsters);
+    for (const b of bosses) if (BOSS_BY_ID[b]?.minion) monsters.add(BOSS_BY_ID[b].minion!);
+    for (const id of [...monsters]) if (SPLITS_INTO[id]) monsters.add(SPLITS_INTO[id]);
     for (const id of monsters) for (const anim of ["walk", "death"]) loadSheet(this, "monsters", `${id}_${anim}`);
-    for (const id of a.bosses) for (const anim of ["walk", "attack", "death", "intro"]) loadSheet(this, "bosses", `${id}_${anim}`);
+    for (const id of bosses) {
+      for (const anim of ["walk", "attack", "death", "intro", "crack", "portal"]) if (hasAnim("bosses", `${id}_${anim}`)) loadSheet(this, "bosses", `${id}_${anim}`);
+    }
     for (const name of assetIndex().anims.vfx) loadSheet(this, "vfx", name);
-    loadImages(this, "boss_banner", "boss_banners", a.bosses);
+    loadImages(this, "boss_banner", "boss_banners", bosses);
+    // Speakers of in-battle barks: unit portraits are loaded already; story portraits aren't.
+    for (const w of waves ?? []) {
+      const who = w.bark?.who;
+      if (who && !UNIT_BY_ID[who] && !this.textures.exists(`story_portrait:${who}`)) this.load.image(`story_portrait:${who}`, `${BASE}story/portraits/${who}.webp`);
+    }
     if (this.hero) for (const anim of ["idle", "skill", "victory"]) loadSheet(this, "heroes", `${this.hero.id}_${anim}`);
   }
 
@@ -234,12 +256,19 @@ export class BattleScene extends Phaser.Scene {
     this.makeAnims();
 
     const a = this.arena;
-    this.battleId = startBattle(a.id).catch(() => null);
+    // A story chapter was started on the server before the scene (the server chose its deck).
+    this.battleId = this.story ? Promise.resolve(this.story.start.battleId) : startBattle(a.id).catch(() => null);
     this.paths = arenaPaths(a);
     this.targetFrom = Math.max(0, a.ring.top - a.entryY - 40);
-    this.add.image(0, 0, `loc:arena_${a.id}`).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
+    const tint = this.story?.chapter.tint ? Phaser.Display.Color.HexStringToColor(this.story.chapter.tint).color : null;
+    const bg = this.add.image(0, 0, this.artKey).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
+    if (tint !== null) bg.setTint(tint);
     // Half the arenas have an ambient loop of the same picture (water, flags, lava...).
-    ambientVideo(this, `arena_${a.id}`, (v) => v.setOrigin(0).setDisplaySize(ARENA_W, ARENA_H));
+    ambientVideo(this, this.art, (v) => {
+      v.setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
+      if (tint !== null) v.setTint(tint);
+    });
+    this.tethers = this.add.graphics().setDepth(1400);
     // Wide layout: the world (arena coordinates) is centred by scrolling the camera;
     // HUD objects use scrollFactor 0 so they stay in screen space.
     this.cameras.main.setScroll(WIDE ? -(W - ARENA_W) / 2 : 0, 0);
@@ -287,7 +316,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   cardLevel(id: string) {
-    return cardLevel(id);
+    return this.story?.start.levels[id] ?? cardLevel(id);
+  }
+
+  /** Background art: the arena's, or the story chapter's. */
+  get art() {
+    return this.story?.chapter.art ?? `arena_${this.arena.id}`;
+  }
+
+  get artKey() {
+    return `loc:${this.art}`;
   }
 
   floater(x: number, y: number, text: string, color: string, size = 24) {
@@ -327,14 +365,14 @@ export class BattleScene extends Phaser.Scene {
 
     if (WIDE) {
       // Blurred, darkened arena behind the side panels.
-      const back = hud(this.add.image(W / 2, H / 2, `loc:arena_${this.arena.id}`).setDepth(-10));
+      const back = hud(this.add.image(W / 2, H / 2, this.artKey).setDepth(-10));
       back.setScale(Math.max(W / back.width, H / back.height)).setTint(0x5a5f8a);
       back.preFX?.addBlur(2, 4, 4, 2);
       const g = hud(this.add.graphics().setDepth(2990));
       g.fillStyle(0x10133a, 0.72).fillRect(0, 0, ox, H).fillRect(W - ox, 0, ox, H);
       g.fillStyle(0xf2b630, 1).fillRect(ox - 6, 0, 6, H).fillRect(W - ox, 0, 6, H);
       g.fillStyle(NAVY, 1).fillRect(ox - 10, 0, 4, H).fillRect(W - ox + 6, 0, 4, H);
-      hud(txt(this, L, 80, this.arena.name.toUpperCase(), 40, "#ffd27a").setDepth(3000));
+      hud(txt(this, L, 80, (this.story?.chapter.title ?? this.arena.name).toUpperCase(), 40, "#ffd27a").setDepth(3000).setWordWrapWidth(ox - 40));
       hud(txt(this, R, 80, "POWER UPS", 40, "#ffd27a").setDepth(3000));
       hud(txt(this, L, H - 60, "Drag matching units together to merge", 22, "#c9d2ff").setDepth(3000));
     } else {
@@ -487,7 +525,8 @@ export class BattleScene extends Phaser.Scene {
     this.summonCostText.setText(fmt(this.summonCost));
     const canSummon = this.mana >= this.summonCost && this.board.includes(null);
     this.summonBtn.setAlpha(canSummon ? 1 : 0.6);
-    this.waveText.setText(`WAVE ${Math.max(1, this.wave)}`);
+    const n = Math.max(1, this.wave);
+    this.waveText.setText(this.story ? `WAVE ${n} / ${this.story.chapter.waves.length}` : `WAVE ${n}`);
     this.hearts.forEach((h, i) => h.setAlpha(i < this.lives ? 1 : 0.2));
     for (const c of this.deckCards) {
       const lvl = this.powerUps[c.id];
@@ -861,6 +900,13 @@ export class BattleScene extends Phaser.Scene {
         const p = this.slotPos(slot);
         this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
       };
+      // Princess Muse: a soft pink mark on the 3×3 square her Last Call reaches.
+      if (u.def.arch === "aura") {
+        for (const s of square3(u.slot)) {
+          const p = this.slotPos(s);
+          this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(94).setTint(0xff8fd8).setAlpha(0.55));
+        }
+      }
       const mime = u.def.arch === "mime" && this.supportReady(u);
       const portal = u.def.arch === "portal" && this.supportReady(u);
       this.board.forEach((other, slot) => {
@@ -939,10 +985,66 @@ export class BattleScene extends Phaser.Scene {
     return boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0);
   }
 
-  /** Every attack-speed bonus on a unit right now: buffs and owls, hero, portal rush, war cry. */
+  /** Every attack-speed bonus on a unit right now: buffs and owls, Muse, hero, portal rush, war cry, Rally. */
   hasteOf(u: Unit) {
     const now = this.now;
-    return u.haste + this.heroHaste + (now < u.rushUntil ? EFFECTS.portal.rush : 0) + (now < this.shoutUntil ? EFFECTS.herald.shout : 0);
+    return (
+      u.haste +
+      u.auraSpeed +
+      this.heroHaste +
+      (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
+      (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
+      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0)
+    );
+  }
+
+  /** Attack-speed multiplier from Fatigue (a Berserker next door, or a Chaos Taffy's tether). */
+  slowOf(u: Unit) {
+    return this.now < u.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1;
+  }
+
+  /** An Aegis Knight next to `u` makes it immune to debuffs. */
+  private shielded(u: Unit) {
+    return neighbours(u.slot).some((j) => this.board[j]?.def.arch === "aegis");
+  }
+
+  /**
+   * Put a debuff on a unit for `time` seconds (Irritation also takes its miss chance). Returns
+   * false when an Aegis Knight protects it.
+   */
+  afflict(u: Unit, kind: "irritation" | "fatigue" | "shellshock", time: number, miss = EFFECTS.irritate.miss) {
+    if (this.shielded(u)) return false;
+    const s = u.status;
+    const until = this.now + time;
+    if (kind === "irritation") {
+      s.irritatedUntil = Math.max(s.irritatedUntil, until);
+      s.miss = miss;
+    } else if (kind === "fatigue") s.fatiguedUntil = Math.max(s.fatiguedUntil, until);
+    else {
+      if (this.now >= s.shockedUntil) this.vfx("lightning_strike", u.sprite.x, u.sprite.y - 40, 90);
+      s.shockedUntil = Math.max(s.shockedUntil, until);
+    }
+    return true;
+  }
+
+  /** Rogue Knight: every few seconds its neighbours get Irritation. */
+  irritateNeighbours(u: Unit) {
+    let any = false;
+    for (const j of neighbours(u.slot)) {
+      const v = this.board[j];
+      if (v && !v.dragging && this.afflict(v, "irritation", EFFECTS.irritate.time)) any = true;
+    }
+    if (any) {
+      u.playOnce("skill");
+      u.callout("TSK!", "#ff6a6a");
+    }
+  }
+
+  /** Units on the board that a boss power may hit (shuffled), at most `n`. */
+  private someUnits(n: number) {
+    const units = this.board.filter((u): u is Unit => !!u && !u.dragging);
+    Phaser.Utils.Array.Shuffle(units);
+    return units.slice(0, n);
   }
 
   /** Whether a Mime can copy or a Portal Imp can move right now. */
@@ -1171,9 +1273,24 @@ export class BattleScene extends Phaser.Scene {
       if (!u) continue;
       u.haste = 0;
       u.charge = 0;
+      u.auraSpeed = 0;
+      u.auraDamage = 0;
       u.perks = [];
       withPerk(u.perks, u.def.perk);
     }
+    // Princess Muse's Last Call: the 3×3 square around her; two Muses don't stack (the best counts).
+    // An Aegis Knight clears its neighbours' debuffs.
+    this.board.forEach((u, i) => {
+      if (u?.def.arch === "aegis") for (const j of neighbours(i)) if (this.board[j]) clearDebuffs(this.board[j]!.status);
+      if (u?.def.arch !== "aura") return;
+      const b = auraBonus(u.rank, this.supportMult(u));
+      for (const j of square3(i)) {
+        const v = this.board[j];
+        if (!v || noAttack(v.def.arch)) continue;
+        v.auraSpeed = Math.max(v.auraSpeed, b.speed);
+        v.auraDamage = Math.max(v.auraDamage, b.damage);
+      }
+    });
     let herald: Unit | null = null;
     this.board.forEach((u, i) => {
       if (!u) return;
@@ -1190,7 +1307,7 @@ export class BattleScene extends Phaser.Scene {
       }
       if (u.def.arch !== "buff") return;
       const mult = boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
-      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
+      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult);
       for (const j of neighbours(i)) {
         const v = this.board[j];
         if (v && v.def.arch !== "buff") {
@@ -1241,9 +1358,34 @@ export class BattleScene extends Phaser.Scene {
     return best;
   }
 
+  /** Damage multiplier from Muse's aura and an Oath Knight's sworn brothers. */
+  private damageMult(unit: Unit) {
+    let m = 1 + unit.auraDamage;
+    if (unit.def.effect === "oath") m *= 1 + EFFECTS.oath.perKnight * neighbours(unit.slot).filter((j) => this.board[j] && isKnight(this.board[j]!.def)).length;
+    return m;
+  }
+
   fire(unit: Unit, target: Monster) {
     const def = unit.def;
-    let damage = unit.stats.damage * this.heroDamageMult * this.heraldMult;
+    const now = this.now;
+    // Irritation: the attack may miss (it still takes its time).
+    if (now < unit.status.irritatedUntil && Math.random() < unit.status.miss) {
+      this.floater(unit.sprite.x, unit.sprite.y - 70, "MISS", "#ff9090", 22);
+      return;
+    }
+    // Knight and Mercenary effects that go off as it attacks.
+    if (def.effect === "rally" || def.effect === "fatigue") {
+      for (const j of neighbours(unit.slot)) {
+        const v = this.board[j];
+        if (!v || v.dragging) continue;
+        if (def.effect === "fatigue") this.afflict(v, "fatigue", EFFECTS.fatigue.linger);
+        else if (!noAttack(v.def.arch)) {
+          if (now >= v.status.rallyUntil) v.callout("RALLY!", "#ffd93b");
+          v.status.rallyUntil = now + EFFECTS.rally.time;
+        }
+      }
+    }
+    let damage = unit.stats.damage * this.heroDamageMult * this.heraldMult * this.damageMult(unit);
     if (def.arch === "growth") damage *= growthMult(unit.alive);
     const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
 
@@ -1259,7 +1401,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private chainLightning(unit: Unit, first: Monster, damage: number, from: Pt) {
-    const jumps = chainJumps(unit.rank, RARITY_ORDER.indexOf(unit.def.rarity));
+    const jumps = chainJumps(unit.rank, rarityIndex(unit.def.rarity));
     const hit: Monster[] = [first];
     let cur = first;
     while (hit.length < jumps) {
@@ -1329,10 +1471,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private applyHit(s: Pick<Shot, "unit" | "def" | "rank" | "damage" | "perks">, m: Monster) {
-    const { unit, def, rank, damage, perks } = s;
+    const { unit, def, rank, perks } = s;
     const e = EFFECTS;
     const now = this.now;
-    const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
+    const rarityIdx = rarityIndex(def.rarity);
+    // Lance Knight: extra damage to corrupted bosses.
+    const damage = def.effect === "bane" && m.boss?.corrupted ? s.damage * (1 + e.bane.bossBonus) : s.damage;
+    // Powder Grenadier: a blast may shellshock a neighbour.
+    if (def.effect === "shellshock" && unit.sprite.active && Math.random() < e.shellshock.chance) {
+      const near = neighbours(unit.slot).map((j) => this.board[j]).filter((v): v is Unit => !!v && !v.dragging);
+      const v = near[Math.floor(Math.random() * near.length)];
+      if (v && this.afflict(v, "shellshock", e.shellshock.time)) v.callout("SHELLSHOCK", "#c9b08a");
+    }
     const pos = m.pos;
     const isBoss = !!m.boss;
     const P = { perks };
@@ -1427,18 +1577,56 @@ export class BattleScene extends Phaser.Scene {
 
   private baseHp(n: number) {
     const e = ECONOMY;
-    const arenaIdx = ARENAS.indexOf(this.arena);
-    return e.waveHpBase * Math.pow(e.waveHpGrowth, n - 1) * (1 + arenaIdx * e.arenaHpStep);
+    // A story chapter has its own HP scale; an arena's grows with its place in the list.
+    const scale = this.story ? this.story.chapter.hpScale : 1 + ARENAS.indexOf(this.arena) * e.arenaHpStep;
+    return e.waveHpBase * Math.pow(e.waveHpGrowth, n - 1) * scale;
+  }
+
+  /** Hired Blades take their wages as a wave starts; one that can't be paid sulks for the wave. */
+  private payWages() {
+    for (const u of this.board) {
+      if (u?.def.effect !== "wages") continue;
+      const cost = wagesFor(u.rank);
+      u.sulking = this.mana < cost;
+      if (u.sulking) {
+        u.callout("UNPAID!", "#ff8080");
+        continue;
+      }
+      this.mana -= cost;
+      this.floater(u.sprite.x, u.sprite.y - 60, `-${cost}`, "#ffb0b0", 22);
+    }
+  }
+
+  /** A story speech bubble over the arena: the speaker's portrait and a line. */
+  private bark(line: StoryLine) {
+    const key = UNIT_BY_ID[line.who] ? `portrait:${line.who}` : `story_portrait:${line.who}`;
+    const w = 620;
+    const g = this.add.graphics();
+    g.fillStyle(NAVY, 0.92).fillRoundedRect(-w / 2, -58, w, 116, 22).lineStyle(4, 0xffd27a, 1).strokeRoundedRect(-w / 2, -58, w, 116, 22);
+    const parts: Phaser.GameObjects.GameObject[] = [g];
+    if (this.textures.exists(key)) parts.push(this.add.image(-w / 2 + 62, 0, key).setDisplaySize(96, 96));
+    const name = UNIT_BY_ID[line.who]?.name ?? line.who.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    parts.push(txt(this, -w / 2 + 124, -30, name, 22, "#ffd27a", [0, 0.5]));
+    parts.push(txt(this, -w / 2 + 124, 12, line.text, 24, "#ffffff", [0, 0.5]).setWordWrapWidth(w - 150));
+    const c = this.add.container(ARENA_W / 2, 200, parts).setDepth(2850).setAlpha(0);
+    this.tweens.add({ targets: c, alpha: 1, y: 180, duration: 250, ease: "Back.Out" });
+    this.tweens.add({ targets: c, alpha: 0, delay: 3600, duration: 300, onComplete: () => c.destroy() });
   }
 
   private startWave() {
     this.wave++;
     const n = this.wave;
     const e = ECONOMY;
-    const isBoss = n % e.bossEvery === 0;
+    const scripted = this.story?.chapter.waves[n - 1];
+    const isBoss = scripted ? !!scripted.boss : n % e.bossEvery === 0;
     if (n > 1) {
       this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
       this.harvest(n - 1);
+    }
+    this.payWages();
+    if (scripted) {
+      this.startScriptedWave(scripted, n);
+      return;
     }
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]);
     // Tanky monsters show up more in later waves.
@@ -1465,6 +1653,36 @@ export class BattleScene extends Phaser.Scene {
     }
     this.spawnInterval = Math.max(e.spawnIntervalMin, e.spawnIntervalStart - n * e.spawnIntervalStep);
     this.spawnTimer = isBoss ? 1.6 : 0.5;
+    this.waveTimer = 0;
+    this.waveState = "spawning";
+    this.refreshHud();
+  }
+
+  /** A story wave: exactly the monsters its script lists (shuffled), the boss first. */
+  private startScriptedWave(w: StoryChapter["waves"][number], n: number) {
+    const e = ECONOMY;
+    const total = this.story!.chapter.waves.length;
+    this.waveHp = w.hp;
+    const list: QueuedSpawn[] = w.spawns.flatMap((s) => (MONSTER_BY_ID[s.id] ? Array.from({ length: s.n }, () => ({ def: MONSTER_BY_ID[s.id] })) : []));
+    Phaser.Utils.Array.Shuffle(list);
+    this.queue = [];
+    const boss = w.boss ? BOSS_BY_ID[w.boss] : undefined;
+    if (boss) {
+      this.queue.push({ boss });
+      this.showBanner(n === total ? `FINAL BOSS: ${boss.name}` : `BOSS: ${boss.name}`, true, boss.id, raceLabel(boss.race).toUpperCase());
+      sfx("boss");
+      music("boss");
+    } else {
+      this.showBanner(n === total ? "FINAL WAVE" : `WAVE ${n} / ${total}`);
+      sfx("wave");
+    }
+    this.queue.push(...list);
+    if (w.bark) {
+      const line = w.bark;
+      this.time.delayedCall(boss ? 1900 : 900, () => !this.over && this.bark(line));
+    }
+    this.spawnInterval = Math.max(e.spawnIntervalMin, e.spawnIntervalStart - n * e.spawnIntervalStep);
+    this.spawnTimer = boss ? 1.6 : 0.5;
     this.waveTimer = 0;
     this.waveState = "spawning";
     this.refreshHud();
@@ -1497,17 +1715,24 @@ export class BattleScene extends Phaser.Scene {
   private spawn(q: QueuedSpawn, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
     const path = at?.path ?? this.paths[Math.random() < 0.5 ? 0 : 1];
     const n = this.wave;
+    const corruption = this.story?.chapter.corruption ?? 0;
     if (q.boss) {
-      const hp = this.baseHp(n) * ECONOMY.bossHpMult * q.boss.hp;
+      const hp = this.baseHp(n) * ECONOMY.bossHpMult * q.boss.hp * this.waveHp;
       const m = new Monster(this, { boss: q.boss }, path, hp, { mana: 150 + n * 15 });
       m.powerTimer = 5;
+      // Corrupted bosses glow violet; the tint is the chapter's corruption.
+      if (q.boss.corrupted) {
+        m.corruption = Math.max(0.3, corruption);
+        m.sprite.preFX?.addGlow(0x9b4dff, 4, 0, false, 0.1, 12);
+      }
       this.boss = m;
       this.monsters.push(m);
       return m;
     }
     const def = q.def!;
-    const hp = this.baseHp(n) * def.hp * hpMult;
+    const hp = this.baseHp(n) * def.hp * hpMult * this.waveHp;
     const m = new Monster(this, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
+    m.corruption = corruption;
     this.monsters.push(m);
     return m;
   }
@@ -1524,25 +1749,138 @@ export class BattleScene extends Phaser.Scene {
       this.vfx("coin_burst", m.pos.x, m.pos.y, 220);
     }
     if (m.def?.traits.includes("rich")) this.vfx("coin_burst", m.pos.x, m.pos.y, 120);
-    // Splitters break into two smaller slimes once.
+    // Splitters break into smaller ones once (some into something else: see SPLITS_INTO).
     if (m.def?.traits.includes("splitter") && m.size > 60) {
-      const child = m.def.id === "gelatinous_cube" ? MONSTER_BY_ID.slime_blob : m.def;
-      for (const off of [-18, 18]) {
+      const child = MONSTER_BY_ID[SPLITS_INTO[m.def.id]] ?? m.def;
+      const offs = SPLIT_COUNT[m.def.id] === 3 ? [-24, 0, 24] : [-18, 18];
+      for (const off of offs) {
         const c = this.spawn({ def: child }, { path: m.path, dist: Math.max(0, m.dist + off) }, 0.7, 0.35);
         c.mana = 3;
       }
     }
   }
 
+  /** Release `count` of a boss's minions around a spot on its path (`at` is a path distance). */
+  private minions(m: Monster, count: number, at = m.dist, spread = 35) {
+    const def = MONSTER_BY_ID[m.boss?.minion ?? ""];
+    if (!def) return;
+    for (let i = 0; i < count; i++) this.spawn({ def }, { path: m.path, dist: Math.max(0, at - 20 - i * spread) }, 0.9, 0.8);
+  }
+
+  /** HP stages of split, layers and portal bosses: each quarter (portal: third) of HP lost. */
+  private bossStages(m: Monster) {
+    const b = m.boss!;
+    if (b.power !== "split" && b.power !== "layers" && b.power !== "portal") return;
+    const parts = b.power === "portal" ? 3 : 4;
+    const stage = Math.min(parts - 1, Math.floor((1 - Math.max(0, m.hp) / m.maxHp) * parts));
+    while (m.stage < stage && !m.dead) {
+      m.stage++;
+      const pos = m.pos;
+      if (b.power === "split") {
+        this.floater(pos.x, pos.y - 60, "SPLIT!", "#b8ffb0", 32);
+        this.vfx("poison_cloud", pos.x, pos.y, 200);
+        this.minions(m, 3, m.dist + 40);
+      } else if (b.power === "portal") {
+        // Blink forward once a phase.
+        this.vfx("shadow_smoke", pos.x, pos.y, 220);
+        m.dist = Math.min(m.path.length * 0.85, m.dist + 220);
+        m.sync(this.now);
+        this.vfx("arcane_vortex", m.pos.x, m.pos.y, 220);
+        this.floater(m.pos.x, m.pos.y - 60, "BLINK!", "#c58bff", 32);
+      } else {
+        // A Jawbreaker layer breaks: units are shaken, it sheds, speeds up and releases chaos-born.
+        const tints = [null, 0xff9ad5, 0x9ad5ff, 0xb070ff];
+        m.layerTint = tints[m.stage] ?? 0xb070ff;
+        m.speedMult *= 1.15;
+        this.cameras.main.shake(300, 0.012);
+        this.floater(pos.x, pos.y - 70, m.stage >= 3 ? "THE CORE!" : "LAYER BROKEN!", "#ffd93b", 34);
+        this.vfx("hit_impact", pos.x, pos.y, 260);
+        for (const u of this.someUnits(b.targets ?? 3)) this.afflict(u, "shellshock", 1.5);
+        this.minions(m, 4, m.dist + 60, 30);
+        const crack = animKey("bosses", `${b.id}_crack`);
+        if (m.stage >= 3 && this.anims.exists(crack)) {
+          m.sprite.play(crack);
+          m.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => !m.dead && m.sprite.play(animKey("bosses", `${b.id}_walk`)));
+        }
+      }
+    }
+  }
+
+  /** Chaos Taffy: tethers the nearest unit, which has Fatigue until the taffy dies. */
+  private updateTethers() {
+    const g = this.tethers;
+    g?.clear();
+    for (const m of this.monsters) {
+      if (m.gone || !m.has("tether") || m.intro > 0 || m.dist < this.targetFrom) continue;
+      let best: Unit | null = null;
+      let bestD = Infinity;
+      for (const u of this.board) {
+        if (!u || u.dragging) continue;
+        const d = Math.hypot(u.sprite.x - m.pos.x, u.sprite.y - m.pos.y);
+        if (d < bestD) [best, bestD] = [u, d];
+      }
+      const u = best as Unit | null;
+      if (!u || !this.afflict(u, "fatigue", 0.25)) continue;
+      g?.lineStyle(7, NAVY, 0.6).lineBetween(m.pos.x, m.pos.y, u.sprite.x, u.sprite.y - 30);
+      g?.lineStyle(4, 0xc58bff, 0.9).lineBetween(m.pos.x, m.pos.y, u.sprite.x, u.sprite.y - 30);
+    }
+  }
+
   private bossPower(m: Monster) {
     const b = m.boss!;
-    const key = animKey("bosses", `${b.id}_attack`);
+    // Some bosses change power below half HP (the Sugar Plum Tyrant drops its shield and rages).
+    const power: BossPower = b.rage && m.hp < m.maxHp / 2 ? b.rage : b.power;
+    // The Bear only roars once it's hurt; split and layer bosses work by HP stages instead.
+    if ((power === "roar" && m.hp >= m.maxHp / 2) || power === "split") return;
+    const portal = animKey("bosses", `${b.id}_portal`);
+    const key = power === "portal" && this.anims.exists(portal) ? portal : animKey("bosses", `${b.id}_attack`);
     if (this.anims.exists(key)) {
       m.sprite.play(key);
       m.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => !m.dead && m.sprite.play(animKey("bosses", `${b.id}_walk`)));
     }
     const pos = m.pos;
-    switch (b.power) {
+    const targets = b.targets ?? 3;
+    switch (power) {
+      case "charm":
+        this.floater(pos.x, pos.y - 60, "CHARM", "#ff9ae6", 32);
+        this.vfx("arcane_vortex", pos.x, pos.y, 200);
+        for (const u of this.someUnits(targets)) {
+          if (this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5)) this.vfx("arcane_vortex", u.sprite.x, u.sprite.y - 30, 110);
+        }
+        break;
+      case "roar":
+        if (!m.roared) {
+          m.roared = true;
+          this.cameras.main.shake(400, 0.014);
+          this.floater(pos.x, pos.y - 70, "ROAR!", "#ff8a3b", 40);
+          for (const u of this.someUnits(targets)) this.afflict(u, "shellshock", 2);
+        } else {
+          m.hasteUntil = this.now + 3;
+          this.vfx("fire_explosion", pos.x, pos.y, 200);
+          this.floater(pos.x, pos.y - 60, "RAGE", "#ff8a3b", 32);
+        }
+        break;
+      case "layers":
+        if (m.stage >= 3) {
+          // The core: every unit gets Irritation in pulses.
+          this.floater(pos.x, pos.y - 70, "CHAOS PULSE", "#c58bff", 34);
+          this.vfx("arcane_vortex", pos.x, pos.y, 280);
+          for (const u of this.board) if (u && !u.dragging) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
+        } else this.minions(m, 2);
+        break;
+      case "portal": {
+        // A portal opens further along the path and minions step out of it.
+        const at = Math.min(m.path.length * 0.85, m.dist + 180 + Math.random() * 220);
+        const p = m.path.at(at);
+        const ring = this.add.graphics().setPosition(p.x, p.y - 20).setDepth(90 + p.y);
+        ring.fillStyle(0x6a2bbf, 0.5).fillEllipse(0, 0, 130, 54).lineStyle(6, 0xc58bff, 1).strokeEllipse(0, 0, 130, 54);
+        ring.setScale(0.2);
+        this.tweens.add({ targets: ring, scale: 1, duration: 300, ease: "Back.Out" });
+        this.tweens.add({ targets: ring, alpha: 0, delay: 2200, duration: 400, onComplete: () => ring.destroy() });
+        this.vfx("summon_circle", p.x, p.y, 170, 90 + p.y);
+        this.time.delayedCall(600, () => !m.dead && !this.over && this.minions(m, 3, at + 40, 30));
+        break;
+      }
       case "summon":
         for (let i = 0; i < 3; i++) this.spawn({ def: MONSTER_BY_ID[b.minion!] }, { path: m.path, dist: Math.max(0, m.dist - 30 - i * 35) }, 0.9, 0.8);
         this.vfx("summon_circle", pos.x, pos.y + 40, 200, 90);
@@ -1569,9 +1907,7 @@ export class BattleScene extends Phaser.Scene {
         this.vfx("shadow_smoke", m.pos.x, m.pos.y, 220);
         break;
       case "freeze_units": {
-        const units = this.board.filter((u): u is Unit => !!u);
-        Phaser.Utils.Array.Shuffle(units);
-        for (const u of units.slice(0, 3)) {
+        for (const u of this.someUnits(targets)) {
           u.frozenUntil = this.now + 3;
           this.vfx("ice_burst", u.sprite.x, u.sprite.y - 20, 140);
         }
@@ -1613,7 +1949,10 @@ export class BattleScene extends Phaser.Scene {
       this.waveTimer += dt;
       const bossAlive = this.boss && !this.boss.gone;
       const alive = this.monsters.some((m) => !m.gone);
-      if (!bossAlive && (!alive || this.waveTimer > 20)) {
+      if (this.story && this.wave >= this.story.chapter.waves.length) {
+        // The last story wave: cleared with lives left wins the chapter.
+        if (!bossAlive && !alive) return this.endGame(undefined, true);
+      } else if (!bossAlive && (!alive || this.waveTimer > 20)) {
         this.waveState = "intro";
         this.introTimer = alive ? 0.5 : 1.5;
       }
@@ -1628,6 +1967,7 @@ export class BattleScene extends Phaser.Scene {
       m.update(dt, now);
       if (m.gone) continue;
       if (m.boss && m.intro <= 0) {
+        this.bossStages(m);
         m.powerTimer -= dt;
         if (m.powerTimer <= 0) {
           m.powerTimer = 6;
@@ -1647,6 +1987,7 @@ export class BattleScene extends Phaser.Scene {
     this.monsters = this.monsters.filter((m) => !m.gone);
     if (this.boss?.gone) this.boss = null;
 
+    this.updateTethers();
     for (const u of this.board) u?.update(dt, now);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
@@ -1659,8 +2000,8 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- end
 
-  /** `why`: shown under the headline when the battle didn't end by itself. */
-  private endGame(why?: string) {
+  /** `why`: shown under the headline when the battle didn't end by itself. `won`: a story chapter was won. */
+  private endGame(why?: string, won = false) {
     if (this.over) return;
     this.over = true;
     this.pauseMenu = null;
@@ -1669,6 +2010,23 @@ export class BattleScene extends Phaser.Scene {
     if (this.tutorialHold) setTutorialDone("battle");
     music(null);
     const stats = { wave: this.wave, kills: this.kills, bosses: this.bossesKilled, ...this.counts };
+    if (this.story) {
+      const story = this.story;
+      const lives = this.lives;
+      const result: Promise<StoryResult | null> = this.battleId
+        .then((id) => (id === null ? null : finishStory(id, { ...stats, won, lives })))
+        .catch(() => null);
+      if (won) {
+        sfx("win");
+        const victory = this.hero && animKey("heroes", `${this.hero.id}_victory`);
+        if (victory && this.heroSprite && this.anims.exists(victory)) this.heroSprite.play({ key: victory, repeat: -1 });
+        this.floater(ARENA_W / 2, 600, "VICTORY!", "#ffd93b", 72);
+      }
+      this.time.delayedCall(won ? 1200 : 500, () =>
+        storyResult(this, { story: story.def, chapter: story.chapter, won, why, stars: won ? starsFor(lives, ECONOMY.lives) : 0, wave: this.wave, result }),
+      );
+      return;
+    }
     const doneBefore = new Set(profile.daily.quests.filter(questDone).map((q) => q.id));
     const leagueBefore = leagueFor(profile.trophies);
     const result: Promise<BattleResult | null> = this.battleId

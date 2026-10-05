@@ -5,10 +5,11 @@ import { currentConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
-import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
+import { chapterDeck, chapterLock, findChapter, starsFor } from "../../shared/stories.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
-import { UNIT_BY_ID, upgradeCost } from "../../shared/units.ts";
+import { UNIT_BY_ID, deckable, upgradeCost } from "../../shared/units.ts";
 import { ARENAS, ARENA_BY_ID } from "../../shared/arenas.ts";
 import { ECONOMY, battleRewards } from "../../shared/economy.ts";
 import { needsAttention } from "../../shared/mail.ts";
@@ -117,7 +118,7 @@ player.put("/me/deck", P, async (c) => {
       if (!Array.isArray(deck) || deck.length !== 5 || new Set(deck).size !== 5) fail(400, "Deck needs 5 different cards");
       for (const id of deck) {
         if (!p.cards[id]) fail(400, `You don't own ${id}`);
-        if (!UNIT_BY_ID[id]?.enabled) fail(400, `${id} is not available`);
+        if (!deckable(UNIT_BY_ID[id])) fail(400, `${id} is not available`);
       }
       p.deck = deck;
     }),
@@ -429,6 +430,96 @@ player.post("/battles/:id/finish", P, async (c) => {
   );
   await releasePlay(db, playerId, deviceOf(c));
   return c.json({ rewards, boosts: { coinMult: boosts.coinMult, gemMult: boosts.gemMult }, wave, ...r });
+});
+
+// ---------------------------------------------------------------- stories (v1.2)
+
+/**
+ * Start a story chapter. The server checks it's unlocked and builds the deck and card levels
+ * itself: the Event deck pick (Story 2) or the equipped deck checked against the chapter's
+ * rules, with required units raised to the level floor (Story 3).
+ */
+player.post("/story/start", P, async (c) => {
+  const req = await body(c);
+  const f = findChapter(String(req.chapter ?? ""));
+  if (!f) fail(404, "Unknown chapter");
+  // The game claims the play slot first (see play.ts); without it, another device is playing.
+  const device = deviceOf(c);
+  if (!(await holdsPlay(c.env.DB, c.get("playerId"), device))) fail(409, "playing elsewhere");
+  let started: { deck: string[]; levels: Record<string, number> } | null = null;
+  const r = await update(c, (p) => {
+    const lock = chapterLock(p.story, p.trophies, f.chapter.id);
+    if (lock) fail(400, lock);
+    const pick = Array.isArray(req.pick) ? req.pick.map(String) : undefined;
+    const d = chapterDeck(f.chapter, { deck: p.deck, level: (id) => p.cards[id]?.level ?? 1 }, pick);
+    if ("problem" in d) fail(400, d.problem);
+    started = d;
+    if (!p.story.started.includes(f.story.id)) p.story.started.push(f.story.id);
+  });
+  const { deck, levels } = started!;
+  const row = await run(
+    c.env.DB,
+    "INSERT INTO battles (user_id, arena, deck, hero, started_at) VALUES (?, ?, ?, ?, ?)",
+    c.get("playerId"),
+    `story:${f.chapter.id}`,
+    JSON.stringify(deck),
+    r.profile.hero,
+    Date.now(),
+  );
+  await setPlayBattle(c.env.DB, c.get("playerId"), device!, row.meta.last_row_id);
+  return c.json({ battleId: row.meta.last_row_id, deck, levels, profile: r.profile });
+});
+
+/**
+ * A story chapter is over. Like a solo run, the client reports how far it got and the server
+ * caps that by the time elapsed; a win needs the last wave cleared with lives left. No trophies.
+ */
+player.post("/story/:id/finish", P, async (c) => {
+  const db = c.env.DB;
+  const id = numParam(c, "id");
+  const playerId = c.get("playerId");
+  const b = await one<{ id: number; arena: string; started_at: number; finished_at: number | null; cutoff: number | null }>(
+    db,
+    "SELECT id, arena, started_at, finished_at, cutoff FROM battles WHERE id = ? AND user_id = ?",
+    id,
+    playerId,
+  );
+  if (!b || !b.arena.startsWith("story:")) fail(404, "Unknown story battle");
+  const f = findChapter(b.arena.slice("story:".length));
+  if (!f) fail(404, "That chapter no longer exists");
+  const now = Date.now();
+  const claimed = await run(db, "UPDATE battles SET finished_at = ? WHERE id = ? AND finished_at IS NULL", now, b.id);
+  if (b.finished_at || !claimed.meta.changes) fail(409, "Battle already finished");
+
+  const req = await body(c);
+  const elapsed = (Math.min(now, b.cutoff ?? now) - b.started_at) / 1000;
+  const waves = f.chapter.waves.length;
+  const int = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+  const wave = int(req.wave, Math.min(waves, Math.floor(elapsed / 3) + 1));
+  const lives = int(req.lives, ECONOMY.lives);
+  // Taken over by another device: it can't count as a win.
+  const won = req.won === true && wave >= waves && lives > 0 && !b.cutoff;
+  const bossWaves = f.chapter.waves.slice(0, wave).filter((w) => w.boss).length;
+  const bosses = int(req.bosses, bossWaves);
+  const kills = int(req.kills, wave * 80);
+  const summons = int(req.summons, 15 + wave * 12);
+  const merges = int(req.merges, summons);
+  const awakens = int(req.awakens, Math.floor(merges / (2 ** (ECONOMY.maxRank - 1) - 1)));
+  const heroCasts = int(req.heroCasts, Math.floor(elapsed / 10) + 1);
+  const stars = won ? starsFor(lives, ECONOMY.lives) : 0;
+  let r;
+  try {
+    r = await update(c, (p) => {
+      addQuestProgress(p.daily, { wave, kills, bosses, summons, merges, awakens, heroCasts, stories: won ? 1 : 0 });
+      return { win: won ? grantStoryWin(p, f.chapter.id, stars, utcDay(now)) : null };
+    });
+  } catch (e) {
+    await run(db, "UPDATE battles SET finished_at = NULL WHERE id = ?", b.id);
+    throw e;
+  }
+  await run(db, "UPDATE battles SET wave = ?, kills = ?, bosses = ?, coins = ?, gems = ?, trophies = 0 WHERE id = ?", wave, kills, bosses, r.win?.coins ?? 0, r.win?.gems ?? 0, b.id);
+  await releasePlay(db, playerId, deviceOf(c));
+  return c.json({ won, wave, ...r });
 });
 
 // ---------------------------------------------------------------- leaderboard

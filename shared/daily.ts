@@ -12,7 +12,7 @@ export interface Reward {
 }
 
 /** What a quest counts. Battle goals come from finished runs; the others from shop/deck actions. */
-export type QuestGoal = "battles" | "wave" | "merges" | "summons" | "kills" | "bosses" | "heroCasts" | "awakens" | "upgrades" | "chests" | "copies" | "swaps" | "brewed";
+export type QuestGoal = "battles" | "wave" | "merges" | "summons" | "kills" | "bosses" | "heroCasts" | "awakens" | "upgrades" | "chests" | "copies" | "swaps" | "brewed" | "stories";
 
 export const QUEST_GOALS: Record<QuestGoal, { text: string; label: string; best?: boolean }> = {
   battles: { text: "Play {n} battles", label: "Battles finished" },
@@ -28,6 +28,7 @@ export const QUEST_GOALS: Record<QuestGoal, { text: string; label: string; best?
   copies: { text: "Copy {n} units with the Mime", label: "Mime copies" },
   swaps: { text: "Move units {n} times with the Portal Imp", label: "Portal Imp swaps and hops" },
   brewed: { text: "Brew {n} mana with the Gnome Brewer", label: "Mana brewed" },
+  stories: { text: "Win {n} story chapters", label: "Story chapters won" },
 };
 export const QUEST_GOAL_IDS = Object.keys(QUEST_GOALS) as QuestGoal[];
 
@@ -42,7 +43,7 @@ export interface QuestDef {
 }
 
 /** Per-battle numbers a finished run reports (the server clamps them first). */
-export type BattleStats = Record<Exclude<QuestGoal, "battles" | "upgrades" | "chests">, number>;
+export type BattleStats = Record<Exclude<QuestGoal, "battles" | "upgrades" | "chests" | "stories">, number>;
 
 export interface DailyState {
   /** UTC day these quests belong to. */
@@ -83,6 +84,8 @@ export const DEFAULT_QUESTS: QuestDef[] = [
   Q("mime_3", "copies", 3, R(150), 0.3),
   Q("swap_5", "swaps", 5, R(150), 0.3),
   Q("brew_500", "brewed", 500, R(150), 0.3),
+  // v1.2 Stories.
+  Q("story_1", "stories", 1, R(0, 15), 0.5),
 ];
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */

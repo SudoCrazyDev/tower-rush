@@ -6,7 +6,7 @@
  * Most effects scale with the unit's merge rank (1-7) and rarity (common 0 ... mythic 4).
  * Fractions are 0-1: 0.2 is 20%.
  */
-import type { Arch } from "./units.ts";
+import type { Arch, UnitEffect } from "./units.ts";
 import { isSupport, supportSummary } from "./support.ts";
 
 export const DEFAULT_EFFECTS = {
@@ -34,6 +34,28 @@ export const DEFAULT_EFFECTS = {
   echo: { strength: 0.25, perRank: 0.05, max: 0.75, delay: 0.6 },
   herald: { perAwakened: 0.05, perRank: 0.01, max: 0.6, shout: 0.3, shoutTime: 6 },
   brewer: { every: 5, perRank: 8, harvestPerRank: 1, tapBonus: 0.25, tapWindow: 2, pvpMult: 0.6 },
+  // v1.2 Stories (see statuses.ts). Princess Muse's Last Call aura over the 3×3 square around her.
+  aura: { speed: 0.05, speedPerRank: 0.02, damage: 0.03, damagePerRank: 0.01, speedMax: 0.4, damageMax: 0.25 },
+  aegis: { pulse: 4 },
+  // Unit effects of the Knights and Mercenaries, and the statuses they cause.
+  rally: { speed: 1, time: 2 },
+  irritate: { every: 4, miss: 0.25, time: 2 },
+  fatigue: { slow: 0.25, linger: 1 },
+  shellshock: { chance: 0.15, time: 1 },
+  wages: { perRank: 10 },
+  oath: { perKnight: 0.08 },
+  bane: { bossBonus: 0.5 },
+};
+
+/** Effect blocks that belong to a unit effect (UnitDef.effect) rather than an archetype. */
+export const EFFECT_LABELS: Record<string, string> = {
+  rally: "Pentagonal Knight: each hit gives adjacent units Rally",
+  irritate: "Rogue Knight: adjacent units get Irritation (attacks can miss)",
+  fatigue: "Berserker Sellsword: adjacent units attack slower (also the Chaos Taffy's tether)",
+  shellshock: "Powder Grenadier: blasts may stun an adjacent unit",
+  wages: "Hired Blade: costs mana every wave or sulks",
+  oath: "Oath Knight: more damage per adjacent Knight",
+  bane: "Lance Knight: extra damage to corrupted bosses",
 };
 
 export type Effects = typeof DEFAULT_EFFECTS;
@@ -198,6 +220,43 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     tapWindow: F("A bubble waits this long to be tapped (seconds)", 0.5, 10),
     pvpMult: PCT("Brew and harvest mana in PvP (0.6 = 60%)", 2),
   },
+  aura: {
+    speed: PCT("Attack speed for units in the 3×3 square, rank 1 (0.05 = +5%)", 2),
+    speedPerRank: PCT("…plus this per rank", 1),
+    damage: PCT("Damage for units in the 3×3 square, rank 1 (0.03 = +3%)", 2),
+    damagePerRank: PCT("…plus this per rank", 1),
+    speedMax: PCT("Most attack speed after card level and power-ups", 5),
+    damageMax: PCT("Most damage after card level and power-ups", 5),
+  },
+  aegis: {
+    pulse: F("Shows its shield every N seconds (looks only)", 0.5, 60, false, 0.5),
+  },
+  rally: {
+    speed: PCT("Rally: attack speed bonus (1 = +100%)", 5),
+    time: F("Rally lasts (seconds)", 0.1, 20),
+  },
+  irritate: {
+    every: F("Irritates its neighbours every N seconds", 0.5, 60, false, 0.5),
+    miss: PCT("Irritation: chance an attack misses"),
+    time: F("Irritation lasts (seconds)", 0.1, 20),
+  },
+  fatigue: {
+    slow: PCT("Fatigue: attack speed lost (0.25 = −25%)", 0.95),
+    linger: F("Fatigue lasts after its last attack (seconds)", 0.1, 20),
+  },
+  shellshock: {
+    chance: PCT("Chance a blast shellshocks an adjacent unit"),
+    time: F("Shellshocked (stunned) for (seconds)", 0.1, 20),
+  },
+  wages: {
+    perRank: F("Wages per wave: rank × this mana", 1, 500),
+  },
+  oath: {
+    perKnight: PCT("Damage per adjacent Knight (0.08 = +8%)", 2),
+  },
+  bane: {
+    bossBonus: PCT("Extra damage to corrupted bosses (0.5 = +50%)", 5),
+  },
 };
 
 // ---------------------------------------------------------------- formulas
@@ -224,9 +283,39 @@ export const growthMult = (secondsOnBoard: number, e = EFFECTS) => 1 + Math.min(
 export const buffBonus = (rank: number, rarity: number, mult = 1, e = EFFECTS) =>
   Math.min(e.buff.max, (e.buff.base + e.buff.perRank * rank + e.buff.perRarity * rarity) * mult);
 export const manaPerPulse = (rank: number, e = EFFECTS) => e.mana.perRank * rank;
+/**
+ * Princess Muse's Last Call: attack speed and damage for every unit in the 3×3 square around
+ * her. `mult` is her card level × power-up multiplier. Two Muses don't stack (the best one counts).
+ */
+export const auraBonus = (rank: number, mult = 1, e = EFFECTS) => ({
+  speed: Math.min(e.aura.speedMax, (e.aura.speed + e.aura.speedPerRank * (rank - 1)) * mult),
+  damage: Math.min(e.aura.damageMax, (e.aura.damage + e.aura.damagePerRank * (rank - 1)) * mult),
+});
+/** Hired Blade's wages for one wave. */
+export const wagesFor = (rank: number, e = EFFECTS) => Math.round(e.wages.perRank * rank);
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const secs = (x: number) => `${+x.toFixed(2)}s`;
+
+/** One line describing a Knight's or Mercenary's own effect (card details). */
+export function unitEffectSummary(effect: UnitEffect, rank: number, e = EFFECTS): string {
+  switch (effect) {
+    case "rally":
+      return `Each hit: adjacent units +${pct(e.rally.speed)} attack speed for ${secs(e.rally.time)}`;
+    case "irritate":
+      return `Every ${secs(e.irritate.every)}: adjacent units miss ${pct(e.irritate.miss)} of attacks for ${secs(e.irritate.time)}`;
+    case "fatigue":
+      return `While attacking: adjacent units attack ${pct(e.fatigue.slow)} slower`;
+    case "shellshock":
+      return `Each blast: ${pct(e.shellshock.chance)} chance to stun an adjacent unit for ${secs(e.shellshock.time)}`;
+    case "wages":
+      return `Wages: ${wagesFor(rank, e)} mana every wave, or no attacks that wave`;
+    case "oath":
+      return `+${pct(e.oath.perKnight)} damage for each adjacent Knight`;
+    case "bane":
+      return `+${pct(e.bane.bossBonus)} damage to corrupted bosses`;
+  }
+}
 
 /** One line describing an archetype's effect for a unit at this rank and rarity (card details). */
 export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFECTS, mult = 1): string | null {
@@ -259,6 +348,12 @@ export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFE
       return `Neighbours attack ${pct(buffBonus(rank, rarity, mult, e))} faster`;
     case "mana":
       return `+${manaPerPulse(rank, e)} mana every ${secs(e.mana.every)}`;
+    case "aura": {
+      const b = auraBonus(rank, mult, e);
+      return `3×3 around her: +${pct(b.speed)} attack speed, +${pct(b.damage)} damage`;
+    }
+    case "aegis":
+      return "Adjacent units are immune to debuffs";
     default:
       if (isSupport(arch)) return supportSummary(arch, rank, e, mult);
       return null;

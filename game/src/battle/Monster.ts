@@ -16,6 +16,12 @@ export interface HitOpts {
   perks?: readonly Perk[];
 }
 
+/** White blended toward the corruption's violet by `k` (0-1). */
+export function corruptTint(k: number) {
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * Math.min(1, k) * 0.75);
+  return (mix(255, 0xb0) << 16) | (mix(255, 0x70) << 8) | mix(255, 0xff);
+}
+
 /** A walking enemy (regular monster or boss). */
 export class Monster {
   readonly scene: BattleScene;
@@ -47,6 +53,16 @@ export class Monster {
   burn = { dps: 0, until: 0 };
   powerTimer = 0;
   intro = 0;
+  /** v1.2 story corruption, 0-1: a violet tint drawn in code (the art is clean). */
+  corruption = 0;
+  /** HP stages a split, layers or portal boss has passed (each quarter or third of its HP). */
+  stage = 0;
+  /** The Corrupted Bear's roar has gone off. */
+  roared = false;
+  /** Shedding a Jawbreaker layer makes it faster. */
+  speedMult = 1;
+  /** Tint of the current Jawbreaker layer. */
+  layerTint: number | null = null;
   private bob = Math.random() * 10;
   private flashUntil = 0;
 
@@ -90,13 +106,13 @@ export class Monster {
   }
 
   has(trait: string) {
-    return this.def?.traits.includes(trait as never) ?? false;
+    return (this.def?.traits ?? this.boss?.traits ?? []).includes(trait as never);
   }
 
   /** Current movement speed after slows/haste. */
   speed(now: number) {
     if (now < this.frozenUntil || now < this.stunUntil) return 0;
-    let s = this.baseSpeed;
+    let s = this.baseSpeed * this.speedMult;
     if (now < this.slowUntil) s *= 1 - this.slowPct;
     if (now < this.hasteUntil) s *= 1.8;
     return s;
@@ -136,6 +152,8 @@ export class Monster {
     else if (this.poison.length) tint = 0xc89bff;
     else if (now < this.slowUntil) tint = 0xb8e8ff;
     else if (this.burn.until > now) tint = 0xffb38a;
+    else if (this.layerTint !== null) tint = this.layerTint;
+    else if (this.corruption > 0) tint = corruptTint(this.corruption);
     if (now < this.flashUntil) this.sprite.setTintFill(0xffffff);
     else if (tint !== null) this.sprite.setTint(tint);
     else this.sprite.clearTint();

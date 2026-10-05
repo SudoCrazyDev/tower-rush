@@ -3,7 +3,7 @@ import type { Race } from "./races.ts";
 import type { Perk } from "./perks.ts";
 import { noAttack } from "./support.ts";
 
-export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
+export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic" | "event";
 export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane";
 
 /**
@@ -36,11 +36,22 @@ export type Arch =
   | "hourglass" // neighbours charge ultimates faster
   | "echo" // repeats neighbours' ultimates
   | "herald" // every unit hits harder per awakened unit
-  | "brewer"; // brews mana, pays a harvest every wave
+  | "brewer" // brews mana, pays a harvest every wave
+  // v1.2 Stories: no attack of their own.
+  | "aura" // Barkeeper: units in the 3×3 square around it attack faster and hit harder
+  | "aegis"; // neighbours are immune to unit debuffs and lose any they have
 
 export type Proj = "arrow" | "fireball" | "ice_shard" | "lightning" | "poison" | "cannonball" | "arcane_orb" | "spark";
 
-export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic"];
+export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
+/**
+ * Rarities that drop from chests. Event cards (v1.2) are earned in stories only: they have no
+ * drop weight and never appear in chests, the shop or card packs.
+ */
+export type ChestRarity = Exclude<Rarity, "event">;
+export const CHEST_RARITIES: ChestRarity[] = ["common", "rare", "epic", "legendary", "mythic"];
+/** A rarity's step for formulas (common 0 ... mythic 4). Event cards use Epic's numbers. */
+export const rarityIndex = (r: Rarity) => (r === "event" ? 2 : RARITIES.indexOf(r));
 export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane"];
 export const PROJECTILES: Proj[] = ["arrow", "fireball", "ice_shard", "lightning", "poison", "cannonball", "arcane_orb", "spark"];
 
@@ -63,7 +74,28 @@ export interface UnitDef {
   perk: Perk;
   /** Disabled units don't drop from chests and can't be put in a deck. */
   enabled: boolean;
+  /** Shown in place of the fighting style ("Barkeeper", "Knight", "Mercenary"). */
+  role?: string;
+  /** Exists only inside a story's Event deck: never in the collection, chests or PvP. */
+  storyOnly?: boolean;
+  /** Earned from a story first; drops from chests only once the player owns a copy. */
+  storyReward?: boolean;
+  /** A unit-specific effect on top of its archetype (v1.2 Knights and Mercenaries; numbers in effects.ts). */
+  effect?: UnitEffect;
 }
+
+/**
+ * v1.2 Knights play for the team, Mercenaries for themselves:
+ * - rally: each hit gives adjacent units Rally (much faster attacks for a moment)
+ * - irritate: every few seconds adjacent units get Irritation (their attacks can miss)
+ * - fatigue: adjacent units attack slower while this one is attacking
+ * - shellshock: each hit may stun a random adjacent unit briefly
+ * - wages: costs mana at the start of every wave; sulks (no attacks) for a wave it can't be paid
+ * - oath: more damage for each adjacent Knight
+ * - bane: extra damage to corrupted bosses
+ */
+export type UnitEffect = "rally" | "irritate" | "fatigue" | "shellshock" | "wages" | "oath" | "bane";
+export const UNIT_EFFECTS: UnitEffect[] = ["rally", "irritate", "fatigue", "shellshock", "wages", "oath", "bane"];
 
 export const RARITY_ORDER: Rarity[] = RARITIES;
 
@@ -74,6 +106,7 @@ export const RARITY_STATS: Record<Rarity, { color: number; dropWeight: number }>
   epic: { color: 0xa24bff, dropWeight: 10 },
   legendary: { color: 0xffb21e, dropWeight: 3.5 },
   mythic: { color: 0xff3b6b, dropWeight: 0.5 },
+  event: { color: 0xff8fd8, dropWeight: 0 },
 };
 
 export const ELEMENT_COLOR: Record<Element, number> = {
@@ -111,6 +144,8 @@ export const ARCHETYPES: Record<Arch, { speed: number; dmg: number; label: strin
   echo: { speed: 0, dmg: 0, label: "Support: repeats neighbours' ultimates" },
   herald: { speed: 0, dmg: 0, label: "Support: every unit hits harder per awakening" },
   brewer: { speed: 0, dmg: 0, label: "Support: brews mana, pays a bonus every wave" },
+  aura: { speed: 0, dmg: 0, label: "Units around it attack faster and hit harder" },
+  aegis: { speed: 0, dmg: 0, label: "Neighbours are immune to debuffs" },
 };
 export const ARCHS = Object.keys(ARCHETYPES) as Arch[];
 
@@ -146,7 +181,7 @@ export function withStyles(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   });
 }
 
-const SEED_DAMAGE: Record<Rarity, number> = { common: 20, rare: 28, epic: 40, legendary: 58, mythic: 82 };
+const SEED_DAMAGE: Record<Rarity, number> = { common: 20, rare: 28, epic: 40, legendary: 58, mythic: 82, event: 40 };
 
 const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arch, proj: Proj, blurb: string, race: Race, style: Style, perk: Perk): UnitDef => ({
   id,
@@ -239,17 +274,43 @@ export const DEFAULT_UNITS: UnitDef[] = [
   U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "fireball", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
   U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "arcane_orb", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
   U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"),
+  // v1.2 Stories: Princess Muse, the Story 1 reward and the first Event card.
+  { ...U("princess_muse", "Princess Muse", "event", "arcane", "aura", "arcane_orb", "A round on the house, and the whole bar fights harder.", "human", "balanced", "none"), role: "Barkeeper" },
+  // v1.2 Stories: Story 2's Knights and Mercenaries. Pentagonal and Rogue Knight are its reward
+  // (normal Epic cards once earned); the other seven only exist in the story's Event deck.
+  { ...U("pentagonal_knight", "Pentagonal Knight", "epic", "lightning", "shot", "spark", "Every hammer blow rallies the line.", "human", "heavy", "none"), damage: 100, speed: 0.44, role: "Knight", storyReward: true, effect: "rally" },
+  { ...U("rogue_knight", "Rogue Knight", "epic", "fire", "shot", "spark", "Fast blades, short temper. Keep him on the edge.", "human", "rapid", "none"), damage: 24, speed: 2.4, role: "Mercenary", storyReward: true, effect: "irritate" },
+  { ...U("aegis_knight", "Aegis Knight", "epic", "arcane", "aegis", "spark", "Stand by the shield and nothing shakes you.", "human", "balanced", "none"), role: "Knight", storyOnly: true },
+  { ...U("lance_knight", "Lance Knight", "epic", "lightning", "pierce", "spark", "Runs the whole line through. Hates corruption most.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "bane" },
+  { ...U("oath_knight", "Oath Knight", "epic", "fire", "shot", "spark", "Stronger with every sworn brother beside him.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "oath" },
+  { ...U("lantern_knight", "Lantern Knight", "epic", "arcane", "mana", "arcane_orb", "His lantern finds mana in the dark.", "human", "balanced", "plunder"), role: "Knight", storyOnly: true },
+  { ...U("berserker_sellsword", "Berserker Sellsword", "epic", "fire", "shot", "spark", "Hits like a landslide. Wears out everyone near him.", "human", "heavy", "none"), damage: 75, role: "Mercenary", storyOnly: true, effect: "fatigue" },
+  { ...U("powder_grenadier", "Powder Grenadier", "epic", "fire", "splash", "cannonball", "Big blasts. Mind your ears.", "human", "balanced", "none"), damage: 52, role: "Mercenary", storyOnly: true, effect: "shellshock" },
+  { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 46, role: "Mercenary", storyOnly: true, effect: "wages" },
 ];
+
+/** The v1.2 Story units: Muse, the Knights and the Mercenaries. */
+export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade"];
 
 /**
  * Units added to the defaults after configs were already saved (the v1.1 support units):
  * appended to an older saved unit list so a live config gets them, with the default numbers.
  */
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit"];
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
-  const have = new Set(list.map((u) => u.id));
-  return [...list, ...defaults.filter((d) => ADDED_UNITS.includes(d.id) && !have.has(d.id))];
+  return withAdded(list, defaults, ADDED_UNITS);
 }
+
+/** Append the `added` defaults that a saved list is missing (things added after configs were saved). */
+export function withAdded<T extends { id: string }>(list: T[], defaults: T[], added: string[]): T[] {
+  const have = new Set(list.map((u) => u.id));
+  return [...list, ...defaults.filter((d) => added.includes(d.id) && !have.has(d.id))];
+}
+
+/** Whether a unit can drop from a chest for this player: story units never, story rewards once owned. */
+export const canDrop = (u: UnitDef, owns: (id: string) => boolean) => u.enabled && !u.storyOnly && u.rarity !== "event" && (!u.storyReward || owns(u.id));
+/** Whether a unit may go in the player's own deck. */
+export const deckable = (u: UnitDef | undefined) => !!u && u.enabled && !u.storyOnly;
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */
 export const UNITS: UnitDef[] = structuredClone(DEFAULT_UNITS);
@@ -281,7 +342,7 @@ export const powerUpCost = (lvl: number) => ECONOMY.powerUpCosts[lvl] ?? Infinit
 export function upgradeCost(level: number, rarity: Rarity) {
   const copies = ECONOMY.upgradeCopies[level - 1] ?? Infinity;
   const coins = ECONOMY.upgradeCoins[level - 1] ?? Infinity;
-  const r = RARITY_ORDER.indexOf(rarity);
+  const r = rarityIndex(rarity);
   return {
     copies: Math.max(1, Math.ceil(copies / (1 + r * ECONOMY.rarityCopyDiscount))),
     coins: Math.round(coins * (1 + r * ECONOMY.rarityCoinMarkup)),

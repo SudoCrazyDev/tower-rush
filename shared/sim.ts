@@ -14,6 +14,8 @@ import { ARENAS, ARENA_BY_ID, type ArenaDef } from "./arenas.ts";
 import { ECONOMY } from "./economy.ts";
 import {
   EFFECTS,
+  auraBonus,
+  wagesFor,
   buffBonus,
   chainJumps,
   critChance,
@@ -29,8 +31,9 @@ import {
   stunChance,
 } from "./effects.ts";
 import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
-import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "./monsters.ts";
-import { RARITY_ORDER, UNIT_BY_ID, boostMult, unitStats, type Element, type UnitDef } from "./units.ts";
+import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "./monsters.ts";
+import { UNIT_BY_ID, boostMult, rarityIndex, unitStats, type Element, type UnitDef } from "./units.ts";
+import { clearDebuffs, isKnight, newStatus, square3 } from "./statuses.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
 import {
@@ -42,6 +45,7 @@ import {
   isSupport,
   mirrorInterval,
   neighbours,
+  noAttack,
   owlCharge,
   owlSpeed,
 } from "./support.ts";
@@ -206,6 +210,13 @@ export class SimUnit {
   timer = 0;
   /** Portal rush: attacks faster until then. */
   rushUntil = 0;
+  /** v1.2 statuses (Rally, Irritation, Fatigue, Shellshock) and Muse's aura. */
+  status = newStatus();
+  auraSpeed = 0;
+  auraDamage = 0;
+  /** Hired Blade not paid this wave: no attacks. */
+  sulking = false;
+  effectTimer = 0;
   // Viewer: when it last attacked.
   firedAt = -1;
 
@@ -285,13 +296,18 @@ export class SimMonster {
     return this.path.at(this.dist);
   }
 
+  /** HP stages passed by split, layers and portal bosses; the Bear's roar; a shed layer's speed-up. */
+  stage = 0;
+  roared = false;
+  speedMult = 1;
+
   has(trait: string) {
-    return this.def?.traits.includes(trait as never) ?? false;
+    return (this.def?.traits ?? this.boss?.traits ?? []).includes(trait as never);
   }
 
   speed(now: number) {
     if (now < this.frozenUntil || now < this.stunUntil) return 0;
-    let s = this.baseSpeed;
+    let s = this.baseSpeed * this.speedMult;
     if (now < this.slowUntil) s *= 1 - this.slowPct;
     if (now < this.hasteUntil) s *= 1.8;
     return s;
@@ -476,9 +492,23 @@ export class Sim {
       if (!u) continue;
       u.haste = 0;
       u.charge = 0;
+      u.auraSpeed = 0;
+      u.auraDamage = 0;
       u.perks = [];
       withPerk(u.perks, u.def.perk);
     }
+    // Princess Muse's Last Call (the 3×3 square, best one counts) and the Aegis Knight's cleanse.
+    this.units.forEach((u, i) => {
+      if (u?.def.arch === "aegis") for (const j of neighbours(i)) if (this.units[j]) clearDebuffs(this.units[j]!.status);
+      if (u?.def.arch !== "aura") return;
+      const b = auraBonus(u.rank, this.supportMult(u));
+      for (const j of square3(i)) {
+        const v = this.units[j];
+        if (!v || noAttack(v.def.arch)) continue;
+        v.auraSpeed = Math.max(v.auraSpeed, b.speed);
+        v.auraDamage = Math.max(v.auraDamage, b.damage);
+      }
+    });
     let herald: SimUnit | null = null;
     this.units.forEach((u, i) => {
       if (!u) return;
@@ -495,7 +525,7 @@ export class Sim {
       }
       if (u.def.arch !== "buff") return;
       const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
-      const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
+      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult);
       for (const j of neighbours(i)) {
         const v = this.units[j];
         if (v && v.def.arch !== "buff") {
@@ -564,6 +594,13 @@ export class Sim {
     if (n > 1 && this.setup.scenario.kind === "run") {
       this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
       this.harvest(n - 1);
+    }
+    // Hired Blades take their wages; one that can't be paid sulks for the wave.
+    for (const u of this.units) {
+      if (u?.def.effect !== "wages") continue;
+      const cost = wagesFor(u.rank);
+      u.sulking = this.mana < cost;
+      if (!u.sulking) this.mana -= cost;
     }
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
     const pick = () => {
@@ -660,6 +697,7 @@ export class Sim {
       this.updateMonster(m, dt);
       if (m.gone) continue;
       if (m.boss && m.intro <= 0) {
+        this.bossStages(m);
         m.powerTimer -= dt;
         if (m.powerTimer <= 0) {
           m.powerTimer = 6;
@@ -826,9 +864,9 @@ export class Sim {
       return;
     }
     if (m.def?.traits.includes("splitter") && m.size > 60) {
-      const child = m.def.id === "gelatinous_cube" ? MONSTER_BY_ID.slime_blob : m.def;
+      const child = MONSTER_BY_ID[SPLITS_INTO[m.def.id]] ?? m.def;
       if (child) {
-        for (const off of [-18, 18]) {
+        for (const off of SPLIT_COUNT[m.def.id] === 3 ? [-24, 0, 24] : [-18, 18]) {
           const c = this.spawn({ def: child }, { path: m.path, dist: Math.max(0, m.dist + off) }, 0.7, 0.35);
           c.mana = 3;
         }
@@ -851,10 +889,88 @@ export class Sim {
     if (this.lives <= 0) this.finish("lost");
   }
 
+  /** Units a boss power may hit (shuffled with the run's random numbers), at most `n`. */
+  private someUnits(n: number) {
+    const units = this.units.filter((u): u is SimUnit => !!u);
+    for (let i = units.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rand() * (i + 1));
+      [units[i], units[j]] = [units[j], units[i]];
+    }
+    return units.slice(0, n);
+  }
+
+  /** An Aegis Knight next to `u` makes it immune to debuffs. */
+  private shielded(u: SimUnit) {
+    return neighbours(u.slot).some((j) => this.units[j]?.def.arch === "aegis");
+  }
+
+  /** Put a debuff on a unit; false when an Aegis Knight protects it. */
+  private afflict(u: SimUnit, kind: "irritation" | "fatigue" | "shellshock", time: number, miss = EFFECTS.irritate.miss) {
+    if (this.shielded(u)) return false;
+    const s = u.status;
+    const until = this.now + time;
+    if (kind === "irritation") {
+      s.irritatedUntil = Math.max(s.irritatedUntil, until);
+      s.miss = miss;
+    } else if (kind === "fatigue") s.fatiguedUntil = Math.max(s.fatiguedUntil, until);
+    else s.shockedUntil = Math.max(s.shockedUntil, until);
+    return true;
+  }
+
+  private minions(m: SimMonster, count: number, at = m.dist, spread = 35) {
+    const def = MONSTER_BY_ID[m.boss?.minion ?? ""];
+    if (!def) return;
+    for (let i = 0; i < count; i++) this.spawn({ def }, { path: m.path, dist: Math.max(0, at - 20 - i * spread) }, 0.9, 0.8);
+  }
+
+  /** HP stages of split, layers and portal bosses (each quarter, or third, of HP lost). */
+  private bossStages(m: SimMonster) {
+    const b = m.boss!;
+    if (b.power !== "split" && b.power !== "layers" && b.power !== "portal") return;
+    const parts = b.power === "portal" ? 3 : 4;
+    const stage = Math.min(parts - 1, Math.floor((1 - Math.max(0, m.hp) / m.maxHp) * parts));
+    while (m.stage < stage && !m.dead) {
+      m.stage++;
+      if (b.power === "split") this.minions(m, 3, m.dist + 40);
+      else if (b.power === "portal") m.dist = Math.min(m.path.length * 0.85, m.dist + 220);
+      else {
+        m.speedMult *= 1.15;
+        for (const u of this.someUnits(b.targets ?? 3)) this.afflict(u, "shellshock", 1.5);
+        this.minions(m, 4, m.dist + 60, 30);
+      }
+      this.log(`${b.name}: stage ${m.stage}`, "boss");
+    }
+  }
+
   private bossPower(m: SimMonster) {
     const b = m.boss!;
     const p = m.pos;
-    switch (b.power) {
+    const power: BossPower = b.rage && m.hp < m.maxHp / 2 ? b.rage : b.power;
+    const targets = b.targets ?? 3;
+    switch (power) {
+      case "charm":
+        for (const u of this.someUnits(targets)) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
+        this.log(`${b.name} charms ${targets} units`, "boss");
+        this.mark("text", p.x, p.y - 60, "#ff9ae6", { text: "CHARM" });
+        break;
+      case "roar":
+        if (m.hp >= m.maxHp / 2) break;
+        if (!m.roared) {
+          m.roared = true;
+          for (const u of this.someUnits(targets)) this.afflict(u, "shellshock", 2);
+          this.log(`${b.name} roars`, "boss");
+          this.mark("text", p.x, p.y - 60, "#ff8a3b", { text: "ROAR" });
+        } else m.hasteUntil = this.now + 3;
+        break;
+      case "layers":
+        if (m.stage >= 3) {
+          for (const u of this.units) if (u) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
+        } else this.minions(m, 2);
+        break;
+      case "portal":
+        this.minions(m, 3, Math.min(m.path.length * 0.85, m.dist + 180 + this.rand() * 220) + 40, 30);
+        this.log(`${b.name} opens a portal`, "boss");
+        break;
       case "summon": {
         const def = b.minion ? MONSTER_BY_ID[b.minion] : undefined;
         if (!def) break;
@@ -885,13 +1001,9 @@ export class Sim {
         this.mark("text", m.pos.x, m.pos.y - 60, "#c58bff", { text: "TELEPORT" });
         break;
       case "freeze_units": {
-        const units = this.units.filter((u): u is SimUnit => !!u);
-        for (let i = units.length - 1; i > 0; i--) {
-          const j = Math.floor(this.rand() * (i + 1));
-          [units[i], units[j]] = [units[j], units[i]];
-        }
-        for (const u of units.slice(0, 3)) u.frozenUntil = this.now + 3;
-        this.log(`${b.name} freezes ${Math.min(3, units.length)} units (3s)`, "boss");
+        const units = this.someUnits(targets);
+        for (const u of units) u.frozenUntil = this.now + 3;
+        this.log(`${b.name} freezes ${units.length} units (3s)`, "boss");
         break;
       }
     }
@@ -983,9 +1095,16 @@ export class Sim {
 
   private updateUnit(u: SimUnit, dt: number) {
     const now = this.now;
-    if (now < u.frozenUntil) return;
+    if (now < u.frozenUntil || now < u.status.shockedUntil) return;
     u.alive += dt;
-    if (u.def.arch === "buff") return;
+    if (u.def.effect === "irritate") {
+      u.effectTimer += dt;
+      if (u.effectTimer >= EFFECTS.irritate.every) {
+        u.effectTimer = 0;
+        for (const j of neighbours(u.slot)) if (this.units[j]) this.afflict(this.units[j]!, "irritation", EFFECTS.irritate.time);
+      }
+    }
+    if (u.def.arch === "buff" || u.def.arch === "aura" || u.def.arch === "aegis") return;
     if (isSupport(u.def.arch)) return this.updateSupport(u, dt);
     if (u.def.arch === "mana") {
       u.pulse += dt;
@@ -1006,9 +1125,9 @@ export class Sim {
         }
       }
     }
-    const rate = u.stats.speed * (1 + this.hasteOf(u));
+    const rate = u.stats.speed * (1 + this.hasteOf(u)) * (now < u.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1);
     u.cooldown -= dt;
-    if (u.cooldown > 0) return;
+    if (u.cooldown > 0 || u.sulking) return;
     const target = this.pickTarget(u.def.arch === "sniper" ? "strongest" : "first");
     if (!target) return;
     u.cooldown = 1 / rate;
@@ -1019,7 +1138,14 @@ export class Sim {
   /** Every attack-speed bonus on a unit right now: buffs and owls, hero, portal rush, war cry. */
   hasteOf(u: SimUnit) {
     const now = this.now;
-    return u.haste + this.heroHaste + (now < u.rushUntil ? EFFECTS.portal.rush : 0) + (now < this.shoutUntil ? EFFECTS.herald.shout : 0);
+    return (
+      u.haste +
+      u.auraSpeed +
+      this.heroHaste +
+      (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
+      (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
+      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0)
+    );
   }
 
   /** Support timers run faster with haste (buff units, the hero, a war cry). */
@@ -1100,7 +1226,19 @@ export class Sim {
   }
 
   private fire(u: SimUnit, target: SimMonster) {
-    let damage = u.stats.damage * this.heroDamageMult * this.heraldMult;
+    const now = this.now;
+    // Irritation: the attack may miss.
+    if (now < u.status.irritatedUntil && this.rand() < u.status.miss) return;
+    if (u.def.effect === "rally" || u.def.effect === "fatigue") {
+      for (const j of neighbours(u.slot)) {
+        const v = this.units[j];
+        if (!v) continue;
+        if (u.def.effect === "fatigue") this.afflict(v, "fatigue", EFFECTS.fatigue.linger);
+        else if (!noAttack(v.def.arch)) v.status.rallyUntil = now + EFFECTS.rally.time;
+      }
+    }
+    let damage = u.stats.damage * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
+    if (u.def.effect === "oath") damage *= 1 + EFFECTS.oath.perKnight * neighbours(u.slot).filter((j) => this.units[j] && isKnight(this.units[j]!.def)).length;
     if (u.def.arch === "growth") damage *= growthMult(u.alive);
     const from = { x: u.x, y: u.y - 30 };
     if (u.def.arch === "chain") return this.chainLightning(u, target, damage, from);
@@ -1108,7 +1246,7 @@ export class Sim {
   }
 
   private chainLightning(u: SimUnit, first: SimMonster, damage: number, from: Pt) {
-    const jumps = chainJumps(u.rank, RARITY_ORDER.indexOf(u.def.rarity));
+    const jumps = chainJumps(u.rank, rarityIndex(u.def.rarity));
     const hit: SimMonster[] = [first];
     let cur = first;
     while (hit.length < jumps) {
@@ -1156,13 +1294,19 @@ export class Sim {
     return this.monsters.filter((m) => !m.gone && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
-  private applyHit(u: SimUnit, damage: number, m: SimMonster) {
+  private applyHit(u: SimUnit, baseDamage: number, m: SimMonster) {
     const def = u.def;
     const rank = u.rank;
     const src = u.slot;
     const e = EFFECTS;
     const now = this.now;
-    const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
+    const rarityIdx = rarityIndex(def.rarity);
+    const damage = def.effect === "bane" && m.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage;
+    if (def.effect === "shellshock" && this.rand() < e.shellshock.chance) {
+      const near = neighbours(u.slot).map((j) => this.units[j]).filter((v): v is SimUnit => !!v);
+      const v = near[Math.floor(this.rand() * near.length)];
+      if (v) this.afflict(v, "shellshock", e.shellshock.time);
+    }
     const pos = m.pos;
     const isBoss = !!m.boss;
     const P = { perks: u.perks };

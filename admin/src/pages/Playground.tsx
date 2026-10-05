@@ -372,6 +372,11 @@ const BOSS_POWER_TEXT: Record<BossDef["power"], string> = {
   shield: "Every 6s: blocks all damage for 2.5s",
   freeze_units: "Every 6s: freezes 3 random units for 3s",
   teleport: "Every 6s: jumps 160px ahead",
+  charm: "Every 6s: a few units get Irritation (their attacks can miss)",
+  roar: "Below half health: one roar stuns a few units, then it rages every 6s",
+  split: "Each quarter of its health lost: 3 minions burst out",
+  layers: "4 layers: each break stuns units, speeds it up and releases minions; the core gives every unit Irritation",
+  portal: "Every 6s: opens a portal ahead that minions step out of; blinks forward each third of its health",
 };
 
 function BossesTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConfig }) {

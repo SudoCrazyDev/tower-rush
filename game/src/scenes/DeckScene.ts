@@ -1,10 +1,11 @@
 import Phaser from "phaser";
-import { buffBonus, effectSummary, EFFECTS } from "../../../shared/effects.ts";
+import { auraBonus, buffBonus, effectSummary, unitEffectSummary, EFFECTS } from "../../../shared/effects.ts";
+import { noAttack } from "../../../shared/support.ts";
 import { PERKS } from "../../../shared/perks.ts";
 import {
   SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
 } from "../../../shared/support.ts";
-import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
+import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
@@ -65,6 +66,7 @@ const RARITY_GROUPS: Record<Rarity, [string, string]> = {
   epic: ["EPIC", "Aged in oak"],
   legendary: ["LEGENDARY", "Top shelf"],
   mythic: ["MYTHIC", "Kept under the counter"],
+  event: ["EVENT", "On the house"],
 };
 const ELEMENT_GROUPS: Record<Element, [string, string]> = {
   fire: ["FIRE", "Firewater"],
@@ -79,7 +81,7 @@ const ROLES: { key: string; title: string; sub: string; icon: string; archs: Arc
   { key: "gun", title: "GUNSLINGERS", sub: "Single-target damage", icon: "stat:range", archs: ["shot", "pierce", "sniper", "crit", "execute", "growth"] },
   { key: "brawl", title: "BRAWLERS", sub: "Hit the whole crowd", icon: "stat:splash", archs: ["splash", "burn", "chain"] },
   { key: "trick", title: "TRICKSTERS", sub: "Slow, freeze, stun and curse", icon: "stat:slow", archs: ["slow", "freeze", "stun", "poison", "curse"] },
-  { key: "support", title: "BARKEEPS", sub: "Buffs and mana", icon: "item:mana_orb", archs: ["buff", "mana"] },
+  { key: "support", title: "BARKEEPS", sub: "Buffs and mana", icon: "item:mana_orb", archs: ["buff", "aura", "mana"] },
   { key: "cast", title: "SUPPORTING CAST", sub: "Never attack: copy, swap, brew", icon: "item:star_shard", archs: SUPPORT_ARCHS },
 ];
 
@@ -368,7 +370,7 @@ export class DeckScene extends Phaser.Scene {
   private visibleUnits() {
     const set = DeckScene.elements;
     const status = DeckScene.status;
-    return UNITS.filter((u) => u.enabled || profile.cards[u.id])
+    return UNITS.filter((u) => (u.enabled || profile.cards[u.id]) && !u.storyOnly)
       .filter((u) => !set.size || set.has(u.element))
       .filter((u) => {
         const owned = !!profile.cards[u.id];
@@ -394,7 +396,7 @@ export class DeckScene extends Phaser.Scene {
     const gridW = cols * GAP_X;
     const left = rect.centerX - gridW / 2;
     const units = this.visibleUnits();
-    const all = UNITS.filter((u) => u.enabled || profile.cards[u.id]);
+    const all = UNITS.filter((u) => (u.enabled || profile.cards[u.id]) && !u.storyOnly);
     let y = 24;
     let n = 0;
 
@@ -563,13 +565,18 @@ export class DeckScene extends Phaser.Scene {
       };
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
-    const style = def.arch === "buff" ? "" : isSupport(def.arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `;
+    // A role (Barkeeper, Knight, Mercenary) shows in place of the style for units that never attack.
+    const silent = noAttack(def.arch);
+    const style =
+      (def.role ? `${def.role.toUpperCase()} · ` : "") +
+      (def.arch === "buff" || (silent && def.role) ? "" : isSupport(def.arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `);
     info.add(txt(this, cx, cy - 82, style + (isSupport(def.arch) ? SUPPORT_TEXT[def.arch] : ARCHETYPES[def.arch].label), isSupport(def.arch) ? 22 : 26, "#ffffff"));
-    // The archetype's numbers for this unit as summoned (rank 1).
-    const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity), EFFECTS, levelMult(owned?.level ?? 1));
+    // The archetype's numbers for this unit as summoned (rank 1), and a Knight's or Mercenary's own effect.
+    const effect = effectSummary(def.arch, 1, rarityIndex(def.rarity), EFFECTS, levelMult(owned?.level ?? 1));
     let lineY = cy - 48;
-    if (effect) {
-      info.add(txt(this, cx, lineY, effect, 20, "#7fffd4"));
+    for (const line of [effect, def.effect ? unitEffectSummary(def.effect, 1) : null]) {
+      if (!line) continue;
+      info.add(txt(this, cx, lineY, line, 20, "#7fffd4"));
       lineY += 32;
     }
     if (def.perk !== "none") {
@@ -584,7 +591,11 @@ export class DeckScene extends Phaser.Scene {
       ...(isSupport(def.arch)
         ? ([[SUPPORT_STAT[def.arch][0], "never attacks"]] as [string, string][])
         : def.arch === "buff"
-        ? ([["stat:attack_speed", `neighbours +${Math.round(buffBonus(1, RARITY_ORDER.indexOf(def.rarity), levelMult(level)) * 100)}% faster`]] as [string, string][])
+        ? ([["stat:attack_speed", `neighbours +${Math.round(buffBonus(1, rarityIndex(def.rarity), levelMult(level)) * 100)}% faster`]] as [string, string][])
+        : def.arch === "aura"
+        ? ([["stat:attack_speed", `3×3 +${Math.round(auraBonus(1, levelMult(level)).speed * 100)}% speed, +${Math.round(auraBonus(1, levelMult(level)).damage * 100)}% dmg`]] as [string, string][])
+        : def.arch === "aegis"
+        ? ([["stat:attack_speed", "never attacks"]] as [string, string][])
         : ([
             ["stat:damage", fmt(now.damage)],
             ["stat:attack_speed", `every ${+(1 / now.speed).toFixed(2)}s`],
@@ -694,15 +705,21 @@ export class DeckScene extends Phaser.Scene {
   private statsTab(def: UnitDef, level: number, cx: number, top: number) {
     const box = this.add.container(0, 0);
     const support = isSupport(def.arch) ? def.arch : null;
-    const noAttack = def.arch === "buff" || !!support;
+    const noAttack = def.arch === "buff" || def.arch === "aura" || def.arch === "aegis" || !!support;
     const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
     const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
     const pct = (v: number) => `${Math.round(v * 100)}%`;
     // Buff units: the attack speed they give their neighbours, in place of damage.
-    const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
-    // Support units: their own effect (a time, a chance, mana...) in the same place.
+    const rarityIdx = rarityIndex(def.rarity);
+    // Support units: their own effect (a time, a chance, mana...) in the same place; Muse her speed bonus.
     const buff = (rank: number, lvl: number, up: number, mult = 1) =>
-      support ? supportCell(support, rank, boostMult(lvl, up)) : `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
+      support
+        ? supportCell(support, rank, boostMult(lvl, up))
+        : def.arch === "aura"
+        ? `+${pct(auraBonus(rank, boostMult(lvl, up)).speed)}`
+        : def.arch === "aegis"
+        ? "—"
+        : `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
     const buffIcon = support ? SUPPORT_STAT[support][0] : "stat:attack_speed";
     const ROW = 33;
     let y = top - 6;

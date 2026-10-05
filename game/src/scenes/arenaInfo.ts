@@ -19,6 +19,11 @@ const POWER: Record<BossPower, string> = {
   shield: "Shields itself",
   freeze_units: "Freezes your units",
   teleport: "Teleports ahead",
+  charm: "Charms your units (they miss)",
+  roar: "Roars to stun your units",
+  split: "Splits when hit hard",
+  layers: "Sheds layers as it breaks",
+  portal: "Opens portals and blinks ahead",
 };
 
 /** Top-player lists fetched this session, kept for a minute so flipping tabs doesn't refetch. */
