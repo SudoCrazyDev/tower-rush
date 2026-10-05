@@ -10,6 +10,10 @@ import { ECONOMY } from "../../../shared/economy.ts";
 import {
   EFFECTS, buffBonus, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
 } from "../../../shared/effects.ts";
+import {
+  SUPPORT_TIP, brewMana, canBecome, echoStrength, harvestMana, heraldBonus, isSupport, luckyChance, mimePrep, mirrorInterval, neighbours, noAttack,
+  owlCharge, owlSpeed, portalCooldown, type SupportArch,
+} from "../../../shared/support.ts";
 import { HERO_BY_ID, type HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
 import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
@@ -42,6 +46,23 @@ function loadAutoCast() {
     return false;
   }
 }
+const TIPS_KEY = "tower-rush-support-tips";
+/** Support units whose one-time tip has been shown on this device. */
+function tipsSeen(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(TIPS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+function markTipSeen(arch: string) {
+  try {
+    localStorage.setItem(TIPS_KEY, JSON.stringify([...tipsSeen(), arch]));
+  } catch {
+    // Shown again next time.
+  }
+}
+
 function saveAutoCast(on: boolean) {
   try {
     localStorage.setItem(AUTO_CAST_KEY, on ? "1" : "0");
@@ -86,7 +107,13 @@ export class BattleScene extends Phaser.Scene {
   kills = 0;
   bossesKilled = 0;
   /** Counted for daily quests. */
-  private counts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0 };
+  private counts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0, copies: 0, swaps: 0, brewed: 0 };
+  /** Banner Herald: damage multiplier for every attacking unit. */
+  heraldMult = 1;
+  /** Banner Herald war cry: everyone attacks faster until then. */
+  private shoutUntil = 0;
+  /** Echo Spirit encores waiting to go off. */
+  private echoes: { at: number; unit: Unit; x: number; y: number; damage: number; mana: number }[] = [];
   powerUps: Record<string, number> = {};
   deck: string[] = [];
 
@@ -147,7 +174,10 @@ export class BattleScene extends Phaser.Scene {
     this.summonCost = ECONOMY.summonCostStart;
     this.lives = ECONOMY.lives;
     this.wave = this.kills = this.bossesKilled = 0;
-    this.counts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0 };
+    this.counts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0, copies: 0, swaps: 0, brewed: 0 };
+    this.heraldMult = 1;
+    this.shoutUntil = 0;
+    this.echoes = [];
     this.powerUps = Object.fromEntries(this.deck.map((id) => [id, 0]));
     this.board = new Array(15).fill(null);
     this.monsters = [];
@@ -649,6 +679,11 @@ export class BattleScene extends Phaser.Scene {
     u.sprite.setScale(0);
     this.tweens.add({ targets: u.sprite, scale: u.baseScale, duration: u.awakened ? 420 : 260, ease: "Back.Out" });
     this.recomputeBuffs();
+    const tip = SUPPORT_TIP[u.def.arch as SupportArch];
+    if (tip && !this.tutorialHold && !tipsSeen().includes(u.def.arch)) {
+      markTipSeen(u.def.arch);
+      this.time.delayedCall(400, () => toast(this, tip));
+    }
     return u;
   }
 
@@ -756,6 +791,13 @@ export class BattleScene extends Phaser.Scene {
     this.vfx("holy_heal", p.x, p.y - 10, 200);
     this.floater(p.x, p.y - 80, "AWAKENED!", "#ffd93b", 34);
     this.cameras.main.flash(180, 255, 230, 140);
+    const herald = this.board.find((h) => h?.def.arch === "herald");
+    if (herald) {
+      this.shoutUntil = this.now + EFFECTS.herald.shoutTime;
+      herald.playOnce("skill");
+      herald.callout("WAR CRY!", "#ff8a3b");
+      for (const v of this.board) if (v && !noAttack(v.def.arch)) this.vfx("fire_explosion", v.sprite.x, v.sprite.y - 20, 90);
+    }
   }
 
   /** An awakened unit's ultimate: its own hit, much stronger, on everything around the target. */
@@ -764,12 +806,15 @@ export class BattleScene extends Phaser.Scene {
     const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
     sfx("ultimate");
     if (unit.def.arch === "mana" || !target) {
-      this.gainMana(Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave), from.x, from.y - 30);
+      const mana = Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave);
+      this.gainMana(mana, from.x, from.y - 30);
       this.vfx("coin_burst", from.x, from.y, 160);
+      this.queueEcho(unit, from.x, from.y, 0, mana);
       return;
     }
     const center = target.pos;
-    const damage = unit.stats.damage * this.heroDamageMult * e.ultimateDamageMult;
+    const damage = unit.stats.damage * this.heroDamageMult * this.heraldMult * e.ultimateDamageMult;
+    this.queueEcho(unit, center.x, center.y, damage, 0);
     const ring = this.add.graphics().setDepth(2060).setPosition(center.x, center.y);
     ring.lineStyle(10, NAVY, 0.7).strokeCircle(0, 0, e.ultimateRadius);
     ring.lineStyle(6, 0xffd93b, 1).strokeCircle(0, 0, e.ultimateRadius);
@@ -798,7 +843,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     // Power-ups strengthen a buff unit's bonus too.
-    if (UNIT_BY_ID[id]?.arch === "buff") this.recomputeBuffs();
+    if (noAttack(UNIT_BY_ID[id]?.arch ?? "shot")) this.recomputeBuffs();
     this.refreshHud();
     this.events.emit("tutorial", "powerup");
   }
@@ -812,12 +857,21 @@ export class BattleScene extends Phaser.Scene {
       u.dragging = true;
       u.setBuffVisible(false);
       obj.setDepth(2500);
-      for (const other of this.board) {
-        if (other && other !== u && other.def.id === u.def.id && other.rank === u.rank && u.rank < maxRank()) {
-          const p = this.slotPos(other.slot);
-          this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
+      const mark = (slot: number) => {
+        const p = this.slotPos(slot);
+        this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
+      };
+      const mime = u.def.arch === "mime" && this.supportReady(u);
+      const portal = u.def.arch === "portal" && this.supportReady(u);
+      this.board.forEach((other, slot) => {
+        if (!other) {
+          if (portal) mark(slot);
+          return;
         }
-      }
+        if (other === u) return;
+        const merges = other.def.id === u.def.id && other.rank === u.rank && u.rank < maxRank();
+        if (merges || (mime && canBecome(u, other)) || (portal && other.rank === u.rank)) mark(slot);
+      });
     });
     this.input.on("drag", (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Sprite & { unit?: Unit }, x: number, y: number) => {
       if (obj.unit && obj.unit === origin) obj.setPosition(x, y);
@@ -830,14 +884,248 @@ export class BattleScene extends Phaser.Scene {
       origin = null;
       u.dragging = false;
       const target = this.unitAt(obj.x, obj.y);
-      if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank() && !this.over) {
-        this.merge(u, target);
-      } else {
+      const back = () => {
         u.place(u.slot);
         u.setBuffVisible(true);
         u.playIdle();
-      }
+      };
+      if (this.over) return back();
+      if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank()) {
+        this.merge(u, target);
+      } else if (target && target !== u && u.def.arch === "mime") {
+        if (!this.supportReady(u)) this.refuse(u, `Ready in ${Math.ceil(mimePrep(this.supportMult(u)) - u.timer)}s`);
+        else if (target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
+        else if (!canBecome(u, target)) this.refuse(u, target.awakened ? "Can't copy awakened" : "Can't copy support");
+        else this.copy(u, target);
+      } else if (u.def.arch === "portal" && (target ? target !== u : this.emptySlotAt(obj.x, obj.y) >= 0)) {
+        if (!this.supportReady(u)) this.refuse(u, `Ready in ${Math.ceil(u.timer)}s`);
+        else if (target && target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
+        else this.teleport(u, target ? target.slot : this.emptySlotAt(obj.x, obj.y));
+      } else back();
     });
+  }
+
+  /** Nearest empty tile within reach of (x, y), or -1. */
+  private emptySlotAt(x: number, y: number) {
+    let best = -1;
+    let bestD = 60;
+    for (let s = 0; s < 15; s++) {
+      if (this.board[s]) continue;
+      const p = this.slotPos(s);
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  /** A drop that doesn't work: back to its tile with a shake and the reason. */
+  private refuse(u: Unit, why: string) {
+    u.place(u.slot);
+    u.setBuffVisible(true);
+    u.playIdle();
+    sfx("error");
+    const x = u.sprite.x;
+    this.tweens.add({ targets: u.sprite, x: { from: x - 10, to: x }, duration: 260, ease: "Bounce.Out" });
+    this.floater(x, u.sprite.y - 80, why, "#ffb0b0", 24);
+  }
+
+  // ---------------------------------------------------------------- support units
+
+  /** Card level × power-up multiplier of a support unit's effect. */
+  supportMult(u: Unit) {
+    return boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0);
+  }
+
+  /** Every attack-speed bonus on a unit right now: buffs and owls, hero, portal rush, war cry. */
+  hasteOf(u: Unit) {
+    const now = this.now;
+    return u.haste + this.heroHaste + (now < u.rushUntil ? EFFECTS.portal.rush : 0) + (now < this.shoutUntil ? EFFECTS.herald.shout : 0);
+  }
+
+  /** Whether a Mime can copy or a Portal Imp can move right now. */
+  supportReady(u: Unit) {
+    if (u.def.arch === "mime") return u.timer >= mimePrep(this.supportMult(u));
+    if (u.def.arch === "portal") return u.timer <= 0;
+    return false;
+  }
+
+  /** One frame of a support unit (called from Unit.update). Haste speeds its timers up. */
+  updateSupport(u: Unit, dt: number) {
+    const t = dt * (1 + this.hasteOf(u));
+    const mult = this.supportMult(u);
+    switch (u.def.arch) {
+      case "mime": {
+        const prep = mimePrep(mult);
+        const was = u.timer >= prep;
+        u.timer += t;
+        u.drawSupportRing(Math.min(1, u.timer / prep), 0x59d64a);
+        if (!was && u.timer >= prep) u.playOnce("skill");
+        return;
+      }
+      case "portal": {
+        const cd = portalCooldown(u.rank, mult);
+        const was = u.timer > 0;
+        u.timer = Math.max(0, u.timer - t);
+        u.drawSupportRing(u.timer > 0 ? 1 - u.timer / cd : 1, 0xff8a3b);
+        if (was && u.timer <= 0) u.playOnce("skill");
+        return;
+      }
+      case "mirror": {
+        const every = mirrorInterval(u.rank, mult);
+        u.timer = Math.min(every, u.timer + t);
+        u.drawSupportRing(u.timer / every, 0xc58bff);
+        const options = neighbours(u.slot)
+          .map((j) => this.board[j])
+          .filter((v): v is Unit => !!v && !v.dragging && canBecome(u, v));
+        if (!options.length) return;
+        if (every - u.timer <= EFFECTS.mirror.warn && !u.sprite.getData("wobble")) {
+          u.sprite.setData("wobble", true);
+          this.tweens.add({ targets: u.sprite, angle: { from: -8, to: 8 }, yoyo: true, repeat: 5, duration: 140, onComplete: () => u.sprite.active && u.sprite.setAngle(0) });
+        }
+        if (u.timer < every) return;
+        const v = options[Math.floor(Math.random() * options.length)];
+        const p = this.slotPos(u.slot);
+        this.vfx("arcane_vortex", p.x, p.y - 20, 150);
+        const w = this.become(u, v.def.id);
+        w.callout("MIRROR!", "#d9b3ff");
+        return;
+      }
+      case "brewer":
+        u.pulse += t;
+        if (u.pulse >= EFFECTS.brewer.every) {
+          u.pulse = 0;
+          u.playOnce("attack");
+          this.brewBubble(u, brewMana(u.rank, mult));
+        }
+        return;
+      default:
+        // Auras (Lucky Cat, Hourglass Owl, Echo Spirit, Banner Herald) just show off now and then.
+        u.pulse -= dt;
+        if (u.pulse <= 0) {
+          u.pulse = 4;
+          u.playOnce("skill");
+        }
+    }
+  }
+
+  /** Replace a unit on its tile with another unit of the same rank (Mime copy, Mirror Slime). */
+  private become(u: Unit, id: string) {
+    const slot = u.slot;
+    const rank = u.rank;
+    this.board[slot] = null;
+    u.destroy();
+    return this.spawnUnit(id, rank, slot);
+  }
+
+  private copy(mime: Unit, target: Unit) {
+    this.counts.copies++;
+    const p = this.slotPos(mime.slot);
+    this.vfx("arcane_vortex", p.x, p.y - 20, 150);
+    const u = this.become(mime, target.def.id);
+    u.callout("COPY!", "#ff9ae6");
+    this.refreshHud();
+  }
+
+  /** Portal Imp: swap with `slot` (a same-rank unit) or hop onto it (empty). */
+  private teleport(imp: Unit, slot: number) {
+    const from = imp.slot;
+    const other = this.board[slot];
+    this.board[slot] = imp;
+    this.board[from] = other;
+    imp.place(slot);
+    imp.setBuffVisible(true);
+    imp.playOnce("attack");
+    if (other) {
+      other.place(from);
+      other.rushUntil = this.now + EFFECTS.portal.rushTime;
+      other.callout("RUSH!", "#ff8a3b");
+    }
+    imp.timer = portalCooldown(imp.rank, this.supportMult(imp));
+    for (const s of [from, slot]) {
+      const p = this.slotPos(s);
+      this.vfx("shadow_smoke", p.x, p.y - 10, 130);
+    }
+    sfx("summon");
+    this.counts.swaps++;
+    this.recomputeBuffs();
+  }
+
+  /** A Gnome Brewer's mana bubble: tap it for a bonus, or it pops by itself. */
+  private brewBubble(u: Unit, amount: number) {
+    const p = this.slotPos(u.slot);
+    const orb = this.add.image(p.x + 28, p.y - 64, "item:mana_orb").setDisplaySize(10, 10).setDepth(2400);
+    this.tweens.add({ targets: orb, displayWidth: 50, displayHeight: 50, y: p.y - 92, duration: 260, ease: "Back.Out" });
+    orb.setInteractive({ useHandCursor: true });
+    let done = false;
+    const collect = (tapped: boolean) => {
+      if (done || !orb.active) return;
+      done = true;
+      const m = tapped ? Math.round(amount * (1 + EFFECTS.brewer.tapBonus)) : amount;
+      this.counts.brewed += m;
+      this.gainMana(m, orb.x, orb.y);
+      if (tapped) this.vfx("coin_burst", orb.x, orb.y, 90);
+      orb.disableInteractive();
+      this.tweens.add({ targets: orb, scale: orb.scale * 1.6, alpha: 0, duration: 200, onComplete: () => orb.destroy() });
+    };
+    orb.on("pointerdown", () => collect(true));
+    this.time.delayedCall(EFFECTS.brewer.tapWindow * 1000, () => collect(false));
+  }
+
+  /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). */
+  private queueEcho(u: Unit, x: number, y: number, damage: number, mana: number) {
+    let best = 0;
+    let spirit: Unit | null = null;
+    for (const j of neighbours(u.slot)) {
+      const v = this.board[j];
+      if (v?.def.arch !== "echo") continue;
+      const s = echoStrength(v.rank, this.supportMult(v));
+      if (s > best) [best, spirit] = [s, v];
+    }
+    if (!spirit) return;
+    spirit.playOnce("attack");
+    this.echoes.push({ at: this.now + EFFECTS.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best) });
+  }
+
+  private updateEchoes() {
+    const due = this.echoes.filter((e) => e.at <= this.now);
+    if (!due.length) return;
+    this.echoes = this.echoes.filter((e) => e.at > this.now);
+    for (const e of due) {
+      this.floater(e.x, e.y - 70, "ENCORE!", "#9ff0ff", 28);
+      if (e.mana) this.gainMana(e.mana, e.x, e.y - 30);
+      if (!e.damage || !e.unit.sprite.active) continue;
+      const r = ECONOMY.ultimateRadius;
+      const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);
+      ring.lineStyle(6, 0x9ff0ff, 1).strokeCircle(0, 0, r).setScale(0.2);
+      this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 380, ease: "Cubic.Out", onComplete: () => ring.destroy() });
+      this.vfx("ice_burst", e.x, e.y, r * 1.4);
+      const u = e.unit;
+      for (const m of this.nearby({ x: e.x, y: e.y }, r)) this.applyHit({ unit: u, def: u.def, rank: u.rank, damage: e.damage, perks: u.perks }, m);
+    }
+  }
+
+  /** Gnome Brewers pay their harvest when wave `ended` is over. */
+  private harvest(ended: number) {
+    for (const u of this.board) {
+      if (u?.def.arch !== "brewer") continue;
+      const m = harvestMana(u.rank, ended, this.supportMult(u));
+      this.counts.brewed += m;
+      u.playOnce("skill");
+      this.gainMana(m, u.sprite.x, u.sprite.y - 60);
+    }
+  }
+
+  /** The best Lucky Cat chance next to tile `slot` (0 without one). */
+  private luckAt(slot: number) {
+    let best = 0;
+    for (const j of neighbours(slot)) {
+      const c = this.board[j];
+      if (c?.def.arch === "lucky") best = Math.max(best, luckyChance(c.rank, this.supportMult(c)));
+    }
+    return best;
   }
 
   private unitAt(x: number, y: number) {
@@ -861,10 +1149,18 @@ export class BattleScene extends Phaser.Scene {
     this.board[b.slot] = null;
     a.destroy();
     b.destroy();
-    const id = this.deck[Math.floor(Math.random() * this.deck.length)];
+    // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
+    const luck = a.def.arch === "lucky" ? 0 : this.luckAt(slot);
+    const keep = luck > 0 && Math.random() < luck;
+    const id = keep ? a.def.id : this.deck[Math.floor(Math.random() * this.deck.length)];
     const u = this.spawnUnit(id, a.rank + 1, slot);
     this.counts.merges++;
     this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 10, 150);
+    if (keep) {
+      this.vfx("coin_burst", u.sprite.x, u.sprite.y - 30, 150);
+      u.callout("LUCKY!", "#ffd93b");
+      for (const j of neighbours(slot)) if (this.board[j]?.def.arch === "lucky") this.board[j]!.playOnce("skill");
+    }
     this.refreshHud();
     this.events.emit("tutorial", "merge", u);
   }
@@ -874,23 +1170,41 @@ export class BattleScene extends Phaser.Scene {
     for (const u of this.board) {
       if (!u) continue;
       u.haste = 0;
+      u.charge = 0;
       u.perks = [];
       withPerk(u.perks, u.def.perk);
     }
+    let herald: Unit | null = null;
     this.board.forEach((u, i) => {
-      if (!u || u.def.arch !== "buff") return;
+      if (!u) return;
+      if (u.def.arch === "herald" && (!herald || u.rank > herald.rank)) herald = u;
+      if (u.def.arch === "hourglass") {
+        const mult = this.supportMult(u);
+        for (const j of neighbours(i)) {
+          const v = this.board[j];
+          if (!v || noAttack(v.def.arch)) continue;
+          if (v.awakened) v.charge += owlCharge(u.rank, mult);
+          else v.haste += owlSpeed(u.rank, mult);
+        }
+        return;
+      }
+      if (u.def.arch !== "buff") return;
       const mult = boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
       const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
-      const col = i % 5;
-      const n = [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1];
-      for (const j of n) {
+      for (const j of neighbours(i)) {
         const v = this.board[j];
         if (v && v.def.arch !== "buff") {
+          // Support units get the haste (it shortens their timers) but not the perk: they never hit.
           v.haste += bonus;
-          withPerk(v.perks, u.def.perk);
+          if (!isSupport(v.def.arch)) withPerk(v.perks, u.def.perk);
         }
       }
     });
+    const h = herald as Unit | null;
+    const awake = this.board.filter((u) => u?.awakened).length;
+    const before = this.heraldMult;
+    this.heraldMult = h ? 1 + heraldBonus(h.rank, awake, this.supportMult(h)) : 1;
+    if (h && this.heraldMult > before) h.callout(`+${Math.round((this.heraldMult - 1) * 100)}% DMG`, "#ff8a3b");
     for (const u of this.board) u?.showBuff();
   }
 
@@ -929,7 +1243,7 @@ export class BattleScene extends Phaser.Scene {
 
   fire(unit: Unit, target: Monster) {
     const def = unit.def;
-    let damage = unit.stats.damage * this.heroDamageMult;
+    let damage = unit.stats.damage * this.heroDamageMult * this.heraldMult;
     if (def.arch === "growth") damage *= growthMult(unit.alive);
     const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
 
@@ -1122,7 +1436,10 @@ export class BattleScene extends Phaser.Scene {
     const n = this.wave;
     const e = ECONOMY;
     const isBoss = n % e.bossEvery === 0;
-    if (n > 1) this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+    if (n > 1) {
+      this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+      this.harvest(n - 1);
+    }
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]);
     // Tanky monsters show up more in later waves.
     const pick = () => {
@@ -1331,6 +1648,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.boss?.gone) this.boss = null;
 
     for (const u of this.board) u?.update(dt, now);
+    if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
     this.updateShots(dt);
     if (this.autoCast && this.hero && now >= this.heroReadyAt) this.castHero(true);

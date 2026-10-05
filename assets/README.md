@@ -47,3 +47,10 @@ in `sprites/vfx/` were re-keyed with `../game/tools/rekey.py` (fits the backgrou
 - Known gaps: the awakened mermaid's animations and portrait were blocked by the
   content filter (false positive). The base mermaid has full idle/attack/skill coverage.
 - `_green/` holds the green-screen copies used as animation inputs and can be deleted.
+
+## v1.1 Supporting Cast (2026-10-05)
+- `_green/<unit>.png`: green-screen stills for Mime, Portal Imp, Mirror Slime, Lucky Cat and Echo
+  Spirit (GPT Image 2.5, references: `style/style_anchor_v2.png` + `_green/bee_keeper.png`).
+- `keyimg.py` keys a still into `units/<unit>.png` (the same soft key as `tospritesheet.py`).
+- `stillsheet.py <unit>...` builds placeholder idle/skill sheets (`sprites/units*/`) and the card
+  portrait (`cards/portraits/`) from the keyed still, until real Seedance clips exist.

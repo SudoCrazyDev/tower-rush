@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { buffBonus, effectSummary, EFFECTS } from "../../../shared/effects.ts";
 import { PERKS } from "../../../shared/perks.ts";
+import {
+  SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
+} from "../../../shared/support.ts";
 import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
@@ -77,7 +80,43 @@ const ROLES: { key: string; title: string; sub: string; icon: string; archs: Arc
   { key: "brawl", title: "BRAWLERS", sub: "Hit the whole crowd", icon: "stat:splash", archs: ["splash", "burn", "chain"] },
   { key: "trick", title: "TRICKSTERS", sub: "Slow, freeze, stun and curse", icon: "stat:slow", archs: ["slow", "freeze", "stun", "poison", "curse"] },
   { key: "support", title: "BARKEEPS", sub: "Buffs and mana", icon: "item:mana_orb", archs: ["buff", "mana"] },
+  { key: "cast", title: "SUPPORTING CAST", sub: "Never attack: copy, swap, brew", icon: "item:star_shard", archs: SUPPORT_ARCHS },
 ];
+
+/** A support unit's effect in a few characters, for the stats tables. */
+function supportCell(arch: SupportArch, rank: number, mult: number) {
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  switch (arch) {
+    case "mime":
+      return `${+mimePrep(mult).toFixed(1)}s`;
+    case "portal":
+      return `${+portalCooldown(rank, mult).toFixed(1)}s`;
+    case "mirror":
+      return `${+mirrorInterval(rank, mult).toFixed(1)}s`;
+    case "lucky":
+      return pct(luckyChance(rank, mult));
+    case "hourglass":
+      return `+${pct(owlCharge(rank, mult))}`;
+    case "echo":
+      return pct(echoStrength(rank, mult));
+    case "herald":
+      return `+${pct(Math.min(EFFECTS.herald.max, (EFFECTS.herald.perAwakened + EFFECTS.herald.perRank * (rank - 1)) * mult))}`;
+    case "brewer":
+      return `+${brewMana(rank, mult)}`;
+  }
+}
+
+/** What the stats tables of a support unit show, and its icon. */
+const SUPPORT_STAT: Record<SupportArch, [string, string]> = {
+  mime: ["item:hourglass_speedup", "Seconds before it can copy"],
+  portal: ["item:hourglass_speedup", "Recharge after a swap or hop"],
+  mirror: ["item:hourglass_speedup", "Seconds between mirrors"],
+  lucky: ["item:coins", "Chance a neighbour's merge keeps its unit"],
+  hourglass: ["item:hourglass_speedup", "Neighbours' ultimate charge rate"],
+  echo: ["stat:splash", "Strength of the repeated ultimate"],
+  herald: ["stat:damage", "Damage for every unit, per awakened unit"],
+  brewer: ["item:mana_orb", `Mana every ${EFFECTS.brewer.every}s, plus rank × wave at wave end`],
+};
 
 function groupsFor(by: GroupBy): Group[] {
   if (by === "rarity")
@@ -526,8 +565,8 @@ export class DeckScene extends Phaser.Scene {
       };
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
-    const style = def.arch === "buff" ? "" : `${STYLES[def.style].label.toUpperCase()} · `;
-    info.add(txt(this, cx, cy - 82, style + ARCHETYPES[def.arch].label, 26, "#ffffff"));
+    const style = def.arch === "buff" ? "" : isSupport(def.arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `;
+    info.add(txt(this, cx, cy - 82, style + (isSupport(def.arch) ? SUPPORT_TEXT[def.arch] : ARCHETYPES[def.arch].label), isSupport(def.arch) ? 22 : 26, "#ffffff"));
     // The archetype's numbers for this unit as summoned (rank 1).
     const effect = effectSummary(def.arch, 1, RARITY_ORDER.indexOf(def.rarity), EFFECTS, levelMult(owned?.level ?? 1));
     let lineY = cy - 48;
@@ -544,7 +583,9 @@ export class DeckScene extends Phaser.Scene {
 
     const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
-      ...(def.arch === "buff"
+      ...(isSupport(def.arch)
+        ? ([[SUPPORT_STAT[def.arch][0], "never attacks"]] as [string, string][])
+        : def.arch === "buff"
         ? ([["stat:attack_speed", `neighbours +${Math.round(buffBonus(1, RARITY_ORDER.indexOf(def.rarity), levelMult(level)) * 100)}% faster`]] as [string, string][])
         : ([
             ["stat:damage", fmt(now.damage)],
@@ -565,7 +606,7 @@ export class DeckScene extends Phaser.Scene {
       p.label.setX(x + 68);
       x += pairW(p) + gap;
       info.add([p.img, p.label]);
-      if (celebrate && def.arch !== "buff") {
+      if (celebrate && def.arch !== "buff" && !isSupport(def.arch)) {
         p.label.setColor("#7dff7a");
         this.tweens.add({ targets: p.label, scale: 1.25, yoyo: true, duration: 220, delay: 250, ease: "Quad.Out" });
         this.time.delayedCall(1400, () => p.label.active && p.label.setColor("#ffffff"));
@@ -654,13 +695,17 @@ export class DeckScene extends Phaser.Scene {
    */
   private statsTab(def: UnitDef, level: number, cx: number, top: number) {
     const box = this.add.container(0, 0);
-    const noAttack = def.arch === "buff";
+    const support = isSupport(def.arch) ? def.arch : null;
+    const noAttack = def.arch === "buff" || !!support;
     const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
     const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
     const pct = (v: number) => `${Math.round(v * 100)}%`;
     // Buff units: the attack speed they give their neighbours, in place of damage.
     const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
-    const buff = (rank: number, lvl: number, up: number, mult = 1) => `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
+    // Support units: their own effect (a time, a chance, mana...) in the same place.
+    const buff = (rank: number, lvl: number, up: number, mult = 1) =>
+      support ? supportCell(support, rank, boostMult(lvl, up)) : `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
+    const buffIcon = support ? SUPPORT_STAT[support][0] : "stat:attack_speed";
     const ROW = 33;
     let y = top - 6;
     // How it fights: style (hit size vs attack speed) and its perk.
@@ -705,7 +750,7 @@ export class DeckScene extends Phaser.Scene {
       levels.map((l) => (l === max ? "MAX" : `Lv ${l}`)),
       [
         noAttack
-          ? { icon: "stat:attack_speed", cells: levels.map((l) => buff(1, l, 0)) }
+          ? { icon: buffIcon, cells: levels.map((l) => buff(1, l, 0)) }
           : { icon: "stat:damage", cells: levels.map((l) => dmg(unitStats(def, 1, l, 0).damage)) },
       ],
       levels.indexOf(level),
@@ -718,7 +763,7 @@ export class DeckScene extends Phaser.Scene {
       ups.map((p) => (p ? `+${p}` : "Base")),
       [
         noAttack
-          ? { icon: "stat:attack_speed", cells: ups.map((p) => buff(1, level, p)) }
+          ? { icon: buffIcon, cells: ups.map((p) => buff(1, level, p)) }
           : { icon: "stat:damage", cells: ups.map((p) => dmg(unitStats(def, 1, level, p).damage)) },
         { icon: "item:mana_orb", cells: ups.map((p) => (p ? fmt(powerUpCost(p - 1)) : "—")) },
       ],
@@ -727,21 +772,25 @@ export class DeckScene extends Phaser.Scene {
 
     // Merge ranks: two of the same unit at the same rank make one of the next rank.
     const ranks = Array.from({ length: maxRank() }, (_, i) => i + 1);
-    const awakens = canAwaken(def.id);
+    const awakens = canAwaken(def.id, def.arch);
     const boost = (r: number, mult: number) => (awakens && r === maxRank() ? mult : 1);
-    const mergeNote = noAttack
+    const mergeNote = support
+      ? "Each merge: a stronger effect · support units never awaken"
+      : noAttack
       ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★7 awakens (×${ECONOMY.awakenDamageMult})` : ""}`
       : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? " · ★7 awakens" : ""}`;
     section("MERGE RANK", mergeNote);
     table(
       ranks.map((r) => `★${r}`),
-      noAttack ? [{ icon: "stat:attack_speed", cells: ranks.map((r) => buff(r, level, 0, boost(r, ECONOMY.awakenDamageMult))) }] : [
+      noAttack ? [{ icon: buffIcon, cells: ranks.map((r) => buff(r, level, 0, boost(r, ECONOMY.awakenDamageMult))) }] : [
         { icon: "stat:damage", cells: ranks.map((r) => dmg(unitStats(def, r, level, 0).damage * boost(r, ECONOMY.awakenDamageMult))) },
         { icon: "stat:attack_speed", cells: ranks.map((r) => every(unitStats(def, r, level, 0).speed * boost(r, ECONOMY.awakenSpeedMult))) },
       ],
       0,
     );
-    const foot = noAttack
+    const foot = support
+      ? `${SUPPORT_STAT[support][1]} (Lv ${level}). ${SUPPORT_TEXT[support]}; it never attacks.`
+      : noAttack
       ? `Its four neighbours attack this much faster (Lv ${level}, max +${pct(EFFECTS.buff.max)}).`
       : `At your card level (Lv ${level}). Times are seconds between attacks.`;
     box.add(txt(this, cx, y - 6, foot, 18, "#9fb0e0").setWordWrapWidth(540));

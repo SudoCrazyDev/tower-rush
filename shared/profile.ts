@@ -49,6 +49,27 @@ export interface Profile {
   offers: Record<string, number>;
   /** Tutorial parts finished or skipped ("battle", "deck"); each one runs once per account. */
   tutorial: string[];
+  /** Releases whose launch gift this account has had ("1.1.0"). */
+  releases: string[];
+}
+
+/** Cards every player gets once when a feature release goes live (docs/features). */
+export const RELEASE_GIFTS: { version: string; cards: string[] }[] = [{ version: "1.1.0", cards: ["portal_imp", "gnome_brewer"] }];
+
+/** Hand out any release gifts not given yet: a new card, or a copy if it's owned. Returns the card ids given. */
+export function grantReleaseGifts(p: Profile) {
+  const given: string[] = [];
+  for (const r of RELEASE_GIFTS) {
+    if (p.releases.includes(r.version)) continue;
+    p.releases.push(r.version);
+    for (const id of r.cards) {
+      if (!UNIT_BY_ID[id]?.enabled) continue;
+      if (p.cards[id]) p.cards[id].copies++;
+      else p.cards[id] = { level: 1, copies: 0 };
+      given.push(id);
+    }
+  }
+  return given;
 }
 
 export const TUTORIAL_PARTS = ["battle", "deck"] as const;
@@ -75,6 +96,7 @@ export function newProfile(): Profile {
     leagues: [],
     offers: {},
     tutorial: [],
+    releases: [],
   };
 }
 

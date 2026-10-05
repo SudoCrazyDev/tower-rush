@@ -7,6 +7,7 @@
  * Fractions are 0-1: 0.2 is 20%.
  */
 import type { Arch } from "./units.ts";
+import { isSupport, supportSummary } from "./support.ts";
 
 export const DEFAULT_EFFECTS = {
   splash: { radius: 85, radiusPerRank: 4, splash: 0.6 },
@@ -24,6 +25,15 @@ export const DEFAULT_EFFECTS = {
   growth: { perSecond: 0.02, max: 2 },
   buff: { base: 0.08, perRank: 0.05, perRarity: 0.03, max: 1.5 },
   mana: { every: 6, perRank: 5, ultimateBase: 20, ultimatePerWave: 4 },
+  // Support units (v1.1, see support.ts): rank-1 values, "perRank" added for each rank above 1.
+  mime: { prep: 12, prepMin: 4 },
+  portal: { cooldown: 20, cooldownPerRank: 2, cooldownMin: 4, rush: 0.25, rushTime: 5 },
+  mirror: { interval: 25, intervalPerRank: 1.5, intervalMin: 8, warn: 2 },
+  lucky: { chance: 0.21, perRank: 0.06, max: 0.6 },
+  hourglass: { charge: 0.3, chargePerRank: 0.1, chargeMax: 1.5, speed: 0.1, speedPerRank: 0.0333, speedMax: 0.5 },
+  echo: { strength: 0.25, perRank: 0.05, max: 0.75, delay: 0.6 },
+  herald: { perAwakened: 0.05, perRank: 0.01, max: 0.6, shout: 0.3, shoutTime: 6 },
+  brewer: { every: 5, perRank: 8, harvestPerRank: 1, tapBonus: 0.25, tapWindow: 2, pvpMult: 0.6 },
 };
 
 export type Effects = typeof DEFAULT_EFFECTS;
@@ -137,6 +147,57 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     ultimateBase: F("Awakened ultimate: mana", 1, 500),
     ultimatePerWave: F("…plus this × wave", 1, 100),
   },
+  mime: {
+    prep: F("Seconds on the board before it can copy, at card level 1", 0.5, 120),
+    prepMin: F("Shortest prep time after card level and power-ups", 0.5, 120),
+  },
+  portal: {
+    cooldown: F("Recharge after a swap or hop at rank 1 (seconds)", 0.5, 120),
+    cooldownPerRank: F("…minus this per rank", 0.5, 20),
+    cooldownMin: F("Shortest recharge", 0.5, 120),
+    rush: PCT("Portal rush: the swapped unit attacks this much faster", 5),
+    rushTime: F("Portal rush lasts (seconds)", 0.5, 60),
+  },
+  mirror: {
+    interval: F("Mirrors a neighbour every N seconds at rank 1", 0.5, 120),
+    intervalPerRank: F("…minus this per rank", 0.1, 20),
+    intervalMin: F("Shortest interval", 0.5, 120),
+    warn: F("Wobble warning before it changes (seconds)", 0.1, 10),
+  },
+  lucky: {
+    chance: PCT("Chance a neighbour's merge keeps its unit, rank 1"),
+    perRank: PCT("…plus this per rank", 0.5),
+    max: PCT("Highest chance after card level and power-ups"),
+  },
+  hourglass: {
+    charge: PCT("Neighbours' ultimate charge rate at rank 1 (0.3 = +30%)", 5),
+    chargePerRank: PCT("…plus this per rank", 1),
+    chargeMax: F("Most extra charge rate", 0.05, 10),
+    speed: PCT("Attack speed for neighbours that can't fire ultimates, rank 1", 2),
+    speedPerRank: F("…plus this per rank", 0.001, 1),
+    speedMax: PCT("Most attack speed it gives", 5),
+  },
+  echo: {
+    strength: PCT("Strength of the repeated ultimate at rank 1", 2),
+    perRank: PCT("…plus this per rank", 1),
+    max: PCT("Strongest echo", 2),
+    delay: F("Delay before the echo (seconds)", 0.1, 5),
+  },
+  herald: {
+    perAwakened: PCT("Damage for every unit per awakened unit, rank 1 (0.05 = +5%)", 2),
+    perRank: PCT("…plus this per rank", 1),
+    max: F("Most damage bonus", 0.05, 10),
+    shout: PCT("War cry: attack speed for everyone when a unit awakens", 5),
+    shoutTime: F("War cry lasts (seconds)", 0.5, 60),
+  },
+  brewer: {
+    every: F("Brews every N seconds", 0.5, 60, false, 0.5),
+    perRank: F("Mana per brew, per rank", 1, 500),
+    harvestPerRank: F("Harvest at wave end: rank × wave × this", 0.1, 50),
+    tapBonus: PCT("Extra mana for tapping the bubble (solo)", 5),
+    tapWindow: F("A bubble waits this long to be tapped (seconds)", 0.5, 10),
+    pvpMult: PCT("Brew and harvest mana in PvP (0.6 = 60%)", 2),
+  },
 };
 
 // ---------------------------------------------------------------- formulas
@@ -199,6 +260,7 @@ export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFE
     case "mana":
       return `+${manaPerPulse(rank, e)} mana every ${secs(e.mana.every)}`;
     default:
+      if (isSupport(arch)) return supportSummary(arch, rank, e, mult);
       return null;
   }
 }

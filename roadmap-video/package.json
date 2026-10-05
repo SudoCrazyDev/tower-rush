@@ -4,7 +4,8 @@
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts Roadmap out/tower-rush-roadmap.mp4",
-    "render:arch": "remotion render src/index.ts Architecture out/tower-rush-architecture.mp4"
+    "render:arch": "remotion render src/index.ts Architecture out/tower-rush-architecture.mp4",
+    "promo:sc": "node scripts/promo-sc.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.532",

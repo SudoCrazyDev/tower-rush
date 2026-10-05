@@ -2,7 +2,7 @@
  * The whole editable game balance as one JSON document. The server stores versions of
  * it, the admin panel edits it, and the game applies it at boot with applyConfig().
  */
-import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, withStyles, type UnitDef, type Rarity } from "./units.ts";
+import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
 import { PERK_IDS } from "./perks.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, type MonsterDef, type BossDef } from "./monsters.ts";
 import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts";
@@ -72,7 +72,7 @@ function replace<T>(target: T[], items: T[]) {
 
 /** Swap the live tables for the ones in `cfg` (in place, so existing imports see them). */
 export function applyConfig(cfg: GameConfig) {
-  replace(UNITS, withStyles(withRaces(cfg.units, DEFAULT_UNITS), DEFAULT_UNITS));
+  replace(UNITS, withAddedUnits(withStyles(withRaces(cfg.units, DEFAULT_UNITS), DEFAULT_UNITS), DEFAULT_UNITS));
   replace(MONSTERS, withRaces(cfg.monsters, DEFAULT_MONSTERS));
   replace(BOSSES, withRaces(cfg.bosses, DEFAULT_BOSSES));
   replace(ARENAS, cfg.arenas);

@@ -33,6 +33,7 @@ import { EFFECTS, effectSummary } from "../../../shared/effects.ts";
 import { HEROES, HERO_BY_ID, HERO_POWERS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
 import { BOSSES, BOSS_BY_ID, MONSTER_BY_ID, type BossDef } from "../../../shared/monsters.ts";
 import { ARCHETYPES, maxRank, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, boostMult, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { noAttack } from "../../../shared/support.ts";
 import { PERKS } from "../../../shared/perks.ts";
 import { arenaGeometry, boardUnitStats, bossAppearances, simulate, simulateMany, waveBaseHp, type SimSetup, type SimSummary } from "../../../shared/sim.ts";
 
@@ -212,7 +213,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
     () =>
       UNITS.map((u) => {
         const st = boardUnitStats({ id: u.id, rank: s.rank, awakened: s.rank >= maxRank() && canAwaken.has(u.id) }, level, powerUp);
-        return { u, raw: u.arch === "buff" ? 0 : st.damage * st.speed, one: measure(u.id, 1, 2), pack: measure(u.id, PACK, 2) };
+        return { u, raw: noAttack(u.arch) ? 0 : st.damage * st.speed, one: measure(u.id, 1, 2), pack: measure(u.id, PACK, 2) };
       }),
     deps,
     250,
@@ -261,12 +262,12 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
           </div>
           <table className="kv">
             <tbody>
-              <tr><td>Damage per hit</td><td>{def.arch === "buff" ? "—" : f1(stats.damage)}</td></tr>
-              <tr><td>Attacks per second</td><td>{def.arch === "buff" ? "—" : stats.speed.toFixed(2)}</td></tr>
-              <tr><td>Damage per second (on paper)</td><td><strong>{def.arch === "buff" ? "—" : f1(stats.damage * stats.speed)}</strong></td></tr>
+              <tr><td>Damage per hit</td><td>{noAttack(def.arch) ? "—" : f1(stats.damage)}</td></tr>
+              <tr><td>Attacks per second</td><td>{noAttack(def.arch) ? "—" : stats.speed.toFixed(2)}</td></tr>
+              <tr><td>Damage per second (on paper)</td><td><strong>{noAttack(def.arch) ? "—" : f1(stats.damage * stats.speed)}</strong></td></tr>
               <tr><td>Effect</td><td>{effectSummary(def.arch, s.rank, rarityIdx, EFFECTS, boostMult(level, powerUp) * (awakened ? ECONOMY.awakenDamageMult : 1)) ?? "—"}</td></tr>
-              <tr><td>Style</td><td>{def.arch === "buff" ? "—" : `${STYLES[def.style].label} — ${STYLES[def.style].text}`}</td></tr>
-              <tr><td>Perk</td><td>{def.perk === "none" ? "—" : `${def.arch === "buff" ? "Neighbours get " : ""}${PERKS[def.perk].label}: ${PERKS[def.perk].text}`}</td></tr>
+              <tr><td>Style</td><td>{noAttack(def.arch) ? "—" : `${STYLES[def.style].label} — ${STYLES[def.style].text}`}</td></tr>
+              <tr><td>Perk</td><td>{def.perk === "none" ? "—" : `${noAttack(def.arch) ? "Neighbours get " : ""}${PERKS[def.perk].label}: ${PERKS[def.perk].text}`}</td></tr>
               {awakened && (
                 <tr>
                   <td>Ultimate</td>
@@ -279,7 +280,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                 </tr>
               )}
               <tr><td>Normal monster on wave {s.wave}</td><td>{f0(hp)} HP</td></tr>
-              {def.arch !== "buff" && stats.damage > 0 && (
+              {!noAttack(def.arch) && stats.damage > 0 && (
                 <tr><td>Hits to kill one</td><td>{Math.ceil(hp / stats.damage)} ({secs(hp / (stats.damage * stats.speed))})</td></tr>
               )}
             </tbody>
@@ -341,7 +342,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                     {u.name} <span className={`rarity ${u.rarity} small`}>{u.rarity}</span>
                   </td>
                   <td>{u.arch}</td>
-                  <td className="num-cell">{u.arch === "buff" ? "—" : f1(raw)}</td>
+                  <td className="num-cell">{noAttack(u.arch) ? "—" : f1(raw)}</td>
                   <td className="num-cell">{f1(one.dps)}</td>
                   <td className="num-cell"><strong>{f1(pack.dps)}</strong></td>
                   <td>
@@ -350,7 +351,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                       <div style={{ width: `${(100 * one.dps) / best}%` }} />
                     </div>
                   </td>
-                  <td className="muted small">{effectSummary(u.arch, s.rank, RARITY_ORDER.indexOf(u.rarity)) ?? (u.arch === "buff" ? "Speeds up neighbours" : "")}</td>
+                  <td className="muted small">{effectSummary(u.arch, s.rank, RARITY_ORDER.indexOf(u.rarity)) ?? (noAttack(u.arch) ? "Speeds up neighbours" : "")}</td>
                 </tr>
               ))}
             </tbody>

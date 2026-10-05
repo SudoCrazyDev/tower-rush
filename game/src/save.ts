@@ -215,6 +215,9 @@ export interface BattleStats {
   merges: number;
   awakens: number;
   heroCasts: number;
+  copies: number;
+  swaps: number;
+  brewed: number;
 }
 
 export async function finishBattle(battleId: number, stats: BattleStats) {

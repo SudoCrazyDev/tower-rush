@@ -12,7 +12,7 @@ export interface Reward {
 }
 
 /** What a quest counts. Battle goals come from finished runs; the others from shop/deck actions. */
-export type QuestGoal = "battles" | "wave" | "merges" | "summons" | "kills" | "bosses" | "heroCasts" | "awakens" | "upgrades" | "chests";
+export type QuestGoal = "battles" | "wave" | "merges" | "summons" | "kills" | "bosses" | "heroCasts" | "awakens" | "upgrades" | "chests" | "copies" | "swaps" | "brewed";
 
 export const QUEST_GOALS: Record<QuestGoal, { text: string; label: string; best?: boolean }> = {
   battles: { text: "Play {n} battles", label: "Battles finished" },
@@ -25,6 +25,9 @@ export const QUEST_GOALS: Record<QuestGoal, { text: string; label: string; best?
   awakens: { text: "Awaken {n} units", label: "Units awakened (max rank)" },
   upgrades: { text: "Upgrade {n} cards", label: "Card upgrades" },
   chests: { text: "Open {n} chests", label: "Chests bought" },
+  copies: { text: "Copy {n} units with the Mime", label: "Mime copies" },
+  swaps: { text: "Move units {n} times with the Portal Imp", label: "Portal Imp swaps and hops" },
+  brewed: { text: "Brew {n} mana with the Gnome Brewer", label: "Mana brewed" },
 };
 export const QUEST_GOAL_IDS = Object.keys(QUEST_GOALS) as QuestGoal[];
 
@@ -76,6 +79,10 @@ export const DEFAULT_QUESTS: QuestDef[] = [
   Q("awaken_1", "awakens", 1, R(0, 15), 0.6),
   Q("upgrade_1", "upgrades", 1, R(100)),
   Q("chest_1", "chests", 1, R(80), 0.6),
+  // v1.1 support units (low weight: only players who own the card can do them).
+  Q("mime_3", "copies", 3, R(150), 0.3),
+  Q("swap_5", "swaps", 5, R(150), 0.3),
+  Q("brew_500", "brewed", 500, R(150), 0.3),
 ];
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */

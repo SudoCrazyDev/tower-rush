@@ -5,6 +5,7 @@
  */
 import { rng } from "./sim.ts";
 import { maxRank, maxPowerUp, powerUpCost } from "./units.ts";
+import { canBecome } from "./support.ts";
 import { PVP } from "./pvp.ts";
 import type { PvpAction, PvpBoard } from "./pvpsim.ts";
 
@@ -32,7 +33,7 @@ export class PvpBot {
     if (b.over || b.now < this.next) return;
     this.next = b.now + 0.35 + (1 - this.skill) * 0.9 + this.r() * 0.4;
     // A few moves per look, like a player tapping through their options.
-    for (let i = 0; i < 2 + Math.round(this.skill * 4); i++) if (!(this.merge() || this.powerUp() || this.send() || this.summon())) break;
+    for (let i = 0; i < 2 + Math.round(this.skill * 4); i++) if (!(this.merge() || this.copy() || this.powerUp() || this.send() || this.summon())) break;
   }
 
   private act(a: PvpAction) {
@@ -62,6 +63,22 @@ export class PvpBot {
     if (!full && pairs[0][2] > 2 && this.r() > 0.3 + this.skill * 0.3) return false;
     const [from, to] = pairs[0];
     return this.act({ t: "merge", from, to });
+  }
+
+  /** A ready Mime copies the highest-damage unit it can: that always makes a pair to merge. */
+  private copy() {
+    const units = this.board.units;
+    for (let i = 0; i < 15; i++) {
+      const m = units[i];
+      if (!m || !this.board.mimeReady(i)) continue;
+      let best = -1;
+      for (let j = 0; j < 15; j++) {
+        const v = units[j];
+        if (v && j !== i && canBecome(m, v) && (best < 0 || v.stats.damage > units[best]!.stats.damage)) best = j;
+      }
+      if (best >= 0) return this.act({ t: "copy", from: i, to: best });
+    }
+    return false;
   }
 
   private powerUp() {

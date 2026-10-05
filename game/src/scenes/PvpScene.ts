@@ -27,6 +27,7 @@ import { PvpBoard, SIM_DT } from "../../../shared/pvpsim.ts";
 import { PvpBot, botSkill } from "../../../shared/pvpbot.ts";
 import type { SimFx, SimMonster, SimShot, SimUnit } from "../../../shared/sim.ts";
 import type { Promotion } from "../../../shared/profile.ts";
+import { canBecome } from "../../../shared/support.ts";
 
 /** The opponent's board sits this far right in the world; only the small camera sees it. */
 const OX = 6000;
@@ -44,6 +45,11 @@ interface UnitView {
   haste: number;
   /** Board time of the last crit/execute callout, so rapid-fire units don't stack them. */
   calloutAt: number;
+  /** Support timer ring (Mime, Portal Imp, Mirror Slime) and the progress it shows. */
+  ring: Phaser.GameObjects.Graphics | null;
+  ringAt: number;
+  /** Tile the pips and aura were drawn for (a Portal Imp can move the unit). */
+  drawnAt: number;
 }
 
 interface MonView {
@@ -640,6 +646,27 @@ export class PvpScene extends Phaser.Scene {
 
   private drawUnits() {
     const b = this.board;
+    // Units a Portal Imp moved keep their view: lift them off their old tiles first.
+    const moved: UnitView[] = [];
+    for (let slot = 0; slot < 15; slot++) {
+      const v = this.units[slot];
+      if (v && v.u !== b.units[slot] && b.units[v.u.slot] === v.u) {
+        moved.push(v);
+        this.units[slot] = null;
+      }
+    }
+    for (const v of moved) {
+      const p = slotPos(this.arena, v.u.slot);
+      const p0 = slotPos(this.arena, v.drawnAt);
+      v.sprite.setPosition(p.x, p.y).setDepth(100 + p.y).setData("slot", v.u.slot);
+      v.pips.setPosition(p.x - p0.x, p.y - p0.y).setDepth(150 + p.y);
+      v.aura?.setPosition(p.x, p.y + 30);
+      v.ring?.setPosition(p.x, p.y + 34).setDepth(97 + p.y);
+      this.clearBuff(v);
+      v.haste = -1;
+      this.vfx("shadow_smoke", p.x, p.y - 10, 130);
+      this.units[v.u.slot] = v;
+    }
     for (let slot = 0; slot < 15; slot++) {
       const u = b.units[slot];
       let v = this.units[slot];
@@ -647,12 +674,14 @@ export class PvpScene extends Phaser.Scene {
         v.sprite.destroy();
         v.pips.destroy();
         v.aura?.destroy();
+        v.ring?.destroy();
         this.clearBuff(v);
         v = this.units[slot] = null;
       }
       if (!u) continue;
       if (!v) v = this.units[slot] = this.unitView(u);
       this.showBuff(v, slot !== this.dragging);
+      this.drawRing(v, b.supportProgress(slot), slot !== this.dragging);
       if (slot === this.dragging) continue;
       if (u.firedAt !== v.fired) {
         v.fired = u.firedAt;
@@ -689,7 +718,30 @@ export class PvpScene extends Phaser.Scene {
     }
     this.vfx("summon_circle", p.x, p.y + 20, u.awakened ? 200 : 130, 90);
     sfx(u.rank > 1 ? (u.awakened ? "awaken" : "merge") : "summon");
-    return { u, sprite, pips, aura, fired: u.firedAt, buff: null, haste: 0, calloutAt: -1 };
+    return { u, sprite, pips, aura, fired: u.firedAt, buff: null, haste: 0, calloutAt: -1, ring: null, ringAt: -1, drawnAt: u.slot };
+  }
+
+  /** Ready ring at the feet of a Mime, Portal Imp or Mirror Slime (same look as solo battles). */
+  private drawRing(v: UnitView, progress: number | null, visible: boolean) {
+    if (progress === null) return;
+    const p = slotPos(this.arena, v.u.slot);
+    if (!v.ring) v.ring = this.add.graphics().setPosition(p.x, p.y + 34).setDepth(97 + p.y);
+    v.ring.setVisible(visible);
+    const step = Math.round(progress * 40);
+    if (step === v.ringAt) return;
+    v.ringAt = step;
+    const color = v.u.def.arch === "mime" ? 0x59d64a : v.u.def.arch === "portal" ? 0xff8a3b : 0xc58bff;
+    const g = v.ring.clear().lineStyle(7, NAVY, 0.7).strokeEllipse(0, 0, 88, 30);
+    if (step >= 40) {
+      g.lineStyle(5, color, 1).strokeEllipse(0, 0, 88, 30).fillStyle(color, 0.18).fillEllipse(0, 0, 88, 30);
+      return;
+    }
+    const pts: Pt[] = [];
+    for (let i = 0; i <= Math.max(2, step); i++) {
+      const a = -Math.PI / 2 + (i / 40) * Math.PI * 2;
+      pts.push({ x: Math.cos(a) * 44, y: Math.sin(a) * 15 });
+    }
+    g.lineStyle(5, 0xc9d2ff, 0.9).strokePoints(pts);
   }
 
   /** The buffed marker (same look as solo battles): follows the unit's haste, hidden while it's dragged. */
@@ -996,8 +1048,13 @@ export class PvpScene extends Phaser.Scene {
       if (!u || this.done) return;
       this.dragging = slot!;
       obj.setDepth(2500);
+      const mime = this.board.mimeReady(slot!);
+      const portal = this.board.portalReady(slot!);
       this.board.units.forEach((o, i) => {
-        if (!o || i === slot || o.def.id !== u.def.id || o.rank !== u.rank || u.rank >= maxRank()) return;
+        if (i === slot) return;
+        const merges = !!o && o.def.id === u.def.id && o.rank === u.rank && u.rank < maxRank();
+        const ok = o ? merges || (mime && canBecome(u, o)) || (portal && o.rank === u.rank) : portal;
+        if (!ok) return;
         const p = slotPos(this.arena, i);
         this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
       });
@@ -1011,10 +1068,11 @@ export class PvpScene extends Phaser.Scene {
       const from = obj.getData("slot") as number;
       if (from !== this.dragging) return;
       this.dragging = -1;
+      // Nearest tile: a merge or Mime copy on a unit, a Portal Imp swap or hop.
       let to = -1;
       let best = 60;
       for (let i = 0; i < 15; i++) {
-        if (i === from || !this.board.units[i]) continue;
+        if (i === from) continue;
         const p = slotPos(this.arena, i);
         const d = Math.hypot(p.x - obj.x, p.y - obj.y);
         if (d < best) {
@@ -1022,12 +1080,30 @@ export class PvpScene extends Phaser.Scene {
           to = i;
         }
       }
-      if (to >= 0 && this.board.apply({ t: "merge", from, to })) {
+      const b = this.board;
+      const x = b.units[from];
+      const y = to >= 0 ? b.units[to] : null;
+      if (to >= 0 && y && b.apply({ t: "merge", from, to })) {
         this.vfx("merge_levelup", obj.x, obj.y - 10, 150);
+        return;
+      }
+      if (to >= 0 && y && b.apply({ t: "copy", from, to })) {
+        this.vfx("arcane_vortex", obj.x, obj.y - 20, 150);
+        return;
+      }
+      if (to >= 0 && (y ? b.apply({ t: "swap", from, to }) : b.apply({ t: "hop", from, to }))) {
+        sfx("summon");
         return;
       }
       const p = slotPos(this.arena, from);
       obj.setPosition(p.x, p.y).setDepth(100 + p.y);
+      // Why a Mime or Portal Imp drop didn't work.
+      const active = x && (x.def.arch === "mime" || x.def.arch === "portal") && to >= 0 && (y || x.def.arch === "portal");
+      if (active) {
+        const ready = x.def.arch === "mime" ? b.mimeReady(from) : b.portalReady(from);
+        sfx("error");
+        floatText(this, p.x, p.y - 80, !ready ? "Not ready yet" : y && y.rank !== x.rank ? `Needs ★${x.rank}` : "Can't copy that", "#ffb0b0", 24);
+      }
     });
   }
 
@@ -1102,6 +1178,9 @@ export class PvpScene extends Phaser.Scene {
       merges: b.counts.merges,
       awakens: b.counts.awakens,
       heroCasts: b.heroCasts,
+      copies: b.counts.copies,
+      swaps: b.counts.swaps,
+      brewed: Math.round(b.brewed),
     };
   }
 

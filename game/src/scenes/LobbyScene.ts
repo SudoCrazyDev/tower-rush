@@ -15,6 +15,7 @@ import { bakeAll } from "../bake";
 import { pointAt, tutorialDue } from "../tutorial";
 import { ambientVideo, coverFit } from "../backdrop";
 import { arenaInfo } from "./arenaInfo";
+import { whatsNew } from "./whatsNew";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, pressable, badge } from "../ui";
 
 /** The login reward pops up by itself once per session. */
@@ -133,6 +134,8 @@ export class LobbyScene extends Phaser.Scene {
     // New players: point at the first battle, then at the deck once it's done.
     if (tutorialDue("battle")) pointAt(this, { x: W / 2, y: (WIDE ? 680 : 760) + 330 }, "down", "START HERE!", 80);
     else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: 140, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
+    // After an update: the release popup, once (not for brand-new players mid-tutorial).
+    else this.time.delayedCall(700, () => this.sys.isActive() && whatsNew(this));
   }
 
   /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */

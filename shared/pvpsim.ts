@@ -12,12 +12,20 @@ import { maxRank, UNIT_BY_ID, maxPowerUp, powerUpCost } from "./units.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "./monsters.ts";
 import { slotPos } from "./path.ts";
 import { PVP, SendStock, sendProblem, type BoardSnap, type Loadout, type SendDef } from "./pvp.ts";
+import { EFFECTS } from "./effects.ts";
+import { canBecome, isSupport, luckyChance, mimePrep, mirrorInterval, neighbours, noAttack, portalCooldown } from "./support.ts";
 
 export { SIM_DT };
 
 export type PvpAction =
   | { t: "summon" }
   | { t: "merge"; from: number; to: number }
+  /** Mime `from` becomes a copy of the same-rank unit on `to`. */
+  | { t: "copy"; from: number; to: number }
+  /** Portal Imp `from` trades places with the same-rank unit on `to`. */
+  | { t: "swap"; from: number; to: number }
+  /** Portal Imp `from` jumps to the empty tile `to`. */
+  | { t: "hop"; from: number; to: number }
   | { t: "power"; id: string }
   | { t: "hero" }
   | { t: "autohero"; on: boolean }
@@ -62,7 +70,7 @@ export class PvpBoard extends Sim {
   /** Sends on their way to this board. */
   incoming: { at: number; send: SendDef }[] = [];
   actions: LoggedAction[] = [];
-  counts = { summons: 0, merges: 0, awakens: 0, sends: 0 };
+  counts = { summons: 0, merges: 0, awakens: 0, sends: 0, copies: 0, swaps: 0, lucky: 0 };
   /** Time the next wave starts. */
   nextWaveAt: number;
 
@@ -105,6 +113,49 @@ export class PvpBoard extends Sim {
 
   protected powerOf(id: string) {
     return this.powerUps?.[id] ?? 0;
+  }
+
+  protected brewMult() {
+    return EFFECTS.brewer.pvpMult;
+  }
+
+  /** Whether the Mime on `slot` has been on the board long enough to copy. */
+  mimeReady(slot: number) {
+    const u = this.units[slot];
+    return !!u && u.def.arch === "mime" && u.timer >= mimePrep(this.supportMult(u));
+  }
+
+  /** Whether the Portal Imp on `slot` has recharged. */
+  portalReady(slot: number) {
+    const u = this.units[slot];
+    return !!u && u.def.arch === "portal" && u.timer <= 0;
+  }
+
+  /** How far a support unit's timer has run (1 = ready), or null for units without one (for the ring). */
+  supportProgress(slot: number) {
+    const u = this.units[slot];
+    if (!u) return null;
+    const m = this.supportMult(u);
+    switch (u.def.arch) {
+      case "mime":
+        return Math.min(1, u.timer / mimePrep(m));
+      case "portal":
+        return u.timer <= 0 ? 1 : 1 - u.timer / portalCooldown(u.rank, m);
+      case "mirror":
+        return u.timer / mirrorInterval(u.rank, m);
+      default:
+        return null;
+    }
+  }
+
+  /** The best Lucky Cat chance next to tile `slot` (0 without one). */
+  luckAt(slot: number) {
+    let best = 0;
+    for (const j of neighbours(slot)) {
+      const c = this.units[j];
+      if (c?.def.arch === "lucky") best = Math.max(best, luckyChance(c.rank, this.supportMult(c)));
+    }
+    return best;
   }
 
   /** Wave health ignores the arena (every PvP arena is equally hard) and climbs faster in sudden death. */
@@ -190,7 +241,10 @@ export class PvpBoard extends Sim {
     const wr = rng((this.opts.seed + n * 0x9e3779b1) >>> 0);
     const isBoss = n % e.bossEvery === 0;
     this.nextWaveAt += isBoss ? r.bossWaveSeconds : r.waveSeconds;
-    if (n > 1) this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+    if (n > 1) {
+      this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+      this.harvest(n - 1);
+    }
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
     const pick = () => {
       const weights = pool.map((m) => (m.traits.includes("tank") ? Math.min(1, n / 12) : 1));
@@ -272,9 +326,47 @@ export class PvpBoard extends Sim {
         const y = this.units[a.to];
         if (!x || !y || a.from === a.to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= maxRank()) return false;
         this.units[a.from] = null;
-        const u = this.place(this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, a.to);
+        this.units[a.to] = null;
+        // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
+        const luck = x.def.arch === "lucky" ? 0 : this.luckAt(a.to);
+        const keep = luck > 0 && this.rand() < luck;
+        if (keep) this.counts.lucky++;
+        const u = this.place(keep ? x.def.id : this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, a.to);
         this.counts.merges++;
         if (u.awakened) this.counts.awakens++;
+        return true;
+      }
+      case "copy": {
+        const x = this.units[a.from];
+        const y = this.units[a.to];
+        if (!x || !y || a.from === a.to || !this.mimeReady(a.from) || !canBecome(x, y)) return false;
+        this.become(x, y.def.id, x.rank);
+        this.counts.copies++;
+        return true;
+      }
+      case "swap": {
+        const x = this.units[a.from];
+        const y = this.units[a.to];
+        if (!x || !y || a.from === a.to || !this.portalReady(a.from) || y.rank !== x.rank || y.def.id === x.def.id) return false;
+        x.moveTo(a.to, slotPos(this.arena, a.to));
+        y.moveTo(a.from, slotPos(this.arena, a.from));
+        this.units[a.to] = x;
+        this.units[a.from] = y;
+        x.timer = portalCooldown(x.rank, this.supportMult(x));
+        y.rushUntil = this.now + EFFECTS.portal.rushTime;
+        this.counts.swaps++;
+        this.recomputeBuffs();
+        return true;
+      }
+      case "hop": {
+        const x = this.units[a.from];
+        if (!x || a.to < 0 || a.to >= 15 || this.units[a.to] || !this.portalReady(a.from)) return false;
+        x.moveTo(a.to, slotPos(this.arena, a.to));
+        this.units[a.to] = x;
+        this.units[a.from] = null;
+        x.timer = portalCooldown(x.rank, this.supportMult(x));
+        this.counts.swaps++;
+        this.recomputeBuffs();
         return true;
       }
       case "power": {
@@ -285,7 +377,7 @@ export class PvpBoard extends Sim {
         for (const u of this.units) {
           if (u?.def.id === a.id) Object.assign(u.stats, boardUnitStats({ id: u.def.id, rank: u.rank, awakened: u.awakened }, this.levelOf(a.id), lvl + 1));
         }
-        if (UNIT_BY_ID[a.id]?.arch === "buff") this.recomputeBuffs();
+        if (noAttack(UNIT_BY_ID[a.id]?.arch ?? "shot")) this.recomputeBuffs();
         return true;
       }
       case "hero":
@@ -313,10 +405,11 @@ export class PvpBoard extends Sim {
   }
 
   private place(id: string, rank: number, slot: number) {
-    const awakened = rank >= maxRank() && !!this.opts.awakens?.(id);
+    const awakened = rank >= maxRank() && !isSupport(UNIT_BY_ID[id]?.arch ?? "shot") && !!this.opts.awakens?.(id);
     const u = new SimUnit({ id, rank, awakened }, slot, slotPos(this.arena, slot), this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0);
     this.units[slot] = u;
     this.recomputeBuffs();
+    if (awakened) this.onAwaken();
     return u;
   }
 

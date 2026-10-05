@@ -33,6 +33,18 @@ import { BOSS_BY_ID, MONSTER_BY_ID, type BossDef, type MonsterDef } from "./mons
 import { RARITY_ORDER, UNIT_BY_ID, boostMult, unitStats, type Element, type UnitDef } from "./units.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
+import {
+  brewMana,
+  canBecome,
+  echoStrength,
+  harvestMana,
+  heraldBonus,
+  isSupport,
+  mirrorInterval,
+  neighbours,
+  owlCharge,
+  owlSpeed,
+} from "./support.ts";
 
 /** Simulation step in seconds. */
 export const SIM_DT = 1 / 30;
@@ -174,10 +186,11 @@ const DUMMY: MonsterDef = { id: "dummy", name: "Training dummy", race: "construc
 export class SimUnit {
   readonly def: UnitDef;
   readonly rank: number;
-  readonly slot: number;
+  /** Slot and position change when a Portal Imp swaps or hops. */
+  slot: number;
   readonly awakened: boolean;
-  readonly x: number;
-  readonly y: number;
+  x: number;
+  y: number;
   readonly stats: { damage: number; speed: number };
   cooldown: number;
   alive: number;
@@ -187,6 +200,12 @@ export class SimUnit {
   frozenUntil = 0;
   pulse = 0;
   ult = 0;
+  /** Extra ultimate charge rate from neighbouring Hourglass Owls (0.5 = +50%). */
+  charge = 0;
+  /** Support timer: Mime prep and Mirror Slime progress count up, Portal Imp recharge counts down. */
+  timer = 0;
+  /** Portal rush: attacks faster until then. */
+  rushUntil = 0;
   // Viewer: when it last attacked.
   firedAt = -1;
 
@@ -194,13 +213,19 @@ export class SimUnit {
     this.def = UNIT_BY_ID[b.id];
     this.rank = b.rank;
     this.slot = slot;
-    this.awakened = !!b.awakened;
+    this.awakened = !!b.awakened && !isSupport(this.def.arch);
     this.x = pos.x;
     this.y = pos.y;
     this.stats = boardUnitStats(b, cardLevel, powerUp);
     withPerk(this.perks, this.def.perk);
     this.cooldown = cooldown;
     this.alive = alive;
+  }
+
+  moveTo(slot: number, pos: Pt) {
+    this.slot = slot;
+    this.x = pos.x;
+    this.y = pos.y;
   }
 }
 
@@ -348,6 +373,12 @@ export class Sim {
   private stormUntil = 0;
   private stormTimer = 0;
   private trackedBoss: SimMonster | null = null;
+  /** Banner Herald: damage multiplier for every attacking unit. */
+  heraldMult = 1;
+  /** Banner Herald war cry: everyone attacks faster until then. */
+  shoutUntil = 0;
+  /** Echo Spirit encores waiting to go off. */
+  private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number }[] = [];
 
   // Results.
   kills = 0;
@@ -358,6 +389,8 @@ export class Sim {
   heroCasts = 0;
   heroDamage = 0;
   manaGained = 0;
+  /** Mana from Gnome Brewers (brews and harvests). */
+  brewed = 0;
   blocked = 0;
   dodged = 0;
   bossHpLeft: number | null = null;
@@ -427,26 +460,81 @@ export class Sim {
     return this.setup.powerUp;
   }
 
+  /** Card level × power-up multiplier of a unit's effect (support units never awaken). */
+  protected supportMult(u: SimUnit) {
+    return boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id));
+  }
+
+  /** Mana multiplier for the Gnome Brewer (PvP pays less). */
+  protected brewMult() {
+    return 1;
+  }
+
+  /** Buff units, Hourglass Owls and the Banner Herald: recomputed whenever the board changes. */
   protected recomputeBuffs() {
     for (const u of this.units) {
       if (!u) continue;
       u.haste = 0;
+      u.charge = 0;
       u.perks = [];
       withPerk(u.perks, u.def.perk);
     }
+    let herald: SimUnit | null = null;
     this.units.forEach((u, i) => {
-      if (!u || u.def.arch !== "buff") return;
+      if (!u) return;
+      if (u.def.arch === "herald" && (!herald || u.rank > herald.rank)) herald = u;
+      if (u.def.arch === "hourglass") {
+        const mult = this.supportMult(u);
+        for (const j of neighbours(i)) {
+          const v = this.units[j];
+          if (!v || v.def.arch === "buff" || isSupport(v.def.arch)) continue;
+          if (v.awakened) v.charge += owlCharge(u.rank, mult);
+          else v.haste += owlSpeed(u.rank, mult);
+        }
+        return;
+      }
+      if (u.def.arch !== "buff") return;
       const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
       const bonus = buffBonus(u.rank, RARITY_ORDER.indexOf(u.def.rarity), mult);
-      const col = i % 5;
-      for (const j of [i - 5, i + 5, col > 0 ? i - 1 : -1, col < 4 ? i + 1 : -1]) {
+      for (const j of neighbours(i)) {
         const v = this.units[j];
         if (v && v.def.arch !== "buff") {
+          // Support units get the haste (it shortens their timers) but not the perk: they never hit.
           v.haste += bonus;
-          withPerk(v.perks, u.def.perk);
+          if (!isSupport(v.def.arch)) withPerk(v.perks, u.def.perk);
         }
       }
     });
+    const h = herald as SimUnit | null;
+    const awake = this.units.filter((u) => u?.awakened).length;
+    this.heraldMult = h ? 1 + heraldBonus(h.rank, awake, this.supportMult(h)) : 1;
+  }
+
+  /** A unit awakened: the Banner Herald's war cry. */
+  protected onAwaken() {
+    if (this.units.some((u) => u?.def.arch === "herald")) {
+      this.shoutUntil = this.now + EFFECTS.herald.shoutTime;
+      this.log("Banner Herald: war cry", "unit");
+    }
+  }
+
+  /** Swap a unit onto another tile (a Mime copy, a Mirror Slime turning): same slot, new unit. */
+  protected become(u: SimUnit, id: string, rank: number) {
+    const v = new SimUnit({ id, rank }, u.slot, { x: u.x, y: u.y }, this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0);
+    this.units[u.slot] = v;
+    this.recomputeBuffs();
+    return v;
+  }
+
+  /** Gnome Brewers pay their harvest when wave `ended` is over. */
+  protected harvest(ended: number) {
+    for (const u of this.units) {
+      if (u?.def.arch !== "brewer") continue;
+      const m = harvestMana(u.rank, ended, this.supportMult(u) * this.brewMult());
+      this.gainMana(m);
+      this.brewed += m;
+      this.mark("text", u.x, u.y - 60, "#7fd8ff", { text: `+${m}` });
+    }
   }
 
   private spawnDummy(i: number) {
@@ -473,7 +561,10 @@ export class Sim {
     const n = this.wave;
     const e = ECONOMY;
     const isBoss = !!forceBoss || n % e.bossEvery === 0;
-    if (n > 1 && this.setup.scenario.kind === "run") this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+    if (n > 1 && this.setup.scenario.kind === "run") {
+      this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+      this.harvest(n - 1);
+    }
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
     const pick = () => {
       const weights = pool.map((m) => (m.traits.includes("tank") ? Math.min(1, n / 12) : 1));
@@ -588,6 +679,7 @@ export class Sim {
     if (this.boss?.gone) this.boss = null;
 
     for (const u of this.units) if (u) this.updateUnit(u, dt);
+    if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
     this.updateShots(dt);
     if (this.hero && this.autoHero && now >= this.heroReadyAt) this.castHero();
@@ -894,6 +986,7 @@ export class Sim {
     if (now < u.frozenUntil) return;
     u.alive += dt;
     if (u.def.arch === "buff") return;
+    if (isSupport(u.def.arch)) return this.updateSupport(u, dt);
     if (u.def.arch === "mana") {
       u.pulse += dt;
       if (u.pulse >= EFFECTS.mana.every) {
@@ -902,7 +995,7 @@ export class Sim {
       }
     }
     if (u.awakened) {
-      u.ult += dt;
+      u.ult += dt * (1 + u.charge);
       if (u.ult >= ECONOMY.ultimateCooldown) {
         const target = u.def.arch === "mana" ? null : this.pickTarget(u.def.arch === "sniper" ? "strongest" : "first");
         if (target || u.def.arch === "mana") {
@@ -913,7 +1006,7 @@ export class Sim {
         }
       }
     }
-    const rate = u.stats.speed * (1 + u.haste + this.heroHaste);
+    const rate = u.stats.speed * (1 + this.hasteOf(u));
     u.cooldown -= dt;
     if (u.cooldown > 0) return;
     const target = this.pickTarget(u.def.arch === "sniper" ? "strongest" : "first");
@@ -923,20 +1016,91 @@ export class Sim {
     this.fire(u, target);
   }
 
+  /** Every attack-speed bonus on a unit right now: buffs and owls, hero, portal rush, war cry. */
+  hasteOf(u: SimUnit) {
+    const now = this.now;
+    return u.haste + this.heroHaste + (now < u.rushUntil ? EFFECTS.portal.rush : 0) + (now < this.shoutUntil ? EFFECTS.herald.shout : 0);
+  }
+
+  /** Support timers run faster with haste (buff units, the hero, a war cry). */
+  private updateSupport(u: SimUnit, dt: number) {
+    const t = dt * (1 + this.hasteOf(u));
+    const mult = this.supportMult(u);
+    switch (u.def.arch) {
+      case "mime":
+        u.timer += t;
+        break;
+      case "portal":
+        u.timer = Math.max(0, u.timer - t);
+        break;
+      case "mirror": {
+        const every = mirrorInterval(u.rank, mult);
+        u.timer = Math.min(every, u.timer + t);
+        if (u.timer < every) break;
+        const options = neighbours(u.slot)
+          .map((j) => this.units[j])
+          .filter((v): v is SimUnit => !!v && canBecome(u, v));
+        if (!options.length) break;
+        const v = options[Math.floor(this.rand() * options.length)];
+        this.log(`Mirror Slime turned into ${v.def.name}`, "unit");
+        this.mark("text", u.x, u.y - 60, "#d9b3ff", { text: "MIRROR" });
+        this.become(u, v.def.id, u.rank);
+        break;
+      }
+      case "brewer":
+        u.pulse += t;
+        if (u.pulse >= EFFECTS.brewer.every) {
+          u.pulse = 0;
+          u.firedAt = this.now;
+          const m = brewMana(u.rank, mult * this.brewMult());
+          this.gainMana(m);
+          this.brewed += m;
+          this.mark("text", u.x, u.y - 60, "#7fd8ff", { text: `+${m}` });
+        }
+        break;
+    }
+  }
+
+  /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). */
+  private queueEcho(u: SimUnit, x: number, y: number, damage: number, mana: number) {
+    let best = 0;
+    for (const j of neighbours(u.slot)) {
+      const v = this.units[j];
+      if (v?.def.arch === "echo") best = Math.max(best, echoStrength(v.rank, this.supportMult(v)));
+    }
+    if (best > 0) this.echoes.push({ at: this.now + EFFECTS.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best) });
+  }
+
+  private updateEchoes() {
+    const due = this.echoes.filter((e) => e.at <= this.now);
+    if (!due.length) return;
+    this.echoes = this.echoes.filter((e) => e.at > this.now);
+    for (const e of due) {
+      this.mark("text", e.x, e.y - 70, "#9ff0ff", { text: "ENCORE" });
+      if (e.mana) this.gainMana(e.mana);
+      if (!e.damage) continue;
+      this.mark("ring", e.x, e.y, "#9ff0ff", { x2: ECONOMY.ultimateRadius });
+      for (const m of this.nearby({ x: e.x, y: e.y }, ECONOMY.ultimateRadius)) this.applyHit(e.unit, e.damage, m);
+    }
+  }
+
   private ultimate(u: SimUnit, target: SimMonster | null) {
     if (u.def.arch === "mana" || !target) {
-      this.gainMana(Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave));
+      const mana = Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave);
+      this.gainMana(mana);
+      this.queueEcho(u, u.x, u.y, 0, mana);
       return;
     }
     const center = target.pos;
-    const damage = u.stats.damage * this.heroDamageMult * ECONOMY.ultimateDamageMult;
+    const damage = u.stats.damage * this.heroDamageMult * this.heraldMult * ECONOMY.ultimateDamageMult;
+    this.queueEcho(u, center.x, center.y, damage, 0);
     this.mark("ring", center.x, center.y, "#ffd93b", { x2: ECONOMY.ultimateRadius });
     this.mark("text", center.x, center.y - 70, "#ffd93b", { text: "ULTIMATE" });
     for (const m of this.nearby(center, ECONOMY.ultimateRadius)) this.applyHit(u, damage, m);
   }
 
   private fire(u: SimUnit, target: SimMonster) {
-    let damage = u.stats.damage * this.heroDamageMult;
+    let damage = u.stats.damage * this.heroDamageMult * this.heraldMult;
     if (u.def.arch === "growth") damage *= growthMult(u.alive);
     const from = { x: u.x, y: u.y - 30 };
     if (u.def.arch === "chain") return this.chainLightning(u, target, damage, from);

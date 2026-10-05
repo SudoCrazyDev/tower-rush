@@ -1,6 +1,7 @@
 import { ECONOMY } from "./economy.ts";
 import type { Race } from "./races.ts";
 import type { Perk } from "./perks.ts";
+import { noAttack } from "./support.ts";
 
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane";
@@ -26,7 +27,16 @@ export type Arch =
   | "sniper" // slow, heavy shots at the healthiest monster
   | "growth" // damage keeps increasing while on the board
   | "buff" // no attack, speeds up neighbours
-  | "mana"; // weak attack, produces mana
+  | "mana" // weak attack, produces mana
+  // Support units (v1.1): never attack, one job each (support.ts).
+  | "mime" // copies a same-rank unit
+  | "portal" // swaps with a same-rank unit, or hops to an empty tile
+  | "mirror" // now and then turns into a same-rank neighbour
+  | "lucky" // neighbours' merges may keep their unit
+  | "hourglass" // neighbours charge ultimates faster
+  | "echo" // repeats neighbours' ultimates
+  | "herald" // every unit hits harder per awakened unit
+  | "brewer"; // brews mana, pays a harvest every wave
 
 export type Proj = "arrow" | "fireball" | "ice_shard" | "lightning" | "poison" | "cannonball" | "arcane_orb" | "spark";
 
@@ -93,6 +103,14 @@ export const ARCHETYPES: Record<Arch, { speed: number; dmg: number; label: strin
   growth: { speed: 0.9, dmg: 0.7, label: "Gets stronger the longer it stays" },
   buff: { speed: 0, dmg: 0, label: "Speeds up neighbouring units" },
   mana: { speed: 0.6, dmg: 0.4, label: "Generates mana over time" },
+  mime: { speed: 0, dmg: 0, label: "Support: copies a unit of the same rank" },
+  portal: { speed: 0, dmg: 0, label: "Support: swaps places with a unit of the same rank" },
+  mirror: { speed: 0, dmg: 0, label: "Support: turns into a neighbour of the same rank" },
+  lucky: { speed: 0, dmg: 0, label: "Support: neighbours' merges can keep their unit" },
+  hourglass: { speed: 0, dmg: 0, label: "Support: neighbours charge ultimates faster" },
+  echo: { speed: 0, dmg: 0, label: "Support: repeats neighbours' ultimates" },
+  herald: { speed: 0, dmg: 0, label: "Support: every unit hits harder per awakening" },
+  brewer: { speed: 0, dmg: 0, label: "Support: brews mana, pays a bonus every wave" },
 };
 export const ARCHS = Object.keys(ARCHETYPES) as Arch[];
 
@@ -139,8 +157,8 @@ const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arc
   arch,
   proj,
   blurb,
-  ...restyle({ damage: SEED_DAMAGE[rarity] * ARCHETYPES[arch].dmg, speed: ARCHETYPES[arch].speed }, "balanced", arch === "buff" ? "balanced" : style),
-  style: arch === "buff" ? "balanced" : style,
+  ...restyle({ damage: SEED_DAMAGE[rarity] * ARCHETYPES[arch].dmg, speed: ARCHETYPES[arch].speed }, "balanced", noAttack(arch) ? "balanced" : style),
+  style: noAttack(arch) ? "balanced" : style,
   perk,
   enabled: true,
 });
@@ -178,6 +196,12 @@ export const DEFAULT_UNITS: UnitDef[] = [
   U("witch_doctor", "Witch Doctor", "rare", "poison", "curse", "poison", "Hexes the weak into the grave.", "orc", "balanced", "finisher"),
   U("pumpkin_scarecrow", "Pumpkin Scarecrow", "rare", "poison", "stun", "fireball", "Scares them stiff, keeps their mana.", "sylvan", "balanced", "plunder"),
   U("ogre_chef", "Ogre Chef", "rare", "fire", "splash", "cannonball", "Big pots for big appetites.", "giant", "heavy", "giant_slayer"),
+  // v1.1 Supporting Cast Arrival: support units (rare)
+  U("portal_imp", "Portal Imp", "rare", "fire", "portal", "spark", "A mischievous imp who rearranges the battlefield.", "demon", "balanced", "none"),
+  U("mirror_slime", "Mirror Slime", "rare", "poison", "mirror", "poison", "It wobbles, it watches, then it's someone else.", "elemental", "balanced", "none"),
+  U("lucky_cat", "Lucky Cat", "rare", "nature", "lucky", "spark", "Wave the paw, keep the luck.", "beast", "balanced", "none"),
+  U("banner_herald", "Banner Herald", "rare", "fire", "herald", "spark", "When a hero awakens, the whole army rallies.", "human", "balanced", "none"),
+  U("gnome_brewer", "Gnome Brewer", "rare", "nature", "brewer", "spark", "Slow and steady fills the cauldron.", "gnome", "balanced", "none"),
   // epic
   U("crystal_golem", "Crystal Golem", "epic", "arcane", "splash", "arcane_orb", "Crystal shards split any armor.", "elemental", "heavy", "armor_breaker"),
   U("cyclops_smith", "Cyclops Smith", "epic", "fire", "buff", "fireball", "Forges neighbours blades that cut armor.", "giant", "balanced", "armor_breaker"),
@@ -196,6 +220,10 @@ export const DEFAULT_UNITS: UnitDef[] = [
   U("treant_guardian", "Treant Guardian", "epic", "nature", "stun", "spark", "Old roots trip the quickest feet.", "sylvan", "balanced", "hunter"),
   U("bone_necromancer", "Bone Necromancer", "epic", "poison", "curse", "poison", "Marks the dying for the grave.", "undead", "heavy", "finisher"),
   U("card_jester", "Card Jester", "epic", "arcane", "crit", "arcane_orb", "Always holds the ace. And your mana.", "human", "balanced", "plunder"),
+  // v1.1 Supporting Cast Arrival: support units (epic)
+  U("mime", "Mime", "epic", "arcane", "mime", "arcane_orb", "A silent performer who becomes whoever stands across.", "fae", "balanced", "none"),
+  U("hourglass_owl", "Hourglass Owl", "epic", "lightning", "hourglass", "lightning", "A clockwork owl that makes time run faster for friends.", "construct", "balanced", "none"),
+  U("echo_spirit", "Echo Spirit", "epic", "ice", "echo", "ice_shard", "Every great move deserves an encore.", "undead", "balanced", "none"),
   // legendary
   U("anubis_priest", "Anubis Priest", "legendary", "arcane", "execute", "arcane_orb", "Weighs every soul. Takes the weak.", "celestial", "balanced", "finisher"),
   U("crystal_queen", "Crystal Queen", "legendary", "ice", "freeze", "ice_shard", "Even the frost-born fall still.", "elf", "balanced", "frostbite"),
@@ -212,6 +240,16 @@ export const DEFAULT_UNITS: UnitDef[] = [
   U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "arcane_orb", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
   U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"),
 ];
+
+/**
+ * Units added to the defaults after configs were already saved (the v1.1 support units):
+ * appended to an older saved unit list so a live config gets them, with the default numbers.
+ */
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit"];
+export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
+  const have = new Set(list.map((u) => u.id));
+  return [...list, ...defaults.filter((d) => ADDED_UNITS.includes(d.id) && !have.has(d.id))];
+}
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */
 export const UNITS: UnitDef[] = structuredClone(DEFAULT_UNITS);

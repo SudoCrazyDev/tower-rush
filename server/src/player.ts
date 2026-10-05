@@ -5,7 +5,7 @@ import { currentConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
-import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, upgradeCost } from "../../shared/units.ts";
@@ -81,8 +81,10 @@ async function me(c: Ctx): Promise<{ u: UserRow; p: Profile }> {
   if (u.banned) fail(403, "banned", { reason: u.ban_reason });
   await touch(db, u);
   const p = readProfile(u);
-  // A new UTC day brings new quests.
-  if (refreshDaily(p)) await writeProfile(db, u, p);
+  // A new UTC day brings new quests; a new release its launch gift.
+  const fresh = refreshDaily(p);
+  const gifts = grantReleaseGifts(p).length > 0;
+  if (fresh || gifts) await writeProfile(db, u, p);
   return { u, p };
 }
 
@@ -385,6 +387,10 @@ player.post("/battles/:id/finish", P, async (c) => {
   const merges = int(req.merges, summons);
   const awakens = int(req.awakens, Math.floor(merges / (2 ** (ECONOMY.maxRank - 1) - 1))); // a max-rank unit takes 2^(maxRank-1) - 1 merges
   const heroCasts = int(req.heroCasts, Math.floor(elapsed / 10) + 1);
+  // Support units: a Mime copy and an Imp move each need a recharge; brewing is capped by time.
+  const copies = int(req.copies, Math.floor(elapsed / 4) + 1);
+  const swaps = int(req.swaps, Math.floor(elapsed / 4) + 1);
+  const brewed = int(req.brewed, Math.floor(elapsed * 60));
 
   const arenaIndex = Math.max(0, ARENAS.findIndex((a) => a.id === b.arena));
   // Running events boost the gold and gems (judged at the end of the battle).
@@ -403,7 +409,7 @@ player.post("/battles/:id/finish", P, async (c) => {
       p.bestWave = Math.max(p.bestWave, wave);
       // First time in a league pays its promotion reward.
       const promotions = payPromotions(p);
-      addQuestProgress(p.daily, { battles: 1, wave, kills, bosses, summons, merges, awakens, heroCasts });
+      addQuestProgress(p.daily, { battles: 1, wave, kills, bosses, summons, merges, awakens, heroCasts, copies, swaps, brewed });
       return { newBest, promotions };
     });
   } catch (e) {

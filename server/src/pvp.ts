@@ -56,6 +56,9 @@ interface Stats {
   merges?: number;
   awakens?: number;
   heroCasts?: number;
+  copies?: number;
+  swaps?: number;
+  brewed?: number;
 }
 
 /** A ranked result for one player's rating: did they win (null = draw), and their and the opponent's rating going in. */
@@ -107,6 +110,9 @@ async function questProgress(db: D1Database, userId: number, stats: Stats, secon
     merges: int(stats.merges, summons),
     awakens: int(stats.awakens, Math.floor(summons / (2 ** (ECONOMY.maxRank - 1) - 1))),
     heroCasts: int(stats.heroCasts, Math.floor(seconds / 10) + 1),
+    copies: int(stats.copies, Math.floor(seconds / 4) + 1),
+    swaps: int(stats.swaps, Math.floor(seconds / 4) + 1),
+    brewed: int(stats.brewed, Math.floor(seconds * 60)),
   };
   for (let attempt = 0; attempt < 4; attempt++) {
     const u = await getUser(db, userId);

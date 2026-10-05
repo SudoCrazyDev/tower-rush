@@ -3,6 +3,7 @@ import { useConfig } from "../config";
 import { Num, Text, Select, Toggle, Thumb, PageHead } from "../components";
 import { asset } from "../api";
 import { ARCHETYPES, ARCHS, ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
+import { noAttack } from "../../../shared/support.ts";
 import { PERKS, PERK_IDS } from "../../../shared/perks.ts";
 import { RACE_IDS, RACES } from "../../../shared/races.ts";
 
@@ -106,7 +107,7 @@ export function UnitsPage() {
                   <td className={changed(u, "proj")}><Select value={u.proj} options={PROJECTILES} onChange={(v) => set(i, "proj", v)} /></td>
                   <td className={changed(u, "damage")}><Num value={u.damage} step={0.5} min={0} onChange={(v) => set(i, "damage", v)} /></td>
                   <td className={changed(u, "speed")}><Num value={u.speed} step={0.05} min={0} onChange={(v) => set(i, "speed", v)} /></td>
-                  <td className="num-cell">{u.arch === "buff" ? "—" : (s.damage * s.speed).toFixed(1)}</td>
+                  <td className="num-cell">{noAttack(u.arch) ? "—" : (s.damage * s.speed).toFixed(1)}</td>
                   <td className={changed(u, "enabled")}><Toggle value={u.enabled} onChange={(v) => set(i, "enabled", v)} /></td>
                   <td className={changed(u, "blurb")}><Text value={u.blurb} onChange={(v) => set(i, "blurb", v)} width={220} /></td>
                 </tr>

@@ -4,6 +4,7 @@ import { ELEMENT_COLOR, maxRank, unitStats, type UnitDef } from "../data/units";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { EFFECTS, manaPerPulse } from "../../../shared/effects.ts";
 import { withPerk, type Perk } from "../../../shared/perks.ts";
+import { isSupport } from "../../../shared/support.ts";
 import { NAVY, txt } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
 
@@ -12,7 +13,7 @@ export const UNIT_PX = 116;
 export const AWAKENED_PX = 132;
 
 /** Whether a unit has awakened art (and so awakens at max rank). */
-export const canAwaken = (id: string) => hasAnim("units_awakened", `${id}_idle`);
+export const canAwaken = (id: string, arch?: string) => (!arch || !isSupport(arch as never)) && hasAnim("units_awakened", `${id}_idle`);
 
 /** A defender standing on one of the 15 board tiles. */
 export class Unit {
@@ -35,6 +36,15 @@ export class Unit {
   readonly awakened: boolean;
   /** Seconds charged toward the next ultimate. */
   ult = 0;
+  /** Extra ultimate charge rate from neighbouring Hourglass Owls (0.5 = +50%). */
+  charge = 0;
+  /** Support timer: Mime prep and Mirror Slime progress count up, Portal Imp recharge counts down. */
+  timer = 0;
+  /** Portal rush: attacks faster until then. */
+  rushUntil = 0;
+  /** Ready / recharge ring at the feet of support units with a timer. */
+  private supportRing: Phaser.GameObjects.Graphics | null = null;
+  private supportDrawn = "";
   private aura: Phaser.GameObjects.Graphics | null = null;
   /** Shown while a neighbouring buff unit speeds this one up: icon and the bonus. */
   private buffBadge: Phaser.GameObjects.Container | null = null;
@@ -47,7 +57,7 @@ export class Unit {
     this.def = def;
     this.rank = rank;
     this.slot = slot;
-    this.awakened = rank >= maxRank() && canAwaken(def.id);
+    this.awakened = rank >= maxRank() && canAwaken(def.id, def.arch);
     withPerk(this.perks, def.perk);
     const p = scene.slotPos(slot);
     if (this.awakened) {
@@ -97,35 +107,71 @@ export class Unit {
     this.aura?.setPosition(p.x, p.y + 30).setDepth(99 + p.y);
     this.buffRing?.setPosition(p.x, p.y + 32).setDepth(98 + p.y);
     this.buffBadge?.setPosition(p.x + 36, p.y - 44).setDepth(160 + p.y);
+    this.supportRing?.setPosition(p.x, p.y + 34).setDepth(97 + p.y);
+    this.supportDrawn = "";
     this.drawPips(p.x, p.y);
+  }
+
+  /**
+   * Mime, Portal Imp and Mirror Slime: a ring at the feet fills as the timer runs (`progress`
+   * 0-1) and turns green when the unit is ready to be dragged.
+   */
+  drawSupportRing(progress: number, color: number) {
+    if (!this.supportRing) {
+      const p = this.scene.slotPos(this.slot);
+      this.supportRing = this.scene.add.graphics().setPosition(p.x, p.y + 34).setDepth(97 + p.y);
+    }
+    const ready = progress >= 1;
+    const key = `${Math.round(progress * 40)}:${color}`;
+    if (key === this.supportDrawn) return;
+    this.supportDrawn = key;
+    const g = this.supportRing.clear();
+    g.lineStyle(7, NAVY, 0.7).strokeEllipse(0, 0, 88, 30);
+    if (ready) {
+      g.lineStyle(5, color, 1).strokeEllipse(0, 0, 88, 30).fillStyle(color, 0.18).fillEllipse(0, 0, 88, 30);
+      return;
+    }
+    // An ellipse arc from the top, clockwise.
+    const pts: { x: number; y: number }[] = [];
+    const n = Math.max(2, Math.round(40 * progress));
+    for (let i = 0; i <= n; i++) {
+      const a = -Math.PI / 2 + (i / 40) * Math.PI * 2;
+      pts.push({ x: Math.cos(a) * 44, y: Math.sin(a) * 15 });
+    }
+    g.lineStyle(5, 0xc9d2ff, 0.9).strokePoints(pts);
   }
 
   /** Show (or clear) the buffed marker after the board's buffs change. */
   showBuff() {
     const scene = this.scene;
-    if (this.haste <= 0) {
+    // Owl charge on an awakened unit shows in teal; any attack-speed bonus in gold.
+    const teal = this.haste <= 0 && this.charge > 0;
+    const amount = teal ? this.charge : this.haste;
+    const color = teal ? 0x3fe0d0 : 0xffd93b;
+    if (amount <= 0 || (this.buffBadge && this.buffBadge.getData("color") !== color)) {
       this.buffBadge?.destroy();
       this.buffRing?.destroy();
       this.buffBadge = this.buffRing = null;
-      return;
+      if (amount <= 0) return;
     }
-    const label = `+${Math.round(this.haste * 100)}%`;
+    const label = `+${Math.round(amount * 100)}%`;
     if (!this.buffBadge) {
+      const css = "#" + color.toString(16).padStart(6, "0");
       this.buffRing = scene.add.graphics();
-      this.buffRing.lineStyle(4, 0xffd93b, 0.85).strokeEllipse(0, 0, 96, 36);
-      this.buffRing.fillStyle(0xffd93b, 0.12).fillEllipse(0, 0, 96, 36);
+      this.buffRing.lineStyle(4, color, 0.85).strokeEllipse(0, 0, 96, 36);
+      this.buffRing.fillStyle(color, 0.12).fillEllipse(0, 0, 96, 36);
       scene.tweens.add({ targets: this.buffRing, alpha: { from: 1, to: 0.45 }, yoyo: true, repeat: -1, duration: 650, ease: "Sine.InOut" });
       const bg = scene.add.graphics();
-      const icon = scene.add.image(-20, 0, "stat:attack_speed").setDisplaySize(26, 26);
-      const text = txt(scene, 0, 0, label, 18, "#ffd93b", [0, 0.5]).setName("label");
-      this.buffBadge = scene.add.container(0, 0, [bg, icon, text]);
+      const icon = scene.add.image(-20, 0, teal ? "item:hourglass_speedup" : "stat:attack_speed").setDisplaySize(26, 26);
+      const text = txt(scene, 0, 0, label, 18, css, [0, 0.5]).setName("label");
+      this.buffBadge = scene.add.container(0, 0, [bg, icon, text]).setData("color", color);
     }
     const text = this.buffBadge.getByName("label") as Phaser.GameObjects.Text;
     const changed = text.text !== label;
     text.setText(label).setX(-6);
     const w = 26 + text.width + 10;
     const bg = this.buffBadge.list[0] as Phaser.GameObjects.Graphics;
-    bg.clear().fillStyle(NAVY, 0.92).fillRoundedRect(-36, -16, w, 32, 16).lineStyle(2, 0xffd93b, 1).strokeRoundedRect(-36, -16, w, 32, 16);
+    bg.clear().fillStyle(NAVY, 0.92).fillRoundedRect(-36, -16, w, 32, 16).lineStyle(2, color, 1).strokeRoundedRect(-36, -16, w, 32, 16);
     // Pinned to the tile, not the sprite (which may be mid-drag).
     const p = this.scene.slotPos(this.slot);
     this.buffRing!.setPosition(p.x, p.y + 32).setDepth(98 + p.y);
@@ -161,6 +207,7 @@ export class Unit {
   setBuffVisible(on: boolean) {
     this.buffBadge?.setVisible(on);
     this.buffRing?.setVisible(on);
+    this.supportRing?.setVisible(on);
   }
 
   drawPips(x: number, y: number) {
@@ -227,6 +274,10 @@ export class Unit {
       }
       return;
     }
+    if (isSupport(this.def.arch)) {
+      this.scene.updateSupport(this, dt);
+      return;
+    }
     if (this.def.arch === "mana") {
       this.pulse += dt;
       if (this.pulse >= EFFECTS.mana.every) {
@@ -237,7 +288,7 @@ export class Unit {
     }
 
     if (this.awakened) {
-      this.ult += dt;
+      this.ult += dt * (1 + this.charge);
       if (this.ult >= ECONOMY.ultimateCooldown) {
         const target = this.def.arch === "mana" ? null : this.scene.pickTarget(this.def.arch === "sniper" ? "strongest" : "first");
         if (target || this.def.arch === "mana") {
@@ -251,7 +302,7 @@ export class Unit {
     }
 
     const { speed } = this.stats;
-    const rate = speed * (1 + this.haste + this.scene.heroHaste);
+    const rate = speed * (1 + this.scene.hasteOf(this));
     this.cooldown -= dt;
     if (this.cooldown > 0) return;
     const target = this.scene.pickTarget(this.def.arch === "sniper" ? "strongest" : "first");
@@ -267,6 +318,7 @@ export class Unit {
     this.aura?.destroy();
     this.buffBadge?.destroy();
     this.buffRing?.destroy();
+    this.supportRing?.destroy();
     this.sprite.destroy();
     this.pips.destroy();
   }
