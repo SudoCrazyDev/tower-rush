@@ -29,7 +29,7 @@ export const DEFAULT_EFFECTS = {
   mime: { prep: 12, prepMin: 4 },
   portal: { cooldown: 20, cooldownPerRank: 2, cooldownMin: 4, rush: 0.25, rushTime: 5 },
   mirror: { interval: 25, intervalPerRank: 1.5, intervalMin: 8, warn: 2 },
-  lucky: { chance: 0.21, perRank: 0.06, max: 0.6 },
+  lucky: { chance: 1, perRank: 0, max: 1 },
   hourglass: { charge: 0.3, chargePerRank: 0.1, chargeMax: 1.5, speed: 0.1, speedPerRank: 0.0333, speedMax: 0.5 },
   echo: { strength: 0.25, perRank: 0.05, max: 0.75, delay: 0.6 },
   herald: { perAwakened: 0.05, perRank: 0.01, max: 0.6, shout: 0.3, shoutTime: 6 },

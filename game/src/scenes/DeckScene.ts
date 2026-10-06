@@ -82,8 +82,8 @@ const ROLES: { key: string; title: string; sub: string; icon: string; archs: Arc
   { key: "gun", title: "GUNSLINGERS", sub: "Single-target damage", icon: "stat:range", archs: ["shot", "pierce", "sniper", "crit", "execute", "growth"] },
   { key: "brawl", title: "BRAWLERS", sub: "Hit the whole crowd", icon: "stat:splash", archs: ["splash", "burn", "chain"] },
   { key: "trick", title: "TRICKSTERS", sub: "Slow, freeze, stun and curse", icon: "stat:slow", archs: ["slow", "freeze", "stun", "poison", "curse"] },
-  { key: "support", title: "BARKEEPS", sub: "Buffs and mana", icon: "item:mana_orb", archs: ["buff", "aura", "mana"] },
-  { key: "cast", title: "SUPPORTING CAST", sub: "Never attack: copy, swap, brew", icon: "item:star_shard", archs: SUPPORT_ARCHS },
+  { key: "support", title: "BARKEEPS", sub: "Buffs, mana and luck", icon: "item:mana_orb", archs: ["buff", "aura", "mana", "lucky"] },
+  { key: "cast", title: "SUPPORTING CAST", sub: "Never attack: copy, swap, brew", icon: "item:star_shard", archs: SUPPORT_ARCHS.filter((a) => a !== "lucky") },
 ];
 
 /** A support unit's effect in a few characters, for the stats tables. */

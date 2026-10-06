@@ -57,7 +57,7 @@
     { key: "gun", title: "Gunslingers", sub: "Single-target damage", icon: "stats/range", archs: ["shot", "pierce", "sniper", "crit", "execute", "growth"] },
     { key: "brawl", title: "Brawlers", sub: "Hit the whole crowd", icon: "stats/splash", archs: ["splash", "burn", "chain"] },
     { key: "trick", title: "Tricksters", sub: "Slow, freeze, stun and curse", icon: "stats/slow", archs: ["slow", "freeze", "stun", "poison", "curse"] },
-    { key: "support", title: "Barkeeps", sub: "Buffs and mana", icon: "items/mana_orb", archs: ["buff", "aura", "mana"] },
+    { key: "support", title: "Barkeeps", sub: "Buffs, mana and luck", icon: "items/mana_orb", archs: ["buff", "aura", "mana", "lucky"] },
   ];
   const ROLE_ARCHS = ROLES.flatMap((r) => r.archs);
   const GROUPS = {

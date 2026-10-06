@@ -55,6 +55,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
     units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["effect"] },
     effects: { rally: ["time"], oath: ["perKnight"] },
   },
+  // The Lucky Cat never attacks, so its neighbours' merges always keep their unit.
+  "1.3.1": { units: {}, effects: { lucky: ["chance", "perRank", "max"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
