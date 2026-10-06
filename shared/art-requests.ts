@@ -43,7 +43,10 @@ export const STYLE_ANCHOR = "assets/style/style_anchor_v2.png";
 const STYLE =
   "Flat 2D vector cartoon game art, thick dark navy outlines, simple two-tone cel shading, chunky rounded badge-like proportions, bright saturated colors, no gradients, no text, no watermark.";
 const GREEN = "Centered, full body, plenty of margin, on a solid flat pure green (#00FF00) background with no shadow on the ground.";
-const ICON = "Single centered icon, bold simple shape that stays readable at 32 pixels, on a solid flat pure green (#00FF00) background.";
+/** Crests and emblems are deliberately less cartoony than the characters: forged metal and enamel. */
+const EMBLEM =
+  "Premium semi-realistic game emblem: polished forged metal with engraved filigree, colored enamel inlays and small cut gemstones, beveled embossed relief, realistic specular highlights and soft ambient occlusion, subtle wear. No thick cartoon outlines, no flat colors. Front view, crisp silhouette that stays readable at 48 pixels, no text, no watermark.";
+const ICON ="Single centered icon, bold simple shape that stays readable at 32 pixels, on a solid flat pure green (#00FF00) background.";
 
 const AURA: Record<Element, string> = {
   fire: "a blazing flame aura, molten-gold and ember-orange trim, glowing embers",
@@ -239,17 +242,31 @@ export function artRequests(have: HaveArt): ArtRequest[] {
     ...PERK_IDS.filter((p) => p !== "none").map((p) =>
       icon("Perk icons", "perk", "ui/perks", p, `Perk: ${PERKS[p].label}`, `Unit perk icon for "${PERKS[p].label}" (${PERKS[p].text}): ${PERK_ART[p]}, inside a round gold-rimmed badge.`, ["ui/icon_buttons_set.webp"]),
     ),
-    ...RACE_IDS.map((r) =>
-      icon(
-        "Race crests",
-        "race",
-        "ui/races",
-        r,
-        `Race: ${RACES[r].label}`,
-        `Small heraldic crest for the ${RACES[r].label} race: ${RACE_ART[r]} on a shield shape tinted #${RACES[r].color.toString(16).padStart(6, "0")}.`,
-        ["ui/element_fire.webp"],
-      ),
-    ),
+    {
+      id: "style:emblem",
+      group: "Race crests",
+      title: "Emblem style anchor (make first)",
+      file: "style/emblem_anchor.png",
+      model: "Nano Banana Pro",
+      aspect: "1:1",
+      refs: [],
+      prompt:
+        `Style reference sheet: four fantasy heraldic emblems in a 2×2 grid with even spacing: a lion on a shield, a dragon on a kite shield, a horned skull on a round shield, an oak leaf on a pointed shield. ${EMBLEM} ` +
+        "Each emblem uses a different metal (gold, silver, bronze, dark iron), all clearly from the same set. Solid flat pure green (#00FF00) background, no green reflections on the metal.",
+    },
+    ...RACE_IDS.map((r) => ({
+      id: `race:${r}`,
+      group: "Race crests",
+      title: `Race: ${RACES[r].label}`,
+      file: `ui/races/${r}.png`,
+      model: "Nano Banana Pro" as const,
+      aspect: "1:1" as const,
+      refs: ["your emblem anchor (assets/style/emblem_anchor.png)"],
+      prompt:
+        `A heraldic crest for the ${RACES[r].label} race, in exactly the style of the reference emblems: ${RACE_ART[r]}, set on a shield with ` +
+        `enamel in #${RACES[r].color.toString(16).padStart(6, "0")} and a forged metal rim. ${EMBLEM} Single emblem, centered with margin, ` +
+        "on a solid flat pure green (#00FF00) background, no green reflections on the metal.",
+    })),
     ...Object.keys(ARCH_ART).map((a) =>
       icon("Archetype icons", "arch", "ui/archs", a, `Archetype: ${a}`, `Unit fighting-style icon: ${ARCH_ART[a]}, inside a rounded-square dark badge.`, ["ui/icon_buttons_set.webp"]),
     ),
