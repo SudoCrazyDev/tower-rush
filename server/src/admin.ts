@@ -12,6 +12,7 @@ import { leaguesByTrophies } from "../../shared/leagues.ts";
 import { UNIT_BY_ID, maxCardLevel } from "../../shared/units.ts";
 import { emptyReward, mailProblems } from "../../shared/mail.ts";
 import type { Reward } from "../../shared/daily.ts";
+import { ART_STATUSES, type ArtStatus } from "../../shared/art-requests.ts";
 
 export const admin = new Hono<AppEnv>();
 
@@ -464,6 +465,33 @@ admin.post("/me/password", async (c) => {
   await run(db, "UPDATE admins SET password_hash = ? WHERE id = ?", await hashPassword(pw), c.get("adminId"));
   await audit(db, c.get("adminId"), "admin.password", `admin:${c.get("adminId")}`);
   return c.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- art requests
+
+admin.get("/art", async (c) =>
+  c.json(await all(c.env.DB, "SELECT id, url, status, notes, updated_at AS updatedAt FROM art_requests")),
+);
+
+/** Saves one request's link, status and notes. A pasted link on a todo row makes it ready. */
+admin.put("/art/:id", async (c) => {
+  const id = param(c, "id");
+  const b = await body(c);
+  const url = String(b.url ?? "").trim();
+  if (url && !/^https:\/\/\S+$/.test(url)) fail(400, "The link must start with https://");
+  let status = String(b.status ?? "todo") as ArtStatus;
+  if (!ART_STATUSES.includes(status)) fail(400, "Unknown status");
+  if (url && status === "todo") status = "ready";
+  if (!url && status === "ready") status = "todo";
+  const notes = String(b.notes ?? "").slice(0, 2000);
+  await run(
+    c.env.DB,
+    `INSERT INTO art_requests (id, url, status, notes, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET url = excluded.url, status = excluded.status, notes = excluded.notes,
+       updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+    id, url, status, notes, Date.now(), c.get("adminId"),
+  );
+  return c.json({ id, url, status, notes, updatedAt: Date.now() });
 });
 
 admin.get("/audit", async (c) => {

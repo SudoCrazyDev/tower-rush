@@ -284,3 +284,16 @@ tr.baseline td { font-style: italic; color: var(--muted); }
 .arena-over.bad { color: #ff8080; }
 .card-group + .card-group { margin-top: 14px; }
 .card-group-head { display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 8px; }
+
+/* Art requests */
+.art-grid td { vertical-align: top; }
+.art-asset { min-width: 190px; }
+.art-asset code { display: block; margin: 4px 0; word-break: break-all; }
+.art-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.art-refs { display: flex; gap: 6px; flex-wrap: wrap; max-width: 200px; }
+.art-refs code { word-break: break-all; }
+.art-prompt { min-width: 280px; max-width: 420px; font-size: 12px; line-height: 1.45; }
+.art-prompt .clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.art-prompt > div { margin-bottom: 6px; cursor: pointer; }
+.art-link { min-width: 220px; }
+.art-link input { width: 100%; margin-bottom: 6px; }

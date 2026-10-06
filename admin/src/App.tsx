@@ -21,6 +21,7 @@ import { AnalyticsPage } from "./pages/Analytics";
 import { PlaygroundPage } from "./pages/Playground";
 import { PvpPage } from "./pages/Pvp";
 import { StoriesPage } from "./pages/Stories";
+import { ArtPage } from "./pages/Art";
 
 function useHashRoute() {
   const [hash, setHash] = useState(location.hash.slice(1) || "/");
@@ -50,6 +51,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/pvp", label: "PvP" },
   { path: "/playground", label: "Playground" },
   { path: "/versions", label: "Versions" },
+  { path: "/art", label: "Art requests" },
   { path: "/users", label: "Players", group: "People" },
   { path: "/mail", label: "Mail" },
   { path: "/admins", label: "Admins" },
@@ -164,6 +166,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     case "/offers": page = <OffersPage />; break;
     case "/economy": page = <EconomyPage />; break;
     case "/versions": page = <VersionsPage />; break;
+    case "/art": page = <ArtPage />; break;
     case "/users": page = id ? <UserDetail id={Number(id)} /> : <UsersPage />; break;
     case "/mail": page = <MailPage to={id ? Number(id) : undefined} />; break;
     case "/admins": page = <AdminsPage />; break;
