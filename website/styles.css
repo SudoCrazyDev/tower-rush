@@ -367,14 +367,18 @@ p { margin: 0; }
 /* Leagues as a staircase: each step sits higher than the one before. */
 /* Leagues as a staircase: every card is the same size and each sits a step higher than the last. */
 .ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; }
-.rung { margin-bottom: calc(var(--i) * 22px); text-align: center; padding: 14px 8px 8px; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 30%, var(--panel)), color-mix(in srgb, var(--c) 8%, var(--panel))); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 60%, transparent), 0 10px 0 color-mix(in srgb, var(--c) 30%, #050818), 0 16px 24px rgba(0, 0, 0, .4); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
+.rung { position: relative; margin-bottom: calc(var(--i) * 22px); text-align: center; padding: 24px 18px 20px; border-radius: 20px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 30%, var(--panel)), color-mix(in srgb, var(--c) 8%, var(--panel))); box-shadow: 0 16px 24px rgba(0, 0, 0, .45); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
+.rung::before { /* the unit-card frame art, 9-sliced so its corners and ornaments keep their shape */
+  content: ""; position: absolute; inset: -9px; pointer-events: none; z-index: 1;
+  border: 38px solid transparent; border-image: var(--frame) 30% stretch; filter: var(--tint) drop-shadow(0 4px 4px rgba(0, 0, 0, .5));
+}
 .rung:hover { transform: translateY(-6px); }
 .rung > img { width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
 .rung b { font: 400 20px/1.1 var(--display); color: var(--c); }
 .rung__gate { display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 15px; padding: 2px 10px; border-radius: 999px; background: rgba(0, 0, 0, .3); }
 .rung__gate img { width: 18px; height: 18px; }
 .rung__reward { align-self: stretch; min-height: 92px; margin-top: 4px; padding: 8px 4px; border-radius: 12px; background: rgba(0, 0, 0, .28); display: flex; flex-direction: column; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--text); }
-.rung__reward small { font-size: 10px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.rung__reward small { font-size: 10px; font-weight: 900; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
 .rung__reward span { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .rung__reward img { width: 20px; height: 20px; object-fit: contain; }
 .ladder__note { text-align: center; color: var(--muted); max-width: 720px; margin: 28px auto 0; }

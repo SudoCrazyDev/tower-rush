@@ -323,13 +323,24 @@
     r.gems && `<span>${img("items/gems.webp", "Gems")}${fmt(r.gems)}</span>`,
     r.chest && D.chests[r.chest] && `<span>${img(`items/${D.chests[r.chest].image}.webp`)}${D.chests[r.chest].name}</span>`,
   ].filter(Boolean).join("");
+  // Each league wears a unit-card rarity frame (cards/frame_*); bronze and platinum are tinted ones.
+  const LEAGUE_FRAME = {
+    bronze: ["common", "sepia(1) saturate(3) hue-rotate(-28deg) brightness(.78)"],
+    silver: ["common", "none"],
+    gold: ["legendary", "none"],
+    platinum: ["rare", "hue-rotate(-30deg) saturate(.75) brightness(1.1)"],
+    diamond: ["rare", "none"],
+    master: ["epic", "none"],
+    champion: ["mythic", "none"],
+  };
   const leagues = [...D.leagues].sort((a, b) => a.trophies - b.trophies);
   $("#leagueLadder").innerHTML = leagues.map((l, i) => {
     const icon = l.icon < D.leagueBadges ? `ui/league_${l.icon}.webp` : "items/trophy.webp";
-    return `<div class="rung" style="--c:${l.color};--i:${i}">
+    const [frame, tint] = LEAGUE_FRAME[l.id] ?? ["common", "none"];
+    return `<div class="rung" style="--c:${l.color};--i:${i};--frame:url(${ART}/cards/frame_${frame}.webp);--tint:${tint}">
       ${img(icon, l.name)}<b>${l.name.replace(" League", "")}</b>
       <span class="rung__gate">${img("items/trophy.webp")}${fmt(l.trophies)}</span>
-      <div class="rung__reward">${l.trophies ? `<small>Promotion reward</small>${reward(l.reward)}` : "<small>Everyone starts here</small>"}</div>
+      <div class="rung__reward">${l.trophies ? `<small>Reward</small>${reward(l.reward)}` : "<small>Everyone starts here</small>"}</div>
     </div>`;
   }).join("");
 
