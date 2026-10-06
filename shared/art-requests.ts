@@ -4,7 +4,7 @@
  * the D1 table art_requests keeps only the link, status and notes. `file` is where the image
  * goes in the raw pack (assets/), from which tools/build_assets.py builds the game files.
  */
-import { UNITS, type Element, type Rarity } from "./units.ts";
+import { ELEMENTS, UNITS, type Element, type Rarity } from "./units.ts";
 import { noAttack, isSupport } from "./support.ts";
 import { PERKS, PERK_IDS } from "./perks.ts";
 import { TRAITS } from "./monsters.ts";
@@ -43,9 +43,32 @@ export const STYLE_ANCHOR = "assets/style/style_anchor_v2.png";
 const STYLE =
   "Flat 2D vector cartoon game art, thick dark navy outlines, simple two-tone cel shading, chunky rounded badge-like proportions, bright saturated colors, no gradients, no text, no watermark.";
 const GREEN = "Centered, full body, plenty of margin, on a solid flat pure green (#00FF00) background with no shadow on the ground.";
-/** Crests and emblems are deliberately less cartoony than the characters: forged metal and enamel. */
+/** Crests and emblems: a notch more polished than the characters, like the league badges (ui/league_*). */
 const EMBLEM =
-  "Premium semi-realistic game emblem: polished forged metal with engraved filigree, colored enamel inlays and small cut gemstones, beveled embossed relief, realistic specular highlights and soft ambient occlusion, subtle wear. No thick cartoon outlines, no flat colors. Front view, crisp silhouette that stays readable at 48 pixels, no text, no watermark.";
+  "Mobile game emblem: bold chunky shapes, thick dark navy outline, glossy beveled metal with simple faceted highlights, a cut-gem accent, clean and bright. Stylized, not realistic: no scratches, no wear, no fine filigree. Front view, crisp silhouette that stays readable at 48 pixels, no text, no watermark.";
+/** The approved Dragon race crest (2026-10-06): every crest and element emblem matches it. */
+const EMBLEM_ANCHOR = "assets/style/emblem_anchor.png";
+/** Green crests key out badly on green, so these go on magenta. */
+const GREENISH_RACES = new Set<string>(["elf", "orc", "goblin", "sylvan"]);
+const GREENISH_ELEMENTS = new Set<string>(["nature", "poison"]);
+
+/** Only races that would have wings get them (the approved Dragon crest has gold wings). */
+const RACE_WINGS: Partial<Record<string, string>> = {
+  dragon: "Glossy gold wings spread from behind the shield, like the reference.",
+  fae: "Sparkly translucent butterfly wings spread from behind the shield.",
+  celestial: "Feathered white-and-gold angel wings spread from behind the shield.",
+  demon: "Dark red bat wings spread from behind the shield.",
+};
+
+const ELEMENT_ART: Record<Element, string> = {
+  fire: "a shield with deep red-orange enamel, a bold stylized flame symbol, a glossy gold rim and a cut ruby; instead of wings, curling flames rise from behind the shield",
+  ice: "a shield with icy light-blue enamel, a bold stylized snowflake symbol, a glossy silver rim and a cut sapphire; instead of wings, ice crystal shards fan out from behind the shield",
+  lightning: "a shield with electric yellow enamel, a bold stylized lightning bolt symbol, a glossy gold rim and a cut topaz; instead of wings, jagged lightning bolts spark out from behind the shield",
+  nature: "a shield with forest-green enamel, a bold stylized leaf symbol, a glossy bronze-gold rim and a cut emerald; instead of wings, large leaves fan out from behind the shield",
+  poison: "a shield with toxic purple enamel, a poison drop with a small skull, a glossy dark silver rim, a cut amethyst and a few lime bubbles; instead of wings, dripping toxic tendrils curl out from behind the shield",
+  arcane: "a shield with deep violet enamel, a glowing star-and-rune symbol, a glossy gold rim and a cut amethyst; instead of wings, swirling magic ribbons with small stars curl out from behind the shield",
+};
+
 const ICON ="Single centered icon, bold simple shape that stays readable at 32 pixels, on a solid flat pure green (#00FF00) background.";
 
 const AURA: Record<Element, string> = {
@@ -242,18 +265,18 @@ export function artRequests(have: HaveArt): ArtRequest[] {
     ...PERK_IDS.filter((p) => p !== "none").map((p) =>
       icon("Perk icons", "perk", "ui/perks", p, `Perk: ${PERKS[p].label}`, `Unit perk icon for "${PERKS[p].label}" (${PERKS[p].text}): ${PERK_ART[p]}, inside a round gold-rimmed badge.`, ["ui/icon_buttons_set.webp"]),
     ),
-    {
-      id: "style:emblem",
-      group: "Race crests",
-      title: "Emblem style anchor (make first)",
-      file: "style/emblem_anchor.png",
-      model: "Nano Banana Pro",
-      aspect: "1:1",
-      refs: [],
+    ...ELEMENTS.map((e) => ({
+      id: `element:${e}`,
+      group: "Element emblems",
+      title: `Element: ${e}`,
+      file: `ui/elements/${e}.png`,
+      model: "Nano Banana Pro" as const,
+      aspect: "1:1" as const,
+      refs: [EMBLEM_ANCHOR],
       prompt:
-        `Style reference sheet: four fantasy heraldic emblems in a 2×2 grid with even spacing: a lion on a shield, a dragon on a kite shield, a horned skull on a round shield, an oak leaf on a pointed shield. ${EMBLEM} ` +
-        "Each emblem uses a different metal (gold, silver, bronze, dark iron), all clearly from the same set. Solid flat pure green (#00FF00) background, no green reflections on the metal.",
-    },
+        `An element emblem for ${e.toUpperCase()}, in exactly the same style, outline thickness, glossy shading and proportions as the reference crest: ${ELEMENT_ART[e]}. ` +
+        `${EMBLEM} Single emblem, centered with margin, on a solid flat pure ${GREENISH_ELEMENTS.has(e) ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
+    })),
     ...RACE_IDS.map((r) => ({
       id: `race:${r}`,
       group: "Race crests",
@@ -261,11 +284,11 @@ export function artRequests(have: HaveArt): ArtRequest[] {
       file: `ui/races/${r}.png`,
       model: "Nano Banana Pro" as const,
       aspect: "1:1" as const,
-      refs: ["your emblem anchor (assets/style/emblem_anchor.png)"],
+      refs: [EMBLEM_ANCHOR],
       prompt:
-        `A heraldic crest for the ${RACES[r].label} race, in exactly the style of the reference emblems: ${RACE_ART[r]}, set on a shield with ` +
-        `enamel in #${RACES[r].color.toString(16).padStart(6, "0")} and a forged metal rim. ${EMBLEM} Single emblem, centered with margin, ` +
-        "on a solid flat pure green (#00FF00) background, no green reflections on the metal.",
+        `A heraldic crest for the ${RACES[r].label} race, in exactly the same style, outline thickness, glossy shading and proportions as the reference crest: ${RACE_ART[r]}, set on a shield with ` +
+        `enamel in #${RACES[r].color.toString(16).padStart(6, "0")} and a glossy metal rim. ${RACE_WINGS[r] ?? "No wings: the shield alone, maybe with a small race-themed ornament on top."} ` +
+        `${EMBLEM} Single emblem, centered with margin, on a solid flat pure ${GREENISH_RACES.has(r) ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
     })),
     ...Object.keys(ARCH_ART).map((a) =>
       icon("Archetype icons", "arch", "ui/archs", a, `Archetype: ${a}`, `Unit fighting-style icon: ${ARCH_ART[a]}, inside a rounded-square dark badge.`, ["ui/icon_buttons_set.webp"]),
