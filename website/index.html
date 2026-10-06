@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tower Rush | Merge. Defend. Conquer.</title>
+  <meta name="description" content="Tower Rush is a free merge tower-defense game in your browser. Summon heroes, merge them into legends, and hold the line against 49 monsters and 20 bosses across 16 arenas." />
+  <meta name="theme-color" content="#0a0f2c" />
+  <meta property="og:title" content="Tower Rush | Merge. Defend. Conquer." />
+  <meta property="og:description" content="Free merge tower defense in your browser. 78 units, 16 arenas, Story mode and real-time PvP." />
+  <meta property="og:image" content="https://assets.depedtoolkit.com/locations/loading_keyart.webp" />
+  <link rel="icon" href="https://assets.depedtoolkit.com/ui/logo.webp" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://assets.depedtoolkit.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ============ NAV ============ -->
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="#top" aria-label="Tower Rush home">
+      <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp" alt="Tower Rush" />
+    </a>
+    <nav class="nav__links" id="navLinks">
+      <a href="#how">How to play</a>
+      <a href="#codex">Units</a>
+      <a href="#heroes">Heroes</a>
+      <a href="#arenas">Arenas</a>
+      <a href="#bosses">Bosses</a>
+      <a href="#modes">Modes</a>
+      <a href="#news">News</a>
+    </nav>
+    <a class="btn btn--play btn--sm" data-play href="#">Play free</a>
+    <button class="nav__burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <video class="hero__video" autoplay muted loop playsinline crossorigin="anonymous"
+        poster="https://assets.depedtoolkit.com/locations/loading_keyart.webp">
+        <source src="https://assets.depedtoolkit.com/video/lobby_landscape.mp4" type="video/mp4" />
+      </video>
+      <div class="hero__shade"></div>
+      <div class="hero__content">
+        <span class="pill pill--live"><i></i> v1.2 Stories is live</span>
+        <img class="hero__logo" crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp" alt="Tower Rush" />
+        <h1 class="hero__tag">Merge. Defend. <span>Conquer.</span></h1>
+        <p class="hero__sub">Summon a squad of heroes, merge them into legends and hold the gate against endless monster waves. Free in your browser on phone or PC.</p>
+        <div class="hero__cta">
+          <a class="btn btn--play btn--xl" data-play href="#"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play free now</a>
+          <button class="btn btn--ghost btn--xl" data-trailer><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8v8l6-4z"/></svg>Watch trailer</button>
+        </div>
+        <p class="hero__note">No download &middot; No sign-up needed &middot; Progress saved to your account</p>
+      </div>
+      <a class="hero__scroll" href="#stats" aria-label="Scroll down"><span></span></a>
+    </section>
+
+    <!-- ============ STATS ============ -->
+    <section class="stats" id="stats">
+      <div class="stat"><b data-count="units">78</b><span>Units to collect</span></div>
+      <div class="stat"><b data-count="arenas">16</b><span>Arenas</span></div>
+      <div class="stat"><b data-count="monsters">49</b><span>Monsters</span></div>
+      <div class="stat"><b data-count="bosses">20</b><span>Bosses</span></div>
+      <div class="stat"><b data-count="heroes">8</b><span>Heroes</span></div>
+    </section>
+
+    <!-- ============ HOW TO PLAY ============ -->
+    <section class="section" id="how">
+      <div class="section__head">
+        <span class="eyebrow">Learn in 30 seconds</span>
+        <h2>How to play</h2>
+        <p>Every battle is a race: build your board faster than the horde can reach the gate.</p>
+      </div>
+      <div class="steps">
+        <article class="step">
+          <div class="step__num">1</div>
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/mana_orb.webp" alt="" loading="lazy" />
+          <h3>Summon</h3>
+          <p>Spend mana to drop a random unit from your 5-card deck onto the board.</p>
+        </article>
+        <article class="step">
+          <div class="step__num">2</div>
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/vfx/merge_levelup.webp" alt="" loading="lazy" />
+          <h3>Merge</h3>
+          <p>Drag two matching units together to rank up. Higher ranks hit much harder.</p>
+        </article>
+        <article class="step">
+          <div class="step__num">3</div>
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/scroll_upgrade.webp" alt="" loading="lazy" />
+          <h3>Power up</h3>
+          <p>Boost a card mid-battle, call your hero's ability, and awaken your best units.</p>
+        </article>
+        <article class="step">
+          <div class="step__num">4</div>
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/trophy.webp" alt="" loading="lazy" />
+          <h3>Defend</h3>
+          <p>Survive the waves, beat the boss and climb the trophy road to new arenas.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ CODEX ============ -->
+    <section class="section section--panel" id="codex">
+      <div class="section__head">
+        <span class="eyebrow">Unit codex</span>
+        <h2>Build your dream deck</h2>
+        <p>Six elements, six rarities and 26 ways to fight. Tap any card for its stats.</p>
+      </div>
+      <div class="filters">
+        <div class="chips" id="rarityFilter" role="group" aria-label="Rarity"></div>
+        <div class="chips" id="elementFilter" role="group" aria-label="Element"></div>
+        <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><input id="unitSearch" type="search" placeholder="Search units" /></label>
+      </div>
+      <p class="codex__count" id="codexCount"></p>
+      <div class="cards" id="cards"></div>
+      <div class="center"><button class="btn btn--ghost" id="moreUnits">Show all units</button></div>
+    </section>
+
+    <!-- ============ HEROES ============ -->
+    <section class="section" id="heroes">
+      <div class="section__head">
+        <span class="eyebrow">Lead the charge</span>
+        <h2>Pick your hero</h2>
+        <p>Heroes stand behind your board and turn the tide with one game-changing power.</p>
+      </div>
+      <div class="heroes">
+        <div class="heroes__stage">
+          <img id="heroArt" crossorigin="anonymous" alt="" />
+          <div class="heroes__info">
+            <h3 id="heroName"></h3>
+            <p class="heroes__blurb" id="heroBlurb"></p>
+            <p class="heroes__ability" id="heroAbility"></p>
+            <div class="heroes__meta" id="heroMeta"></div>
+          </div>
+        </div>
+        <div class="heroes__list" id="heroList" role="tablist"></div>
+      </div>
+    </section>
+
+    <!-- ============ ARENAS ============ -->
+    <section class="section section--panel" id="arenas">
+      <div class="section__head">
+        <span class="eyebrow">The trophy road</span>
+        <h2>16 arenas to conquer</h2>
+        <p>Win trophies to unlock new battlegrounds, each with its own monsters and bosses. Hover to see them come alive.</p>
+      </div>
+      <div class="rail" id="arenaRail"></div>
+    </section>
+
+    <!-- ============ BOSSES ============ -->
+    <section class="section section--danger" id="bosses">
+      <div class="section__head">
+        <img class="section__badge" crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/boss_warning.webp" alt="" loading="lazy" />
+        <span class="eyebrow eyebrow--red">Boss warning</span>
+        <h2>Face the bosses</h2>
+        <p>Every fifth wave something big walks through the gate, and each boss has a trick of its own.</p>
+      </div>
+      <div class="bosses" id="bossGrid"></div>
+      <h3 class="subhead">The bestiary</h3>
+      <div class="marquee"><div class="marquee__track" id="monsterTrack"></div></div>
+    </section>
+
+    <!-- ============ MODES ============ -->
+    <section class="section" id="modes">
+      <div class="section__head">
+        <span class="eyebrow">Ways to play</span>
+        <h2>Game modes</h2>
+      </div>
+      <div class="modes">
+        <article class="mode mode--story">
+          <img class="mode__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/story_background.webp" alt="" loading="lazy" />
+          <div class="mode__body">
+            <span class="pill">New in v1.2</span>
+            <h3>Story mode</h3>
+            <p><b>Book 1: The Chosen.</b> Three stories, nine scripted chapters with intro panels, special decks and boss fights. Clear them to earn story-only cards like the Princess Muse.</p>
+            <div class="books" id="books"></div>
+          </div>
+        </article>
+        <article class="mode mode--pvp">
+          <img class="mode__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/pvp_versus_background.webp" alt="" loading="lazy" />
+          <div class="mode__body">
+            <span class="pill pill--red">Real-time</span>
+            <h3>PvP battles</h3>
+            <p>Same waves, same clock, two players. Spend mana to <b>send monsters</b> to your rival's board and build income to outlast them.</p>
+            <ul class="mode__list">
+              <li><b>Ranked</b> climb a rating ladder with its own tiers</li>
+              <li><b>Mirror</b> both players get the same deck</li>
+              <li><b>Casual</b> and <b>VS Bot</b> for practice</li>
+              <li><b>Friend codes</b> to challenge anyone</li>
+            </ul>
+          </div>
+        </article>
+        <article class="mode mode--classic">
+          <img class="mode__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/world_map.webp" alt="" loading="lazy" />
+          <div class="mode__body">
+            <span class="pill pill--gold">Core</span>
+            <h3>Arena battles</h3>
+            <p>Survive as many waves as you can. Your best wave per arena, daily quests, login rewards and chests keep every run worth it.</p>
+            <div class="loot">
+              <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/chest_common.webp" alt="Common chest" loading="lazy" />
+              <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/chest_rare.webp" alt="Rare chest" loading="lazy" />
+              <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/chest_epic.webp" alt="Epic chest" loading="lazy" />
+              <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/chest_legendary.webp" alt="Legendary chest" loading="lazy" />
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ LEAGUES ============ -->
+    <section class="section section--panel" id="leagues">
+      <div class="section__head">
+        <span class="eyebrow">Climb the ranks</span>
+        <h2>Trophy leagues</h2>
+        <p>Each promotion pays out coins, gems and chests. How high can you go?</p>
+      </div>
+      <div class="leagues" id="leagues"></div>
+    </section>
+
+    <!-- ============ NEWS ============ -->
+    <section class="section" id="news">
+      <div class="section__head">
+        <span class="eyebrow">Patch notes</span>
+        <h2>Latest news</h2>
+      </div>
+      <div class="news">
+        <article class="post post--feature">
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/story1_saving_the_muse.webp" alt="" loading="lazy" />
+          <div>
+            <time>Oct 6, 2026 &middot; v1.2.0</time>
+            <h3>Stories: Book 1 "The Chosen"</h3>
+            <p>Story mode arrives with three stories of three chapters each. Every chapter is a scripted battle with intro panels and a boss. Meet the Knights and Mercenaries, a new kind of unit that plays for the team or for itself.</p>
+          </div>
+        </article>
+        <article class="post">
+          <time>Oct 6, 2026 &middot; v1.2.1 / v1.2.2</time>
+          <h3>Knights hotfix</h3>
+          <p>Balance changes for the story Knights and Mercenaries, and story card unlocks fixed.</p>
+        </article>
+        <article class="post">
+          <time>Oct 6, 2026 &middot; v1.1.0</time>
+          <h3>Supporting Cast Arrival</h3>
+          <p>8 Rare and Epic support units that buff, heal and slow instead of attacking. Launch gift: Portal Imp and Gnome Brewer.</p>
+        </article>
+        <article class="post">
+          <time>Oct 3&ndash;5, 2026 &middot; v1.0.0</time>
+          <h3>Launch</h3>
+          <p>Tower Rush goes live with 60 units, 16 arenas, heroes, PvP, daily quests and trophy leagues.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section class="cta">
+      <img class="cta__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/lobby_landscape.webp" alt="" loading="lazy" />
+      <div class="cta__body">
+        <h2>The gate won't hold itself.</h2>
+        <p>Jump in now. It's free, it runs in your browser, and your first chest is waiting.</p>
+        <a class="btn btn--play btn--xl" data-play href="#"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play Tower Rush</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp" alt="Tower Rush" loading="lazy" />
+    <nav>
+      <a href="#codex">Units</a><a href="#arenas">Arenas</a><a href="#modes">Modes</a><a href="#news">News</a><a data-play href="#">Play</a>
+    </nav>
+    <p>&copy; 2026 Tower Rush. All rights reserved.</p>
+  </footer>
+
+  <!-- ============ MODALS ============ -->
+  <div class="modal" id="unitModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__box unit" role="dialog" aria-modal="true" aria-labelledby="unitName">
+      <button class="modal__x" data-close aria-label="Close">&times;</button>
+      <div class="unit__art">
+        <img id="unitImg" crossorigin="anonymous" alt="" />
+        <button class="unit__awaken" id="unitAwaken" hidden>Show awakened</button>
+      </div>
+      <div class="unit__info">
+        <div class="unit__tags" id="unitTags"></div>
+        <h3 id="unitName"></h3>
+        <p class="unit__blurb" id="unitBlurb"></p>
+        <div class="unit__stats" id="unitStats"></div>
+        <p class="unit__arch" id="unitArch"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="trailerModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__box modal__box--video" role="dialog" aria-modal="true" aria-label="Trailer">
+      <button class="modal__x" data-close aria-label="Close">&times;</button>
+      <video id="trailer" controls playsinline crossorigin="anonymous" preload="none"
+        poster="https://assets.depedtoolkit.com/locations/loading_keyart.webp">
+        <source src="https://assets.depedtoolkit.com/video/trailer.mp4" type="video/mp4" />
+      </video>
+    </div>
+  </div>
+
+  <script src="data/game.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
