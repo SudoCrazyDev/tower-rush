@@ -473,6 +473,77 @@ const VFX_LIST: [string, string, string, string, boolean?][] = [
   ["VFX: rewards", "rarity_glow_rare", "Rare glow", "a radiant blue glow ring with sparkles"],
 ];
 
+/**
+ * Melee weapons units throw instead of the generic spark (vfx/weapons/<key>.png). The art is
+ * element-neutral: the game adds the element glow, particle trail and impact, so a future unit
+ * just picks one. "spin" weapons rotate in flight, "straight" ones fly point-first, "strike" ones
+ * appear at the target. [key, what, motion]
+ */
+const WEAPONS: [string, string, "spin" | "straight" | "strike"][] = [
+  // Blades
+  ["sword", "a classic steel knight's sword with a gold crossguard", "spin"],
+  ["katana", "a slim curved katana with a wrapped hilt and round guard", "spin"],
+  ["greatsword", "a huge two-handed steel greatsword", "spin"],
+  ["dagger", "a short steel dagger with a leather grip", "spin"],
+  ["twin_daggers", "two crossed steel daggers", "spin"],
+  ["sabre", "a curved cavalry sabre with a brass hand guard", "spin"],
+  ["scimitar", "a wide curved desert scimitar", "spin"],
+  ["rapier", "a thin elegant rapier with a swept hilt", "spin"],
+  ["cutlass", "a stubby pirate cutlass with a cup guard", "spin"],
+  ["cleaver", "a big square butcher's cleaver", "spin"],
+  // Axes and blunt
+  ["axe", "a single-bladed wood-handled battle axe", "spin"],
+  ["double_axe", "a big double-headed battle axe", "spin"],
+  ["hammer", "a chunky steel war hammer with a wooden handle", "spin"],
+  ["mace", "a flanged steel mace", "spin"],
+  ["flail", "a spiked iron ball on a short chain and handle", "spin"],
+  ["morning_star", "a spiked morning-star club", "spin"],
+  ["club", "a knobbly wooden caveman club", "spin"],
+  ["anchor", "a heavy iron ship anchor", "spin"],
+  // Polearms
+  ["spear", "a wooden spear with a leaf-shaped steel tip, pointing right", "straight"],
+  ["lance", "a long striped jousting lance with a steel tip, pointing right", "straight"],
+  ["trident", "a three-pronged steel trident, pointing right", "straight"],
+  ["halberd", "a halberd with an axe blade and spike", "spin"],
+  ["scythe", "a large curved reaper's scythe", "spin"],
+  ["sickle", "a small curved hand sickle", "spin"],
+  ["staff", "a long wooden staff with metal caps on both ends", "spin"],
+  ["bo_staff", "a plain lacquered red bo staff", "spin"],
+  // Thrown
+  ["shuriken", "a four-pointed steel ninja star", "spin"],
+  ["kunai", "a black steel kunai with a ring pommel, pointing right", "straight"],
+  ["chakram", "a round steel chakram ring blade", "spin"],
+  ["boomerang", "a carved wooden boomerang", "spin"],
+  ["throwing_knife", "a slim balanced throwing knife, pointing right", "straight"],
+  ["bola", "a bola: three stone weights tied together by cords", "spin"],
+  // Body attacks
+  ["palm_wave", "a glowing open-palm print shockwave", "strike"],
+  ["fist_shockwave", "a big punching fist with a round shockwave ring", "strike"],
+  ["claw_swipe", "three curved claw swipe arcs", "strike"],
+  ["bite", "a pair of snapping cartoon jaws with sharp teeth", "strike"],
+  ["tail_swipe", "a curved swoosh arc of a swinging tail", "strike"],
+  ["horn_charge", "a pair of bull horns with a dust burst", "strike"],
+  ["stomp_crack", "a flat cracked-ground stomp with flying rocks", "strike"],
+  // Quirky
+  ["frying_pan", "a black iron frying pan", "spin"],
+  ["wrench", "a big steel adjustable wrench", "spin"],
+  ["saw_blade", "a round toothed circular saw blade", "spin"],
+  ["ladle", "a big soup ladle", "spin"],
+  ["war_fan", "an open folding steel war fan", "spin"],
+  ["bone", "a big cartoon bone", "spin"],
+  ["pitchfork", "a three-tined farm pitchfork, pointing right", "straight"],
+];
+
+/** Hand-made weapons for top-tier units, drawn from the unit's own sprite. [unit id, name, what] */
+const SIGNATURE_WEAPONS: [string, string, string][] = [
+  ["monkey_king", "Monkey King", "his golden staff with red bands at both ends, with a swirl of green leaves"],
+  ["fox_samurai", "Fox Samurai", "his katana wreathed in violet foxfire flames"],
+  ["rogue_knight", "Rogue Knight", "his two crossed daggers trailing orange embers"],
+  ["pentagonal_knight", "Pentagonal Knight", "his war hammer crackling with yellow lightning"],
+  ["berserker_sellsword", "Berserker Sellsword", "his huge notched greatsword trailing fire"],
+  ["lance_knight", "Lance Knight", "his lance crackling with lightning, pointing right"],
+];
+
 /** The awakened art the game already has: index.json from the asset base. */
 export interface HaveArt {
   units_awakened: string[];
@@ -537,6 +608,32 @@ export function artRequests(have: HaveArt): ArtRequest[] {
       prompt:
         `${STYLE} Game visual effect sprite: ${what}, matching the reference effects. Bright glowing colors, one single frame, ` +
         `centered with margin, nothing else in frame, on a solid flat pure ${magenta ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
+    })),
+    ...WEAPONS.map(([key, what, motion]) => ({
+      id: `weapon:${key}`,
+      group: "Weapons (generic)",
+      title: `Weapon: ${key.replace(/_/g, " ")} (${motion})`,
+      file: `vfx/weapons/${key}.png`,
+      model: "Nano Banana 2" as const,
+      aspect: "1:1" as const,
+      refs: ["vfx/proj_arrow.webp", "vfx/hit_spark.webp", STYLE_ANCHOR],
+      prompt:
+        `${STYLE} Game weapon sprite for a thrown attack: ${what}. Plain neutral materials (steel, wood, gold, leather), no elemental glow, no fire, no magic, ` +
+        `${motion === "strike" ? "drawn as a bold white-and-grey effect shape" : "seen flat from the side, the whole weapon visible"}. ` +
+        `One single object, centered with margin, nothing else in frame, on a solid flat pure green (#00FF00) background.`,
+    })),
+    ...SIGNATURE_WEAPONS.map(([id, name, what]) => ({
+      id: `weapon-sig:${id}`,
+      group: "Weapons (signature)",
+      title: `Signature weapon: ${name}`,
+      file: `vfx/weapons/sig_${id}.png`,
+      model: "Nano Banana Pro" as const,
+      aspect: "1:1" as const,
+      refs: [U(id), STYLE_ANCHOR],
+      prompt:
+        `${STYLE} Game weapon sprite: the ${name}'s weapon from the reference character, ${what}. Same colors and design as the weapon the character holds, ` +
+        `but on its own with no character, seen flat from the side, the whole weapon visible, bright and glowing. ` +
+        `One single object, centered with margin, nothing else in frame, on a solid flat pure ${id === "monkey_king" ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
     })),
     ...SCENES.map(([group, k, title, aspect, model, refs, what]) => {
       const site = group === "Website images";
