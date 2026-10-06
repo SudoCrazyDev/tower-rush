@@ -91,11 +91,12 @@ export interface UnitDef {
  * - fatigue: adjacent units attack slower while this one is attacking
  * - shellshock: each hit may stun a random adjacent unit briefly
  * - wages: costs mana at the start of every wave; sulks (no attacks) for a wave it can't be paid
- * - oath: more damage for each adjacent Knight
- * - bane: extra damage to corrupted bosses
+ * - oath: more damage and attack speed for each adjacent Knight
+ * - bane: extra damage to corrupted bosses, and each hit chains to more monsters
+ * - lantern: extra mana every few seconds, more for each Knight on the field
  */
-export type UnitEffect = "rally" | "irritate" | "fatigue" | "shellshock" | "wages" | "oath" | "bane";
-export const UNIT_EFFECTS: UnitEffect[] = ["rally", "irritate", "fatigue", "shellshock", "wages", "oath", "bane"];
+export type UnitEffect = "rally" | "irritate" | "fatigue" | "shellshock" | "wages" | "oath" | "bane" | "lantern";
+export const UNIT_EFFECTS: UnitEffect[] = ["rally", "irritate", "fatigue", "shellshock", "wages", "oath", "bane", "lantern"];
 
 export const RARITY_ORDER: Rarity[] = RARITIES;
 
@@ -279,14 +280,14 @@ export const DEFAULT_UNITS: UnitDef[] = [
   // v1.2 Stories: Story 2's Knights and Mercenaries. Pentagonal and Rogue Knight are its reward
   // (normal Epic cards once earned); the other seven only exist in the story's Event deck.
   { ...U("pentagonal_knight", "Pentagonal Knight", "epic", "lightning", "shot", "spark", "Every hammer blow rallies the line.", "human", "heavy", "none"), damage: 100, speed: 0.44, role: "Knight", storyReward: true, effect: "rally" },
-  { ...U("rogue_knight", "Rogue Knight", "epic", "fire", "shot", "spark", "Fast blades, short temper. Keep him on the edge.", "human", "rapid", "none"), damage: 24, speed: 2.4, role: "Mercenary", storyReward: true, effect: "irritate" },
+  { ...U("rogue_knight", "Rogue Knight", "epic", "fire", "shot", "spark", "Fast blades, short temper. Keep him on the edge.", "human", "rapid", "none"), damage: 24, speed: 4.8, role: "Mercenary", storyReward: true, effect: "irritate" },
   { ...U("aegis_knight", "Aegis Knight", "epic", "arcane", "aegis", "spark", "Stand by the shield and nothing shakes you.", "human", "balanced", "none"), role: "Knight", storyOnly: true },
   { ...U("lance_knight", "Lance Knight", "epic", "lightning", "pierce", "spark", "Runs the whole line through. Hates corruption most.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "bane" },
   { ...U("oath_knight", "Oath Knight", "epic", "fire", "shot", "spark", "Stronger with every sworn brother beside him.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "oath" },
-  { ...U("lantern_knight", "Lantern Knight", "epic", "arcane", "mana", "arcane_orb", "His lantern finds mana in the dark.", "human", "balanced", "plunder"), role: "Knight", storyOnly: true },
+  { ...U("lantern_knight", "Lantern Knight", "epic", "arcane", "mana", "arcane_orb", "His lantern finds mana in the dark.", "human", "balanced", "plunder"), role: "Knight", storyOnly: true, effect: "lantern" },
   { ...U("berserker_sellsword", "Berserker Sellsword", "epic", "fire", "shot", "spark", "Hits like a landslide. Wears out everyone near him.", "human", "heavy", "none"), damage: 75, role: "Mercenary", storyOnly: true, effect: "fatigue" },
   { ...U("powder_grenadier", "Powder Grenadier", "epic", "fire", "splash", "cannonball", "Big blasts. Mind your ears.", "human", "balanced", "none"), damage: 52, role: "Mercenary", storyOnly: true, effect: "shellshock" },
-  { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 46, role: "Mercenary", storyOnly: true, effect: "wages" },
+  { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 60, speed: 1.25, role: "Mercenary", storyOnly: true, effect: "wages" },
 ];
 
 /** The v1.2 Story units: Muse, the Knights and the Mercenaries. */

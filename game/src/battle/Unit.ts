@@ -330,6 +330,13 @@ export class Unit {
         this.scene.irritateNeighbours(this);
       }
     }
+    if (this.def.effect === "lantern") {
+      this.effectTimer += dt;
+      if (this.effectTimer >= EFFECTS.lantern.every) {
+        this.effectTimer = 0;
+        this.scene.lanternPulse(this);
+      }
+    }
     if (this.def.arch === "buff" || this.def.arch === "aura" || this.def.arch === "aegis") {
       this.pulse -= dt;
       if (this.pulse <= 0) {

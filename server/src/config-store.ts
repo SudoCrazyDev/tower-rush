@@ -1,4 +1,4 @@
-import { applyConfig, defaultConfig, validateConfig, withPvpDefaults, type GameConfig } from "../../shared/config.ts";
+import { applyConfig, defaultConfig, validateConfig, withHotfixes, withPvpDefaults, type GameConfig } from "../../shared/config.ts";
 import { withEffectDefaults } from "../../shared/effects.ts";
 import { withRaces } from "../../shared/races.ts";
 import { withAdded, withAddedUnits, withStyles } from "../../shared/units.ts";
@@ -24,7 +24,7 @@ const CHECK_MS = 5_000;
 /** Older saved configs may predate newer fields; fill those in from the defaults. */
 function upgrade(cfg: GameConfig): GameConfig {
   const d = defaultConfig();
-  return {
+  return withHotfixes({
     ...d,
     ...cfg,
     units: withAddedUnits(withStyles(withRaces(cfg.units, d.units), d.units), d.units),
@@ -35,7 +35,8 @@ function upgrade(cfg: GameConfig): GameConfig {
     effects: withEffectDefaults(cfg.effects),
     pvp: withPvpDefaults(cfg.pvp),
     dropWeights: { ...d.dropWeights, ...cfg.dropWeights },
-  };
+    hotfixes: cfg.hotfixes ?? [],
+  });
 }
 
 function load(row: VersionRow) {

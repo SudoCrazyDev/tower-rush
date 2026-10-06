@@ -5,12 +5,12 @@ import { ARENAS, ARENA_BY_ID, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "../data/monsters";
 import { maxRank, rarityIndex, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
 import { findChapter, starsFor, type StoryChapter, type StoryDef, type StoryLine } from "../../../shared/stories.ts";
-import { clearDebuffs, isKnight, square3 } from "../../../shared/statuses.ts";
+import { clearDebuffs, isKnight, isMercenary, square3 } from "../../../shared/statuses.ts";
 import { raceLabel } from "../../../shared/races.ts";
 import { chills, withPerk, type Perk } from "../../../shared/perks.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import {
-  EFFECTS, auraBonus, buffBonus, wagesFor, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
+  EFFECTS, auraBonus, buffBonus, wagesFor, lanternMana, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
 } from "../../../shared/effects.ts";
 import {
   SUPPORT_TIP, brewMana, canBecome, echoStrength, harvestMana, heraldBonus, isSupport, luckyChance, mimePrep, mirrorInterval, neighbours, noAttack,
@@ -994,8 +994,19 @@ export class BattleScene extends Phaser.Scene {
       this.heroHaste +
       (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
       (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
-      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0)
+      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0) +
+      (u.def.effect === "oath" ? EFFECTS.oath.speedPerKnight * this.adjacentKnights(u) : 0)
     );
+  }
+
+  private adjacentKnights(u: Unit) {
+    return neighbours(u.slot).filter((j) => this.board[j] && isKnight(this.board[j]!.def)).length;
+  }
+
+  /** Lantern Knight's pulse: extra mana, more for each Knight on the field. */
+  lanternPulse(u: Unit) {
+    const knights = this.board.filter((v) => v && isKnight(v.def)).length;
+    this.gainMana(lanternMana(knights), u.sprite.x, u.sprite.y - 50);
   }
 
   /** Attack-speed multiplier from Fatigue (a Berserker next door, or a Chaos Taffy's tether). */
@@ -1358,10 +1369,11 @@ export class BattleScene extends Phaser.Scene {
     return best;
   }
 
-  /** Damage multiplier from Muse's aura and an Oath Knight's sworn brothers. */
+  /** Damage multiplier from Muse's aura, an Oath Knight's sworn brothers and a Berserker's fellow Mercenaries. */
   private damageMult(unit: Unit) {
     let m = 1 + unit.auraDamage;
-    if (unit.def.effect === "oath") m *= 1 + EFFECTS.oath.perKnight * neighbours(unit.slot).filter((j) => this.board[j] && isKnight(this.board[j]!.def)).length;
+    if (unit.def.effect === "oath") m *= 1 + EFFECTS.oath.perKnight * this.adjacentKnights(unit);
+    if (unit.def.effect === "fatigue") m *= 1 + EFFECTS.fatigue.perMercenary * this.board.filter((v) => v && isMercenary(v.def)).length;
     return m;
   }
 
@@ -1434,6 +1446,36 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /** Lance Knight's chain: up to `jumps` more monsters, each the nearest to the last, skipping `skip`. */
+  private chainOn(first: Monster, skip: Monster[], jumps: number, damageOf: (m: Monster) => number, perks: readonly Perk[]) {
+    const hit: Monster[] = [];
+    let cur = first;
+    while (hit.length < jumps) {
+      let next: Monster | null = null;
+      let bestD = EFFECTS.chain.range;
+      for (const m of this.monsters) {
+        if (m.gone || skip.includes(m) || hit.includes(m)) continue;
+        const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
+        if (d < bestD) {
+          bestD = d;
+          next = m;
+        }
+      }
+      if (!next) break;
+      hit.push(next);
+      cur = next;
+    }
+    if (!hit.length) return;
+    const g = this.add.graphics().setDepth(2050);
+    let p = first.pos;
+    for (const m of hit) {
+      this.zigzag(g, p, m.pos, 0xfff27a);
+      p = m.pos;
+    }
+    this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
+    hit.forEach((m, i) => m.damage(damageOf(m) * Math.pow(EFFECTS.chain.falloff, i + 1), { perks, sure: true }));
+  }
+
   private zigzag(g: Phaser.GameObjects.Graphics, a: Pt, b: Pt, color: number) {
     const pts: Pt[] = [a];
     const n = 6;
@@ -1476,7 +1518,10 @@ export class BattleScene extends Phaser.Scene {
     const now = this.now;
     const rarityIdx = rarityIndex(def.rarity);
     // Lance Knight: extra damage to corrupted bosses.
-    const damage = def.effect === "bane" && m.boss?.corrupted ? s.damage * (1 + e.bane.bossBonus) : s.damage;
+    const bane = (o: Monster) => (def.effect === "bane" && o.boss?.corrupted ? s.damage * (1 + e.bane.bossBonus) : s.damage);
+    // Rogue Knight: nearly every blow crits.
+    const rogueCrit = def.effect === "irritate" && Math.random() < e.irritate.critChance;
+    const damage = bane(m) * (rogueCrit ? e.irritate.critMult : 1);
     // Powder Grenadier: a blast may shellshock a neighbour.
     if (def.effect === "shellshock" && unit.sprite.active && Math.random() < e.shellshock.chance) {
       const near = neighbours(unit.slot).map((j) => this.board[j]).filter((v): v is Unit => !!v && !v.dragging);
@@ -1485,7 +1530,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const pos = m.pos;
     const isBoss = !!m.boss;
-    const P = { perks };
+    const P = { perks, ...(rogueCrit && { crit: true }) };
     const chilled = chills(perks, m);
     let vfxSize = 70;
 
@@ -1509,6 +1554,8 @@ export class BattleScene extends Phaser.Scene {
           o.damage(damage * e.pierce.damage, { ...P, sure: true });
           this.vfx("hit_impact", o.pos.x, o.pos.y, 50);
         }
+        // Lance Knight: the hit also chains on to more monsters.
+        if (def.effect === "bane") this.chainOn(m, [m, ...behind], e.bane.chain, bane, perks);
         break;
       }
       case "slow":

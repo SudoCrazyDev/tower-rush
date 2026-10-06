@@ -25,6 +25,7 @@ import {
   freezeChance,
   growthMult,
   manaPerPulse,
+  lanternMana,
   pierceTargets,
   slowAmount,
   splashRadius,
@@ -33,7 +34,7 @@ import {
 import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "./monsters.ts";
 import { UNIT_BY_ID, boostMult, rarityIndex, unitStats, type Element, type UnitDef } from "./units.ts";
-import { clearDebuffs, isKnight, newStatus, square3 } from "./statuses.ts";
+import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
 import {
@@ -1104,6 +1105,13 @@ export class Sim {
         for (const j of neighbours(u.slot)) if (this.units[j]) this.afflict(this.units[j]!, "irritation", EFFECTS.irritate.time);
       }
     }
+    if (u.def.effect === "lantern") {
+      u.effectTimer += dt;
+      if (u.effectTimer >= EFFECTS.lantern.every) {
+        u.effectTimer = 0;
+        this.gainMana(lanternMana(this.units.filter((v) => v && isKnight(v.def)).length));
+      }
+    }
     if (u.def.arch === "buff" || u.def.arch === "aura" || u.def.arch === "aegis") return;
     if (isSupport(u.def.arch)) return this.updateSupport(u, dt);
     if (u.def.arch === "mana") {
@@ -1144,8 +1152,13 @@ export class Sim {
       this.heroHaste +
       (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
       (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
-      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0)
+      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0) +
+      (u.def.effect === "oath" ? EFFECTS.oath.speedPerKnight * this.adjacentKnights(u) : 0)
     );
+  }
+
+  private adjacentKnights(u: SimUnit) {
+    return neighbours(u.slot).filter((j) => this.units[j] && isKnight(this.units[j]!.def)).length;
   }
 
   /** Support timers run faster with haste (buff units, the hero, a war cry). */
@@ -1238,7 +1251,8 @@ export class Sim {
       }
     }
     let damage = u.stats.damage * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
-    if (u.def.effect === "oath") damage *= 1 + EFFECTS.oath.perKnight * neighbours(u.slot).filter((j) => this.units[j] && isKnight(this.units[j]!.def)).length;
+    if (u.def.effect === "oath") damage *= 1 + EFFECTS.oath.perKnight * this.adjacentKnights(u);
+    if (u.def.effect === "fatigue") damage *= 1 + EFFECTS.fatigue.perMercenary * this.units.filter((v) => v && isMercenary(v.def)).length;
     if (u.def.arch === "growth") damage *= growthMult(u.alive);
     const from = { x: u.x, y: u.y - 30 };
     if (u.def.arch === "chain") return this.chainLightning(u, target, damage, from);
@@ -1272,6 +1286,28 @@ export class Sim {
     hit.forEach((m, i) => this.hurt(m, damage * Math.pow(EFFECTS.chain.falloff, i), u.slot, { perks: u.perks }));
   }
 
+  /** Up to `jumps` more monsters, each the nearest within chain range of the last, skipping `skip`. */
+  private chainOn(first: SimMonster, skip: SimMonster[], jumps: number) {
+    const out: SimMonster[] = [];
+    let cur = first;
+    while (out.length < jumps) {
+      let next: SimMonster | null = null;
+      let bestD = EFFECTS.chain.range;
+      for (const m of this.monsters) {
+        if (m.gone || skip.includes(m) || out.includes(m)) continue;
+        const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
+        if (d < bestD) {
+          bestD = d;
+          next = m;
+        }
+      }
+      if (!next) break;
+      out.push(next);
+      cur = next;
+    }
+    return out;
+  }
+
   private updateShots(dt: number) {
     for (const s of this.shots) {
       if (!s.target.gone) s.aim = s.target.pos;
@@ -1301,7 +1337,9 @@ export class Sim {
     const e = EFFECTS;
     const now = this.now;
     const rarityIdx = rarityIndex(def.rarity);
-    const damage = def.effect === "bane" && m.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage;
+    const bane = (o: SimMonster) => (def.effect === "bane" && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage);
+    // Rogue Knight: nearly every blow crits.
+    const damage = bane(m) * (def.effect === "irritate" && this.rand() < e.irritate.critChance ? e.irritate.critMult : 1);
     if (def.effect === "shellshock" && this.rand() < e.shellshock.chance) {
       const near = neighbours(u.slot).map((j) => this.units[j]).filter((v): v is SimUnit => !!v);
       const v = near[Math.floor(this.rand() * near.length)];
@@ -1335,6 +1373,8 @@ export class Sim {
           .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
           .slice(0, pierceTargets(rank));
         for (const o of behind) this.hurt(o, damage * e.pierce.damage, src, { ...P, sure: true });
+        // Lance Knight: the hit also chains on to more monsters.
+        if (def.effect === "bane") this.chainOn(m, [m, ...behind], e.bane.chain).forEach((o, i) => this.hurt(o, bane(o) * Math.pow(e.chain.falloff, i + 1), src, { ...P, sure: true }));
         break;
       }
       case "slow":

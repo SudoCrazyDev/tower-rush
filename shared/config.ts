@@ -41,6 +41,38 @@ export interface GameConfig {
   /** Story mode (v1.2): the book, its stories, chapters and wave scripts. */
   book: BookDef;
   dropWeights: Record<Rarity, number>;
+  /** Balance hotfixes already applied to this config (see HOTFIXES). */
+  hotfixes?: string[];
+}
+
+/**
+ * Balance hotfixes that change numbers a saved config already holds. A saved config keeps its
+ * own values over the defaults, so on load each hotfix it hasn't had copies the listed fields
+ * from the defaults once (withHotfixes), and is recorded so later admin edits stick.
+ */
+const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]> }> = {
+  "1.2.1": {
+    units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["effect"] },
+    effects: { rally: ["time"], oath: ["perKnight"] },
+  },
+};
+
+export function withHotfixes(cfg: GameConfig): GameConfig {
+  const done = new Set(cfg.hotfixes ?? []);
+  const units = cfg.units.map((u) => ({ ...u }));
+  const effects = structuredClone(cfg.effects) as unknown as Record<string, Record<string, unknown>>;
+  const defEffects = DEFAULT_EFFECTS as unknown as Record<string, Record<string, unknown>>;
+  for (const [id, fix] of Object.entries(HOTFIXES)) {
+    if (done.has(id)) continue;
+    done.add(id);
+    for (const [unitId, fields] of Object.entries(fix.units)) {
+      const u = units.find((x) => x.id === unitId) as Record<string, unknown> | undefined;
+      const d = DEFAULT_UNITS.find((x) => x.id === unitId) as Record<string, unknown> | undefined;
+      if (u && d) for (const f of fields) u[f] = d[f];
+    }
+    for (const [block, fields] of Object.entries(fix.effects)) for (const f of fields) if (effects[block]) effects[block][f] = defEffects[block][f];
+  }
+  return { ...cfg, units, effects: effects as unknown as Effects, hotfixes: [...done] };
 }
 
 export function defaultConfig(): GameConfig {
@@ -60,6 +92,7 @@ export function defaultConfig(): GameConfig {
     effects: DEFAULT_EFFECTS,
     pvp: DEFAULT_PVP,
     book: DEFAULT_BOOK,
+    hotfixes: Object.keys(HOTFIXES),
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5, event: 0 },
   });
 }

@@ -38,24 +38,26 @@ export const DEFAULT_EFFECTS = {
   aura: { speed: 0.05, speedPerRank: 0.02, damage: 0.03, damagePerRank: 0.01, speedMax: 0.4, damageMax: 0.25 },
   aegis: { pulse: 4 },
   // Unit effects of the Knights and Mercenaries, and the statuses they cause.
-  rally: { speed: 1, time: 2 },
-  irritate: { every: 4, miss: 0.25, time: 2 },
-  fatigue: { slow: 0.25, linger: 1 },
+  rally: { speed: 1, time: 4 },
+  irritate: { every: 4, miss: 0.25, time: 2, critChance: 0.95, critMult: 3 },
+  fatigue: { slow: 0.25, linger: 1, perMercenary: 0.15 },
   shellshock: { chance: 0.15, time: 1 },
   wages: { perRank: 10 },
-  oath: { perKnight: 0.08 },
-  bane: { bossBonus: 0.5 },
+  oath: { perKnight: 0.1, speedPerKnight: 0.05 },
+  bane: { bossBonus: 0.5, chain: 5 },
+  lantern: { every: 5, mana: 5, perKnight: 3 },
 };
 
 /** Effect blocks that belong to a unit effect (UnitDef.effect) rather than an archetype. */
 export const EFFECT_LABELS: Record<string, string> = {
   rally: "Pentagonal Knight: each hit gives adjacent units Rally",
-  irritate: "Rogue Knight: adjacent units get Irritation (attacks can miss)",
-  fatigue: "Berserker Sellsword: adjacent units attack slower (also the Chaos Taffy's tether)",
+  irritate: "Rogue Knight: adjacent units get Irritation (attacks can miss); its own blows crit",
+  fatigue: "Berserker Sellsword: adjacent units attack slower (also the Chaos Taffy's tether); more damage per Mercenary",
   shellshock: "Powder Grenadier: blasts may stun an adjacent unit",
   wages: "Hired Blade: costs mana every wave or sulks",
-  oath: "Oath Knight: more damage per adjacent Knight",
-  bane: "Lance Knight: extra damage to corrupted bosses",
+  oath: "Oath Knight: more damage and speed per adjacent Knight",
+  bane: "Lance Knight: extra damage to corrupted bosses; hits chain to more monsters",
+  lantern: "Lantern Knight: extra mana every few seconds, more per Knight on the field",
 };
 
 export type Effects = typeof DEFAULT_EFFECTS;
@@ -239,10 +241,13 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     every: F("Irritates its neighbours every N seconds", 0.5, 60, false, 0.5),
     miss: PCT("Irritation: chance an attack misses"),
     time: F("Irritation lasts (seconds)", 0.1, 20),
+    critChance: PCT("Rogue Knight's own crit chance (0.95 = 95%)"),
+    critMult: F("Rogue Knight's crit multiplier (×)", 0.1, 20, false, 1),
   },
   fatigue: {
     slow: PCT("Fatigue: attack speed lost (0.25 = −25%)", 0.95),
     linger: F("Fatigue lasts after its last attack (seconds)", 0.1, 20),
+    perMercenary: PCT("Berserker damage per Mercenary on the field (0.15 = +15%)", 2),
   },
   shellshock: {
     chance: PCT("Chance a blast shellshocks an adjacent unit"),
@@ -252,10 +257,17 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     perRank: F("Wages per wave: rank × this mana", 1, 500),
   },
   oath: {
-    perKnight: PCT("Damage per adjacent Knight (0.08 = +8%)", 2),
+    perKnight: PCT("Damage per adjacent Knight (0.1 = +10%)", 2),
+    speedPerKnight: PCT("Attack speed per adjacent Knight (0.05 = +5%)", 2),
   },
   bane: {
     bossBonus: PCT("Extra damage to corrupted bosses (0.5 = +50%)", 5),
+    chain: F("Each hit also chains to up to N more monsters", 1, 20, true),
+  },
+  lantern: {
+    every: F("Lantern pulses every N seconds", 0.5, 60, false, 0.5),
+    mana: F("Mana per pulse", 1, 500, true),
+    perKnight: F("…plus this per Knight on the field", 1, 100, true),
   },
 };
 
@@ -293,6 +305,8 @@ export const auraBonus = (rank: number, mult = 1, e = EFFECTS) => ({
 });
 /** Hired Blade's wages for one wave. */
 export const wagesFor = (rank: number, e = EFFECTS) => Math.round(e.wages.perRank * rank);
+/** Lantern Knight's extra mana for one pulse, with `knights` Knights on the field (itself included). */
+export const lanternMana = (knights: number, e = EFFECTS) => Math.round(e.lantern.mana + e.lantern.perKnight * knights);
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const secs = (x: number) => `${+x.toFixed(2)}s`;
@@ -303,17 +317,19 @@ export function unitEffectSummary(effect: UnitEffect, rank: number, e = EFFECTS)
     case "rally":
       return `Each hit: adjacent units +${pct(e.rally.speed)} attack speed for ${secs(e.rally.time)}`;
     case "irritate":
-      return `Every ${secs(e.irritate.every)}: adjacent units miss ${pct(e.irritate.miss)} of attacks for ${secs(e.irritate.time)}`;
+      return `${pct(e.irritate.critChance)} crit ×${+e.irritate.critMult.toFixed(1)} · every ${secs(e.irritate.every)}: adjacent units miss ${pct(e.irritate.miss)} of attacks for ${secs(e.irritate.time)}`;
     case "fatigue":
-      return `While attacking: adjacent units attack ${pct(e.fatigue.slow)} slower`;
+      return `While attacking: adjacent units attack ${pct(e.fatigue.slow)} slower · +${pct(e.fatigue.perMercenary)} damage per Mercenary on the field`;
     case "shellshock":
       return `Each blast: ${pct(e.shellshock.chance)} chance to stun an adjacent unit for ${secs(e.shellshock.time)}`;
     case "wages":
       return `Wages: ${wagesFor(rank, e)} mana every wave, or no attacks that wave`;
     case "oath":
-      return `+${pct(e.oath.perKnight)} damage for each adjacent Knight`;
+      return `+${pct(e.oath.perKnight)} damage and +${pct(e.oath.speedPerKnight)} attack speed for each adjacent Knight`;
     case "bane":
-      return `+${pct(e.bane.bossBonus)} damage to corrupted bosses`;
+      return `+${pct(e.bane.bossBonus)} damage to corrupted bosses · each hit chains to ${e.bane.chain} more`;
+    case "lantern":
+      return `+${e.lantern.mana} mana every ${secs(e.lantern.every)}, +${e.lantern.perKnight} more per Knight on the field`;
   }
 }
 

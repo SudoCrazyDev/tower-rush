@@ -27,6 +27,7 @@ export function square3(i: number) {
 }
 
 export const isKnight = (def: UnitDef) => def.role === "Knight";
+export const isMercenary = (def: UnitDef) => def.role === "Mercenary";
 
 /** The timers a unit carries. */
 export interface UnitStatus {

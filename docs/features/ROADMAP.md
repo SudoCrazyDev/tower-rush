@@ -6,9 +6,9 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 [ROADMAP.md](../../ROADMAP.md).
 
 ```
- v1.0.0            v1.1.0                   QoL          v1.2.0           next
- Launch build ───► Supporting Cast ───────► polish ────► Stories ───────► balance, then
- Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6            Books 2–4 (TBD)
+ v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          next
+ Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► balance, then
+ Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Books 2–4 (TBD)
 ```
 
 | Version | Title | Shipped | Git | Design doc |
@@ -17,6 +17,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.1.0 | **Supporting Cast Arrival** | 2026-10-06 | tag `v1.1.0` (`e1d0153`) | [v1.1](v1.1-supporting-cast-arrival/README.md) |
 | — | QoL between v1.1 and v1.2 | 2026-10-06 | (untagged) | — |
 | v1.2.0 | **Stories** | 2026-10-06 | tag `v1.2.0` | [v1.2](v1.2-stories/README.md) |
+| v1.2.1 | Knights hotfix | 2026-10-06 | — | [v1.2](v1.2-stories/README.md) (5.4) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
 ---
@@ -70,6 +71,23 @@ Shipped with a **lobby redesign**: ARENA and STORIES mode cards (swipe between t
 one open), a carousel of books, then a carousel of chapters, all in ornate gold card frames.
 
 [Design doc](v1.2-stories/README.md) · [Promo kit](v1.2-stories/PROMO.md)
+
+## v1.2.1: Knights hotfix (2026-10-06)
+
+A balance patch for the Story 2 Knights and Mercenaries:
+
+| Unit | Change |
+|---|---|
+| Pentagonal Knight | Rally lasts **4s** (was 2s) |
+| Rogue Knight | **Double attack speed** (2.4 → 4.8/s); its own blows crit **95%** of the time for **×3** |
+| Lance Knight | Each hit also **chains to up to 5 more monsters** (chain falloff per jump) |
+| Oath Knight | **+10% damage** (was +8%) and **+5% attack speed** for each adjacent Knight |
+| Lantern Knight | New pulse: **+5 mana every 5s, +3 more per Knight on the field** (on top of its usual mana) |
+| Berserker Sellsword | **+15% damage per Mercenary on the field** (itself included) |
+| Hired Blade | Damage **46 → 60**, attack speed **×1.25** |
+
+All numbers are editable on the admin Effects and Units pages. Saved live configs pick these up
+once on load (`hotfixes` in the config, see `withHotfixes` in shared/config.ts).
 
 ## Next
 

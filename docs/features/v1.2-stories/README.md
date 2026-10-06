@@ -267,15 +267,15 @@ mercenaries away from your carries, or next to an **Aegis Knight**.
 
 | # | Unit | Side | Archetype | Stats | Effect |
 |---|---|---|---|---|---|
-| 1 | **Pentagonal Knight**¹ | Knight | heavy single-target | Very high damage, very slow | Each hit gives adjacent units **Rally** (+100% speed for 2s). |
+| 1 | **Pentagonal Knight**¹ | Knight | heavy single-target | Very high damage, very slow | Each hit gives adjacent units **Rally** (+100% speed for 4s; 2s before v1.2.1). |
 | 2 | **Aegis Knight** | Knight | buff (no attack) | — | Adjacent units are **immune to debuffs**, and lose any they already have. |
-| 3 | **Lance Knight** | Knight | pierce | Medium damage, medium speed | Hits every monster in a line; +50% damage to corrupted bosses. |
-| 4 | **Oath Knight** | Knight | single-target | Medium damage | +8% damage for each adjacent **Knight**. |
-| 5 | **Lantern Knight** | Knight | mana | Low damage | Makes mana on kills, so the deck has an economy (there are no player mana units here). |
-| 6 | **Rogue Knight**¹ | Mercenary | rapid | Low damage, very high speed | Every 4s, adjacent units get **Irritation** (25% miss) for 2s. |
-| 7 | **Berserker Sellsword** | Mercenary | heavy | Very high damage | Adjacent units have **Fatigue** (−25% speed) while it's attacking. |
+| 3 | **Lance Knight** | Knight | pierce | Medium damage, medium speed | Hits every monster in a line, and (v1.2.1) each hit chains on to up to 5 more monsters; +50% damage to corrupted bosses. |
+| 4 | **Oath Knight** | Knight | single-target | Medium damage | +10% damage and +5% attack speed for each adjacent **Knight** (v1.2.1; was +8% damage). |
+| 5 | **Lantern Knight** | Knight | mana | Low damage | Makes mana, so the deck has an economy (there are no player mana units here). v1.2.1: also +5 mana every 5s, plus 3 per Knight on the field. |
+| 6 | **Rogue Knight**¹ | Mercenary | rapid | Low damage, very high speed (v1.2.1: double speed, 95% crit ×3) | Every 4s, adjacent units get **Irritation** (25% miss) for 2s. |
+| 7 | **Berserker Sellsword** | Mercenary | heavy | Very high damage | Adjacent units have **Fatigue** (−25% speed) while it's attacking. v1.2.1: +15% damage per Mercenary on the field (itself included). |
 | 8 | **Powder Grenadier** | Mercenary | splash | High splash damage | Each blast has a 15% chance to **Shellshock** a random adjacent unit for 1s. |
-| 9 | **Hired Blade** | Mercenary | crit | High crit damage | **Wages:** takes 10 × rank mana at the start of every wave; if it can't be paid, it sulks (no attacks) for that wave. |
+| 9 | **Hired Blade** | Mercenary | crit | High crit damage (v1.2.1: damage 46 → 60, speed ×1.25) | **Wages:** takes 10 × rank mana at the start of every wave; if it can't be paid, it sulks (no attacks) for that wave. |
 
 ¹ *Pentagonal Knight and Rogue Knight are the story reward. Their story versions are the same
 units the player earns at the end, so only 7 units are story-only.*
@@ -309,7 +309,7 @@ levelled the usual way. Their numbers are the same as in 5.4, scaled by card lev
 |---|---|---|
 | Style | heavy | rapid |
 | Damage / speed | High damage, very slow (about 2× a heavy unit's time between attacks) | Low damage, very high speed |
-| Effect | **Rally:** each hit gives adjacent units +100% attack speed for 2s | **Irritation:** every 4s, adjacent units miss 25% of attacks for 2s |
+| Effect | **Rally:** each hit gives adjacent units +100% attack speed for 4s (v1.2.1) | **Irritation:** every 4s, adjacent units miss 25% of attacks for 2s |
 | Strategy | The rhythm unit: surround it with fast attackers. | Isolate it on an edge tile, or pair it with an Aegis-style unit later. |
 | Awakening | Optional (needs awakened art; see costs) | Optional |
 
