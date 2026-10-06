@@ -1,4 +1,4 @@
-# Tower Rush website
+# Crown & Keep website
 
 The game's marketing site: a static one-page site (HTML, CSS and vanilla JS, no build step).
 

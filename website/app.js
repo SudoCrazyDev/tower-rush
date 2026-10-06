@@ -1,4 +1,4 @@
-// Tower Rush website: renders the codex, heroes, arenas, bosses and leagues from data/game.js
+// Crown & Keep website: renders the codex, heroes, arenas, bosses and leagues from data/game.js
 // (exported from shared/ by scripts/export-data.mjs). Art is loaded from the game's R2 bucket.
 (() => {
   const ART = "https://assets.depedtoolkit.com";

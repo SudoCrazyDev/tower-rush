@@ -94,6 +94,18 @@
         "--strictPort"
       ],
       "port": 5183
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5191",
+        "--directory",
+        "website"
+      ],
+      "port": 5191
     }
   ]
 }
