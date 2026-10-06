@@ -375,12 +375,18 @@
     });
 
     $("#duelRules").innerHTML = [
-      `<b>Same waves, same clock.</b> A new wave hits both boards every ${rules.waveSeconds} seconds.`,
-      `<b>Guard your ${rules.hp} HP.</b> Each monster that gets through costs 1 HP. Tanks cost ${rules.tankLeakDamage} and bosses ${rules.bossLeakDamage}.`,
-      `<b>Send monsters.</b> Spend mana to send them to your rival's board. Each send also raises your income.`,
-      `<b>Last keep standing wins.</b> From wave ${rules.suddenDeathWave} it's sudden death: waves grow fast until someone falls.`,
-      `<b>Pick a mode.</b> ${Object.values(P.modes).map((m) => `${m.name}: ${m.text.replace(/\.$/, "")}`).join(". ")}. Ranked also has its own rating tiers: ${[...P.tiers].sort((a, b) => a.rating - b.rating).map((t) => `<em style="color:${t.color}">${t.name}</em>`).join(" &rarr; ")}.`,
-    ].map((t) => `<li>${t}</li>`).join("");
+      ["items/hourglass_speedup.webp", "Same waves", `Both boards get the same wave every ${rules.waveSeconds}s.`],
+      ["items/heart_life.webp", `Guard ${rules.hp} HP`, `Leaks cost 1 HP. Tanks ${rules.tankLeakDamage}, bosses ${rules.bossLeakDamage}.`],
+      ["items/mana_orb.webp", "Send monsters", "Spend mana to flood your rival. Sends raise your income."],
+      ["ui/icon_pvp.webp", "Last keep wins", `Sudden death from wave ${rules.suddenDeathWave}.`],
+    ].map(([icon, title, text]) => `<li>${img(icon)}<b>${title}</b><span>${text}</span></li>`).join("");
+    const tiers = [...P.tiers].sort((a, b) => a.rating - b.rating);
+    const MODE_ICON = { ranked: "items/trophy.webp", mirror: "items/card_pack.webp", casual: "ui/icon_friends.webp" };
+    $("#duelModes").innerHTML = Object.entries(P.modes).map(([id, m]) => `
+      <article class="pvpmode${id === "ranked" ? " pvpmode--ranked" : ""}">${img(MODE_ICON[id] ?? "ui/icon_pvp.webp")}
+        <div><h3>${m.name}</h3><p>${m.text}</p>
+        ${id === "ranked" ? `<div class="pvpmode__tiers">${tiers.map((t) => `<em style="--c:${t.color}">${t.name}</em>`).join("")}</div>` : ""}</div>
+      </article>`).join("");
 
     const sendBtns = $("#duelSends");
     sendBtns.innerHTML = P.sends.map((s, i) => {
