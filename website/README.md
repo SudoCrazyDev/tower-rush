@@ -30,6 +30,12 @@ Open `index.html` directly, or serve the folder:
 
 ## Deploy
 
-Any static host works (Cloudflare Pages, or a `/site` route on the game's Worker). The news
-section in `index.html` is written by hand; add a post there with each release
+Live at https://crown-and-keep.philiplouis0717.workers.dev, a static-assets-only Worker
+(`website/wrangler.jsonc`: no code, no bindings; `.assetsignore` keeps this README, `scripts/`
+and the config off the site). Deploy from this folder so wrangler uses that config and not the
+game's `wrangler.jsonc` at the repo root:
+
+    cd website && npx --prefix .. wrangler deploy
+
+The news section in `index.html` is written by hand; add a post there with each release
 (see `docs/features/ROADMAP.md`).

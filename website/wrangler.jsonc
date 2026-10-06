@@ -1,0 +1,7 @@
+// Marketing site: static assets only (no Worker code, no bindings).
+// Deploy from this folder: npx wrangler deploy
+{
+  "name": "crown-and-keep",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "." }
+}
