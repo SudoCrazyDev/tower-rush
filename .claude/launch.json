@@ -4,20 +4,96 @@
     {
       "name": "server",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "server", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "server",
+        "run",
+        "dev"
+      ],
       "port": 8787
     },
     {
       "name": "tower-rush",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "game", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "game",
+        "run",
+        "dev"
+      ],
       "port": 5173
     },
     {
       "name": "admin",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "admin", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "admin",
+        "run",
+        "dev"
+      ],
       "port": 5174
+    },
+    {
+      "name": "tower-rush-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "game",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "tower-rush-pvp",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "game",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5181",
+        "--strictPort"
+      ],
+      "port": 5181
+    },
+    {
+      "name": "admin-pvp",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "admin",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5182",
+        "--strictPort"
+      ],
+      "port": 5182
+    },
+    {
+      "name": "tower-rush-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "game",
+        "exec",
+        "--",
+        "vite",
+        "preview",
+        "--port",
+        "5183",
+        "--strictPort"
+      ],
+      "port": 5183
     }
   ]
 }
