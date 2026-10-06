@@ -24,6 +24,8 @@ import {
   useAwakenable,
   usePlaySettings,
   useSimulation,
+  starterDeck,
+  type DeckPick,
   type PlaySettings,
 } from "../playground";
 import { applyConfig, type GameConfig } from "../../../shared/config.ts";
@@ -32,12 +34,14 @@ import { ECONOMY } from "../../../shared/economy.ts";
 import { EFFECTS, effectSummary } from "../../../shared/effects.ts";
 import { HEROES, HERO_BY_ID, HERO_POWERS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
 import { BOSSES, BOSS_BY_ID, MONSTER_BY_ID, type BossDef } from "../../../shared/monsters.ts";
-import { ARCHETYPES, maxRank, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, boostMult, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { ARCHETYPES, maxRank, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, boostMult, deckable, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { PVP } from "../../../shared/pvp.ts";
+import { deckProblem, runDecks, type DeckSide, type SideStats } from "../deckSim";
 import { noAttack } from "../../../shared/support.ts";
 import { PERKS } from "../../../shared/perks.ts";
 import { arenaGeometry, boardUnitStats, bossAppearances, simulate, simulateMany, waveBaseHp, type SimSetup, type SimSummary } from "../../../shared/sim.ts";
 
-type Tab = "units" | "bosses" | "heroes";
+type Tab = "units" | "bosses" | "heroes" | "deck";
 type Setter = <K extends keyof PlaySettings>(k: K, v: PlaySettings[K]) => void;
 
 export function PlaygroundPage() {
@@ -56,10 +60,10 @@ export function PlaygroundPage() {
     <>
       <PageHead
         title="Playground"
-        desc="Test units, bosses and heroes in a simulated battle. It uses the balance you're editing, unpublished changes included, so tweak a number on another page and come back to compare. Nothing here is saved."
+        desc="Test units, bosses, heroes and whole decks in a simulated battle. It uses the balance you're editing, unpublished changes included, so tweak a number on another page and come back to compare. Nothing here is saved."
       >
         <div className="seg">
-          {(["units", "bosses", "heroes"] as const).map((t) => (
+          {(["units", "bosses", "heroes", "deck"] as const).map((t) => (
             <button key={t} className={tab === t ? "on" : ""} onClick={() => go(t)}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
@@ -70,6 +74,7 @@ export function PlaygroundPage() {
       {tab === "units" && <UnitsTab s={s} set={set} cfg={applied} />}
       {tab === "bosses" && <BossesTab s={s} set={set} cfg={applied} />}
       {tab === "heroes" && <HeroesTab s={s} set={set} cfg={applied} />}
+      {tab === "deck" && <DeckTab s={s} set={set} cfg={applied} />}
     </>
   );
 }
@@ -757,6 +762,214 @@ function HeroesTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameCon
             </table>
           </div>
           <p className="muted small">Same arena, wave and board; up to 10 runs each. Mana heroes don't change the fight here because the board can't grow mid-fight; their value is the mana column.</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------- deck tab
+
+const SIDE_COLORS = ["#f2b630", "#5aa9ff"];
+const DECK_RUNS = 50;
+
+function DeckPicker({ title, color, pick, onChange, problem }: { title: string; color: string; pick: DeckPick; onChange: (p: DeckPick) => void; problem: string | null }) {
+  const pool = UNITS.filter((u) => deckable(u));
+  const cards = Array.from({ length: 5 }, (_, i) => pick.cards[i] ?? "");
+  const setCard = (i: number, id: string) => onChange({ ...pick, cards: cards.map((c, j) => (j === i ? id : c)) });
+  const random = () => {
+    const left = [...pool];
+    const deck: string[] = [];
+    while (deck.length < 5 && left.length) deck.push(left.splice(Math.floor(Math.random() * left.length), 1)[0].id);
+    onChange({ ...pick, cards: deck });
+  };
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>
+          <span style={{ background: color, display: "inline-block", width: 10, height: 10, borderRadius: 5, marginRight: 8 }} />
+          {title}
+        </h2>
+        <div className="row" style={{ gap: 6 }}>
+          <button className="btn small ghost" onClick={() => onChange({ ...pick, cards: starterDeck() })}>Starter deck</button>
+          <button className="btn small ghost" onClick={random}>Random deck</button>
+        </div>
+      </div>
+      {cards.map((id, i) => (
+        <div key={i} className="row" style={{ gap: 8, alignItems: "center", marginBottom: 6 }}>
+          {UNIT_BY_ID[id] ? <Thumb src={asset("portraits", id)} size={30} /> : <span style={{ width: 30 }} />}
+          <UnitSelect value={id} units={pool} onChange={(v) => setCard(i, v)} />
+        </div>
+      ))}
+      <div className="controls" style={{ marginTop: 10 }}>
+        <div>
+          <label>Hero</label>
+          <Select
+            value={HERO_BY_ID[pick.hero] ? pick.hero : ""}
+            options={["", ...HEROES.map((h) => h.id)]}
+            labels={{ "": "No hero", ...Object.fromEntries(HEROES.map((h) => [h.id, `${h.name} · ${h.power}${h.enabled ? "" : " (off)"}`])) }}
+            onChange={(v) => onChange({ ...pick, hero: v })}
+          />
+        </div>
+        <div>
+          <label>Card level</label>
+          <Stepper value={Math.min(pick.level, maxCardLevel())} min={1} max={maxCardLevel()} onChange={(v) => onChange({ ...pick, level: v })} />
+        </div>
+      </div>
+      {problem && <p className="note">{problem}</p>}
+    </div>
+  );
+}
+
+/** Each card's share of the side's damage and the rank it got to. */
+function DeckCards({ title, pick, stats }: { title: string; pick: DeckPick; stats: SideStats }) {
+  const hero = HERO_BY_ID[pick.hero];
+  const total = Object.values(stats.damage).reduce((a, b) => a + b, 0) + stats.heroDamage;
+  const rows = Object.entries(stats.damage).sort((a, b) => b[1] - a[1]);
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <h2>{title}</h2>
+      {rows.map(([id, d]) => (
+        <div key={id} className="bar-row share">
+          <Thumb src={asset("portraits", id)} size={24} />
+          <span className="small">
+            {UNIT_BY_ID[id]?.name ?? id} <span className="muted" title="Highest rank reached, average">R{(stats.topRank[id] ?? 0).toFixed(1)}</span>
+          </span>
+          <div className="bar">
+            <div style={{ width: `${total ? (100 * d) / total : 0}%` }} />
+          </div>
+          <span className="small num-cell" title={`${f0(d)} damage per match`}>{pct(total ? d / total : 0)}</span>
+        </div>
+      ))}
+      {hero && stats.heroDamage > 0 && (
+        <div className="bar-row share">
+          <Thumb src={asset("portraits_heroes", hero.id)} size={24} />
+          <span className="small">{hero.name}</span>
+          <div className="bar">
+            <div style={{ width: `${(100 * stats.heroDamage) / total}%` }} />
+          </div>
+          <span className="small num-cell" title={`${f0(stats.heroDamage)} damage per match`}>{pct(stats.heroDamage / total)}</span>
+        </div>
+      )}
+      <p className="muted small">
+        Per match: {f1(stats.summons)} summons, {f1(stats.merges)} merges, {f1(stats.sends)} sends, {short(total)} damage.
+      </p>
+    </div>
+  );
+}
+
+function DeckTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConfig }) {
+  const canAwaken = useAwakenable();
+  const vs = s.deckMode === "vs";
+  const ok = (id: string) => deckable(UNIT_BY_ID[id]);
+  const probA = deckProblem(s.deckA.cards, ok);
+  const probB = vs ? deckProblem(s.deckB.cards, ok) : null;
+  const runs = Math.min(s.runs, DECK_RUNS);
+  const side = (p: DeckPick): DeckSide => ({ cards: p.cards, hero: HERO_BY_ID[p.hero] ? p.hero : null, level: Math.min(p.level, maxCardLevel()) });
+  const sim = useSimulation(
+    () =>
+      probA || probB
+        ? null
+        : runDecks({ a: side(s.deckA), b: vs ? side(s.deckB) : null, arena: ARENA_BY_ID[s.deckArena] ? s.deckArena : null, skill: s.deckSkill, runs, awakens: (id) => canAwaken.has(id) }),
+    [cfg, canAwaken, runs, s.deckMode, s.deckArena, s.deckSkill, JSON.stringify([s.deckA, s.deckB])],
+    300,
+  );
+  const r = sim.value;
+  const rules = PVP.rules;
+  const lastWave = r ? Math.max(...r.waves) : 0;
+  const avgWave = r ? r.waves.reduce((a, b) => a + b, 0) / r.runs : 0;
+
+  return (
+    <>
+      <div className="panel controls">
+        <div>
+          <label>Mode</label>
+          <Select value={s.deckMode} options={["vs", "solo"] as const} labels={{ vs: "Deck A vs deck B", solo: "Deck A alone" }} onChange={(v) => set("deckMode", v)} />
+        </div>
+        <div>
+          <label>Arena</label>
+          <Select
+            value={ARENA_BY_ID[s.deckArena] ? s.deckArena : ""}
+            options={["", ...ARENAS.map((a) => a.id)]}
+            labels={{ "": "Random each match", ...Object.fromEntries(ARENAS.map((a, i) => [a.id, `${i + 1}. ${a.name}`])) }}
+            onChange={(v) => set("deckArena", v)}
+          />
+        </div>
+        <div>
+          <label title="How quickly the bots act and how much they send (0-1)">Bot skill</label>
+          <Stepper value={s.deckSkill} min={0} max={1} step={0.1} onChange={(v) => set("deckSkill", Math.round(v * 10) / 10)} />
+        </div>
+        <div>
+          <label title="Each match has its own waves, arena (when random) and luck">Matches</label>
+          <Select value={String(runs) as "20"} options={["1", "5", "10", "20", "50"] as const} onChange={(v) => set("runs", Number(v))} />
+        </div>
+      </div>
+      <p className="muted small">
+        Bots play whole matches with each deck: they summon, merge, buy power-ups, auto-cast the hero and spend spare mana on sends. Waves and rules are PvP's: {rules.hp} HP, sudden death from wave {rules.suddenDeathWave}, last wave {rules.maxWave}.
+        {vs ? " Each deck's sends go to the other board." : " Alone, nothing arrives from an opponent; sends still raise income."}
+      </p>
+
+      <div className="two-col">
+        <DeckPicker title="Deck A" color={SIDE_COLORS[0]} pick={s.deckA} onChange={(p) => set("deckA", p)} problem={probA} />
+        {vs ? (
+          <DeckPicker title="Deck B" color={SIDE_COLORS[1]} pick={s.deckB} onChange={(p) => set("deckB", p)} problem={probB} />
+        ) : (
+          <div className="panel">
+            <h2>Alone against the waves</h2>
+            <p className="muted small">
+              How far deck A gets on its own. Every match ends on 0 HP or at wave {rules.maxWave}; the waves grow much faster from sudden death (wave {rules.suddenDeathWave}) on, so that's where most decks stop.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="two-col">
+        <div className="panel">
+          <div className="panel-head">
+            <h2>{vs ? "Deck A vs deck B" : "Deck A alone"}</h2>
+            <Busy busy={sim.busy} />
+          </div>
+          {r && (
+            <>
+              <div className="stats">
+                {vs ? (
+                  <Stat label="Deck A wins" value={pct(r.wins[0] / r.runs)} sub={`${r.wins[0]} / ${r.wins[1]} / ${r.wins[2]} (A / B / draw)`} />
+                ) : (
+                  <Stat label={`Reached wave ${rules.maxWave}`} value={pct(r.wins[0] / r.runs)} sub={`${r.wins[0]} of ${r.runs}`} />
+                )}
+                <Stat label="Last wave reached" value={f1(avgWave)} sub={`${Math.min(...r.waves)} to ${lastWave}`} />
+                <Stat label="Average length" value={`${(r.avgTime / 60).toFixed(1)} min`} />
+                {r.b ? (
+                  <Stat label="HP left A / B" value={`${f1(r.a.hpLeft)} / ${f1(r.b.hpLeft)}`} sub={`${r.byHp} ended on 0 HP`} />
+                ) : (
+                  <Stat label="HP left" value={f1(r.a.hpLeft)} sub={`of ${rules.hp}`} />
+                )}
+              </div>
+              <h2 style={{ marginTop: 14 }}>HP at the start of each wave</h2>
+              <TimeChart
+                x={Array.from({ length: lastWave }, (_, i) => `W${i + 1}`)}
+                series={[
+                  { label: "Deck A", color: SIDE_COLORS[0], kind: "line", values: r.a.hpByWave.slice(0, lastWave) },
+                  ...(r.b ? [{ label: "Deck B", color: SIDE_COLORS[1], kind: "line" as const, values: r.b.hpByWave.slice(0, lastWave) }] : []),
+                ]}
+                format={(v) => v.toFixed(1)}
+                height={200}
+              />
+              {r.b && <Legend series={[{ label: "Deck A", color: SIDE_COLORS[0] }, { label: "Deck B", color: SIDE_COLORS[1] }]} />}
+              <p className="muted small">Averaged over {r.runs} matches; a board that has lost counts as 0 HP.</p>
+            </>
+          )}
+          {!r && !sim.busy && <p className="muted small">Fix the deck{vs ? "s" : ""} above to run the matches.</p>}
+        </div>
+        <div className="panel">
+          <h2 style={{ marginBottom: 10 }}>Damage by card</h2>
+          {r && (
+            <>
+              <DeckCards title="Deck A" pick={s.deckA} stats={r.a} />
+              {r.b && <DeckCards title="Deck B" pick={s.deckB} stats={r.b} />}
+              <p className="muted small">R is the highest rank the card reached, averaged over the matches.</p>
+            </>
+          )}
         </div>
       </div>
     </>

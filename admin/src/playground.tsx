@@ -31,12 +31,30 @@ export interface PlaySettings {
   // Heroes tab
   hero: string;
   heroCharged: boolean;
+  // Deck tab
+  deckMode: "vs" | "solo";
+  deckA: DeckPick;
+  deckB: DeckPick;
+  /** Empty: a random arena per match, like PvP. */
+  deckArena: string;
+  deckSkill: number;
+}
+
+/** A deck in the Deck tab: five cards, a hero ("" for none) and one card level for all five. */
+export interface DeckPick {
+  cards: string[];
+  hero: string;
+  level: number;
 }
 
 const KEY = "tower-rush-playground";
 
+export function starterDeck() {
+  return ECONOMY.starterDeck.length ? [...ECONOMY.starterDeck] : UNITS.slice(0, 5).map((u) => u.id);
+}
+
 function starterBoard(rank = 3): (BoardUnit | null)[] {
-  const deck = ECONOMY.starterDeck.length ? ECONOMY.starterDeck : UNITS.slice(0, 5).map((u) => u.id);
+  const deck = starterDeck();
   return Array.from({ length: 15 }, (_, i) => ({ id: deck[i % deck.length], rank }));
 }
 
@@ -55,6 +73,11 @@ function defaults(): PlaySettings {
     escort: true,
     hero: "young_king",
     heroCharged: true,
+    deckMode: "vs",
+    deckA: { cards: starterDeck(), hero: "young_king", level: 3 },
+    deckB: { cards: starterDeck(), hero: "", level: 3 },
+    deckArena: "",
+    deckSkill: 0.6,
   };
 }
 
