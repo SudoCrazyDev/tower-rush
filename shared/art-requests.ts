@@ -297,6 +297,113 @@ const EMOTES: [string, string][] = [
   ["ghost_boo", "a ghost popping out with a cheeky grin"],
 ];
 
+/**
+ * Static VFX sprites (vfx/<key>.png). The game tweens them (scale, fade, spin), so each is one
+ * clean frame. Animated clips still need Seedance (credits), so they aren't listed here.
+ * [group, key, title, what, on magenta (green subject)]
+ */
+const VFX_LIST: [string, string, string, string, boolean?][] = [
+  // Projectiles: new shapes for future units, plus a bigger awakened version of each existing one.
+  ["VFX: projectiles", "proj_spark", "Spark projectile", "a small crackling yellow-white electric spark orb with tiny jagged arcs"],
+  ["VFX: projectiles", "proj_holy", "Holy bolt", "a radiant white-gold holy bolt with a soft halo and tiny sparkles"],
+  ["VFX: projectiles", "proj_shadow", "Shadow bolt", "a swirling dark purple shadow orb with wispy black smoke tendrils"],
+  ["VFX: projectiles", "proj_rock", "Boulder", "a chunky cracked brown boulder with small flying pebbles"],
+  ["VFX: projectiles", "proj_bomb", "Bomb", "a round black cartoon bomb with a lit sparking fuse"],
+  ["VFX: projectiles", "proj_dagger", "Thrown dagger", "a spinning silver throwing dagger with a short motion streak"],
+  ["VFX: projectiles", "proj_shuriken", "Shuriken", "a four-pointed steel ninja star with a spin blur"],
+  ["VFX: projectiles", "proj_spear", "Spear", "a flying wooden spear with a steel tip, pointing right"],
+  ["VFX: projectiles", "proj_axe", "Throwing axe", "a spinning double-headed throwing axe"],
+  ["VFX: projectiles", "proj_bubble", "Water bubble", "a glossy blue water bubble with a white highlight and droplets"],
+  ["VFX: projectiles", "proj_leaf", "Leaf blade", "a sharp spinning green leaf blade with a small wind swirl", true],
+  ["VFX: projectiles", "proj_thorn", "Thorn", "a curved sharp green thorn spike with a vine tail", true],
+  ["VFX: projectiles", "proj_skull", "Cursed skull", "a small floating green-flamed skull, grinning", true],
+  ["VFX: projectiles", "proj_star", "Star bolt", "a five-pointed glowing yellow star with a twinkling trail"],
+  ["VFX: projectiles", "proj_note", "Music note", "a bright magical music note with a sparkly swirl, for a bard"],
+  ["VFX: projectiles", "proj_feather", "Feather dart", "a sharp white-and-gold feather dart pointing right"],
+  ["VFX: projectiles", "proj_wind", "Wind slash", "a crescent-shaped pale cyan wind slash"],
+  ["VFX: projectiles", "proj_water", "Water jet", "a short curling blue water jet with spray"],
+  ["VFX: projectiles", "proj_meteor", "Meteor", "a flaming meteor rock with a fiery tail pointing up-left"],
+  ["VFX: projectiles", "proj_fireball_awakened", "Fireball (awakened)", "a huge blazing fireball with a golden core and a long flame tail, more epic than the reference"],
+  ["VFX: projectiles", "proj_ice_shard_awakened", "Ice shard (awakened)", "a giant glowing crystal ice lance with frost sparkles, more epic than the reference"],
+  ["VFX: projectiles", "proj_lightning_awakened", "Lightning (awakened)", "a thick golden-white lightning bolt with branching arcs, more epic than the reference"],
+  ["VFX: projectiles", "proj_poison_awakened", "Poison (awakened)", "a big bubbling toxic glob with dripping venom and a skull-shaped bubble", true],
+  ["VFX: projectiles", "proj_arcane_orb_awakened", "Arcane orb (awakened)", "a large swirling violet arcane orb ringed by orbiting runes, more epic than the reference"],
+  ["VFX: projectiles", "proj_arrow_awakened", "Arrow (awakened)", "a glowing golden enchanted arrow with a light trail, more epic than the reference"],
+  ["VFX: projectiles", "proj_cannonball_awakened", "Cannonball (awakened)", "a flaming iron cannonball with a smoke and spark trail"],
+  // Impacts: a burst shown where a hit lands.
+  ["VFX: impacts", "impact_fire", "Fire impact", "a round burst of orange flames and embers"],
+  ["VFX: impacts", "impact_ice", "Ice impact", "a starburst of shattering ice shards and frost puffs"],
+  ["VFX: impacts", "impact_lightning", "Lightning impact", "a bright yellow electric starburst with jagged arcs"],
+  ["VFX: impacts", "impact_nature", "Nature impact", "a burst of green leaves and petals", true],
+  ["VFX: impacts", "impact_poison", "Poison impact", "a splash of bubbling green venom droplets", true],
+  ["VFX: impacts", "impact_arcane", "Arcane impact", "a violet magic starburst with tiny runes"],
+  ["VFX: impacts", "impact_physical", "Physical impact", "a white comic-style hit star with speed lines"],
+  ["VFX: impacts", "impact_holy", "Holy impact", "a burst of golden light rays and sparkles"],
+  ["VFX: impacts", "impact_shadow", "Shadow impact", "a burst of dark purple smoke wisps"],
+  ["VFX: impacts", "crit_burst", "Critical hit burst", "a big jagged red-and-gold comic impact burst, no text"],
+  ["VFX: impacts", "slash_arc", "Sword slash", "a curved white crescent sword-slash arc with a light glow"],
+  ["VFX: impacts", "claw_marks", "Claw marks", "three diagonal red claw scratch marks"],
+  ["VFX: impacts", "explosion_big", "Big explosion", "a large round cartoon explosion cloud with orange fire and grey smoke"],
+  ["VFX: impacts", "death_puff", "Death puff", "a round puff of grey cartoon smoke clouds"],
+  ["VFX: impacts", "soul_wisp", "Soul wisp", "a small friendly pale-blue ghost wisp rising upward"],
+  // Status effects: small overlays above a unit or monster.
+  ["VFX: status", "status_burn", "Burning", "small flames licking upward, as an overlay"],
+  ["VFX: status", "status_poisoned", "Poisoned", "green toxic bubbles rising with a tiny skull", true],
+  ["VFX: status", "status_shocked", "Shocked", "small crackling yellow electric zigzags"],
+  ["VFX: status", "status_slowed", "Slowed", "a blue snail-shell spiral with frost dust"],
+  ["VFX: status", "status_stunned", "Stunned", "a ring of little yellow stars and birds circling"],
+  ["VFX: status", "status_rooted", "Rooted", "green vines and roots curling up from the ground", true],
+  ["VFX: status", "status_shield", "Shielded", "a translucent glossy blue hexagon bubble shield"],
+  ["VFX: status", "status_haste", "Haste", "yellow speed chevrons and wind streaks"],
+  ["VFX: status", "status_rage", "Rage", "a red anger vein mark with steam puffs"],
+  ["VFX: status", "status_cursed", "Cursed", "a purple floating eye sigil with dark wisps"],
+  ["VFX: status", "status_weakened", "Weakened", "a cracked grey sword pointing down"],
+  ["VFX: status", "status_regen", "Regenerating", "small green plus signs and sparkles rising", true],
+  ["VFX: status", "status_invulnerable", "Invulnerable", "a golden glowing dome with a halo"],
+  ["VFX: status", "status_sleep", "Asleep", "a blue nightcap moon with small floating Z shapes"],
+  // Ground: decals and rings drawn under units, seen from above at a 3/4 angle.
+  ["VFX: ground", "ground_scorch", "Scorch mark", "a flat black-and-orange scorched ground patch with embers"],
+  ["VFX: ground", "ground_frost", "Frost patch", "a flat icy frost patch with crystals on the ground"],
+  ["VFX: ground", "ground_poison", "Poison puddle", "a flat bubbling green toxic puddle", true],
+  ["VFX: ground", "ground_crater", "Crater", "a flat cracked rocky crater in the ground"],
+  ["VFX: ground", "ground_holy", "Holy circle", "a flat glowing golden rune circle on the ground"],
+  ["VFX: ground", "ground_shadow", "Shadow pool", "a flat swirling dark purple shadow pool"],
+  ["VFX: ground", "boss_warning", "Boss warning ring", "a flat red danger ring with chevrons pointing inward, no text"],
+  ...(["fire", "ice", "lightning", "nature", "poison", "arcane"] as const).map(
+    (e): [string, string, string, string, boolean] => [
+      "VFX: ground",
+      `aura_${e}`,
+      `Aura ring: ${e}`,
+      `a flat glowing ${e} element aura ring seen at a 3/4 angle from above, for under an awakened unit, with ${
+        { fire: "flames", ice: "ice crystals", lightning: "electric arcs", nature: "leaves and vines", poison: "toxic bubbles", arcane: "violet runes" }[e]
+      } around the rim`,
+      e === "nature" || e === "poison",
+    ],
+  ),
+  // Particles: tiny sprites for particle emitters.
+  ["VFX: particles", "pt_ember", "Particle: ember", "a single tiny glowing orange ember"],
+  ["VFX: particles", "pt_snowflake", "Particle: snowflake", "a single white six-pointed snowflake"],
+  ["VFX: particles", "pt_leaf", "Particle: leaf", "a single small green leaf", true],
+  ["VFX: particles", "pt_bubble", "Particle: bubble", "a single small green toxic bubble", true],
+  ["VFX: particles", "pt_rune", "Particle: rune", "a single small glowing violet rune symbol"],
+  ["VFX: particles", "pt_star", "Particle: star", "a single small four-pointed white-gold sparkle star"],
+  ["VFX: particles", "pt_coin", "Particle: coin", "a single shiny gold coin seen at a slight angle"],
+  ["VFX: particles", "pt_gem", "Particle: gem", "a single small cut purple gem"],
+  ["VFX: particles", "pt_heart", "Particle: heart", "a single small glossy red heart"],
+  ["VFX: particles", "pt_smoke", "Particle: smoke", "a single soft grey cartoon smoke puff"],
+  ["VFX: particles", "pt_feather", "Particle: feather", "a single small white feather"],
+  ["VFX: particles", "pt_confetti", "Particle: confetti", "a small cluster of colorful confetti pieces"],
+  // Rewards and UI moments.
+  ["VFX: rewards", "level_up_arrow", "Level-up arrow", "a big glossy gold upward arrow with sparkles"],
+  ["VFX: rewards", "light_rays", "Light rays", "a radial burst of soft golden light rays, for behind a reward"],
+  ["VFX: rewards", "star_burst", "Star burst", "an explosion of gold stars and sparkles"],
+  ["VFX: rewards", "chest_glow", "Chest glow", "a soft golden glow beam shooting upward with sparkles"],
+  ["VFX: rewards", "merge_flash", "Merge flash", "a bright white-gold four-pointed flash with a ring"],
+  ["VFX: rewards", "rarity_glow_legendary", "Legendary glow", "a radiant orange-gold glow ring with flares"],
+  ["VFX: rewards", "rarity_glow_epic", "Epic glow", "a radiant purple glow ring with sparkles"],
+  ["VFX: rewards", "rarity_glow_rare", "Rare glow", "a radiant blue glow ring with sparkles"],
+];
+
 /** The awakened art the game already has: index.json from the asset base. */
 export interface HaveArt {
   units_awakened: string[];
@@ -349,16 +456,19 @@ export function artRequests(have: HaveArt): ArtRequest[] {
       prompt: `${STYLE} Round player avatar portrait of ${what}, head and shoulders, big friendly eyes, centered, filling a circle, on a plain soft single-color background. Square 1:1.`,
     })),
     ...GLYPHS.map(([k, what]) => icon("UI glyphs", "glyph", "ui/glyphs", k, `Glyph: ${k}`, `Game UI glyph: ${what}.`, ["ui/hud_elements.webp"])),
-    {
-      id: "vfx:spark",
-      group: "VFX",
-      title: "Spark projectile",
-      file: "vfx/proj_spark.png",
-      model: "Nano Banana 2",
-      aspect: "1:1",
-      refs: ["vfx/proj_lightning.webp", "vfx/proj_arcane_orb.webp", STYLE_ANCHOR],
-      prompt: `${STYLE} Game projectile: a small crackling yellow-white electric spark orb with tiny jagged arcs, seen from above, matching the reference projectiles. ${ICON}`,
-    },
+    ...VFX_LIST.map(([group, key, title, what, magenta]) => ({
+      // proj_spark keeps its original id so any saved row still matches.
+      id: key === "proj_spark" ? "vfx:spark" : `vfx:${key}`,
+      group,
+      title,
+      file: `vfx/${key}.png`,
+      model: "Nano Banana 2" as const,
+      aspect: "1:1" as const,
+      refs: [key.endsWith("_awakened") ? `vfx/${key.replace("_awakened", "")}.webp` : "vfx/proj_fireball.webp", "vfx/hit_spark.webp", STYLE_ANCHOR],
+      prompt:
+        `${STYLE} Game visual effect sprite: ${what}, matching the reference effects. Bright glowing colors, one single frame, ` +
+        `centered with margin, nothing else in frame, on a solid flat pure ${magenta ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
+    })),
     ...WEBSITE.map(([k, title, aspect, what]) => ({
       id: `website:${k}`,
       group: "Website images",
