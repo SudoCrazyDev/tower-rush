@@ -17,7 +17,8 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.1.0 | **Supporting Cast Arrival** | 2026-10-06 | tag `v1.1.0` (`e1d0153`) | [v1.1](v1.1-supporting-cast-arrival/README.md) |
 | — | QoL between v1.1 and v1.2 | 2026-10-06 | (untagged) | — |
 | v1.2.0 | **Stories** | 2026-10-06 | tag `v1.2.0` | [v1.2](v1.2-stories/README.md) |
-| v1.2.1 | Knights hotfix | 2026-10-06 | — | [v1.2](v1.2-stories/README.md) (5.4) |
+| v1.2.1 | Knights hotfix | 2026-10-06 | tag `v1.2.1` | [v1.2](v1.2-stories/README.md) (5.4) |
+| v1.2.2 | Story card unlocks hotfix | 2026-10-06 | tag `v1.2.2` | [v1.2](v1.2-stories/README.md) (5.7) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
 ---
@@ -88,6 +89,14 @@ A balance patch for the Story 2 Knights and Mercenaries:
 
 All numbers are editable on the admin Effects and Units pages. Saved live configs pick these up
 once on load (`hotfixes` in the config, see `withHotfixes` in shared/config.ts).
+
+## v1.2.2: Story card unlocks hotfix (2026-10-06)
+
+- **Rogue Knight and Pentagonal Knight stay out of chests until unlocked.** Chests only roll a
+  story reward card once the player owns it (checked: 20,000 mythic chests on an empty
+  collection gave none). A locked story card's details now say **"Unlock it in Story 2:
+  Chaorruption"** with a STORIES button that opens that book, instead of "Find this card in
+  chests!" and a SHOP button. Princess Muse points to Story 1 the same way.
 
 ## Next
 

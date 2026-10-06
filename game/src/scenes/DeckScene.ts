@@ -13,6 +13,7 @@ import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, raceBadge } from "../ui";
 import { topBar } from "./LobbyScene";
+import { storyUnlocking } from "../../../shared/stories.ts";
 import { coach, setTutorialDone, tutorialDue } from "../tutorial";
 import { music, sfx } from "../audio";
 import { bakeAll, bakedImage } from "../bake";
@@ -632,6 +633,13 @@ export class DeckScene extends Phaser.Scene {
     const def = UNIT_BY_ID[id];
     const owned = profile.cards[id];
     if (!owned) {
+      // Story rewards never drop from chests until the story has given you one.
+      const from = storyUnlocking(id);
+      if (from) {
+        box.add(txt(this, cx, cy + 200, `Unlock it in Story ${from.number}: ${from.story.title}`, 32, "#ffd27a").setWordWrapWidth(560));
+        box.add(button(this, cx, cy + 360, 360, 100, "STORIES", "yellow", () => this.scene.start("Lobby", { mode: "story", story: from.story.id })));
+        return;
+      }
       box.add(txt(this, cx, cy + 200, "Find this card in chests!", 32, "#ffd27a"));
       box.add(button(this, cx, cy + 360, 360, 100, "SHOP", "green", () => this.scene.start("Shop")));
       return;

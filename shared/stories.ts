@@ -479,6 +479,12 @@ export interface StoryProgress {
 
 export const newStoryProgress = (): StoryProgress => ({ chapters: {}, started: [], badges: [], replays: { day: "", n: 0 } });
 
+/** The story whose chapter rewards unlock this card (Princess Muse, the reward Knights), if any. */
+export function storyUnlocking(unitId: string, book: BookDef = BOOK): { story: StoryDef; number: number } | null {
+  const i = book.stories.findIndex((s) => s.chapters.some((c) => c.reward.cards.includes(unitId)));
+  return i >= 0 ? { story: book.stories[i], number: i + 1 } : null;
+}
+
 export function findChapter(id: string): { story: StoryDef; chapter: StoryChapter; index: number } | null {
   for (const story of BOOK.stories) {
     const index = story.chapters.findIndex((c) => c.id === id);
