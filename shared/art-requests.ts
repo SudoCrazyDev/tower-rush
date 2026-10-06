@@ -244,57 +244,126 @@ const GLYPHS: [string, string][] = [
   ["heart", "a chunky red heart with a white shine"],
 ];
 
-const WEBSITE: [string, string, string, string][] = [
-  ["hero", "Homepage hero banner", "16:9", "Wide promotional key art for a fantasy tower defense game called Crown & Keep: a line of cute hero units (an archer, a knight, a fire witch, a frost yeti) defending a castle gate on a winding path against a monster horde (orcs, slimes, skeletons) led by a giant boss, epic sunset sky. Leave calm empty space on the left third for a headline. 1920x1080."],
-  ["merge", "Merge feature image", "16:9", "Game feature illustration: two identical cute archer units on glowing board tiles merging into one bigger, upgraded archer with a burst of sparkles and a +1 star, top-down board view."],
-  ["pvp", "PvP feature image", "16:9", "Game feature illustration: two rival players' armies face each other across a split battlefield, a glowing VS emblem in the middle, red side versus blue side, monsters charging down both lanes."],
-  ["stories", "Stories feature image", "16:9", "Game feature illustration: an open storybook with a candy kingdom castle popping out of the pages, a princess waving from a tower, corrupted purple vines creeping in."],
-  ["collection", "Collection feature image", "16:9", "Game feature illustration: a fan of trading cards with cute fantasy heroes in common, rare, epic, legendary and mythic frames, the mythic card glowing in the center, gold coins and chests around."],
-  ["leagues", "Leagues feature image", "16:9", "Game feature illustration: a tall stone staircase climbing into the clouds, a shiny league badge on each step (bronze, silver, gold, crystal, master), a giant gold champion trophy glowing at the top, a tiny hero climbing it."],
-  ["heroes", "Heroes feature image", "16:9", "Game feature illustration: eight cute fantasy commanders (a knight queen, a wizard, a pirate captain, a druid, a necromancer, an engineer, a dragon rider, a monk) posing together on a castle wall like a team poster, banners flying."],
-];
+/** Game art paths (at the asset base) used as character references in the scenes below. */
+const U = (id: string) => `units/${id}.webp`;
+const P = (id: string) => `portraits/${id}.webp`;
+const M = (id: string) => `monsters/${id}.webp`;
+const B = (id: string) => `bosses/${id}.webp`;
+const H = (id: string) => `heroes/${id}.webp`;
+const A = (id: string) => `locations/arena_${id}.webp`;
+const BADGES = [0, 1, 2, 3, 4, 5, 6].map((n) => `ui/league_${n}.webp`);
 
-/** Marketing images: social, ads and downloads (not used by the game itself). */
+/** Scenes with our cast: the model must copy the referenced characters, not invent its own. */
+const CAST =
+  "Use ONLY the characters shown in the reference images, each drawn exactly as it looks there (same face, species, colors, outfit, weapon and proportions) so fans recognize them; " +
+  "do not invent any other characters or creatures. If a reference shows a place, set the scene there.";
 const HOLD = "Leave a calm, uncluttered band for a headline added later.";
-const MARKETING: [string, string, string, ArtRequest["aspect"], ArtModel, string][] = [
-  // [group, key, title, aspect, model, what]
-  ["Social profiles", "discord_icon", "Discord server icon", "1:1", "Nano Banana Pro", "Round server icon: a golden crown sitting on top of a small chunky castle keep, bold and centered, readable at 48 pixels, on a royal-blue circle."],
-  ["Social profiles", "discord_banner", "Discord server banner", "16:9", "Nano Banana Pro", `Wide banner: a cozy castle courtyard where cute hero units hang out (an archer, a knight, a fire witch, a frost yeti, an owl wizard), torches and banners, evening light. ${HOLD}`],
-  ["Social profiles", "youtube_banner", "YouTube channel banner", "16:9", "Seedream 4.5", "Very wide channel banner (2560x1440, keep everything important inside the middle 1546x423 strip): a row of cute hero units on a castle wall facing a monster horde on the horizon, epic sunset sky."],
-  ["Social profiles", "facebook_cover", "Facebook / X cover", "16:9", "Seedream 4.5", `Wide cover image (3:1 crop safe): a winding path to a castle gate guarded by cute hero units, monsters marching in from the right, bright daytime sky. ${HOLD}`],
-  ["Unit of the Day posts", "uotd_square", "Unit of the Day: square", "1:1", "Nano Banana 2", "Social post background: a glowing round spotlight stage on a castle floor, royal blue and gold, sparkles, an empty pedestal in the center for a unit card to be placed on, decorative corners. Leave the center empty."],
-  ["Unit of the Day posts", "uotd_story", "Unit of the Day: story", "9:16", "Nano Banana 2", "Vertical story background: a tall glowing spotlight beam onto an empty pedestal, royal blue and gold, banners on both sides, sparkles. Leave the middle empty for a unit card and the top for a title."],
-  ["Unit of the Day posts", "uotd_feed", "Unit of the Day: feed", "4:5", "Nano Banana 2", "Feed post background: an empty card display stand on a velvet castle table, royal blue and gold, candles and coins around the edges. Leave the center empty for a unit card."],
-  ["Ad images", "ad_merge_sq", "Ad: Merge to win (square)", "1:1", "Nano Banana 2", `Mobile game ad image: two identical cute archers on glowing tiles merging into one big powerful archer in a burst of light, monsters blasted back. ${HOLD}`],
-  ["Ad images", "ad_merge_story", "Ad: Merge to win (story)", "9:16", "Nano Banana 2", `Vertical mobile game ad image: a 3x3 board of cute fantasy units with two matching knights merging in a burst of light into a bigger knight, monsters on the path below. ${HOLD}`],
-  ["Ad images", "ad_pvp_sq", "Ad: Beat your friend (square)", "1:1", "Nano Banana 2", `Mobile game ad image: two cute rival heroes glaring at each other across a split battlefield, blue side versus red side, one sending a giant monster at the other, a glowing VS emblem. ${HOLD}`],
-  ["Ad images", "ad_pvp_story", "Ad: Beat your friend (story)", "9:16", "Nano Banana 2", `Vertical mobile game ad image: two stacked battlefields, blue on top and red below, a giant monster leaping from one to the other, a glowing VS emblem in the middle. ${HOLD}`],
-  ["Ad images", "ad_champion_sq", "Ad: Climb to Champion (square)", "1:1", "Nano Banana 2", `Mobile game ad image: a cute knight raising a huge gold champion trophy on a mountain peak, league badges shining like stars in the sky, confetti. ${HOLD}`],
-  ["Ad images", "ad_champion_story", "Ad: Climb to Champion (story)", "9:16", "Nano Banana 2", `Vertical mobile game ad image: a tall staircase of league badges rising into the clouds, a cute hero leaping up the steps toward a giant glowing gold champion trophy. ${HOLD}`],
-  ["Ad images", "ad_boss_sq", "Ad: Stop the boss (square)", "1:1", "Nano Banana 2", `Mobile game ad image: a giant angry boss monster stomping toward a tiny castle, a line of brave cute hero units blocking the path, dramatic red sky. ${HOLD}`],
-  ["Ad images", "ad_awaken_sq", "Ad: Awaken your heroes (square)", "1:1", "Nano Banana Pro", `Mobile game ad image: split before-and-after of the same cute fire witch, plain on the left and awakened on the right with a blazing flame aura, golden armor and a huge staff. ${HOLD}`],
-  ["Release thumbnails", "news_v1_1", "News: v1.1 Supporting Cast", "16:9", "Nano Banana Pro", "News thumbnail: a group of cute support characters (a mime, a lucky cat, an owl with an hourglass, a bard with a war banner, a brewer with a cauldron) stepping onto a theatre stage under a spotlight."],
-  ["Release thumbnails", "news_v1_2", "News: v1.2 Stories", "16:9", "Nano Banana Pro", "News thumbnail: an open glowing storybook with a candy kingdom castle rising from its pages, a candy king waving, purple corruption creeping at the edges."],
-  ["Release thumbnails", "news_v1_3", "News: v1.3 Crown & Keep", "16:9", "Nano Banana Pro", "News thumbnail: a shining golden crown placed on top of a small sturdy castle keep, fireworks and banners behind it, a grand reveal."],
-  ["Release thumbnails", "news_pvp", "News: PvP", "16:9", "Nano Banana Pro", "News thumbnail: two cute rival commanders shaking hands over a split battlefield, sparks flying, blue versus red, a glowing VS emblem."],
-  ["Wallpapers", "wall_fire_desktop", "Wallpaper: Fire (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a volcano arena at dusk, a cute fire witch and a phoenix defending a lava path, glowing embers drifting, rich detail."],
-  ["Wallpapers", "wall_ice_desktop", "Wallpaper: Ice (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a snowy tundra village at night under auroras, a cute frost yeti and an ice mage guarding a frozen path, snow falling."],
-  ["Wallpapers", "wall_nature_desktop", "Wallpaper: Nature (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a giant glowing mushroom forest, a cute elf archer and a treant guarding a mossy path, fireflies."],
-  ["Wallpapers", "wall_candy_desktop", "Wallpaper: Candy (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a candy palace on a hill of sweets under a pink sky, a candy princess and gummy guards, sprinkles in the air."],
-  ["Wallpapers", "wall_castle_phone", "Wallpaper: Castle (phone)", "9:16", "Seedream 4.5", "Phone wallpaper: a tall castle keep with a golden crown on its tower, a winding path below guarded by cute heroes, monsters far away, stars above. Keep the top quarter calm for the clock."],
-  ["Wallpapers", "wall_boss_phone", "Wallpaper: Boss (phone)", "9:16", "Seedream 4.5", "Phone wallpaper: a giant boss monster towering over a tiny brave knight on a cliff, dramatic storm sky. Keep the top quarter calm for the clock."],
-  ["Wallpapers", "wall_pvp_phone", "Wallpaper: PvP (phone)", "9:16", "Seedream 4.5", "Phone wallpaper: a red army on top and a blue army below clashing in the middle with a glowing VS emblem. Keep the top quarter calm for the clock."],
+
+type Scene = [group: string, key: string, title: string, aspect: ArtRequest["aspect"], model: ArtModel, refs: string[], what: string];
+
+const SCENES: Scene[] = [
+  // Website sections
+  ["Website images", "hero", "Homepage hero banner", "16:9", "Nano Banana Pro",
+    [U("shield_knight"), U("hooded_archer"), U("ember_witch"), U("frost_sorceress"), U("lion_paladin"), M("orc_brute"), M("slime_blob"), M("skeleton_soldier"), B("fire_dragon")],
+    "Wide promotional key art for the tower defense game Crown & Keep: Shield Knight, Hooded Archer, Ember Witch, Frost Sorceress and Lion Paladin defend a castle gate on a winding path against a horde of Orc Brutes, Slime Blobs and Skeleton Soldiers led by the giant Fire Dragon, epic sunset sky. Leave calm empty space on the left third for a headline."],
+  ["Website images", "merge", "Merge feature image", "16:9", "Nano Banana Pro",
+    [U("hooded_archer"), "ui/rating_stars.webp"],
+    "Game feature illustration: two identical Hooded Archers standing on glowing board tiles merge into one bigger, upgraded Hooded Archer in a burst of sparkles with an extra gold star, top-down board view."],
+  ["Website images", "pvp", "PvP feature image", "16:9", "Nano Banana Pro",
+    [H("young_king"), H("dark_knight"), M("orc_brute"), M("goblin_runner"), A("meadow")],
+    "Game feature illustration: the Young King (blue side) and the Dark Knight (red side) face off across a split battlefield with a glowing VS emblem in the middle, Orc Brutes and Goblin Runners charging down both lanes."],
+  ["Website images", "stories", "Stories feature image", "16:9", "Nano Banana Pro",
+    [U("princess_muse"), "story/portraits/candy_king.webp", B("chaos_jawbreaker"), A("candy_palace")],
+    "Game feature illustration: an open storybook with the candy palace popping out of its pages, Princess Muse and the Candy King waving from the castle, the Chaos Jawbreaker looming behind with purple corruption creeping in."],
+  ["Website images", "collection", "Collection feature image", "16:9", "Nano Banana Pro",
+    [P("hooded_archer"), P("ember_witch"), P("fox_samurai"), P("valkyrie"), P("monkey_king"), "cards/frame_mythic.webp", "items/coins.webp"],
+    "Game feature illustration: a fan of five trading cards showing Hooded Archer (common), Ember Witch (rare), Fox Samurai (epic), Valkyrie (legendary) and Monkey King (mythic) in their rarity frames, the mythic Monkey King card glowing in the center, gold coins around."],
+  ["Website images", "leagues", "Leagues feature image", "16:9", "Nano Banana Pro",
+    [...BADGES, "items/trophy.webp", U("lion_paladin")],
+    "Game feature illustration: a stone staircase climbing into the clouds with one league badge from the references on each step, in order from Bronze at the bottom to Champion at the top, a giant gold trophy glowing at the summit and Lion Paladin climbing toward it."],
+  ["Website images", "heroes", "Heroes feature image", "16:9", "Nano Banana Pro",
+    ["young_king", "orc_warchief", "panda_brewmaster", "gnome_mech", "griffin_knight", "sea_witch", "elf_archmage", "dark_knight"].map(H),
+    "Game feature illustration: all eight hero commanders (Young King, Orc Warchief, Panda Brewmaster, Gnome Mech, Griffin Knight, Sea Witch, Elf Archmage, Dark Knight) posing together on a castle wall like a team poster, banners flying."],
+
+  // Social profiles
+  ["Social profiles", "discord_icon", "Discord server icon", "1:1", "Nano Banana Pro", ["assets/brand/icon_512.png", "assets/brand/logo.png"],
+    "Round server icon based on the game's icon reference: a golden crown on a small chunky castle keep, bold and centered, readable at 48 pixels, on a royal-blue circle."],
+  ["Social profiles", "discord_banner", "Discord server banner", "16:9", "Nano Banana Pro",
+    [U("shield_knight"), U("hooded_archer"), U("ember_witch"), U("penguin_wizard"), U("hourglass_owl")],
+    `Wide banner: Shield Knight, Hooded Archer, Ember Witch, Penguin Wizard and Hourglass Owl relaxing together in a cozy castle courtyard, torches and banners, evening light. ${HOLD}`],
+  ["Social profiles", "youtube_banner", "YouTube channel banner", "16:9", "Nano Banana Pro",
+    [U("shield_knight"), U("hooded_archer"), U("flame_adept"), U("tesla_gnome"), U("fox_spearman"), M("orc_brute"), M("goblin_runner"), M("slime_blob")],
+    "Very wide channel banner (keep everything important inside a thin middle strip, about 6:1): Shield Knight, Hooded Archer, Flame Adept, Tesla Gnome and Fox Spearman on a castle wall facing Orc Brutes, Goblin Runners and Slime Blobs on the horizon, sunset sky."],
+  ["Social profiles", "facebook_cover", "Facebook / X cover", "16:9", "Nano Banana Pro",
+    [U("bear_rider"), U("sand_monk"), U("frost_sorceress"), U("gear_engineer"), M("wolf_raider"), M("boar_rider"), A("meadow")],
+    `Wide cover image (3:1 crop safe): Bear Rider, Sand Monk, Frost Sorceress and Gear Engineer guard the path to a castle gate as Wolf Raiders and Boar Riders charge in from the right, bright daytime sky. ${HOLD}`],
+
+  // Unit of the Day backgrounds (the unit card is placed on top later)
+  ["Unit of the Day posts", "uotd_square", "Unit of the Day: square", "1:1", "Nano Banana 2", ["cards/frame_legendary.webp"],
+    "Social post background with NO characters: a glowing round spotlight stage on a castle floor, royal blue and gold, sparkles, an empty pedestal in the center for a unit card, decorative corners. Leave the center empty."],
+  ["Unit of the Day posts", "uotd_story", "Unit of the Day: story", "9:16", "Nano Banana 2", ["cards/frame_legendary.webp"],
+    "Vertical story background with NO characters: a tall spotlight beam onto an empty pedestal, royal blue and gold, banners on both sides, sparkles. Leave the middle empty for a unit card and the top for a title."],
+  ["Unit of the Day posts", "uotd_feed", "Unit of the Day: feed", "4:5", "Nano Banana 2", ["cards/frame_legendary.webp"],
+    "Feed post background with NO characters: an empty card display stand on a velvet castle table, royal blue and gold, candles and coins around the edges. Leave the center empty for a unit card."],
+
+  // Ads
+  ["Ad images", "ad_merge_sq", "Ad: Merge to win (square)", "1:1", "Nano Banana Pro", [U("hooded_archer"), M("slime_blob"), M("goblin_runner")],
+    `Mobile game ad image: two identical Hooded Archers on glowing tiles merge into one big powerful Hooded Archer in a burst of light, Slime Blobs and Goblin Runners blasted back. ${HOLD}`],
+  ["Ad images", "ad_merge_story", "Ad: Merge to win (story)", "9:16", "Nano Banana Pro", [U("shield_knight"), U("hooded_archer"), U("ember_witch"), U("tesla_gnome"), M("zombie_peasant")],
+    `Vertical mobile game ad image: a 3x3 board of Hooded Archers, Ember Witches and Tesla Gnomes where two Shield Knights merge in a burst of light into a bigger Shield Knight, Zombie Peasants on the path below. ${HOLD}`],
+  ["Ad images", "ad_pvp_sq", "Ad: Beat your friend (square)", "1:1", "Nano Banana Pro", [H("young_king"), H("dark_knight"), M("orc_brute")],
+    `Mobile game ad image: the Young King (blue side) and the Dark Knight (red side) glare at each other across a split battlefield, the Dark Knight hurling an Orc Brute onto the Young King's side, a glowing VS emblem. ${HOLD}`],
+  ["Ad images", "ad_pvp_story", "Ad: Beat your friend (story)", "9:16", "Nano Banana Pro", [M("door_ogre"), M("goblin_runner"), H("young_king"), H("dark_knight")],
+    `Vertical mobile game ad image: two stacked battlefields, the Young King's blue board on top and the Dark Knight's red board below, a Door Ogre leaping from one board to the other with Goblin Runners, a glowing VS emblem in the middle. ${HOLD}`],
+  ["Ad images", "ad_champion_sq", "Ad: Climb to Champion (square)", "1:1", "Nano Banana Pro", [U("lion_paladin"), "items/trophy.webp", BADGES[6], BADGES[5], BADGES[4]],
+    `Mobile game ad image: Lion Paladin raises a huge gold trophy on a mountain peak, the league badges from the references shining in the sky like stars, confetti. ${HOLD}`],
+  ["Ad images", "ad_champion_story", "Ad: Climb to Champion (story)", "9:16", "Nano Banana Pro", [U("valkyrie"), ...BADGES],
+    `Vertical mobile game ad image: a tall staircase of the league badges from the references rising into the clouds, Bronze at the bottom to Champion at the top, Valkyrie flying up the steps toward the Champion badge. ${HOLD}`],
+  ["Ad images", "ad_boss_sq", "Ad: Stop the boss (square)", "1:1", "Nano Banana Pro", [B("demon_lord"), U("shield_knight"), U("aegis_knight"), U("hooded_archer"), U("sun_priestess")],
+    `Mobile game ad image: the giant Demon Lord stomps toward a tiny castle while Shield Knight, Aegis Knight, Hooded Archer and Sun Priestess bravely block the path, dramatic red sky. ${HOLD}`],
+  ["Ad images", "ad_awaken_sq", "Ad: Awaken your heroes (square)", "1:1", "Nano Banana Pro", [U("ember_witch"), "units_awakened/ember_witch.webp"],
+    `Mobile game ad image: a before-and-after split of Ember Witch, her normal form (first reference) on the left and her awakened form (second reference) on the right in a burst of flame. ${HOLD}`],
+
+  // News thumbnails
+  ["Release thumbnails", "news_v1_1", "News: v1.1 Supporting Cast", "16:9", "Nano Banana Pro",
+    [U("mime"), U("lucky_cat"), U("hourglass_owl"), U("banner_herald"), U("gnome_brewer"), U("portal_imp")],
+    "News thumbnail: the support units Mime, Lucky Cat, Hourglass Owl, Banner Herald, Gnome Brewer and Portal Imp stepping onto a theatre stage under a spotlight."],
+  ["Release thumbnails", "news_v1_2", "News: v1.2 Stories", "16:9", "Nano Banana Pro",
+    [U("princess_muse"), "story/portraits/candy_king.webp", B("chaos_jawbreaker"), A("candy_palace")],
+    "News thumbnail: an open glowing storybook with the candy palace rising from its pages, the Candy King and Princess Muse waving, the Chaos Jawbreaker's purple corruption creeping in at the edges."],
+  ["Release thumbnails", "news_v1_3", "News: v1.3 Crown & Keep", "16:9", "Nano Banana Pro",
+    ["assets/brand/logo.png", H("young_king"), U("shield_knight"), U("hooded_archer")],
+    "News thumbnail: the Young King places a shining golden crown on top of a small sturdy castle keep while Shield Knight and Hooded Archer cheer, fireworks and banners behind, a grand reveal. Leave room at the top for the logo."],
+  ["Release thumbnails", "news_pvp", "News: PvP", "16:9", "Nano Banana Pro", [H("young_king"), H("orc_warchief"), A("meadow")],
+    "News thumbnail: the Young King (blue side) and the Orc Warchief (red side) shake hands over a split battlefield before the duel, sparks flying, a glowing VS emblem."],
+
+  // Wallpapers
+  ["Wallpapers", "wall_fire_desktop", "Wallpaper: Fire (desktop)", "16:9", "Nano Banana Pro", [U("ember_witch"), U("phoenix_chick"), U("lava_golem"), A("volcano")],
+    "Desktop wallpaper: Ember Witch, Phoenix Chick and Lava Golem defend a lava path in the volcano arena at dusk, glowing embers drifting, rich detail."],
+  ["Wallpapers", "wall_ice_desktop", "Wallpaper: Ice (desktop)", "16:9", "Nano Banana Pro", [U("frost_sorceress"), U("penguin_wizard"), U("crystal_queen"), B("frost_wyrm"), A("tundra")],
+    "Desktop wallpaper: Frost Sorceress, Penguin Wizard and Crystal Queen stand against the Frost Wyrm on a frozen path in the tundra at night under auroras, snow falling."],
+  ["Wallpapers", "wall_nature_desktop", "Wallpaper: Nature (desktop)", "16:9", "Nano Banana Pro", [U("hooded_archer"), U("treant_guardian"), U("vine_druid"), M("mushroom_walker"), A("mushroom_forest")],
+    "Desktop wallpaper: Hooded Archer, Treant Guardian and Vine Druid guard a mossy path through the glowing mushroom forest as Mushroom Walkers approach, fireflies."],
+  ["Wallpapers", "wall_candy_desktop", "Wallpaper: Candy (desktop)", "16:9", "Nano Banana Pro", [U("princess_muse"), M("gummy_bear"), M("cotton_candy_puff"), B("gummy_warlord"), A("candy_palace")],
+    "Desktop wallpaper: Princess Muse defends the candy palace from Gummy Bears and Cotton Candy Puffs led by the Gummy Warlord, pink sky, sprinkles in the air."],
+  ["Wallpapers", "wall_castle_phone", "Wallpaper: Castle (phone)", "9:16", "Nano Banana Pro", [H("young_king"), U("shield_knight"), U("hooded_archer"), U("tesla_gnome")],
+    "Phone wallpaper: a tall castle keep with a golden crown on its tower, the Young King on the battlements, Shield Knight, Hooded Archer and Tesla Gnome guarding the winding path below, stars above. Keep the top quarter calm for the clock."],
+  ["Wallpapers", "wall_boss_phone", "Wallpaper: Boss (phone)", "9:16", "Nano Banana Pro", [B("void_emperor"), U("lion_paladin")],
+    "Phone wallpaper: the giant Void Emperor towers over Lion Paladin standing brave on a cliff, dramatic storm sky. Keep the top quarter calm for the clock."],
+  ["Wallpapers", "wall_pvp_phone", "Wallpaper: PvP (phone)", "9:16", "Nano Banana Pro", [H("dark_knight"), H("young_king"), M("orc_brute"), U("shield_knight")],
+    "Phone wallpaper: the Dark Knight's red army on top and the Young King's blue army below (Orc Brutes against Shield Knights) clash in the middle around a glowing VS emblem. Keep the top quarter calm for the clock."],
 ];
 
-const EMOTES: [string, string][] = [
-  ["dragon_laugh", "a baby dragon laughing so hard it puffs smoke"],
-  ["yeti_shiver", "a frost yeti shivering with chattering teeth"],
-  ["mermaid_wave", "a mermaid waving hello from a splash of water"],
-  ["skeleton_shrug", "a skeleton shrugging, its jaw dropping off"],
-  ["cat_wink", "a lucky cat winking and raising a paw with a gold coin"],
-  ["mime_shock", "a mime gasping with hands on cheeks"],
-  ["orc_flex", "an orc flexing huge arms proudly"],
-  ["ghost_boo", "a ghost popping out with a cheeky grin"],
+/** New chat emotes, each starring one of our characters (like the existing goblin_laugh, witch_thumbsup). */
+const EMOTES: [key: string, ref: string, what: string][] = [
+  ["dragon_laugh", U("storm_whelp"), "Storm Whelp laughing so hard it puffs little sparks"],
+  ["yeti_shiver", M("yeti_cub"), "the Yeti Cub shivering with chattering teeth"],
+  ["mermaid_wave", U("tide_mermaid"), "Tide Mermaid waving hello from a splash of water"],
+  ["skeleton_shrug", M("skeleton_soldier"), "the Skeleton Soldier shrugging, its jaw dropping off"],
+  ["cat_wink", U("lucky_cat"), "Lucky Cat winking and raising a paw with a gold coin"],
+  ["mime_shock", U("mime"), "the Mime gasping with hands on cheeks"],
+  ["orc_flex", M("orc_brute"), "the Orc Brute flexing huge arms proudly"],
+  ["ghost_boo", U("lantern_ghost"), "Lantern Ghost popping out with a cheeky grin"],
 ];
 
 /**
@@ -469,35 +538,30 @@ export function artRequests(have: HaveArt): ArtRequest[] {
         `${STYLE} Game visual effect sprite: ${what}, matching the reference effects. Bright glowing colors, one single frame, ` +
         `centered with margin, nothing else in frame, on a solid flat pure ${magenta ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
     })),
-    ...WEBSITE.map(([k, title, aspect, what]) => ({
-      id: `website:${k}`,
-      group: "Website images",
-      title,
-      file: `website/${k}.png`,
-      model: (k === "hero" ? "Seedream 4.5" : "Seedream 5.0 lite") as ArtModel,
-      aspect: aspect as "16:9",
-      refs: ["brand/og_image.png", STYLE_ANCHOR],
-      prompt: `${STYLE} ${what}`,
-    })),
-    ...MARKETING.map(([group, k, title, aspect, model, what]) => ({
-      id: `marketing:${k}`,
-      group,
-      title,
-      file: `marketing/${k}.png`,
-      model,
-      aspect,
-      refs: ["assets/brand/key_art_1920x1080.png", STYLE_ANCHOR],
-      prompt: `${STYLE} ${what}`,
-    })),
-    ...EMOTES.map(([k, what]) => ({
+    ...SCENES.map(([group, k, title, aspect, model, refs, what]) => {
+      const site = group === "Website images";
+      return {
+        id: `${site ? "website" : "marketing"}:${k}`,
+        group,
+        title,
+        file: `${site ? "website" : "marketing"}/${k}.png`,
+        model,
+        aspect,
+        refs: [...refs, STYLE_ANCHOR],
+        prompt: `${STYLE} ${what.includes("NO characters") ? "" : `${CAST} `}${what}`,
+      };
+    }),
+    ...EMOTES.map(([k, ref, what]) => ({
       id: `emote:${k}`,
       group: "Extra emotes",
       title: `Emote: ${k.replace("_", " ")}`,
       file: `ui/emotes/${k}.png`,
-      model: "Nano Banana 2" as const,
+      model: "Nano Banana Pro" as const,
       aspect: "1:1" as const,
-      refs: ["emotes/goblin_laugh.webp", "emotes/witch_thumbsup.webp", STYLE_ANCHOR],
-      prompt: `${STYLE} Chat emote sticker: ${what}. Big expressive face, exaggerated emotion, head and upper body, matching the reference emotes. ${ICON}`,
+      refs: [ref, "emotes/goblin_laugh.webp", "emotes/witch_thumbsup.webp", STYLE_ANCHOR],
+      prompt:
+        `${STYLE} Chat emote sticker of the character in the first reference, drawn exactly as it looks there (same face, colors and outfit): ${what}. ` +
+        `Big expressive face, exaggerated emotion, head and upper body, framed like the other reference emotes. ${ICON}`,
     })),
   ];
 }
