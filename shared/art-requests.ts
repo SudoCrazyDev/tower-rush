@@ -19,7 +19,7 @@ export interface ArtRequest {
   /** Raw pack path (relative to assets/) the finished image is saved to. */
   file: string;
   model: ArtModel;
-  aspect: "1:1" | "16:9" | "9:16";
+  aspect: "1:1" | "16:9" | "9:16" | "4:5";
   /** Reference images to attach: game art paths (relative to the asset base), raw-pack files (assets/...) or a note. */
   refs: string[];
   prompt: string;
@@ -250,6 +250,51 @@ const WEBSITE: [string, string, string, string][] = [
   ["pvp", "PvP feature image", "16:9", "Game feature illustration: two rival players' armies face each other across a split battlefield, a glowing VS emblem in the middle, red side versus blue side, monsters charging down both lanes."],
   ["stories", "Stories feature image", "16:9", "Game feature illustration: an open storybook with a candy kingdom castle popping out of the pages, a princess waving from a tower, corrupted purple vines creeping in."],
   ["collection", "Collection feature image", "16:9", "Game feature illustration: a fan of trading cards with cute fantasy heroes in common, rare, epic, legendary and mythic frames, the mythic card glowing in the center, gold coins and chests around."],
+  ["leagues", "Leagues feature image", "16:9", "Game feature illustration: a tall stone staircase climbing into the clouds, a shiny league badge on each step (bronze, silver, gold, crystal, master), a giant gold champion trophy glowing at the top, a tiny hero climbing it."],
+  ["heroes", "Heroes feature image", "16:9", "Game feature illustration: eight cute fantasy commanders (a knight queen, a wizard, a pirate captain, a druid, a necromancer, an engineer, a dragon rider, a monk) posing together on a castle wall like a team poster, banners flying."],
+];
+
+/** Marketing images: social, ads and downloads (not used by the game itself). */
+const HOLD = "Leave a calm, uncluttered band for a headline added later.";
+const MARKETING: [string, string, string, ArtRequest["aspect"], ArtModel, string][] = [
+  // [group, key, title, aspect, model, what]
+  ["Social profiles", "discord_icon", "Discord server icon", "1:1", "Nano Banana Pro", "Round server icon: a golden crown sitting on top of a small chunky castle keep, bold and centered, readable at 48 pixels, on a royal-blue circle."],
+  ["Social profiles", "discord_banner", "Discord server banner", "16:9", "Nano Banana Pro", `Wide banner: a cozy castle courtyard where cute hero units hang out (an archer, a knight, a fire witch, a frost yeti, an owl wizard), torches and banners, evening light. ${HOLD}`],
+  ["Social profiles", "youtube_banner", "YouTube channel banner", "16:9", "Seedream 4.5", "Very wide channel banner (2560x1440, keep everything important inside the middle 1546x423 strip): a row of cute hero units on a castle wall facing a monster horde on the horizon, epic sunset sky."],
+  ["Social profiles", "facebook_cover", "Facebook / X cover", "16:9", "Seedream 4.5", `Wide cover image (3:1 crop safe): a winding path to a castle gate guarded by cute hero units, monsters marching in from the right, bright daytime sky. ${HOLD}`],
+  ["Unit of the Day posts", "uotd_square", "Unit of the Day: square", "1:1", "Nano Banana 2", "Social post background: a glowing round spotlight stage on a castle floor, royal blue and gold, sparkles, an empty pedestal in the center for a unit card to be placed on, decorative corners. Leave the center empty."],
+  ["Unit of the Day posts", "uotd_story", "Unit of the Day: story", "9:16", "Nano Banana 2", "Vertical story background: a tall glowing spotlight beam onto an empty pedestal, royal blue and gold, banners on both sides, sparkles. Leave the middle empty for a unit card and the top for a title."],
+  ["Unit of the Day posts", "uotd_feed", "Unit of the Day: feed", "4:5", "Nano Banana 2", "Feed post background: an empty card display stand on a velvet castle table, royal blue and gold, candles and coins around the edges. Leave the center empty for a unit card."],
+  ["Ad images", "ad_merge_sq", "Ad: Merge to win (square)", "1:1", "Nano Banana 2", `Mobile game ad image: two identical cute archers on glowing tiles merging into one big powerful archer in a burst of light, monsters blasted back. ${HOLD}`],
+  ["Ad images", "ad_merge_story", "Ad: Merge to win (story)", "9:16", "Nano Banana 2", `Vertical mobile game ad image: a 3x3 board of cute fantasy units with two matching knights merging in a burst of light into a bigger knight, monsters on the path below. ${HOLD}`],
+  ["Ad images", "ad_pvp_sq", "Ad: Beat your friend (square)", "1:1", "Nano Banana 2", `Mobile game ad image: two cute rival heroes glaring at each other across a split battlefield, blue side versus red side, one sending a giant monster at the other, a glowing VS emblem. ${HOLD}`],
+  ["Ad images", "ad_pvp_story", "Ad: Beat your friend (story)", "9:16", "Nano Banana 2", `Vertical mobile game ad image: two stacked battlefields, blue on top and red below, a giant monster leaping from one to the other, a glowing VS emblem in the middle. ${HOLD}`],
+  ["Ad images", "ad_champion_sq", "Ad: Climb to Champion (square)", "1:1", "Nano Banana 2", `Mobile game ad image: a cute knight raising a huge gold champion trophy on a mountain peak, league badges shining like stars in the sky, confetti. ${HOLD}`],
+  ["Ad images", "ad_champion_story", "Ad: Climb to Champion (story)", "9:16", "Nano Banana 2", `Vertical mobile game ad image: a tall staircase of league badges rising into the clouds, a cute hero leaping up the steps toward a giant glowing gold champion trophy. ${HOLD}`],
+  ["Ad images", "ad_boss_sq", "Ad: Stop the boss (square)", "1:1", "Nano Banana 2", `Mobile game ad image: a giant angry boss monster stomping toward a tiny castle, a line of brave cute hero units blocking the path, dramatic red sky. ${HOLD}`],
+  ["Ad images", "ad_awaken_sq", "Ad: Awaken your heroes (square)", "1:1", "Nano Banana Pro", `Mobile game ad image: split before-and-after of the same cute fire witch, plain on the left and awakened on the right with a blazing flame aura, golden armor and a huge staff. ${HOLD}`],
+  ["Release thumbnails", "news_v1_1", "News: v1.1 Supporting Cast", "16:9", "Nano Banana Pro", "News thumbnail: a group of cute support characters (a mime, a lucky cat, an owl with an hourglass, a bard with a war banner, a brewer with a cauldron) stepping onto a theatre stage under a spotlight."],
+  ["Release thumbnails", "news_v1_2", "News: v1.2 Stories", "16:9", "Nano Banana Pro", "News thumbnail: an open glowing storybook with a candy kingdom castle rising from its pages, a candy king waving, purple corruption creeping at the edges."],
+  ["Release thumbnails", "news_v1_3", "News: v1.3 Crown & Keep", "16:9", "Nano Banana Pro", "News thumbnail: a shining golden crown placed on top of a small sturdy castle keep, fireworks and banners behind it, a grand reveal."],
+  ["Release thumbnails", "news_pvp", "News: PvP", "16:9", "Nano Banana Pro", "News thumbnail: two cute rival commanders shaking hands over a split battlefield, sparks flying, blue versus red, a glowing VS emblem."],
+  ["Wallpapers", "wall_fire_desktop", "Wallpaper: Fire (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a volcano arena at dusk, a cute fire witch and a phoenix defending a lava path, glowing embers drifting, rich detail."],
+  ["Wallpapers", "wall_ice_desktop", "Wallpaper: Ice (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a snowy tundra village at night under auroras, a cute frost yeti and an ice mage guarding a frozen path, snow falling."],
+  ["Wallpapers", "wall_nature_desktop", "Wallpaper: Nature (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a giant glowing mushroom forest, a cute elf archer and a treant guarding a mossy path, fireflies."],
+  ["Wallpapers", "wall_candy_desktop", "Wallpaper: Candy (desktop)", "16:9", "Seedream 4.5", "Desktop wallpaper: a candy palace on a hill of sweets under a pink sky, a candy princess and gummy guards, sprinkles in the air."],
+  ["Wallpapers", "wall_castle_phone", "Wallpaper: Castle (phone)", "9:16", "Seedream 4.5", "Phone wallpaper: a tall castle keep with a golden crown on its tower, a winding path below guarded by cute heroes, monsters far away, stars above. Keep the top quarter calm for the clock."],
+  ["Wallpapers", "wall_boss_phone", "Wallpaper: Boss (phone)", "9:16", "Seedream 4.5", "Phone wallpaper: a giant boss monster towering over a tiny brave knight on a cliff, dramatic storm sky. Keep the top quarter calm for the clock."],
+  ["Wallpapers", "wall_pvp_phone", "Wallpaper: PvP (phone)", "9:16", "Seedream 4.5", "Phone wallpaper: a red army on top and a blue army below clashing in the middle with a glowing VS emblem. Keep the top quarter calm for the clock."],
+];
+
+const EMOTES: [string, string][] = [
+  ["dragon_laugh", "a baby dragon laughing so hard it puffs smoke"],
+  ["yeti_shiver", "a frost yeti shivering with chattering teeth"],
+  ["mermaid_wave", "a mermaid waving hello from a splash of water"],
+  ["skeleton_shrug", "a skeleton shrugging, its jaw dropping off"],
+  ["cat_wink", "a lucky cat winking and raising a paw with a gold coin"],
+  ["mime_shock", "a mime gasping with hands on cheeks"],
+  ["orc_flex", "an orc flexing huge arms proudly"],
+  ["ghost_boo", "a ghost popping out with a cheeky grin"],
 ];
 
 /** The awakened art the game already has: index.json from the asset base. */
@@ -323,6 +368,26 @@ export function artRequests(have: HaveArt): ArtRequest[] {
       aspect: aspect as "16:9",
       refs: ["brand/og_image.png", STYLE_ANCHOR],
       prompt: `${STYLE} ${what}`,
+    })),
+    ...MARKETING.map(([group, k, title, aspect, model, what]) => ({
+      id: `marketing:${k}`,
+      group,
+      title,
+      file: `marketing/${k}.png`,
+      model,
+      aspect,
+      refs: ["assets/brand/key_art_1920x1080.png", STYLE_ANCHOR],
+      prompt: `${STYLE} ${what}`,
+    })),
+    ...EMOTES.map(([k, what]) => ({
+      id: `emote:${k}`,
+      group: "Extra emotes",
+      title: `Emote: ${k.replace("_", " ")}`,
+      file: `ui/emotes/${k}.png`,
+      model: "Nano Banana 2" as const,
+      aspect: "1:1" as const,
+      refs: ["emotes/goblin_laugh.webp", "emotes/witch_thumbsup.webp", STYLE_ANCHOR],
+      prompt: `${STYLE} Chat emote sticker: ${what}. Big expressive face, exaggerated emotion, head and upper body, matching the reference emotes. ${ICON}`,
     })),
   ];
 }
