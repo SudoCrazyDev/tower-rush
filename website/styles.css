@@ -365,14 +365,16 @@ p { margin: 0; }
 .earn__card dd.pos { color: var(--green); }
 .earn__card dd.neg { color: #ff8095; }
 /* Leagues as a staircase: each step sits higher than the one before. */
+/* Leagues as a staircase: every card is the same size and each sits a step higher than the last. */
 .ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; }
-.rung { text-align: center; padding: 16px 8px calc(18px + var(--i) * 16px); border-radius: 18px 18px 8px 8px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 24%, var(--panel)), var(--panel)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
+.rung { margin-bottom: calc(var(--i) * 22px); text-align: center; padding: 14px 8px 8px; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 30%, var(--panel)), color-mix(in srgb, var(--c) 8%, var(--panel))); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 60%, transparent), 0 10px 0 color-mix(in srgb, var(--c) 30%, #050818), 0 16px 24px rgba(0, 0, 0, .4); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
 .rung:hover { transform: translateY(-6px); }
-.rung > img { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
-.rung b { font: 400 19px/1.1 var(--display); color: var(--c); }
-.rung__gate { display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 15px; }
-.rung__gate img { width: 20px; height: 20px; }
-.rung__reward { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.rung > img { width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
+.rung b { font: 400 20px/1.1 var(--display); color: var(--c); }
+.rung__gate { display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 15px; padding: 2px 10px; border-radius: 999px; background: rgba(0, 0, 0, .3); }
+.rung__gate img { width: 18px; height: 18px; }
+.rung__reward { align-self: stretch; min-height: 92px; margin-top: 4px; padding: 8px 4px; border-radius: 12px; background: rgba(0, 0, 0, .28); display: flex; flex-direction: column; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--text); }
+.rung__reward small { font-size: 10px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .rung__reward span { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .rung__reward img { width: 20px; height: 20px; object-fit: contain; }
 .ladder__note { text-align: center; color: var(--muted); max-width: 720px; margin: 28px auto 0; }
@@ -534,7 +536,7 @@ p { margin: 0; }
 /* ---------- responsive ---------- */
 @media (max-width: 1100px) {
   .ladder { grid-template-columns: repeat(4, 1fr); }
-  .rung { padding-bottom: 18px; }
+  .rung { margin-bottom: 0; }
   .heroes { grid-template-columns: 1fr; }
   .heroes__list { grid-template-columns: repeat(4, 1fr); }
 }

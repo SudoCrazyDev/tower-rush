@@ -302,6 +302,11 @@ if __name__ == "__main__":
         # League badges, lowest league first (a league's `icon` in the config is its slice number).
         "leagues": slice_atlas(f"{SRC}/ui/league_ranks.png", f"{OUT}/ui/league", 160),
     }
+    # Badges drawn after the atlas (league_ranks_extra_<n>.png, e.g. 6 = Champion) follow its slices.
+    for src in sorted(glob.glob(f"{SRC}/ui/league_ranks_extra_*.png")):
+        n = int(re.search(r"_(\d+)\.png$", src).group(1))
+        fit(src, f"{OUT}/ui/league_{n}.webp", 160)
+        index["atlas"]["leagues"] = max(index["atlas"]["leagues"], n + 1)
     index["hazy"] = [
         f"{folder}/{n}"
         for folder in ("units", "monsters", "bosses")

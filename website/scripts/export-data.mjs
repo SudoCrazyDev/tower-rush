@@ -132,6 +132,7 @@ const out = {
   arenas: DEFAULT_ARENAS,
   heroes: DEFAULT_HEROES.map((h) => ({ ...h, ability: heroAbilityText(h) })),
   leagues: DEFAULT_LEAGUES,
+  leagueBadges: index.atlas.leagues, // league badge art on R2: ui/league_0 .. n-1
   // How trophies move: arena runs (battleRewards) and Ranked PvP.
   trophies: { perWave: ECONOMY.trophiesPerWave, offset: ECONOMY.trophyOffset, maxLoss: ECONOMY.trophyMaxLoss },
   chests: Object.fromEntries(DEFAULT_CHESTS.map((c) => [c.id, { name: c.name, image: c.image }])),

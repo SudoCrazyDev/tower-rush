@@ -325,11 +325,11 @@
   ].filter(Boolean).join("");
   const leagues = [...D.leagues].sort((a, b) => a.trophies - b.trophies);
   $("#leagueLadder").innerHTML = leagues.map((l, i) => {
-    const icon = l.icon <= 5 ? `ui/league_${l.icon}.webp` : "items/trophy.webp";
+    const icon = l.icon < D.leagueBadges ? `ui/league_${l.icon}.webp` : "items/trophy.webp";
     return `<div class="rung" style="--c:${l.color};--i:${i}">
       ${img(icon, l.name)}<b>${l.name.replace(" League", "")}</b>
-      <span class="rung__gate">${l.trophies ? `${img("items/trophy.webp")}${fmt(l.trophies)}` : "Everyone starts here"}</span>
-      <div class="rung__reward">${l.trophies ? reward(l.reward) : ""}</div>
+      <span class="rung__gate">${img("items/trophy.webp")}${fmt(l.trophies)}</span>
+      <div class="rung__reward">${l.trophies ? `<small>Promotion reward</small>${reward(l.reward)}` : "<small>Everyone starts here</small>"}</div>
     </div>`;
   }).join("");
 
