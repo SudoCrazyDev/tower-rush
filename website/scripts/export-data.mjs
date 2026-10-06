@@ -9,7 +9,8 @@ import { DEFAULT_LEAGUES } from "../../shared/leagues.ts";
 import { PERKS } from "../../shared/perks.ts";
 import { DEFAULT_HEROES, heroAbilityText } from "../../shared/heroes.ts";
 import { RACES } from "../../shared/races.ts";
-import { ECONOMY } from "../../shared/economy.ts";
+import { ECONOMY, DEFAULT_CHESTS } from "../../shared/economy.ts";
+import { DEFAULT_PVP, PVP_MODE_INFO } from "../../shared/pvp.ts";
 import { EFFECTS, auraBonus, buffBonus, effectSummary, unitEffectSummary } from "../../shared/effects.ts";
 import {
   SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
@@ -131,10 +132,14 @@ const out = {
   arenas: DEFAULT_ARENAS,
   heroes: DEFAULT_HEROES.map((h) => ({ ...h, ability: heroAbilityText(h) })),
   leagues: DEFAULT_LEAGUES,
+  // How trophies move: arena runs (battleRewards) and Ranked PvP.
+  trophies: { perWave: ECONOMY.trophiesPerWave, offset: ECONOMY.trophyOffset, maxLoss: ECONOMY.trophyMaxLoss },
+  chests: Object.fromEntries(DEFAULT_CHESTS.map((c) => [c.id, { name: c.name, image: c.image }])),
+  pvp: { rules: DEFAULT_PVP.rules, sends: DEFAULT_PVP.sends.filter((s) => s.enabled), tiers: DEFAULT_PVP.tiers, modes: PVP_MODE_INFO },
   awakened: index.portraits_awakened,
   videos: index.videos,
 };
 mkdirSync(new URL("../data/", import.meta.url), { recursive: true });
 writeFileSync(new URL("../data/game.js", import.meta.url), `window.GAME_DATA = ${JSON.stringify(out)};
 `);
-console.log(Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length])));
+console.log(Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length ?? Object.keys(v).length])));

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Crown &amp; Keep: Tower Defense | Merge. Defend. Conquer.</title>
-  <meta name="description" content="Crown &amp; Keep is a free merge tower-defense game in your browser. Summon heroes, merge them into legends, and hold the line against 49 monsters and 20 bosses across 16 arenas." />
+  <meta name="description" content="Crown &amp; Keep is a free merge tower-defense game in your browser. Summon heroes, merge them into legends, and hold the line against 30 monsters and 12 bosses across 16 arenas." />
   <meta name="theme-color" content="#0a0f2c" />
   <meta property="og:title" content="Crown &amp; Keep: Tower Defense | Merge. Defend. Conquer." />
   <meta property="og:description" content="Free merge tower defense in your browser. 78 units, 16 arenas, Story mode and real-time PvP." />
@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://assets.depedtoolkit.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=1.3.1" />
 </head>
 <body>
   <!-- ============ NAV ============ -->
@@ -32,6 +32,8 @@
       <a href="#arenas">Arenas</a>
       <a href="#bosses">Bosses</a>
       <a href="#modes">Modes</a>
+      <a href="#pvp">PvP</a>
+      <a href="#leagues">Leagues</a>
       <a href="#news">News</a>
     </nav>
     <a class="btn btn--play btn--sm" data-play href="#">Play free</a>
@@ -57,15 +59,14 @@
         </div>
         <p class="hero__note">No download &middot; No sign-up needed &middot; Progress saved to your account</p>
       </div>
-      <a class="hero__scroll" href="#stats" aria-label="Scroll down"><span></span></a>
     </section>
 
     <!-- ============ STATS ============ -->
     <section class="stats" id="stats">
       <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/card_pack.webp" alt="" loading="lazy" /><b data-count="units">78</b><span>units</span></div>
       <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/trophy.webp" alt="" loading="lazy" /><b data-count="arenas">16</b><span>arenas</span></div>
-      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/monsters/slime_blob.webp" alt="" loading="lazy" /><b data-count="monsters">49</b><span>monsters</span></div>
-      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/boss_warning.webp" alt="" loading="lazy" /><b data-count="bosses">20</b><span>bosses</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/monsters/slime_blob.webp" alt="" loading="lazy" /><b data-count="monsters">30</b><span>monsters</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/boss_warning.webp" alt="" loading="lazy" /><b data-count="bosses">12</b><span>bosses</span></div>
       <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/talent_rune.webp" alt="" loading="lazy" /><b data-count="heroes">8</b><span>heroes</span></div>
     </section>
 
@@ -210,14 +211,43 @@
       </div>
     </section>
 
+    <!-- ============ PVP ============ -->
+    <section class="section section--pvp" id="pvp">
+      <div class="section__head">
+        <span class="eyebrow eyebrow--red">Real-time PvP</span>
+        <h2>A duel, up close</h2>
+        <p>Two boards, the same waves on the same clock. Hold your keep and flood your rival's with monsters. Try the send buttons below.</p>
+      </div>
+      <div class="duel" id="duel">
+        <div class="duel__top">
+          <div class="duel__side"><b>You</b><span class="duel__hp"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/heart_life.webp" alt="HP" loading="lazy" /><i data-hp="0">20</i></span></div>
+          <div class="duel__clock"><b id="duelWave">WAVE 1</b><span id="duelNext">next wave in 20s</span></div>
+          <div class="duel__side duel__side--r"><span class="duel__hp"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/heart_life.webp" alt="HP" loading="lazy" /><i data-hp="1">20</i></span><b>Rival</b></div>
+        </div>
+        <div class="duel__boards">
+          <div class="board" data-board="0"><img class="board__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/arena_meadow.webp" alt="" loading="lazy" /><div class="board__units"></div><div class="board__foes"></div></div>
+          <div class="duel__vs">VS</div>
+          <div class="board board--r" data-board="1"><img class="board__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/arena_meadow.webp" alt="" loading="lazy" /><div class="board__units"></div><div class="board__foes"></div></div>
+        </div>
+        <div class="duel__bar">
+          <div class="duel__mana"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/mana_orb.webp" alt="Mana" loading="lazy" /><b id="duelMana">0</b><span id="duelIncome">+6 every 6s</span></div>
+          <div class="duel__sends" id="duelSends" aria-label="Send monsters to your rival"></div>
+        </div>
+        <div class="duel__end" id="duelEnd" hidden></div>
+      </div>
+      <ol class="duel__rules" id="duelRules"></ol>
+    </section>
+
     <!-- ============ LEAGUES ============ -->
     <section class="section section--panel" id="leagues">
       <div class="section__head">
         <span class="eyebrow">Climb the ranks</span>
         <h2>Trophy leagues</h2>
-        <p>Each promotion pays out coins, gems and chests. How high can you go?</p>
+        <p>Trophies measure how far you've come. Earn them by surviving waves in arena battles and by winning Ranked PvP. Pass a league's trophy mark and you move up and collect its reward.</p>
       </div>
-      <div class="leagues" id="leagues"></div>
+      <div class="earn" id="trophyEarn"></div>
+      <div class="ladder" id="leagueLadder"></div>
+      <p class="ladder__note">The first time you reach a league, its reward is yours to keep. Lose trophies and you can drop back down, but you never pay the reward back. More trophies also unlock new arenas.</p>
     </section>
 
     <!-- ============ NEWS ============ -->
@@ -272,7 +302,7 @@
   <footer class="footer">
     <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" loading="lazy" />
     <nav>
-      <a href="#codex">Units</a><a href="#arenas">Arenas</a><a href="#modes">Modes</a><a href="#news">News</a><a data-play href="#">Play</a>
+      <a href="#codex">Units</a><a href="#arenas">Arenas</a><a href="#modes">Modes</a><a href="#pvp">PvP</a><a href="#leagues">Leagues</a><a href="#news">News</a><a data-play href="#">Play</a>
     </nav>
     <p>&copy; 2026 Crown &amp; Keep. All rights reserved.</p>
   </footer>
@@ -298,7 +328,7 @@
     </div>
   </div>
 
-  <script src="data/game.js"></script>
-  <script src="app.js"></script>
+  <script src="data/game.js?v=1.3.1"></script>
+  <script src="app.js?v=1.3.1"></script>
 </body>
 </html>

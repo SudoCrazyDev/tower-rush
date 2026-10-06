@@ -1,4 +1,4 @@
-// Crown & Keep website: renders the codex, heroes, arenas, bosses and leagues from data/game.js
+// Crown & Keep website: renders the codex, heroes, arenas, bosses, the PvP demo and leagues from data/game.js
 // (exported from shared/ by scripts/export-data.mjs). Art is loaded from the game's R2 bucket.
 (() => {
   const ART = "https://assets.depedtoolkit.com";
@@ -44,7 +44,11 @@
   $$("main section[id]").forEach((s) => navObs.observe(s));
 
   // ---------------------------------------------------------------- stats (lobby top-bar pills)
-  const counts = { units: D.units.filter((u) => u.enabled).length, arenas: D.arenas.length, monsters: D.monsters.length, bosses: D.bosses.length, heroes: D.heroes.filter((h) => h.enabled).length };
+  // Story-only monsters and bosses (not in any arena's lists) stay off the site.
+  const arenaFoes = new Set(D.arenas.flatMap((a) => [...a.monsters, ...a.bosses]));
+  const MONSTERS = D.monsters.filter((m) => arenaFoes.has(m.id));
+  const BOSSES = D.bosses.filter((b) => arenaFoes.has(b.id));
+  const counts = { units: D.units.filter((u) => u.enabled).length, arenas: D.arenas.length, monsters: MONSTERS.length, bosses: BOSSES.length, heroes: D.heroes.filter((h) => h.enabled).length };
   $$("[data-count]").forEach((el) => { el.textContent = counts[el.dataset.count]; });
 
   // ---------------------------------------------------------------- codex (the deck room)
@@ -279,14 +283,14 @@
   });
 
   // ---------------------------------------------------------------- bosses + bestiary
-  $("#bossGrid").innerHTML = D.bosses.map((b) => {
+  $("#bossGrid").innerHTML = BOSSES.map((b) => {
     const corrupt = /chaos|corrupt/i.test(b.id + b.name);
     return `<article class="boss${corrupt ? " boss--corrupt" : ""}">
       ${img(`boss_banners/${b.id}.webp`, b.name)}
       <div class="boss__body"><span class="boss__power">${BOSS_POWER[b.power] ?? cap(b.power)}</span><h3>${b.name}</h3></div>
     </article>`;
   }).join("");
-  const foes = D.monsters.map((m) => `<div class="foe">${img(`monsters/${m.id}.webp`, m.name)}<span>${m.name}</span></div>`).join("");
+  const foes = MONSTERS.map((m) => `<div class="foe">${img(`monsters/${m.id}.webp`, m.name)}<span>${m.name}</span></div>`).join("");
   $("#monsterTrack").innerHTML = foes + foes.replace(/alt="[^"]*"/g, 'alt="" aria-hidden="true"');
 
   // ---------------------------------------------------------------- story books
@@ -299,16 +303,219 @@
     `<div class="book">${img(`story/covers/${cover}.webp`, title)}<b>${title}</b><span>${blurb}</span></div>`).join("");
 
   // ---------------------------------------------------------------- leagues
-  $("#leagues").innerHTML = D.leagues.map((l) => {
+  // How trophies move (economy.battleRewards, pvp.trophyChange), then the league ladder.
+  const T = D.trophies, R = D.pvp.rules;
+  const runTrophies = (wave) => Math.max(-T.maxLoss, wave * T.perWave - T.offset);
+  const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `&minus;${-n}` : "0");
+  $("#trophyEarn").innerHTML = [
+    ["items/trophy.webp", "Arena battles", `Every wave you survive is worth ${T.perWave} trophies, minus ${T.offset} for the run.`,
+      [[`Reach wave 10`, signed(runTrophies(10))], [`Reach wave 20`, signed(runTrophies(20))], [`Fall early`, `down to ${signed(-T.maxLoss)}`]]],
+    ["ui/icon_pvp.webp", "Ranked PvP", "Win a Ranked duel to take trophies. Beat a higher-ranked rival and you win more, and lose less.",
+      [["Win", signed(R.trophyWin)], ["Lose", signed(-R.trophyLoss)]]],
+    ["ui/icon_story.webp", "Just for fun", "Story, Casual, Mirror, friend challenges and bot practice never win or lose trophies. Play them freely.", [["Trophies", "0"]]],
+  ].map(([icon, title, text, rows]) => `
+    <article class="earn__card">${img(icon)}<h3>${title}</h3><p>${text}</p>
+      <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd class="${/minus|down/.test(v) ? "neg" : v === "0" ? "" : "pos"}">${v}</dd></div>`).join("")}</dl>
+    </article>`).join("");
+
+  const reward = (r) => [
+    r.coins && `<span>${img("items/coins.webp", "Coins")}${fmt(r.coins)}</span>`,
+    r.gems && `<span>${img("items/gems.webp", "Gems")}${fmt(r.gems)}</span>`,
+    r.chest && D.chests[r.chest] && `<span>${img(`items/${D.chests[r.chest].image}.webp`)}${D.chests[r.chest].name}</span>`,
+  ].filter(Boolean).join("");
+  const leagues = [...D.leagues].sort((a, b) => a.trophies - b.trophies);
+  $("#leagueLadder").innerHTML = leagues.map((l, i) => {
     const icon = l.icon <= 5 ? `ui/league_${l.icon}.webp` : "items/trophy.webp";
-    return `<div class="league" style="--c:${l.color}">${img(icon, l.name)}<b>${l.name.replace(" League", "")}</b><span>${fmt(l.trophies)}+</span></div>`;
+    return `<div class="rung" style="--c:${l.color};--i:${i}">
+      ${img(icon, l.name)}<b>${l.name.replace(" League", "")}</b>
+      <span class="rung__gate">${l.trophies ? `${img("items/trophy.webp")}${fmt(l.trophies)}` : "Everyone starts here"}</span>
+      <div class="rung__reward">${l.trophies ? reward(l.reward) : ""}</div>
+    </div>`;
   }).join("");
+
+  // ---------------------------------------------------------------- PvP demo
+  // A sped-up, simplified duel in the browser: the real rules (HP, sends, income, leaks) at toy
+  // numbers. Both boards get the same waves; sends add monsters to the other board and raise income.
+  (function duel() {
+    const root = $("#duel");
+    const P = D.pvp, rules = P.rules;
+    const SPEED = 3; // game seconds per real second
+    const WAVE_S = rules.waveSeconds / SPEED, INCOME_S = rules.incomeEvery / SPEED;
+    const arena = D.arenas[0];
+    const MON = Object.fromEntries(D.monsters.map((m) => [m.id, m]));
+    const boss = D.bosses.find((b) => b.id === arena.bosses[0]);
+    const deck = D.units.filter((u) => u.enabled && !u.card.unlock.startsWith("Unlock")).sort(() => Math.random() - 0.5);
+    const boards = $$(".board", root).map((el, i) => ({
+      el, foesEl: $(".board__foes", el), hpEl: $(`[data-hp="${i}"]`, root),
+      units: deck.slice(i * 5, i * 5 + 5),
+    }));
+    // The arena's own geometry (shared/arenas.ts, a 750x1334 board): in at the top gate, around the
+    // left or right half of the ring, out at the bottom gate. Units stand on the grid tiles.
+    const W = 750, H = 1334, g = arena.ring;
+    const pct = ([x, y]) => [(x / W) * 100, (y / H) * 100];
+    const route = (side) => [[arena.cx, arena.entryY], [arena.cx, g.top], [side, g.top], [side, g.bottom], [arena.cx, g.bottom], [arena.cx, arena.exitY]].map(pct);
+    const ROUTES = [route(g.left), route(g.right)].map((pts) => {
+      const segs = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], (p[1] - pts[i][1]) * H / W));
+      return { pts, segs, len: segs.reduce((a, b) => a + b, 0) };
+    });
+    const along = (r, x) => {
+      let d = Math.max(0, Math.min(1, x)) * r.len;
+      for (let i = 0; i < r.segs.length; i++) {
+        if (d <= r.segs[i]) { const t = d / r.segs[i], a = r.pts[i], b = r.pts[i + 1]; return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+        d -= r.segs[i];
+      }
+      return r.pts.at(-1);
+    };
+    const TILES = [[0, 0], [2, 0], [4, 0], [1, 2], [3, 2]]; // grid column, row
+    boards.forEach((b) => {
+      $(".board__units", b.el).innerHTML = b.units.map((u, i) => {
+        const [x, y] = pct([arena.grid.x0 + TILES[i][0] * arena.grid.dx, arena.grid.y0 + TILES[i][1] * arena.grid.dy]);
+        return `<span class="tower" style="left:${x}%;top:${y}%">${img(`portraits/${u.id}.webp`, u.name)}</span>`;
+      }).join("");
+    });
+
+    $("#duelRules").innerHTML = [
+      `<b>Same waves, same clock.</b> A new wave hits both boards every ${rules.waveSeconds} seconds.`,
+      `<b>Guard your ${rules.hp} HP.</b> Each monster that gets through costs 1 HP. Tanks cost ${rules.tankLeakDamage} and bosses ${rules.bossLeakDamage}.`,
+      `<b>Send monsters.</b> Spend mana to send them to your rival's board. Each send also raises your income.`,
+      `<b>Last keep standing wins.</b> From wave ${rules.suddenDeathWave} it's sudden death: waves grow fast until someone falls.`,
+      `<b>Pick a mode.</b> ${Object.values(P.modes).map((m) => `${m.name}: ${m.text.replace(/\.$/, "")}`).join(". ")}. Ranked also has its own rating tiers: ${[...P.tiers].sort((a, b) => a.rating - b.rating).map((t) => `<em style="color:${t.color}">${t.name}</em>`).join(" &rarr; ")}.`,
+    ].map((t) => `<li>${t}</li>`).join("");
+
+    const sendBtns = $("#duelSends");
+    sendBtns.innerHTML = P.sends.map((s, i) => {
+      const art = s.monster === "boss" ? `bosses/${boss.id}.webp` : `monsters/${s.monster}.webp`;
+      return `<button class="send" data-i="${i}" title="${s.name}: ${s.count} &times; ${s.monster === "boss" ? boss.name : MON[s.monster]?.name}">
+        ${img(art, s.name)}<em>${s.count > 1 ? `&times;${s.count}` : ""}</em>${s.income ? `<i>+${s.income}</i>` : ""}
+        <span>${img("items/mana_orb.webp")}${s.cost}</span><small></small></button>`;
+    }).join("");
+    const btns = $$(".send", sendBtns);
+
+    let st, last = performance.now();
+    const reset = () => {
+      st = { t: 0, wave: 0, nextWave: 1.2, nextIncome: INCOME_S, over: false, aiNext: 3,
+        side: boards.map(() => ({ hp: rules.hp, mana: 60, income: rules.baseIncome, foes: [] })) };
+      boards.forEach((b) => { b.foesEl.innerHTML = ""; });
+      $("#duelEnd").hidden = true;
+    };
+
+    const spawn = (bi, id, n, hpMult, sent, leak) => {
+      const def = id === "boss" ? boss : MON[id];
+      for (let k = 0; k < n; k++) {
+        const el = document.createElement("span");
+        el.className = `foe-run${sent ? " is-sent" : ""}${id === "boss" ? " is-boss" : ""}`;
+        el.innerHTML = img(`${id === "boss" ? "bosses" : "monsters"}/${def.id}.webp`, "");
+        boards[bi].foesEl.appendChild(el);
+        const hp = 10 * def.hp * hpMult * (1 + st.wave * 0.45);
+        // def.speed is px/s in the game (about 30-125); a lap takes ~6-14 demo seconds.
+        st.side[bi].foes.push({ el, x: -k * 0.05, hp, max: hp, v: def.speed / 600, leak, route: ROUTES[(k + st.wave) % 2] });
+      }
+    };
+    const leakOf = (id) => (id === "boss" ? rules.bossLeakDamage : MON[id]?.traits?.includes("tank") ? rules.tankLeakDamage : rules.leakDamage);
+
+    const send = (from, s) => {
+      const me = st.side[from];
+      if (st.over || me.mana < s.cost || st.wave < s.unlockWave) return false;
+      me.mana -= s.cost;
+      me.income += s.income;
+      const to = 1 - from;
+      boards[to].el.classList.remove("is-hit"); void boards[to].el.offsetWidth; boards[to].el.classList.add("is-hit");
+      setTimeout(() => !st.over && spawn(to, s.monster, s.count, s.hpMult, true, s.leakDamage ?? leakOf(s.monster)), rules.sendDelay / SPEED * 1000);
+      return true;
+    };
+    sendBtns.addEventListener("click", (e) => {
+      const b = e.target.closest(".send");
+      if (b && send(0, P.sends[+b.dataset.i])) { b.classList.remove("is-fired"); void b.offsetWidth; b.classList.add("is-fired"); }
+    });
+
+    const step = (dt) => {
+      st.t += dt;
+      if (st.t >= st.nextWave) {
+        st.wave++;
+        st.nextWave = st.t + WAVE_S;
+        const pool = arena.monsters;
+        const id = pool[(st.wave - 1) % pool.length];
+        const isBoss = st.wave % 5 === 0;
+        boards.forEach((_, i) => isBoss ? spawn(i, "boss", 1, 3, false, rules.bossLeakDamage) : spawn(i, id, 5, 1, false, leakOf(id)));
+      }
+      if (st.t >= st.nextIncome) { st.nextIncome += INCOME_S; st.side.forEach((s) => { s.mana += s.income; }); }
+
+      st.side.forEach((side, bi) => {
+        // Towers: the five units focus the monster furthest along, and grow with the waves like merges do.
+        let dmg = dt * 22 * (1 + st.wave * 0.4);
+        const order = [...side.foes].sort((a, b) => b.x - a.x);
+        for (const f of order) {
+          if (dmg <= 0 || f.x < 0) break;
+          const hit = Math.min(dmg, f.hp);
+          f.hp -= hit; dmg -= hit;
+          f.el.classList.add("is-hit");
+        }
+        side.foes = side.foes.filter((f) => {
+          f.x += f.v * dt * SPEED / 4;
+          if (f.hp <= 0) { side.mana += 5; f.el.classList.add("is-dead"); setTimeout(() => f.el.remove(), 300); return false; }
+          if (f.x >= 1) { side.hp = Math.max(0, side.hp - f.leak); f.el.remove(); boards[bi].hpEl.parentElement.classList.remove("is-leak"); void boards[bi].hpEl.offsetWidth; boards[bi].hpEl.parentElement.classList.add("is-leak"); return false; }
+          const [x, y] = along(f.route, f.x);
+          f.el.style.left = `${x}%`;
+          f.el.style.top = `${y}%`;
+          f.el.style.opacity = f.x < 0 ? 0 : 1;
+          f.el.style.setProperty("--hp", f.hp / f.max);
+          return true;
+        });
+      });
+
+      // The rival plays too: every second or two it sends something it can afford.
+      if (st.t >= st.aiNext) {
+        st.aiNext = st.t + 0.8 + Math.random() * 1.2;
+        const ok = P.sends.filter((s) => st.wave >= s.unlockWave && st.side[1].mana >= s.cost);
+        if (ok.length) send(1, ok[Math.floor(Math.random() * ok.length)]);
+      }
+
+      const [me, rival] = st.side;
+      if (!me.hp || !rival.hp) {
+        st.over = true;
+        const won = !rival.hp;
+        $("#duelEnd").innerHTML = `${img(`ui/banner_${won ? "victory" : "defeat"}.webp`, won ? "Victory" : "Defeat")}
+          <p>${won ? `Ranked win: ${signed(R.trophyWin)} trophies` : `Ranked loss: ${signed(-R.trophyLoss)} trophies`}</p>
+          <button class="btn btn--sm" id="duelAgain">Play again</button>`;
+        $("#duelEnd").hidden = false;
+        $("#duelAgain").addEventListener("click", reset);
+      }
+    };
+
+    const draw = () => {
+      $("#duelWave").textContent = st.wave ? `WAVE ${st.wave}` : "GET READY";
+      $("#duelNext").textContent = `next wave in ${Math.max(0, Math.ceil((st.nextWave - st.t) * SPEED))}s`;
+      boards.forEach((b, i) => { b.hpEl.textContent = st.side[i].hp; });
+      const me = st.side[0];
+      $("#duelMana").textContent = Math.floor(me.mana);
+      $("#duelIncome").textContent = `+${me.income} every ${rules.incomeEvery}s`;
+      btns.forEach((b, i) => {
+        const s = P.sends[i], locked = st.wave < s.unlockWave;
+        b.disabled = st.over || locked || me.mana < s.cost;
+        $("small", b).textContent = locked ? `W${s.unlockWave}` : "";
+      });
+    };
+
+    const loop = () => {
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      // Paused while the demo is off screen or the tab is hidden.
+      const box = root.getBoundingClientRect();
+      if (document.hidden || box.bottom < 0 || box.top > innerHeight) return;
+      if (!st.over) step(dt);
+      draw();
+    };
+    reset();
+    draw();
+    setInterval(loop, 33);
+  })();
 
   // ---------------------------------------------------------------- reveal on scroll
   const revealObs = new IntersectionObserver((entries, obs) => {
     for (const en of entries) if (en.isIntersecting) { en.target.classList.add("is-in"); obs.unobserve(en.target); }
   }, { threshold: 0.12 });
-  $$(".section__head, .step, .heroes, .rail, .bosses, .mode, .league, .post").forEach((el) => {
+  $$(".section__head, .step, .heroes, .rail, .bosses, .mode, .duel, .earn__card, .rung, .post").forEach((el) => {
     el.classList.add("reveal");
     revealObs.observe(el);
   });

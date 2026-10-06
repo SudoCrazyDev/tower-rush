@@ -132,9 +132,6 @@ p { margin: 0; }
 .hero__sub { font-size: clamp(16px, 2vw, 19px); color: #e3e9ff; max-width: 620px; text-shadow: 0 2px 8px rgba(0, 0, 0, .9); }
 .hero__cta { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
 .hero__note { font-size: 14px; color: #c9d3f5; text-shadow: 0 2px 6px rgba(0, 0, 0, .9); }
-.hero__scroll { position: absolute; bottom: 28px; left: 50%; translate: -50% 0; width: 28px; height: 46px; border-radius: 16px; border: 2px solid rgba(255, 255, 255, .6); }
-.hero__scroll span { position: absolute; left: 50%; top: 8px; width: 4px; height: 9px; margin-left: -2px; border-radius: 2px; background: #fff; animation: wheel 1.6s infinite; }
-@keyframes wheel { to { transform: translateY(14px); opacity: 0; } }
 
 /* ---------- stats ---------- */
 /* The game's lobby top bar: dark pills with a navy rim, a big icon hanging off the left end. */
@@ -356,13 +353,91 @@ p { margin: 0; }
 .loot img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .6)); transition: transform .2s; }
 .loot img:hover { transform: translateY(-6px) rotate(6deg); }
 
-/* ---------- leagues ---------- */
-.leagues { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; align-items: end; }
-.league { text-align: center; padding: 18px 8px; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 22%, var(--panel)), var(--panel)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); transition: transform .2s; }
-.league:hover { transform: translateY(-8px); }
-.league img { width: 80px; height: 80px; object-fit: contain; margin: 0 auto 8px; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
-.league b { display: block; font: 400 18px/1.1 var(--display); color: var(--c); }
-.league span { font-size: 13px; color: var(--muted); font-weight: 800; }
+/* ---------- trophies + leagues ---------- */
+.earn { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 56px; }
+.earn__card { padding: 22px 22px 18px; border-radius: 20px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 2px var(--line); display: flex; flex-direction: column; gap: 8px; }
+.earn__card > img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .5)); }
+.earn__card h3 { font-size: 24px; }
+.earn__card p { color: var(--muted); font-size: 15px; flex: 1; }
+.earn__card dl { display: grid; gap: 6px; margin-top: 6px; }
+.earn__card dl div { display: flex; justify-content: space-between; padding: 7px 12px; border-radius: 10px; background: rgba(0, 0, 0, .25); font-weight: 800; font-size: 15px; }
+.earn__card dd { font: 400 18px/1 var(--display); color: var(--muted); }
+.earn__card dd.pos { color: var(--green); }
+.earn__card dd.neg { color: #ff8095; }
+/* Leagues as a staircase: each step sits higher than the one before. */
+.ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; }
+.rung { text-align: center; padding: 16px 8px calc(18px + var(--i) * 16px); border-radius: 18px 18px 8px 8px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 24%, var(--panel)), var(--panel)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
+.rung:hover { transform: translateY(-6px); }
+.rung > img { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
+.rung b { font: 400 19px/1.1 var(--display); color: var(--c); }
+.rung__gate { display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 15px; }
+.rung__gate img { width: 20px; height: 20px; }
+.rung__reward { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.rung__reward span { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.rung__reward img { width: 20px; height: 20px; object-fit: contain; }
+.ladder__note { text-align: center; color: var(--muted); max-width: 720px; margin: 28px auto 0; }
+
+/* ---------- PvP demo ---------- */
+.section--pvp .section__head { margin-bottom: 32px; }
+.duel { position: relative; border-radius: 24px; overflow: hidden; background: #0d1235; box-shadow: 0 20px 40px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 59, 92, .35); }
+.duel__top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 12px 18px; background: linear-gradient(90deg, rgba(58, 160, 255, .25), transparent 40%, transparent 60%, rgba(255, 59, 92, .25)); }
+.duel__side { display: flex; align-items: center; gap: 12px; font: 400 22px/1 var(--display); }
+.duel__side--r { justify-content: flex-end; }
+.duel__hp { display: flex; align-items: center; gap: 4px; padding: 4px 12px 4px 4px; border-radius: 999px; background: rgba(0, 0, 0, .4); }
+.duel__hp img { width: 28px; height: 28px; }
+.duel__hp i { font-style: normal; min-width: 2ch; }
+.duel__hp.is-leak { animation: leak .4s; }
+@keyframes leak { 40% { background: rgba(255, 59, 92, .7); transform: scale(1.12); } }
+.duel__clock { text-align: center; display: flex; flex-direction: column; }
+.duel__clock b { font: 400 24px/1 var(--display); color: var(--gold); }
+.duel__clock span { font-size: 13px; color: var(--muted); font-weight: 800; }
+.duel__boards { display: flex; justify-content: center; align-items: center; gap: 18px; padding: 16px; background: radial-gradient(ellipse at center, rgba(255, 59, 92, .18), transparent 70%); }
+.duel__vs { font: 400 40px/1 var(--display); color: var(--gold); text-shadow: 0 4px 0 #b35a00, 0 0 24px rgba(255, 201, 60, .5); }
+.board { position: relative; width: min(300px, 40vw); aspect-ratio: 750 / 1334; overflow: hidden; border-radius: 16px; box-shadow: 0 0 0 3px rgba(58, 160, 255, .7), 0 12px 30px rgba(0, 0, 0, .5); }
+.board--r { box-shadow: 0 0 0 3px rgba(255, 59, 92, .7), 0 12px 30px rgba(0, 0, 0, .5); }
+.board__bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.board.is-hit { animation: hitflash .5s; }
+@keyframes hitflash { 30% { box-shadow: 0 0 0 5px #ff3b5c, 0 0 40px rgba(255, 59, 92, .8); } }
+.board__units, .board__foes { position: absolute; inset: 0; }
+.board__foes { z-index: 2; }
+.foe-run { position: absolute; width: 13%; aspect-ratio: 1; translate: -50% -60%; transition: opacity .2s; }
+.foe-run img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); }
+.foe-run::after { /* health bar */
+  content: ""; position: absolute; left: 15%; top: -8%; width: calc(70% * var(--hp, 1)); height: 4px; border-radius: 2px; background: var(--green);
+}
+.foe-run.is-sent img { filter: drop-shadow(0 0 5px rgba(255, 59, 92, 1)); }
+.foe-run.is-sent::after { background: #ff5577; }
+.foe-run.is-boss { width: 24%; }
+.foe-run.is-dead { animation: pop .3s reverse forwards; }
+.tower { position: absolute; width: 11%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 4px 8px rgba(0, 0, 0, .5); background: var(--panel); }
+.tower img { width: 100%; height: 100%; object-fit: cover; }
+.duel__bar { display: flex; align-items: center; gap: 16px; padding: 12px 18px; background: rgba(0, 0, 0, .35); flex-wrap: wrap; }
+.duel__mana { display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; }
+.duel__mana img { width: 40px; height: 40px; grid-row: span 2; }
+.duel__mana b { font: 400 26px/1 var(--display); color: #8fd8ff; }
+.duel__mana span { font-size: 12px; font-weight: 800; color: var(--green); }
+.duel__sends { display: flex; gap: 8px; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
+.send { position: relative; width: 72px; padding: 6px 4px 4px; border: 0; border-radius: 14px; background: linear-gradient(180deg, #7a2335, #3e1020); box-shadow: inset 0 0 0 2px rgba(255, 120, 140, .5), 0 4px 0 rgba(0, 0, 0, .4); color: #fff; cursor: pointer; font: inherit; transition: transform .1s, filter .2s; }
+.send:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.15); }
+.send:disabled { cursor: not-allowed; filter: grayscale(.8) brightness(.6); }
+.send > img { width: 44px; height: 44px; object-fit: contain; display: block; margin: 0 auto; }
+.send em { position: absolute; right: 6px; top: 4px; font: 400 14px/1 var(--display); font-style: normal; }
+.send i { position: absolute; left: 6px; top: 4px; font-style: normal; font-size: 12px; font-weight: 900; color: #7dff7a; }
+.send span { display: flex; align-items: center; justify-content: center; gap: 2px; font-weight: 900; font-size: 13px; }
+.send span img { width: 16px; height: 16px; }
+.send small { position: absolute; inset: 0; display: grid; place-items: center; font: 400 20px/1 var(--display); color: #fff; text-shadow: 0 2px 0 #000; pointer-events: none; }
+.send small:empty { display: none; }
+.send.is-fired { animation: fire .35s; }
+@keyframes fire { 40% { transform: translateY(-8px) scale(1.08); box-shadow: inset 0 0 0 2px #fff, 0 0 24px rgba(255, 59, 92, .9); } }
+.duel__end { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(5, 8, 25, .78); backdrop-filter: blur(3px); }
+.duel__end[hidden] { display: none; }
+.duel__end img { width: min(420px, 80%); }
+.duel__end p { font: 400 22px/1 var(--display); color: var(--gold-text); }
+.duel__rules { list-style: none; counter-reset: r; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 24px; padding: 0; }
+.duel__rules li { counter-increment: r; position: relative; padding: 16px 16px 16px 54px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 0 0 2px var(--line); color: var(--muted); font-size: 15px; }
+.duel__rules li::before { content: counter(r); position: absolute; left: 14px; top: 14px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--red); color: #fff; font: 400 16px/1 var(--display); }
+.duel__rules b { color: var(--text); }
+.duel__rules em { font-style: normal; font-weight: 900; }
 
 /* ---------- news ---------- */
 .news { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
@@ -450,7 +525,8 @@ p { margin: 0; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1100px) {
-  .leagues { grid-template-columns: repeat(4, 1fr); }
+  .ladder { grid-template-columns: repeat(4, 1fr); }
+  .rung { padding-bottom: 18px; }
   .heroes { grid-template-columns: 1fr; }
   .heroes__list { grid-template-columns: repeat(4, 1fr); }
 }
@@ -468,6 +544,8 @@ p { margin: 0; }
   .modes { grid-template-columns: 1fr; }
   .mode--story { grid-row: auto; }
   .news { grid-template-columns: 1fr; }
+  .earn { grid-template-columns: 1fr; }
+  .duel__sends { justify-content: center; }
   .cards { grid-template-columns: repeat(6, 1fr); }
   .shelf:not(.is-open) .card:nth-child(n + 7) { display: none; }
   .heroes__stage { grid-template-columns: 1fr; min-height: 0; }
@@ -477,7 +555,6 @@ p { margin: 0; }
 @media (max-width: 600px) {
   .nav { padding: 0 12px; gap: 8px; }
   .nav__brand img { height: 40px; }
-  .hero__scroll { display: none; }
   .section { padding: 80px 16px; }
   .stats { gap: 12px 10px; margin-top: -24px; }
   .stat { height: 42px; padding: 0 14px 0 38px; margin-left: 22px; }
@@ -505,12 +582,20 @@ p { margin: 0; }
   .dlg__table { font-size: 14px; }
   .dlg__table th, .dlg__table td { padding: 5px 3px; }
   .heroes__list { grid-template-columns: repeat(2, 1fr); }
-  .leagues { grid-template-columns: repeat(2, 1fr); }
-  .leagues .league:last-child { grid-column: span 2; }
   .post--feature { grid-template-columns: 1fr; }
   .post--feature img { max-width: 220px; }
   .search input { width: 120px; }
   .btn--xl { padding: 16px 24px; font-size: 19px; width: 100%; }
   .hero__cta { width: 100%; }
   .bosses { grid-template-columns: repeat(2, 1fr); }
+  .ladder { grid-template-columns: repeat(2, 1fr); }
+  .ladder .rung:last-child { grid-column: span 2; }
+  .duel__top { padding: 10px; gap: 6px; }
+  .duel__side { font-size: 17px; gap: 6px; }
+  .duel__clock b { font-size: 19px; }
+  .duel__boards { gap: 8px; padding: 10px 6px; }
+  .duel__vs { font-size: 24px; }
+  .send { width: 62px; }
+  .send > img { width: 36px; height: 36px; }
+  .duel__mana { width: 100%; justify-content: center; }
 }

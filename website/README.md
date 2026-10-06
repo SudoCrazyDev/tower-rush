@@ -4,10 +4,10 @@ The game's marketing site: a static one-page site (HTML, CSS and vanilla JS, no 
 
 | File | What |
 |---|---|
-| `index.html` | Page structure: hero, how to play, unit codex, heroes, arenas, bosses, modes, leagues, news |
+| `index.html` | Page structure: hero, how to play, unit codex, heroes, arenas, bosses, modes, PvP demo, trophy leagues, news |
 | `styles.css` | All styling; rarity and element colours match `shared/units.ts` |
-| `app.js` | Renders the codex, heroes, arenas, bosses and leagues from the data file; modals, filters, nav |
-| `data/game.js` | Generated. Units, monsters, bosses, arenas, heroes and leagues from `shared/`. Each unit carries its card dialog (effect lines, merge-rank and power-up tables) worked out with the game's own formulas, like `DeckScene.showCard` |
+| `app.js` | Renders the codex, heroes, arenas, bosses, PvP demo and leagues from the data file; modals, filters, nav. Story-only monsters and bosses (not in any arena list) are left out |
+| `data/game.js` | Generated. Units, monsters, bosses, arenas, heroes, leagues, trophy rules, chests and PvP rules/sends/tiers from `shared/`. Each unit carries its card dialog (effect lines, merge-rank and power-up tables) worked out with the game's own formulas, like `DeckScene.showCard` |
 | `scripts/export-data.mjs` | Writes `data/game.js` |
 
 All art (portraits, arena backgrounds and videos, the trailer) is loaded from the game's R2
