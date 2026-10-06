@@ -59,11 +59,11 @@
 
     <!-- ============ STATS ============ -->
     <section class="stats" id="stats">
-      <div class="stat"><b data-count="units">78</b><span>Units to collect</span></div>
-      <div class="stat"><b data-count="arenas">16</b><span>Arenas</span></div>
-      <div class="stat"><b data-count="monsters">49</b><span>Monsters</span></div>
-      <div class="stat"><b data-count="bosses">20</b><span>Bosses</span></div>
-      <div class="stat"><b data-count="heroes">8</b><span>Heroes</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/card_pack.webp" alt="" loading="lazy" /><b data-count="units">78</b><span>units</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/trophy.webp" alt="" loading="lazy" /><b data-count="arenas">16</b><span>arenas</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/monsters/slime_blob.webp" alt="" loading="lazy" /><b data-count="monsters">49</b><span>monsters</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/boss_warning.webp" alt="" loading="lazy" /><b data-count="bosses">20</b><span>bosses</span></div>
+      <div class="stat"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/items/talent_rune.webp" alt="" loading="lazy" /><b data-count="heroes">8</b><span>heroes</span></div>
     </section>
 
     <!-- ============ HOW TO PLAY ============ -->
@@ -102,20 +102,18 @@
     </section>
 
     <!-- ============ CODEX ============ -->
-    <section class="section section--panel" id="codex">
+    <section class="section section--panel section--saloon" id="codex">
       <div class="section__head">
-        <span class="eyebrow">Unit codex</span>
+        <span class="eyebrow">The deck room</span>
         <h2>Build your dream deck</h2>
-        <p>Six elements, six rarities and 26 ways to fight. Tap any card for its stats.</p>
+        <p>Pick five cards to take into battle. Tap one to see what it does at every merge rank.</p>
       </div>
       <div class="filters">
-        <div class="chips" id="rarityFilter" role="group" aria-label="Rarity"></div>
-        <div class="chips" id="elementFilter" role="group" aria-label="Element"></div>
+        <span class="filters__label">Shelve by</span>
+        <div class="chips" id="groupBy" role="group" aria-label="Group cards by"></div>
         <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><input id="unitSearch" type="search" placeholder="Search units" /></label>
       </div>
-      <p class="codex__count" id="codexCount"></p>
-      <div class="cards" id="cards"></div>
-      <div class="center"><button class="btn btn--ghost" id="moreUnits">Show all units</button></div>
+      <div id="shelves"></div>
     </section>
 
     <!-- ============ HEROES ============ -->
@@ -274,19 +272,10 @@
   <!-- ============ MODALS ============ -->
   <div class="modal" id="unitModal" aria-hidden="true">
     <div class="modal__backdrop" data-close></div>
-    <div class="modal__box unit" role="dialog" aria-modal="true" aria-labelledby="unitName">
+    <div class="modal__box dlg" role="dialog" aria-modal="true" aria-labelledby="unitName">
+      <h3 class="dlg__title" id="unitName"></h3>
       <button class="modal__x" data-close aria-label="Close">&times;</button>
-      <div class="unit__art">
-        <img id="unitImg" crossorigin="anonymous" alt="" />
-        <button class="unit__awaken" id="unitAwaken" hidden>Show awakened</button>
-      </div>
-      <div class="unit__info">
-        <div class="unit__tags" id="unitTags"></div>
-        <h3 id="unitName"></h3>
-        <p class="unit__blurb" id="unitBlurb"></p>
-        <div class="unit__stats" id="unitStats"></div>
-        <p class="unit__arch" id="unitArch"></p>
-      </div>
+      <div class="dlg__scroll" id="unitBody"></div>
     </div>
   </div>
 

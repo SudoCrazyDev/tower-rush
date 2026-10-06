@@ -43,114 +43,156 @@
   }, { rootMargin: "-45% 0px -50% 0px" });
   $$("main section[id]").forEach((s) => navObs.observe(s));
 
-  // ---------------------------------------------------------------- stats counters
-  const counts = { units: D.units.length, arenas: D.arenas.length, monsters: D.monsters.length, bosses: D.bosses.length, heroes: D.heroes.length };
-  const countObs = new IntersectionObserver((entries, obs) => {
-    for (const en of entries) {
-      if (!en.isIntersecting) continue;
-      obs.unobserve(en.target);
-      const el = en.target, to = counts[el.dataset.count], t0 = performance.now();
-      const tick = (t) => {
-        const k = Math.min(1, (t - t0) / 1200);
-        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
-        if (k < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
-  }, { threshold: 0.6 });
-  $$("[data-count]").forEach((el) => countObs.observe(el));
+  // ---------------------------------------------------------------- stats (lobby top-bar pills)
+  const counts = { units: D.units.filter((u) => u.enabled).length, arenas: D.arenas.length, monsters: D.monsters.length, bosses: D.bosses.length, heroes: D.heroes.filter((h) => h.enabled).length };
+  $$("[data-count]").forEach((el) => { el.textContent = counts[el.dataset.count]; });
 
-  // ---------------------------------------------------------------- codex
+  // ---------------------------------------------------------------- codex (the deck room)
   const units = D.units.filter((u) => u.enabled);
-  const awakened = new Set(D.awakened);
-  const maxDmg = Math.max(...units.map((u) => u.damage));
-  const maxSpd = Math.max(...units.map((u) => u.speed));
-  const maxDps = Math.max(...units.map((u) => u.damage * u.speed));
-  const PAGE = 18;
-  const state = { rarity: "all", element: "all", q: "", all: false };
+  const RARITY_DESC = ["mythic", "legendary", "epic", "rare", "common", "event"];
+  // Shelf names and taglines are the deck screen's own (DeckScene RARITY_GROUPS, ELEMENT_GROUPS, ROLES).
+  const RARITY_GROUPS = { common: "The house pour", rare: "Fine spirits", epic: "Aged in oak", legendary: "Top shelf", mythic: "Kept under the counter", event: "On the house" };
+  const ELEMENT_GROUPS = { fire: "Firewater", ice: "Served on the rocks", lightning: "Thunder shots", nature: "Herbal brews", poison: "Snake oil", arcane: "Mystic mixers" };
+  const ROLES = [
+    { key: "gun", title: "Gunslingers", sub: "Single-target damage", icon: "stats/range", archs: ["shot", "pierce", "sniper", "crit", "execute", "growth"] },
+    { key: "brawl", title: "Brawlers", sub: "Hit the whole crowd", icon: "stats/splash", archs: ["splash", "burn", "chain"] },
+    { key: "trick", title: "Tricksters", sub: "Slow, freeze, stun and curse", icon: "stats/slow", archs: ["slow", "freeze", "stun", "poison", "curse"] },
+    { key: "support", title: "Barkeeps", sub: "Buffs and mana", icon: "items/mana_orb", archs: ["buff", "aura", "mana"] },
+  ];
+  const ROLE_ARCHS = ROLES.flatMap((r) => r.archs);
+  const GROUPS = {
+    rarity: () => RARITY_DESC.map((r) => ({ key: r, title: cap(r), sub: RARITY_GROUPS[r], icon: `cards/frame_${r}.webp`, color: RARITY_COLOR[r], match: (u) => u.rarity === r })),
+    element: () => ELEMENTS.map((e) => ({ key: e, title: cap(e), sub: ELEMENT_GROUPS[e], icon: `ui/element_${e}.webp`, color: ELEMENT_COLOR[e], match: (u) => u.element === e })),
+    role: () => [
+      ...ROLES.map((r) => ({ ...r, match: (u) => r.archs.includes(u.arch) })),
+      { key: "cast", title: "Supporting cast", sub: "Never attack: copy, swap, brew", icon: "items/star_shard", match: (u) => !ROLE_ARCHS.includes(u.arch) },
+    ].map((g) => ({ ...g, icon: `${g.icon}.webp` })),
+  };
+  const state = { by: "rarity", q: "", open: new Set() };
+  // Each shelf shows one row until opened; the column counts match .cards in styles.css.
+  const narrow = matchMedia("(max-width: 600px)"), mid = matchMedia("(max-width: 900px)");
 
-  const chip = (group, value, label, color, icon = "") =>
-    `<button class="chip${value === "all" ? " is-on" : ""}" data-group="${group}" data-value="${value}" style="--c:${color}">${icon}${label}</button>`;
-  $("#rarityFilter").innerHTML = chip("rarity", "all", "All", "#ffc93c") +
-    RARITIES.filter((r) => units.some((u) => u.rarity === r)).map((r) => chip("rarity", r, cap(r), RARITY_COLOR[r])).join("");
-  $("#elementFilter").innerHTML = chip("element", "all", "Any element", "#ffc93c") +
-    ELEMENTS.map((e) => chip("element", e, cap(e), ELEMENT_COLOR[e], img(`ui/element_${e}.webp`))).join("");
-  $$(".filters .chip").forEach((b) => b.addEventListener("click", () => {
-    $$(`.chip[data-group="${b.dataset.group}"]`).forEach((c) => c.classList.toggle("is-on", c === b));
-    state[b.dataset.group] = b.dataset.value;
-    renderCards();
-  }));
-  $("#unitSearch").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); renderCards(); });
-  $("#moreUnits").addEventListener("click", () => { state.all = !state.all; renderCards(); });
+  $("#groupBy").innerHTML = [["rarity", "Rarity", "cards/frame_legendary.webp"], ["element", "Element", "ui/element_fire.webp"], ["role", "Role", "stats/damage.webp"]]
+    .map(([v, label, icon]) => `<button class="chip${v === state.by ? " is-on" : ""}" data-by="${v}">${img(icon)}${label}</button>`).join("");
+  $("#groupBy").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip");
+    if (!b) return;
+    $$("#groupBy .chip").forEach((c) => c.classList.toggle("is-on", c === b));
+    state.by = b.dataset.by;
+    state.open.clear();
+    renderShelves();
+  });
+  $("#unitSearch").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); renderShelves(); });
+  [narrow, mid].forEach((mq) => mq.addEventListener("change", () => renderShelves()));
 
-  function filtered() {
-    return units
-      .filter((u) => state.rarity === "all" || u.rarity === state.rarity)
-      .filter((u) => state.element === "all" || u.element === state.element)
-      .filter((u) => !state.q || `${u.name} ${u.race} ${u.arch} ${u.role ?? ""}`.toLowerCase().includes(state.q))
-      .sort((a, b) => RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity) || a.name.localeCompare(b.name));
+  // ui.ts cardView(): rarity frame (mythic once awakened), portrait, element icon.
+  const cardFace = (u, awake = false) =>
+    img(`cards/frame_${awake ? "mythic" : u.rarity}.webp`, "", "card__bg") +
+    img(`${awake ? "portraits_awakened" : "portraits"}/${u.id}.webp`, u.name, "card__art") +
+    img(`ui/element_${u.element}.webp`, u.element, "card__el");
+  const cardHtml = (u, i) => `
+    <button class="card" data-id="${u.id}" style="animation-delay:${Math.min(i, 8) * 35}ms">
+      <span class="card__frame">${cardFace(u)}${u.card.awakens ? img("items/star_shard.webp", "Awakens", "card__wake") : ""}</span>
+      <span class="card__name">${u.name}</span>
+    </button>`;
+
+  function renderShelves() {
+    const list = units.filter((u) => !state.q || `${u.name} ${u.race} ${u.arch} ${u.role ?? ""} ${u.element} ${u.rarity}`.toLowerCase().includes(state.q));
+    const perRow = narrow.matches ? 4 : mid.matches ? 6 : 8;
+    const html = GROUPS[state.by]().map((g) => {
+      const us = list.filter(g.match).sort((a, b) => RARITY_DESC.indexOf(a.rarity) - RARITY_DESC.indexOf(b.rarity) || a.name.localeCompare(b.name));
+      if (!us.length) return "";
+      const open = state.q || state.open.has(g.key);
+      return `<div class="shelf${open ? " is-open" : ""}" style="--c:${g.color ?? "var(--gold-text)"}">
+        <div class="shelf__sign">${img(g.icon)}<h3>${g.title}</h3><span>${g.sub}</span><em>${us.length}</em></div>
+        <div class="cards">${us.map(cardHtml).join("")}</div>
+        ${us.length > perRow && !state.q ? `<button class="chip shelf__more" data-more="${g.key}">${open ? "Show fewer" : `Show all ${us.length}`}</button>` : ""}
+      </div>`;
+    }).join("");
+    $("#shelves").innerHTML = html || `<p class="empty">No cards match "${state.q.replace(/[<&"]/g, "")}".</p>`;
   }
-  function renderCards() {
-    const list = filtered();
-    const shown = state.all ? list : list.slice(0, PAGE);
-    $("#codexCount").textContent = `${list.length} unit${list.length === 1 ? "" : "s"}`;
-    $("#cards").innerHTML = shown.length ? shown.map((u, i) => `
-      <button class="card" data-id="${u.id}" data-rarity="${u.rarity}" style="animation-delay:${Math.min(i, 18) * 25}ms">
-        ${img(`portraits/${u.id}.webp`, u.name, "card__art")}
-        ${img(`ui/element_${u.element}.webp`, u.element, "card__el")}
-        ${awakened.has(u.id) ? `<span class="card__wake">Awakens</span>` : ""}
-        <span class="card__name">${u.name}</span>
-        <span class="card__rarity">${u.role ?? u.rarity}</span>
-      </button>`).join("") : `<p class="empty">No units match. Try another filter.</p>`;
-    const btn = $("#moreUnits");
-    btn.hidden = list.length <= PAGE;
-    btn.textContent = state.all ? "Show fewer" : `Show all ${list.length} units`;
-  }
-  $("#cards").addEventListener("click", (e) => {
+  $("#shelves").addEventListener("click", (e) => {
+    const more = e.target.closest("[data-more]");
+    if (more) {
+      const k = more.dataset.more;
+      state.open.has(k) ? state.open.delete(k) : state.open.add(k);
+      renderShelves();
+      return;
+    }
     const card = e.target.closest(".card");
     if (card) openUnit(card.dataset.id);
   });
-  renderCards();
+  renderShelves();
 
-  // ---------------------------------------------------------------- unit modal
+  // ---------------------------------------------------------------- unit dialog (DeckScene.showCard)
   const unitModal = $("#unitModal");
-  let wakeOn = false, current = null;
+  let tab = "info";
+  const table = (t, hi = 0) => `<table class="dlg__table">
+    <tr><td></td>${t.heads.map((h, i) => `<th${i === hi ? ' class="hi"' : ""}>${h}</th>`).join("")}</tr>
+    ${t.rows.map((r) => `<tr><td>${img(`${r.icon}.webp`)}</td>${r.cells.map((c, i) => `<td${i === hi ? ' class="hi"' : ""}>${c}</td>`).join("")}</tr>`).join("")}
+  </table>`;
   function openUnit(id) {
     const u = units.find((x) => x.id === id);
     if (!u) return;
-    current = u; wakeOn = false;
-    const box = $(".modal__box", unitModal);
-    box.style.setProperty("--c", RARITY_COLOR[u.rarity]);
-    $("#unitImg").src = `${ART}/portraits/${u.id}.webp`;
-    $("#unitImg").alt = u.name;
+    const c = u.card;
+    $(".modal__box", unitModal).style.setProperty("--c", RARITY_COLOR[u.rarity]);
     $("#unitName").textContent = u.name;
-    $("#unitBlurb").textContent = `"${u.blurb}"`;
-    $("#unitTags").innerHTML = [
-      `<span class="tag" style="color:${RARITY_COLOR[u.rarity]}">${u.rarity}</span>`,
-      `<span class="tag" style="color:${ELEMENT_COLOR[u.element]}">${img(`ui/element_${u.element}.webp`)}${u.element}</span>`,
-      `<span class="tag">${u.race}</span>`,
-      `<span class="tag">${u.role ?? u.style}</span>`,
-    ].join("");
-    const support = u.damage === 0;
-    const bar = (label, val, max, text) =>
-      `<div class="ustat"><small>${label}</small><b>${text}</b><i style="--w:${Math.max(4, (val / max) * 100)}%"></i></div>`;
-    $("#unitStats").innerHTML = support
-      ? `<div class="ustat" style="grid-column:1/-1"><small>Role</small><b>Support</b><span style="display:block;color:var(--muted);margin-top:4px">Never attacks. Makes the units around it stronger.</span></div>`
-      : bar("Damage", u.damage, maxDmg, fmt(u.damage)) +
-        bar("Attack speed", u.speed, maxSpd, `${u.speed}/s`) +
-        bar("Damage per second", u.damage * u.speed, maxDps, fmt(Math.round(u.damage * u.speed))) +
-        `<div class="ustat"><small>Perk</small><b style="font-size:17px">${u.perkLabel && u.perk !== "none" ? u.perkLabel : "None"}</b>${u.perk !== "none" && u.perkText ? `<span style="display:block;color:var(--muted);font-size:13px;margin-top:4px">${cap(u.perkText)}</span>` : ""}</div>`;
-    $("#unitArch").innerHTML = u.archLabel ? `<b>How it fights:</b> ${u.archLabel}.` : "";
-    const wake = $("#unitAwaken");
-    wake.hidden = !awakened.has(u.id);
-    wake.textContent = "Show awakened";
+    $("#unitBody").innerHTML = `
+      <div class="dlg__top">
+        <div class="dlg__race" style="--race:${c.raceColor}"><small>Race</small><b>${c.raceLabel}</b></div>
+        <button class="dlg__card${c.awakens ? " is-flip" : ""}" id="dlgCard" aria-label="${c.awakens ? "Flip to the awakened form" : u.name}">${cardFace(u)}</button>
+        ${c.awakens ? `<button class="dlg__wake" id="dlgWake"><span>${cardFace(u, true)}</span>Awakens<br>at rank ${c.ranks.heads.length}</button>` : ""}
+      </div>
+      <div class="dlg__tabs" role="tablist">
+        <button class="chip" role="tab" data-tab="info">Details</button>
+        <button class="chip" role="tab" data-tab="stats">Stats</button>
+      </div>
+      <div class="dlg__pane" data-pane="info">
+        <div class="dlg__lines">
+          <div class="dlg__rarity" id="dlgRarity">${u.rarity} · ${u.element}</div>
+          ${c.awakeText ? `<div class="dlg__awake" id="dlgAwake" hidden>${c.awakeText}</div>` : ""}
+          <div class="dlg__role">${c.role}</div>
+          ${c.effects.map((l) => `<div class="dlg__fx">${l}</div>`).join("")}
+          ${c.perkLine ? `<div class="dlg__perk">${c.perkLine}</div>` : ""}
+          <div class="dlg__blurb">"${u.blurb}"</div>
+        </div>
+        <div class="dlg__quick">${c.quick.map(([icon, v]) => `<span>${img(`${icon}.webp`)}${v}</span>`).join("")}</div>
+        <p class="dlg__unlock">${c.unlock}</p>
+        <a class="btn btn--play dlg__cta" href="${GAME_URL}" target="_blank" rel="noopener">Play free</a>
+      </div>
+      <div class="dlg__pane" data-pane="stats">
+        <div class="dlg__lines">
+          ${c.styleLine ? `<div class="dlg__role">${c.styleLine}</div>` : ""}
+          ${c.perkLine ? `<div class="dlg__perk">${c.perkLine}</div>` : ""}
+        </div>
+        <div class="dlg__sec"><h4>Merge rank</h4><p>${c.rankNote}</p></div>
+        ${table(c.ranks)}
+        <div class="dlg__sec"><h4>Power-ups in battle</h4><p>${c.upNote}</p></div>
+        ${table(c.ups)}
+        <p class="dlg__foot">${c.foot}</p>
+      </div>`;
+    showTab(tab);
+    if (c.awakens) {
+      let awake = false;
+      const flip = () => {
+        awake = !awake;
+        $("#dlgCard").innerHTML = cardFace(u, awake);
+        $("#dlgWake").hidden = awake;
+        $("#dlgRarity").hidden = awake;
+        $("#dlgAwake").hidden = !awake;
+      };
+      $("#dlgCard").addEventListener("click", flip);
+      $("#dlgWake").addEventListener("click", flip);
+    }
+    $("#unitBody").scrollTop = 0;
     openModal(unitModal);
   }
-  $("#unitAwaken").addEventListener("click", (e) => {
-    wakeOn = !wakeOn;
-    $("#unitImg").src = `${ART}/${wakeOn ? "portraits_awakened" : "portraits"}/${current.id}.webp`;
-    e.target.textContent = wakeOn ? "Show base form" : "Show awakened";
-  });
+  function showTab(t) {
+    tab = t;
+    $$("#unitBody [data-tab]").forEach((b) => { b.classList.toggle("is-on", b.dataset.tab === t); b.setAttribute("aria-selected", b.dataset.tab === t); });
+    $$("#unitBody [data-pane]").forEach((p) => { p.hidden = p.dataset.pane !== t; });
+  }
+  $("#unitBody").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) showTab(b.dataset.tab); });
 
   // ---------------------------------------------------------------- modals
   let lastFocus = null;
@@ -266,7 +308,7 @@
   const revealObs = new IntersectionObserver((entries, obs) => {
     for (const en of entries) if (en.isIntersecting) { en.target.classList.add("is-in"); obs.unobserve(en.target); }
   }, { threshold: 0.12 });
-  $$(".section__head, .step, .heroes, .rail, .bosses, .mode, .league, .post, .stat").forEach((el) => {
+  $$(".section__head, .step, .heroes, .rail, .bosses, .mode, .league, .post").forEach((el) => {
     el.classList.add("reveal");
     revealObs.observe(el);
   });
