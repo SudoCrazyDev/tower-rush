@@ -1,4 +1,4 @@
-/** Thin client for the Tower Rush server (see ../server). */
+/** Thin client for the Crown & Keep server (see ../server). */
 
 const TOKEN_KEY = "tower-rush-token";
 

@@ -1,4 +1,4 @@
-# Tower Rush: what's next
+# Crown & Keep: what's next
 
 State as of 2026-10-03: playable merge tower-defense (Phaser 3) with widescreen and phone
 layouts, synthesized music and sound effects, a Node + SQLite server (accounts, server-side

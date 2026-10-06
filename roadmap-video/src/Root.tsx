@@ -5,6 +5,7 @@ import { Releases, R_TOTAL } from "./Releases";
 import { CAST } from "./promo/cast";
 import { KeyArt, Square, Story, Teaser, TEASER_LEN, TeaserStory, UnitPost } from "./promo/SupportingCast";
 import { StBanner, StInfoBestiary, StInfoDeck, StInfoKnights, StInfoMuse, StInfoPath, StKeyArt, StSquare, StStory, StTeaserStory } from "./promo/Stories";
+import { RbBanner, RbIcon, RbKeyArt, RbReveal, RbSquare, RbStory, REVEAL_LEN } from "./promo/Rebrand";
 
 export const RemotionRoot = () => (
   <>
@@ -32,5 +33,12 @@ export const RemotionRoot = () => (
     <Still id="st-info-deck" component={StInfoDeck} width={1080} height={1350} />
     <Still id="st-info-knights" component={StInfoKnights} width={1080} height={1350} />
     <Still id="st-info-bestiary" component={StInfoBestiary} width={1080} height={1350} />
+    {/* v1.3 Branding Revamp promo kit (docs/features/v1.3-branding-revamp/PROMO.md) */}
+    <Still id="rb-keyart" component={RbKeyArt} width={1920} height={1080} />
+    <Still id="rb-square" component={RbSquare} width={1080} height={1080} />
+    <Still id="rb-story" component={RbStory} width={1080} height={1920} />
+    <Still id="rb-banner" component={RbBanner} width={1500} height={500} />
+    <Still id="rb-icon" component={RbIcon} width={1024} height={1024} />
+    <Composition id="rb-reveal" component={RbReveal} durationInFrames={REVEAL_LEN} fps={30} width={1080} height={1920} />
   </>
 );

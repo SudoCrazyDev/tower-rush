@@ -1,4 +1,4 @@
-# Tower Rush feature roadmap
+# Crown & Keep feature roadmap
 
 The release timeline: what shipped, when, and what's next. Each feature release has a design doc
 and promo kit (see [README.md](README.md) for the conventions); the smaller quality-of-life (QoL)
@@ -6,9 +6,9 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 [ROADMAP.md](../../ROADMAP.md).
 
 ```
- v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          next
- Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► balance, then
- Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Books 2–4 (TBD)
+ v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          v1.3.0            next
+ Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► Branding ────────► balance, then
+ Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Books 2–4 (TBD)
 ```
 
 | Version | Title | Shipped | Git | Design doc |
@@ -19,6 +19,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.2.0 | **Stories** | 2026-10-06 | tag `v1.2.0` | [v1.2](v1.2-stories/README.md) |
 | v1.2.1 | Knights hotfix | 2026-10-06 | tag `v1.2.1` | [v1.2](v1.2-stories/README.md) (5.4) |
 | v1.2.2 | Story card unlocks hotfix | 2026-10-06 | tag `v1.2.2` | [v1.2](v1.2-stories/README.md) (5.7) |
+| v1.3.0 | **Branding Revamp** | 2026-10-06 | tag `v1.3.0` | [v1.3](v1.3-branding-revamp/README.md) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
 ---
@@ -97,6 +98,13 @@ once on load (`hotfixes` in the config, see `withHotfixes` in shared/config.ts).
   collection gave none). A locked story card's details now say **"Unlock it in Story 2:
   Chaorruption"** with a STORIES button that opens that book, instead of "Find this card in
   chests!" and a SHOP button. Princess Muse points to Story 1 the same way.
+
+## v1.3.0: Branding Revamp (2026-10-06)
+
+**Tower Rush is now Crown & Keep: Tower Defense.** "Tower Rush" was already taken. A new logo
+in the same style, a new app icon and favicon, share images, and a What's New popup announcing
+the name. Same colours, same game; logins, settings and progress carry over.
+[Design doc](v1.3-branding-revamp/README.md) · [Promo kit](v1.3-branding-revamp/PROMO.md)
 
 ## Next
 

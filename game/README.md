@@ -1,4 +1,4 @@
-# Tower Rush (web)
+# Crown & Keep (web)
 
 A merge tower-defense game for the browser, built with Phaser 3 + TypeScript + Vite,
 using the generated art in `../assets`. It needs the server in `../server` for accounts,

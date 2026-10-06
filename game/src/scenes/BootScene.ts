@@ -18,7 +18,8 @@ export class BootScene extends Phaser.Scene {
     // Always fetch a fresh index: a cached one from before an art upload hides the new art.
     this.load.json("index", `${BASE}index.json?cors&t=${Date.now()}`);
     this.load.image("loc:loading_keyart", `${BASE}locations/loading_keyart.webp`);
-    this.load.image("ui:logo", `${BASE}ui/logo.webp`);
+    // Versioned so the v1.3 Crown & Keep logo replaces a cached Tower Rush one (R2 and browsers cache art for a day).
+    this.load.image("ui:logo", `${BASE}ui/logo.webp?v=1.3.0`);
   }
 
   create() {

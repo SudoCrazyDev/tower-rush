@@ -1,4 +1,4 @@
-# Deploying Tower Rush (Cloudflare)
+# Deploying Crown & Keep (Cloudflare)
 
 Everything runs on Cloudflare:
 

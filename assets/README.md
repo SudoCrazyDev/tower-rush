@@ -1,4 +1,4 @@
-# Asset Pack — Tower Rush (working title)
+# Asset Pack — Crown & Keep (formerly Tower Rush)
 
 Original art in a flat 2D vector cartoon style (thick navy outlines, simple cel shading,
 chunky badge-like characters). Generated with Higgsfield on 2026-10-03 (1,631 credits).

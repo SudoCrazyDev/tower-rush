@@ -1,7 +1,11 @@
-# Tower Rush
+# Crown & Keep: Tower Defense
 
 A merge tower-defense web game (Rush Royale-style) with a server for player accounts
 and an admin panel for balancing the game and managing players.
+
+The game was called **Tower Rush** until v1.3.0 (2026-10-06). Internal ids still use
+`tower-rush` (the Worker, D1 database, R2 bucket, browser storage keys and the PvP socket
+protocol) so players keep their logins and settings; only the player-facing name changed.
 
 | Folder | What | Dev URL |
 |---|---|---|

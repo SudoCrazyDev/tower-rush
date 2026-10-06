@@ -1,5 +1,5 @@
 /**
- * Tower Rush API on Cloudflare Workers. The game and admin panel are static files served
+ * Crown & Keep API on Cloudflare Workers. The game and admin panel are static files served
  * by Workers static assets (see wrangler.jsonc); requests that aren't files land here.
  */
 import { Hono } from "hono";
