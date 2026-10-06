@@ -96,7 +96,7 @@
     $("#codexCount").textContent = `${list.length} unit${list.length === 1 ? "" : "s"}`;
     $("#cards").innerHTML = shown.length ? shown.map((u, i) => `
       <button class="card" data-id="${u.id}" data-rarity="${u.rarity}" style="animation-delay:${Math.min(i, 18) * 25}ms">
-        ${img(`portraits/${u.id}.webp`, u.name)}
+        ${img(`portraits/${u.id}.webp`, u.name, "card__art")}
         ${img(`ui/element_${u.element}.webp`, u.element, "card__el")}
         ${awakened.has(u.id) ? `<span class="card__wake">Awakens</span>` : ""}
         <span class="card__name">${u.name}</span>
