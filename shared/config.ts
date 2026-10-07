@@ -2,7 +2,7 @@
  * The whole editable game balance as one JSON document. The server stores versions of
  * it, the admin panel edits it, and the game applies it at boot with applyConfig().
  */
-import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, UNIT_EFFECTS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
+import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, UNIT_EFFECTS, WEAPON_KEYS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
 import { PERK_IDS } from "./perks.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
 import { BOOK, DEFAULT_BOOK, storyProblems, type BookDef } from "./stories.ts";
@@ -181,6 +181,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     num(u.damage, `${w} damage`);
     num(u.speed, `${w} speed`);
     if (u.effect !== undefined) oneOf(u.effect, UNIT_EFFECTS, `${w} effect`);
+    if (u.weapon !== undefined) oneOf(u.weapon, WEAPON_KEYS, `${w} weapon`);
     if (u.kit !== undefined || u.perks !== undefined) errs.push(...kitProblems(u, w));
   }
   const monsterIds = ids(cfg.monsters, "monster");
