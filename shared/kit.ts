@@ -102,32 +102,55 @@ export function withPerkDefaults(p: Partial<PerkValues> | undefined): PerkValues
 // ---------------------------------------------------------------- migration
 
 type LegacyUnit = Pick<UnitDef, "arch" | "perk" | "effect">;
+/** A saved v1 effects object: its burn block still carries the splash numbers (typed loosely). */
+type LegacyEffects = { splash?: object; burn?: object };
+/** What burn's own splash was in v1 (DEFAULT_EFFECTS.burn before P3). */
+const LEGACY_BURN_SPLASH: Record<string, number> = { radius: 85, radiusPerRank: 4, splash: 0.5 };
 
 /**
  * The kit that plays exactly like a v1 unit. A rider archetype on its own (old `freeze`) needs an
  * attack in front of it: a single-target shot. Old `burn` was its own splash, so it becomes a
  * splash tuned to burn's splash numbers plus the burn rider.
  */
-export function kitFromLegacy(u: LegacyUnit, e: Effects = EFFECTS): { kit: ArchSlot[]; perks: PerkSlot[] } {
+export function kitFromLegacy(u: LegacyUnit, e: LegacyEffects = EFFECTS): { kit: ArchSlot[]; perks: PerkSlot[] } {
   const kit: ArchSlot[] = [];
-  const kind = ARCH_KIND[u.arch];
-  if (u.arch === "burn") {
+  const arch = u.arch ?? "shot";
+  const kind = ARCH_KIND[arch];
+  if (arch === "burn") {
+    const burn = (e.burn ?? {}) as Record<string, number>;
+    const splash = (e.splash ?? EFFECTS.splash) as Record<string, number>;
     const tune: Record<string, number> = {};
-    for (const f of ["radius", "radiusPerRank", "splash"] as const) if (e.burn[f] !== e.splash[f]) tune[f] = e.burn[f];
+    for (const f of ["radius", "radiusPerRank", "splash"]) {
+      const v = burn[f] ?? LEGACY_BURN_SPLASH[f];
+      if (v !== splash[f]) tune[f] = v;
+    }
     kit.push(Object.keys(tune).length ? { arch: "splash", tune } : { arch: "splash" }, { arch: "burn" });
-  } else if (kind === "rider") kit.push({ arch: "shot" }, { arch: u.arch });
-  else kit.push({ arch: u.arch });
+  } else if (kind === "rider") kit.push({ arch: "shot" }, { arch });
+  else kit.push({ arch });
   if (u.effect) kit.push({ arch: u.effect });
   const perks: PerkSlot[] = u.perk && u.perk !== "none" ? [{ perk: u.perk }] : [];
   return { kit, perks };
 }
 
+/** Drop the v1 fields (arch, effect, perk) from a unit: saved v2 configs never carry them. */
+function stripLegacy<T extends UnitDef>(u: T): T {
+  const { arch: _a, effect: _e, perk: _p, ...rest } = u;
+  return rest as T;
+}
+
 /**
  * Give every unit its kit. A unit that has a kit keeps it (the kit is the source of truth); a unit
- * from a v1 saved config has none, so it is derived from the legacy `arch`, `effect` and `perk`.
+ * from a v1 saved config has none, so it is derived from the legacy `arch`, `effect` and `perk`
+ * (the only place they are read). The legacy fields are removed either way.
  */
-export function withKits<T extends UnitDef>(list: T[], e: Effects = EFFECTS): T[] {
-  return list.map((u) => (Array.isArray(u.kit) && u.kit.length ? u : { ...u, ...kitFromLegacy(u, e) }));
+export function withKits<T extends UnitDef>(list: T[], e: LegacyEffects = EFFECTS): T[] {
+  return list.map((u) => {
+    const hasKit = Array.isArray(u.kit) && u.kit.length > 0;
+    if (hasKit && Array.isArray(u.perks)) return stripLegacy(u);
+    // A hotfix may have copied a kit onto a v1 unit that still has its old `perk`.
+    const d = kitFromLegacy(u, e);
+    return stripLegacy({ ...u, kit: hasKit ? u.kit : d.kit, perks: Array.isArray(u.perks) && (hasKit || u.perks.length) ? u.perks : d.perks });
+  });
 }
 
 // ---------------------------------------------------------------- numbers
@@ -146,7 +169,7 @@ export function unitEffects(def: Pick<UnitDef, "kit">, e: Effects = EFFECTS): Ef
 export const fx = <A extends EffectArch>(def: Pick<UnitDef, "kit">, arch: A, e: Effects = EFFECTS): Effects[A] => unitEffects(def, e)[arch];
 
 export const kitHas = (def: Pick<UnitDef, "kit">, arch: KitArch) => !!def.kit?.some((s) => s.arch === arch);
-export const kitPrimary = (def: Pick<UnitDef, "kit">) => def.kit[0].arch;
+export const kitPrimary = (def: Pick<UnitDef, "kit">) => def.kit[0].arch as Arch;
 
 // ---------------------------------------------------------------- text
 

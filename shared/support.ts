@@ -51,8 +51,8 @@ export const brewMana = (rank: number, mult = 1, e: Effects = EFFECTS) => Math.r
 export const harvestMana = (rank: number, wave: number, mult = 1, e: Effects = EFFECTS) => Math.round(e.brewer.harvestPerRank * rank * wave * mult);
 
 /** Whether a Mime or Mirror Slime may turn into `target` (same rank, attacker or buff, not awakened). */
-export const canBecome = (self: { rank: number }, target: { rank: number; awakened: boolean; def: { arch: Arch } }) =>
-  target.rank === self.rank && !target.awakened && !isSupport(target.def.arch);
+export const canBecome = (self: { rank: number }, target: { rank: number; awakened: boolean; primary: Arch }) =>
+  target.rank === self.rank && !target.awakened && !isSupport(target.primary);
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const secs = (x: number) => `${+x.toFixed(1)}s`;

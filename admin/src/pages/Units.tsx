@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useConfig } from "../config";
 import { Num, Text, Select, Toggle, Thumb, PageHead } from "../components";
 import { asset } from "../api";
-import { ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
+import { ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, WEAPON_KEYS, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
 import { noAttack } from "../../../shared/support.ts";
 import { KitEditor, kitLine, perksLine, primaryArch } from "../kitEditor";
 import { RACE_IDS, RACES } from "../../../shared/races.ts";
@@ -28,6 +28,7 @@ export function UnitsPage() {
   );
   if (!draft || !saved) return <div className="muted">Loading…</div>;
 
+  const WEAPON_OPTIONS = ["none", ...WEAPON_KEYS];
   const set = <K extends keyof UnitDef>(i: number, k: K, v: UnitDef[K]) => edit((c) => void (c.units[i][k] = v));
   const changed = (u: UnitDef, k: keyof UnitDef) => {
     const before = saved.units.find((s) => s.id === u.id);
@@ -80,6 +81,7 @@ export function UnitsPage() {
               <th title="Heavy: slow, big hits. Rapid: fast, light hits. Changing it rescales damage and speed">Style</th>
               <th title="Buff units hand their perks to the neighbours they buff">Perks</th>
               <th>Projectile</th>
+              <th title="Melee weapon thrown instead of the projectile (none = use the projectile)">Weapon</th>
               <th>Damage</th>
               <th>Speed</th>
               <th title="Damage × speed at the chosen rank, card level 1">DPS @R{rank}</th>
@@ -108,6 +110,7 @@ export function UnitsPage() {
                   <td className={changed(u, "style")}><Select value={u.style} options={STYLE_IDS} labels={STYLE_LABELS} onChange={(v) => setStyle(i, v)} /></td>
                   <td className={changed(u, "perks")}>{perksLine(u)}</td>
                   <td className={changed(u, "proj")}><Select value={u.proj} options={PROJECTILES} onChange={(v) => set(i, "proj", v)} /></td>
+                  <td className={changed(u, "weapon")}><Select value={u.weapon ?? "none"} options={WEAPON_OPTIONS} onChange={(v) => set(i, "weapon", v === "none" ? undefined : v)} /></td>
                   <td className={changed(u, "damage")}><Num value={u.damage} step={0.5} min={0} onChange={(v) => set(i, "damage", v)} /></td>
                   <td className={changed(u, "speed")}><Num value={u.speed} step={0.05} min={0} onChange={(v) => set(i, "speed", v)} /></td>
                   <td className="num-cell">{noAttack(primaryArch(u)) ? "—" : (s.damage * s.speed).toFixed(1)}</td>
@@ -116,7 +119,7 @@ export function UnitsPage() {
                 </tr>
                 {open.has(u.id) && (
                   <tr>
-                    <td colSpan={15}>
+                    <td colSpan={16}>
                       <KitEditor unit={u} rank={rank} effects={draft.effects} perkValues={draft.perks} onKit={(kit) => set(i, "kit", kit)} onPerks={(perks) => set(i, "perks", perks)} />
                     </td>
                   </tr>

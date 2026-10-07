@@ -16,6 +16,7 @@ import { ARENAS, ARENA_BY_ID, type ArenaDef } from "./arenas.ts";
 import { ECONOMY } from "./economy.ts";
 import {
   EFFECTS,
+  type Effects,
   auraBonus,
   wagesFor,
   buffBonus,
@@ -35,12 +36,13 @@ import {
 } from "./effects.ts";
 import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "./monsters.ts";
-import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Element, type UnitDef } from "./units.ts";
+import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Arch, type Element, type UnitDef } from "./units.ts";
 import { raceLabel } from "./races.ts";
 import { starsFor, type StoryChapter, type StoryLine } from "./stories.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
-import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
+import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
+import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
 import {
   brewMana,
   canBecome,
@@ -300,6 +302,9 @@ export function boardUnitStats(b: BoardUnit, cardLevel: number, powerUp: number)
   return s;
 }
 
+/** A unit id's primary archetype ("shot" for an unknown id). */
+const unitPrimary = (id: string): Arch => (UNIT_BY_ID[id] ? kitPrimary(UNIT_BY_ID[id]) : "shot");
+
 const DUMMY: MonsterDef = { id: "dummy", name: "Training dummy", race: "construct", hp: 1, speed: 0, traits: [], mana: 0, size: 84 };
 
 // ---------------------------------------------------------------- actors
@@ -320,8 +325,14 @@ export class SimUnit {
   cooldown: number;
   alive: number;
   haste = 0;
-  /** Its own perk plus those from neighbouring buff units. */
-  perks: Perk[] = [];
+  /** What it does: kit[0] (attack or solo archetype). */
+  readonly primary: Arch;
+  /** The unit's own effect numbers: the global blocks with its kit's tune overrides applied. */
+  readonly fx: Effects;
+  /** Its own perks, values resolved. */
+  readonly ownPerks: ActivePerk[];
+  /** Its own perks plus those from neighbouring buff units (the higher value wins). */
+  perks: ActivePerk[] = [];
   frozenUntil = 0;
   pulse = 0;
   ult = 0;
@@ -343,13 +354,16 @@ export class SimUnit {
 
   constructor(b: BoardUnit, slot: number, pos: Pt, cardLevel: number, powerUp: number, cooldown: number, alive: number) {
     this.def = UNIT_BY_ID[b.id];
+    this.primary = kitPrimary(this.def);
+    this.fx = unitEffects(this.def);
+    this.ownPerks = this.def.perks.map((s) => ({ perk: s.perk, ...perkValue(s) }));
     this.rank = b.rank;
     this.slot = slot;
-    this.awakened = !!b.awakened && !isSupport(this.def.arch);
+    this.awakened = !!b.awakened && !isSupport(this.primary);
     this.x = pos.x;
     this.y = pos.y;
     this.stats = boardUnitStats(b, cardLevel, powerUp);
-    withPerk(this.perks, this.def.perk);
+    for (const p of this.ownPerks) addPerk(this.perks, p);
     this.cooldown = cooldown;
     this.alive = alive;
   }
@@ -692,16 +706,16 @@ export class Sim {
       u.auraSpeed = 0;
       u.auraDamage = 0;
       u.perks = [];
-      withPerk(u.perks, u.def.perk);
+      for (const p of u.ownPerks) addPerk(u.perks, p);
     }
     // Princess Muse's Last Call (the 3×3 square, best one counts) and the Aegis Knight's cleanse.
     this.units.forEach((u, i) => {
-      if (u?.def.arch === "aegis") for (const j of neighbours(i)) if (this.units[j]) clearDebuffs(this.units[j]!.status);
-      if (u?.def.arch !== "aura") return;
-      const b = auraBonus(u.rank, this.supportMult(u));
+      if (u?.primary === "aegis") for (const j of neighbours(i)) if (this.units[j]) clearDebuffs(this.units[j]!.status);
+      if (u?.primary !== "aura") return;
+      const b = auraBonus(u.rank, this.supportMult(u), u.fx);
       for (const j of square3(i)) {
         const v = this.units[j];
-        if (!v || noAttack(v.def.arch)) continue;
+        if (!v || noAttack(v.primary)) continue;
         v.auraSpeed = Math.max(v.auraSpeed, b.speed);
         v.auraDamage = Math.max(v.auraDamage, b.damage);
       }
@@ -709,41 +723,41 @@ export class Sim {
     let herald: SimUnit | null = null;
     this.units.forEach((u, i) => {
       if (!u) return;
-      if (u.def.arch === "herald" && (!herald || u.rank > herald.rank)) herald = u;
-      if (u.def.arch === "hourglass") {
+      if (u.primary === "herald" && (!herald || u.rank > herald.rank)) herald = u;
+      if (u.primary === "hourglass") {
         const mult = this.supportMult(u);
         for (const j of neighbours(i)) {
           const v = this.units[j];
-          if (!v || noAttack(v.def.arch)) continue;
-          if (v.awakened) v.charge += owlCharge(u.rank, mult);
-          else v.haste += owlSpeed(u.rank, mult);
+          if (!v || noAttack(v.primary)) continue;
+          if (v.awakened) v.charge += owlCharge(u.rank, mult, u.fx);
+          else v.haste += owlSpeed(u.rank, mult, u.fx);
         }
         return;
       }
-      if (u.def.arch !== "buff") return;
+      if (u.primary !== "buff") return;
       const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
-      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult);
+      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult, u.fx);
       for (const j of neighbours(i)) {
         const v = this.units[j];
-        if (v && v.def.arch !== "buff") {
+        if (v && v.primary !== "buff") {
           // Support units get the haste (it shortens their timers) but not the perk: they never hit.
           v.haste += bonus;
-          if (!isSupport(v.def.arch)) withPerk(v.perks, u.def.perk);
+          if (!isSupport(v.primary)) for (const p of u.ownPerks) addPerk(v.perks, p);
         }
       }
     });
     const h = herald as SimUnit | null;
     const awake = this.units.filter((u) => u?.awakened).length;
     const before = this.heraldMult;
-    this.heraldMult = h ? 1 + heraldBonus(h.rank, awake, this.supportMult(h)) : 1;
+    this.heraldMult = h ? 1 + heraldBonus(h.rank, awake, this.supportMult(h), h.fx) : 1;
     if (h && this.heraldMult > before) this.callout("herald", `+${Math.round((this.heraldMult - 1) * 100)}% DMG`, "#ff8a3b", h.x, h.y - 60, h.uid);
   }
 
   /** A unit awakened: the Banner Herald's war cry. */
   protected onAwaken() {
-    const herald = this.units.find((u) => u?.def.arch === "herald");
+    const herald = this.units.find((u) => u?.primary === "herald");
     if (herald) {
-      this.shoutUntil = this.now + EFFECTS.herald.shoutTime;
+      this.shoutUntil = this.now + herald.fx.herald.shoutTime;
       this.log("Banner Herald: war cry", "unit");
       this.emit({ type: "herald_cry", t: this.now, uid: herald.uid });
     }
@@ -751,7 +765,7 @@ export class Sim {
 
   /** Whether a unit of this id and rank awakens (max rank, not a support, and the game has the art). */
   private awakensAt(id: string, rank: number) {
-    return rank >= maxRank() && !isSupport(UNIT_BY_ID[id]?.arch ?? "shot") && !!this.o.awakens?.(id);
+    return rank >= maxRank() && !isSupport(unitPrimary(id)) && !!this.o.awakens?.(id);
   }
 
   /** Put a new unit on a tile (summon, merge, become): fresh uid, buffs, awaken events. */
@@ -777,8 +791,8 @@ export class Sim {
   /** Gnome Brewers pay their harvest when wave `ended` is over. */
   protected harvest(ended: number) {
     for (const u of this.units) {
-      if (u?.def.arch !== "brewer") continue;
-      const m = harvestMana(u.rank, ended, this.supportMult(u) * this.brewMult());
+      if (u?.primary !== "brewer") continue;
+      const m = harvestMana(u.rank, ended, this.supportMult(u) * this.brewMult(), u.fx);
       this.gainMana(m, u.x, u.y - 60, "harvest");
       this.counts.brewed += m;
       this.mark("text", u.x, u.y - 60, "#7fd8ff", { text: `+${m}` });
@@ -809,8 +823,8 @@ export class Sim {
   /** Hired Blades take their wages as a wave starts; one that can't be paid sulks for the wave. */
   private payWages() {
     for (const u of this.units) {
-      if (u?.def.effect !== "wages") continue;
-      const cost = wagesFor(u.rank);
+      if (!u || !kitHas(u.def, "wages")) continue;
+      const cost = wagesFor(u.rank, u.fx);
       u.sulking = this.mana < cost;
       if (u.sulking) this.callout("unpaid", "UNPAID!", "#ff8080", u.x, u.y - 60, u.uid);
       else this.mana -= cost;
@@ -1111,7 +1125,7 @@ export class Sim {
   }
 
   /** Apply damage; returns true if it killed. */
-  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly Perk[]; crit?: boolean; color?: string } = {}) {
+  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly ActivePerk[]; crit?: boolean; color?: string } = {}) {
     if (m.dead) return false;
     if (this.now < m.shieldUntil) {
       this.blocked += amount;
@@ -1119,13 +1133,13 @@ export class Sim {
       return false;
     }
     const perks = opts.perks ?? [];
-    if (!opts.sure && m.has("dodge") && !perks.includes("true_strike") && this.rand() < 0.15) {
+    if (!opts.sure && m.has("dodge") && dodgeChance(perks) > 0 && this.rand() < dodgeChance(perks)) {
       this.dodged++;
       this.callout("dodge", "MISS", "#dddddd", m.pos.x, m.pos.y - 20);
       return false;
     }
     let dmg = amount * (1 + m.curse) * perkMult(perks, m);
-    if (m.has("armored") && !perks.includes("armor_breaker")) dmg *= 0.7;
+    if (m.has("armored")) dmg *= armorMult(perks);
     if (opts.crit && !opts.quiet) this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b" });
     const dealt = Math.min(Math.max(0, m.hp), dmg);
     if (src === "hero") this.heroDamage += dealt;
@@ -1133,7 +1147,7 @@ export class Sim {
     m.hp -= dmg;
     if (m.hp <= 0) {
       this.kill(m, src);
-      if (perks.includes("plunder")) this.gainMana(PERK.plunder, m.pos.x, m.pos.y - 40, "plunder");
+      if (plunderMana(perks) > 0) this.gainMana(plunderMana(perks), m.pos.x, m.pos.y - 40, "plunder");
       return true;
     }
     return false;
@@ -1212,7 +1226,7 @@ export class Sim {
 
   /** An Aegis Knight next to `u` makes it immune to debuffs. */
   private shielded(u: SimUnit) {
-    return neighbours(u.slot).some((j) => this.units[j]?.def.arch === "aegis");
+    return neighbours(u.slot).some((j) => this.units[j]?.primary === "aegis");
   }
 
   /** Put a debuff on a unit; false when an Aegis Knight protects it. */
@@ -1516,7 +1530,7 @@ export class Sim {
     this.units[from] = null;
     this.units[to] = null;
     // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
-    const luck = x.def.arch === "lucky" ? 0 : this.luckAt(to);
+    const luck = x.primary === "lucky" ? 0 : this.luckAt(to);
     const keep = luck > 0 && this.rand() < luck;
     if (keep) this.counts.lucky++;
     const u = this.place(keep ? x.def.id : this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, to);
@@ -1548,8 +1562,8 @@ export class Sim {
     x.dragging = y.dragging = false;
     this.units[to] = x;
     this.units[from] = y;
-    x.timer = portalCooldown(x.rank, this.supportMult(x));
-    y.rushUntil = this.now + EFFECTS.portal.rushTime;
+    x.timer = portalCooldown(x.rank, this.supportMult(x), x.fx);
+    y.rushUntil = this.now + x.fx.portal.rushTime;
     this.counts.swaps++;
     this.recomputeBuffs();
     this.emit({ type: "swap", t: this.now, uid: x.uid, other: y.uid, from, to });
@@ -1581,7 +1595,7 @@ export class Sim {
     for (const u of this.units) {
       if (u?.def.id === id) Object.assign(u.stats, boardUnitStats({ id: u.def.id, rank: u.rank, awakened: u.awakened }, this.levelOf(id), lvl + 1));
     }
-    if (noAttack(UNIT_BY_ID[id]?.arch ?? "shot")) this.recomputeBuffs();
+    if (noAttack(unitPrimary(id))) this.recomputeBuffs();
     this.emit({ type: "powerup", t: this.now, id, level: lvl + 1 });
     return true;
   }
@@ -1589,13 +1603,13 @@ export class Sim {
   /** Whether the Mime on `slot` has been on the board long enough to copy. */
   mimeReady(slot: number) {
     const u = this.units[slot];
-    return !!u && u.def.arch === "mime" && u.timer >= mimePrep(this.supportMult(u));
+    return !!u && u.primary === "mime" && u.timer >= mimePrep(this.supportMult(u), u.fx);
   }
 
   /** Whether the Portal Imp on `slot` has recharged. */
   portalReady(slot: number) {
     const u = this.units[slot];
-    return !!u && u.def.arch === "portal" && u.timer <= 0;
+    return !!u && u.primary === "portal" && u.timer <= 0;
   }
 
   /** How far a support unit's timer has run (1 = ready), or null for units without one (for the ring). */
@@ -1603,13 +1617,13 @@ export class Sim {
     const u = this.units[slot];
     if (!u) return null;
     const m = this.supportMult(u);
-    switch (u.def.arch) {
+    switch (u.primary) {
       case "mime":
-        return Math.min(1, u.timer / mimePrep(m));
+        return Math.min(1, u.timer / mimePrep(m, u.fx));
       case "portal":
-        return u.timer <= 0 ? 1 : 1 - u.timer / portalCooldown(u.rank, m);
+        return u.timer <= 0 ? 1 : 1 - u.timer / portalCooldown(u.rank, m, u.fx);
       case "mirror":
-        return u.timer / mirrorInterval(u.rank, m);
+        return u.timer / mirrorInterval(u.rank, m, u.fx);
       default:
         return null;
     }
@@ -1620,7 +1634,7 @@ export class Sim {
     let best = 0;
     for (const j of neighbours(slot)) {
       const c = this.units[j];
-      if (c?.def.arch === "lucky") best = Math.max(best, luckyChance(c.rank, this.supportMult(c)));
+      if (c?.primary === "lucky") best = Math.max(best, luckyChance(c.rank, this.supportMult(c), c.fx));
     }
     return best;
   }
@@ -1666,39 +1680,39 @@ export class Sim {
     if (u.dragging) return;
     if (now < u.frozenUntil || now < u.status.shockedUntil) return;
     u.alive += dt;
-    if (u.def.effect === "irritate") {
+    if (kitHas(u.def, "irritate")) {
       u.effectTimer += dt;
-      if (u.effectTimer >= EFFECTS.irritate.every) {
+      if (u.effectTimer >= u.fx.irritate.every) {
         u.effectTimer = 0;
         let any = false;
         for (const j of neighbours(u.slot)) {
           const v = this.units[j];
-          if (v && !v.dragging && this.afflict(v, "irritation", EFFECTS.irritate.time)) any = true;
+          if (v && !v.dragging && this.afflict(v, "irritation", u.fx.irritate.time, u.fx.irritate.miss)) any = true;
         }
         if (any) this.callout("tsk", "TSK!", "#ff6a6a", u.x, u.y - 60, u.uid);
       }
     }
-    if (u.def.effect === "lantern") {
+    if (kitHas(u.def, "lantern")) {
       u.effectTimer += dt;
-      if (u.effectTimer >= EFFECTS.lantern.every) {
+      if (u.effectTimer >= u.fx.lantern.every) {
         u.effectTimer = 0;
-        this.gainMana(lanternMana(this.units.filter((v) => v && isKnight(v.def)).length), u.x, u.y - 50, "lantern");
+        this.gainMana(lanternMana(this.units.filter((v) => v && isKnight(v.def)).length, u.fx), u.x, u.y - 50, "lantern");
       }
     }
-    if (u.def.arch === "buff" || u.def.arch === "aura" || u.def.arch === "aegis") return;
-    if (isSupport(u.def.arch)) return this.updateSupport(u, dt);
-    if (u.def.arch === "mana") {
+    if (u.primary === "buff" || u.primary === "aura" || u.primary === "aegis") return;
+    if (isSupport(u.primary)) return this.updateSupport(u, dt);
+    if (u.primary === "mana") {
       u.pulse += dt;
-      if (u.pulse >= EFFECTS.mana.every) {
+      if (u.pulse >= u.fx.mana.every) {
         u.pulse = 0;
-        this.gainMana(manaPerPulse(u.rank), u.x, u.y - 50, "pulse");
+        this.gainMana(manaPerPulse(u.rank, u.fx), u.x, u.y - 50, "pulse");
       }
     }
     if (u.awakened) {
       u.ult += dt * (1 + u.charge);
       if (u.ult >= ECONOMY.ultimateCooldown) {
-        const target = u.def.arch === "mana" ? null : this.pickTarget(u.def.arch === "sniper" ? "strongest" : "first");
-        if (target || u.def.arch === "mana") {
+        const target = u.primary === "mana" ? null : this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
+        if (target || u.primary === "mana") {
           u.ult = 0;
           this.ultimate(u, target);
           u.cooldown = Math.max(u.cooldown, 0.5);
@@ -1706,10 +1720,10 @@ export class Sim {
         }
       }
     }
-    const rate = u.stats.speed * (1 + this.hasteOf(u)) * (now < u.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1);
+    const rate = u.stats.speed * (1 + this.hasteOf(u)) * (now < u.status.fatiguedUntil ? 1 - u.fx.fatigue.slow : 1);
     u.cooldown -= dt;
     if (u.cooldown > 0 || u.sulking) return;
-    const target = this.pickTarget(u.def.arch === "sniper" ? "strongest" : "first");
+    const target = this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
     if (!target) return;
     u.cooldown = 1 / rate;
     u.firedAt = now;
@@ -1726,7 +1740,7 @@ export class Sim {
       (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
       (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
       (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0) +
-      (u.def.effect === "oath" ? EFFECTS.oath.speedPerKnight * this.adjacentKnights(u) : 0)
+      (kitHas(u.def, "oath") ? u.fx.oath.speedPerKnight * this.adjacentKnights(u) : 0)
     );
   }
 
@@ -1738,7 +1752,7 @@ export class Sim {
   private updateSupport(u: SimUnit, dt: number) {
     const t = dt * (1 + this.hasteOf(u));
     const mult = this.supportMult(u);
-    switch (u.def.arch) {
+    switch (u.primary) {
       case "mime":
         u.timer += t;
         break;
@@ -1746,7 +1760,7 @@ export class Sim {
         u.timer = Math.max(0, u.timer - t);
         break;
       case "mirror": {
-        const every = mirrorInterval(u.rank, mult);
+        const every = mirrorInterval(u.rank, mult, u.fx);
         u.timer = Math.min(every, u.timer + t);
         if (u.timer < every) break;
         const options = neighbours(u.slot)
@@ -1762,13 +1776,13 @@ export class Sim {
       }
       case "brewer":
         u.pulse += t;
-        if (u.pulse >= EFFECTS.brewer.every) {
+        if (u.pulse >= u.fx.brewer.every) {
           u.pulse = 0;
           u.firedAt = this.now;
-          const m = brewMana(u.rank, mult * this.brewMult());
+          const m = brewMana(u.rank, mult * this.brewMult(), u.fx);
           if (this.o.bubbles && this.mode !== "pvp") {
             // Solo: the mana waits in a bubble. Tap it (collectBrew) for +tapBonus, or it pops by itself.
-            const b = { id: ++this.bubbleId, unit: u, amount: m, at: this.now, expires: this.now + EFFECTS.brewer.tapWindow, x: u.x + 28, y: u.y - 64 };
+            const b = { id: ++this.bubbleId, unit: u, amount: m, at: this.now, expires: this.now + u.fx.brewer.tapWindow, x: u.x + 28, y: u.y - 64 };
             this.bubbles.push(b);
             this.emit({ type: "brew", t: this.now, bubble: b.id, uid: u.uid, slot: u.slot, amount: m, x: b.x, y: b.y });
             break;
@@ -1791,7 +1805,7 @@ export class Sim {
     if (i < 0 || this.over) return false;
     const b = this.bubbles[i];
     this.bubbles.splice(i, 1);
-    const m = tapped ? Math.round(b.amount * (1 + EFFECTS.brewer.tapBonus)) : b.amount;
+    const m = tapped ? Math.round(b.amount * (1 + b.unit.fx.brewer.tapBonus)) : b.amount;
     const x = b.x;
     const y = b.y;
     this.counts.brewed += m;
@@ -1811,9 +1825,9 @@ export class Sim {
     let best = 0;
     for (const j of neighbours(u.slot)) {
       const v = this.units[j];
-      if (v?.def.arch === "echo") best = Math.max(best, echoStrength(v.rank, this.supportMult(v)));
+      if (v?.primary === "echo") best = Math.max(best, echoStrength(v.rank, this.supportMult(v), v.fx));
     }
-    if (best > 0) this.echoes.push({ at: this.now + EFFECTS.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best) });
+    if (best > 0) this.echoes.push({ at: this.now + u.fx.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best) });
   }
 
   private updateEchoes() {
@@ -1832,8 +1846,8 @@ export class Sim {
   }
 
   private ultimate(u: SimUnit, target: SimMonster | null) {
-    if (u.def.arch === "mana" || !target) {
-      const mana = Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave);
+    if (u.primary === "mana" || !target) {
+      const mana = Math.round(u.fx.mana.ultimateBase + u.fx.mana.ultimatePerWave * this.wave);
       this.gainMana(mana, u.x, u.y - 60, "ultimate");
       this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "mana", x: u.x, y: u.y, radius: 0 });
       this.queueEcho(u, u.x, u.y, 0, mana);
@@ -1855,33 +1869,34 @@ export class Sim {
       this.callout("miss", "MISS", "#ff9090", u.x, u.y - 70, u.uid);
       return;
     }
-    if (u.def.effect === "rally" || u.def.effect === "fatigue") {
+    if (kitHas(u.def, "rally") || kitHas(u.def, "fatigue")) {
       for (const j of neighbours(u.slot)) {
         const v = this.units[j];
         if (!v || v.dragging) continue;
-        if (u.def.effect === "fatigue") this.afflict(v, "fatigue", EFFECTS.fatigue.linger);
-        else if (!noAttack(v.def.arch)) {
+        if (kitHas(u.def, "fatigue")) this.afflict(v, "fatigue", u.fx.fatigue.linger);
+        else if (!noAttack(v.primary)) {
           if (now >= v.status.rallyUntil) this.callout("rally", "RALLY!", "#ffd93b", v.x, v.y - 60, v.uid);
-          v.status.rallyUntil = now + EFFECTS.rally.time;
+          v.status.rallyUntil = now + u.fx.rally.time;
         }
       }
     }
     let damage = u.stats.damage * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
-    if (u.def.effect === "oath") damage *= 1 + EFFECTS.oath.perKnight * this.adjacentKnights(u);
-    if (u.def.effect === "fatigue") damage *= 1 + EFFECTS.fatigue.perMercenary * this.units.filter((v) => v && isMercenary(v.def)).length;
-    if (u.def.arch === "growth") damage *= growthMult(u.alive);
+    if (kitHas(u.def, "oath")) damage *= 1 + u.fx.oath.perKnight * this.adjacentKnights(u);
+    if (kitHas(u.def, "fatigue")) damage *= 1 + u.fx.fatigue.perMercenary * this.units.filter((v) => v && isMercenary(v.def)).length;
+    if (kitHas(u.def, "growth")) damage *= growthMult(u.alive, u.fx);
     const from = { x: u.x, y: u.y - 30 };
-    if (u.def.arch === "chain") return this.chainLightning(u, target, damage, from);
-    this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.def.arch === "sniper" ? EFFECTS.sniper.shotSpeed : 1100 });
+    if (u.primary === "chain") return this.chainLightning(u, target, damage, from);
+    this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.primary === "sniper" ? u.fx.sniper.shotSpeed : 1100 });
   }
 
   private chainLightning(u: SimUnit, first: SimMonster, damage: number, from: Pt) {
-    const jumps = chainJumps(u.rank, rarityIndex(u.def.rarity));
+    const e = u.fx;
+    const jumps = chainJumps(u.rank, rarityIndex(u.def.rarity), e);
     const hit: SimMonster[] = [first];
     let cur = first;
     while (hit.length < jumps) {
       let next: SimMonster | null = null;
-      let bestD = EFFECTS.chain.range;
+      let bestD = e.chain.range;
       for (const m of this.monsters) {
         if (m.gone || hit.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
@@ -1901,19 +1916,17 @@ export class Sim {
       this.view({ type: "zap", t: this.now, kind: "chain", n, x: p.x, y: p.y, x2: m.pos.x, y2: m.pos.y, color: zapColor });
       p = m.pos;
     });
-    hit.forEach((m, i) => {
-      this.view({ type: "hit", t: this.now, uid: u.uid, target: m.uid, kind: "chain", element: u.def.element, x: m.pos.x, y: m.pos.y, size: 80 });
-      this.hurt(m, damage * Math.pow(EFFECTS.chain.falloff, i), u.slot, { perks: u.perks });
-    });
+    // The bolt lands like any other attack: kit riders apply to every monster it hit.
+    this.applyHit(u, damage, first, hit);
   }
 
   /** Up to `jumps` more monsters, each the nearest within chain range of the last, skipping `skip`. */
-  private chainOn(first: SimMonster, skip: SimMonster[], jumps: number) {
+  private chainOn(first: SimMonster, skip: SimMonster[], jumps: number, range: number) {
     const out: SimMonster[] = [];
     let cur = first;
     while (out.length < jumps) {
       let next: SimMonster | null = null;
-      let bestD = EFFECTS.chain.range;
+      let bestD = range;
       for (const m of this.monsters) {
         if (m.gone || skip.includes(m) || out.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
@@ -1952,132 +1965,177 @@ export class Sim {
     return this.monsters.filter((m) => !m.gone && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
-  private applyHit(u: SimUnit, baseDamage: number, m: SimMonster) {
+  /**
+   * One attack landing on `m` (a shot arriving, an ultimate or echo strike, or `chain`: the monsters
+   * a chain lightning hit, `m` first). Three steps, all read from the unit's kit:
+   *  1. Pre-hit riders roll once for the whole attack: crit (multiplies all its damage) and execute
+   *     (replaces the main target's hit).
+   *  2. The attack archetype (kit[0]) decides who is hit: splash adds the monsters around the target,
+   *     pierce the ones behind it (and a Lance Knight's chain), chain its lightning path; shot, sniper
+   *     and mana hit the target only.
+   *  3. The post-hit riders apply, in kit order, to every monster the attack hit (the main target
+   *     first), each with its own rolls: slow, freeze, stun, poison, burn, curse. Poison and burn
+   *     deal a share of the attack's damage whoever they land on.
+   */
+  private applyHit(u: SimUnit, baseDamage: number, m: SimMonster, chain?: SimMonster[]) {
     const def = u.def;
     const rank = u.rank;
     const src = u.slot;
-    const e = EFFECTS;
+    const e = u.fx;
     const now = this.now;
     const rarityIdx = rarityIndex(def.rarity);
-    const bane = (o: SimMonster) => (def.effect === "bane" && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage);
+    const chained = !!chain && u.primary === "chain";
+    const bane = (o: SimMonster) => (kitHas(def, "bane") && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage);
     // Rogue Knight: nearly every blow crits.
-    const rogue = def.effect === "irritate" && this.rand() < e.irritate.critChance;
-    const damage = bane(m) * (rogue ? e.irritate.critMult : 1);
-    if (def.effect === "shellshock" && this.units[u.slot] === u && this.rand() < e.shellshock.chance) {
+    const rogue = kitHas(def, "irritate") && this.rand() < e.irritate.critChance;
+    let damage = bane(m) * (rogue ? e.irritate.critMult : 1);
+    if (kitHas(def, "shellshock") && this.units[u.slot] === u && this.rand() < e.shellshock.chance) {
       const near = neighbours(u.slot).map((j) => this.units[j]).filter((v): v is SimUnit => !!v && !v.dragging);
       const v = near[Math.floor(this.rand() * near.length)];
       if (v && this.afflict(v, "shellshock", e.shellshock.time)) this.callout("shellshock", "SHELLSHOCK", "#c9b08a", v.x, v.y - 60, v.uid);
     }
     const pos = m.pos;
     const isBoss = !!m.boss;
-    const P = { perks: u.perks, crit: rogue };
-    const chilled = chills(u.perks, m);
     let vfxSize = 70;
-    this.mark("hit", pos.x, pos.y, ELEMENT_CSS[def.element]);
+    if (!chained) this.mark("hit", pos.x, pos.y, ELEMENT_CSS[def.element]);
 
-    switch (def.arch) {
-      case "splash":
-      case "burn": {
-        const splash = this.nearby(pos, splashRadius(def.arch, rank), m);
-        const burnDps = def.arch === "burn" ? damage * e.burn.burnDps : 0;
-        this.hurt(m, damage, src, P);
-        for (const o of splash) this.hurt(o, damage * e[def.arch].splash, src, { ...P, sure: true, quiet: true });
-        if (burnDps) {
-          for (const o of [m, ...splash]) {
-            const keep = o.burn.until > now && o.burn.dps > burnDps;
-            o.burn = keep ? { ...o.burn, until: now + e.burn.burnTime } : { dps: burnDps, until: now + e.burn.burnTime, src };
-          }
+    // 1. Pre-hit riders, in kit order.
+    let cm = 1;
+    let critHit = false;
+    let exec = false;
+    for (const s of def.kit) {
+      if (s.arch === "crit" && this.rand() < critChance(rank, e)) {
+        critHit = true;
+        cm = critMult(rank, e);
+        damage *= cm;
+      } else if (s.arch === "execute") exec = this.rand() < executeChance(rank, rarityIdx, e);
+    }
+
+    // 2. The attack.
+    const hits: SimMonster[] = [];
+    const hit = (o: SimMonster, amount: number, opts: { sure?: boolean; quiet?: boolean; crit?: boolean; color?: string } = {}) => {
+      hits.push(o);
+      this.hurt(o, amount, src, { perks: u.perks, crit: rogue || critHit, ...opts });
+    };
+    const mainHit = () => {
+      if (exec) {
+        vfxSize = 130;
+        if (isBoss) {
+          this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: `×${e.execute.bossMult}`, slot: src, callout: `×${e.execute.bossMult}` });
+          this.callout("execute", `×${e.execute.bossMult}`, "#ff7ad9", u.x, u.y - 60, u.uid);
+          hit(m, damage * e.execute.bossMult, { crit: true, color: "#ff7ad9" });
+        } else {
+          this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE", slot: src, callout: "EXECUTE" });
+          this.callout("execute", "EXECUTE", "#ff7ad9", u.x, u.y - 60, u.uid);
+          this.view({ type: "proc", t: now, kind: "execute", x: pos.x, y: pos.y - 30 });
+          hit(m, m.hp / (1 + m.curse) / (m.has("armored") ? armorMult(u.perks) : 1) + 1, { sure: true });
         }
-        this.mark("ring", pos.x, pos.y, ELEMENT_CSS[def.element], { x2: splashRadius(def.arch, rank) });
-        vfxSize = 130 + rank * 6;
+      } else if (u.primary === "sniper") {
+        vfxSize = 120;
+        hit(m, damage, { crit: true, color: "#ffffff" });
+      } else hit(m, damage);
+    };
+    switch (u.primary) {
+      case "splash": {
+        const radius = splashRadius(rank, e);
+        const around = this.nearby(pos, radius, m);
+        mainHit();
+        for (const o of around) hit(o, damage * e.splash.splash, { sure: true, quiet: true });
+        this.mark("ring", pos.x, pos.y, ELEMENT_CSS[def.element], { x2: radius });
+        vfxSize = Math.max(vfxSize, 130 + rank * 6);
         break;
       }
       case "pierce": {
-        this.hurt(m, damage, src, P);
+        mainHit();
         const behind = this.nearby(pos, e.pierce.range, m)
           .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
-          .slice(0, pierceTargets(rank));
+          .slice(0, pierceTargets(rank, e));
         for (const o of behind) {
           this.view({ type: "hit", t: now, uid: u.uid, target: o.uid, kind: "pierce", element: def.element, x: o.pos.x, y: o.pos.y, size: 50 });
-          this.hurt(o, damage * e.pierce.damage, src, { ...P, sure: true });
+          hit(o, damage * e.pierce.damage, { sure: true });
         }
         // Lance Knight: the hit also chains on to more monsters.
-        if (def.effect === "bane") {
+        if (kitHas(def, "bane")) {
           let from = m.pos;
-          this.chainOn(m, [m, ...behind], e.bane.chain).forEach((o, i) => {
+          this.chainOn(m, [m, ...behind], e.bane.chain, e.chain.range).forEach((o, i) => {
             this.view({ type: "zap", t: now, kind: "bane", n: i, x: from.x, y: from.y, x2: o.pos.x, y2: o.pos.y, color: "#fff27a" });
             from = o.pos;
             this.view({ type: "hit", t: now, uid: u.uid, target: o.uid, kind: "bane", element: def.element, x: o.pos.x, y: o.pos.y, size: 0 });
-            this.hurt(o, bane(o) * Math.pow(e.chain.falloff, i + 1), src, { ...P, sure: true });
+            hit(o, bane(o) * cm * Math.pow(e.chain.falloff, i + 1), { sure: true });
           });
         }
         break;
       }
-      case "slow":
-        this.hurt(m, damage, src, P);
-        if (chilled || def.element !== "ice") {
-          m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, slowAmount(rank, rarityIdx, isBoss));
-          m.slowUntil = now + e.slow.duration;
+      case "chain":
+        if (chain) {
+          chain.forEach((o, i) => {
+            this.view({ type: "hit", t: now, uid: u.uid, target: o.uid, kind: "chain", element: def.element, x: o.pos.x, y: o.pos.y, size: 80 });
+            if (i === 0) mainHit();
+            else hit(o, damage * Math.pow(e.chain.falloff, i));
+          });
+          break;
         }
-        break;
-      case "freeze":
-        this.hurt(m, damage, src, P);
-        if (chilled && this.rand() < freezeChance(rank, rarityIdx)) {
-          m.frozenUntil = now + (isBoss ? e.freeze.bossDuration : e.freeze.duration);
-          this.mark("text", pos.x, pos.y - 30, "#7fd8ff", { text: "FROZEN" });
-          this.view({ type: "proc", t: now, kind: "frozen", x: pos.x, y: pos.y - 30 });
-        }
-        break;
-      case "stun":
-        this.hurt(m, damage, src, P);
-        if (this.rand() < stunChance(rank, rarityIdx)) {
-          m.stunUntil = now + (isBoss ? e.stun.bossDuration : e.stun.duration);
-          this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "STUN" });
-          this.view({ type: "proc", t: now, kind: "stun", x: pos.x, y: pos.y - 30 });
-        }
-        break;
-      case "poison":
-        this.hurt(m, damage, src, P);
-        m.poison.push({ dps: damage * e.poison.dps, until: now + e.poison.duration, src });
-        while (m.poison.length > e.poison.maxStacks) m.poison.shift();
-        break;
-      case "crit": {
-        const crit = this.rand() < critChance(rank);
-        this.hurt(m, crit ? damage * critMult(rank) : damage, src, { ...P, crit: rogue || crit });
-        if (crit) {
-          vfxSize = 110;
-          this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT", slot: src, callout: `CRIT ×${+critMult(rank).toFixed(1)}` });
-          this.callout("crit", `CRIT ×${+critMult(rank).toFixed(1)}`, "#ffd93b", u.x, u.y - 60, u.uid);
-        }
-        break;
-      }
-      case "curse":
-        this.hurt(m, damage, src, P);
-        m.curse = Math.min(e.curse.max, m.curse + curseStep(rank, rarityIdx));
-        break;
-      case "execute":
-        if (this.rand() < executeChance(rank, rarityIdx)) {
-          if (isBoss) {
-            this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: `×${e.execute.bossMult}`, slot: src, callout: `×${e.execute.bossMult}` });
-            this.callout("execute", `×${e.execute.bossMult}`, "#ff7ad9", u.x, u.y - 60, u.uid);
-            this.hurt(m, damage * e.execute.bossMult, src, { ...P, crit: true, color: "#ff7ad9" });
-          } else {
-            this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE", slot: src, callout: "EXECUTE" });
-            this.callout("execute", "EXECUTE", "#ff7ad9", u.x, u.y - 60, u.uid);
-            this.view({ type: "proc", t: now, kind: "execute", x: pos.x, y: pos.y - 30 });
-            this.hurt(m, m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, src, { ...P, sure: true });
-          }
-          vfxSize = 130;
-        } else this.hurt(m, damage, src, P);
-        break;
-      case "sniper":
-        this.hurt(m, damage, src, { ...P, crit: true, color: "#ffffff" });
-        vfxSize = 120;
+        mainHit();
         break;
       default:
-        this.hurt(m, damage, src, P);
+        mainHit();
     }
-    this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
+
+    // 3. Post-hit riders, in kit order, on every monster the attack hit.
+    for (const s of def.kit) {
+      switch (s.arch) {
+        case "slow":
+          for (const o of hits) {
+            if (!chills(u.perks, o) && def.element === "ice") continue;
+            o.slowPct = Math.max(o.slowUntil > now ? o.slowPct : 0, slowAmount(rank, rarityIdx, !!o.boss, e));
+            o.slowUntil = now + e.slow.duration;
+          }
+          break;
+        case "freeze":
+          for (const o of hits) {
+            if (chills(u.perks, o) && this.rand() < freezeChance(rank, rarityIdx, e)) {
+              o.frozenUntil = now + (o.boss ? e.freeze.bossDuration : e.freeze.duration);
+              this.mark("text", o.pos.x, o.pos.y - 30, "#7fd8ff", { text: "FROZEN" });
+              this.view({ type: "proc", t: now, kind: "frozen", x: o.pos.x, y: o.pos.y - 30 });
+            }
+          }
+          break;
+        case "stun":
+          for (const o of hits) {
+            if (this.rand() < stunChance(rank, rarityIdx, e)) {
+              o.stunUntil = now + (o.boss ? e.stun.bossDuration : e.stun.duration);
+              this.mark("text", o.pos.x, o.pos.y - 30, "#ffd93b", { text: "STUN" });
+              this.view({ type: "proc", t: now, kind: "stun", x: o.pos.x, y: o.pos.y - 30 });
+            }
+          }
+          break;
+        case "poison":
+          for (const o of hits) {
+            o.poison.push({ dps: damage * e.poison.dps, until: now + e.poison.duration, src });
+            while (o.poison.length > e.poison.maxStacks) o.poison.shift();
+          }
+          break;
+        case "burn": {
+          const burnDps = damage * e.burn.burnDps;
+          for (const o of hits) {
+            const keep = o.burn.until > now && o.burn.dps > burnDps;
+            o.burn = keep ? { ...o.burn, until: now + e.burn.burnTime } : { dps: burnDps, until: now + e.burn.burnTime, src };
+          }
+          break;
+        }
+        case "curse":
+          for (const o of hits) o.curse = Math.min(e.curse.max, o.curse + curseStep(rank, rarityIdx, e));
+          break;
+        case "crit":
+          if (critHit) {
+            vfxSize = 110;
+            this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT", slot: src, callout: `CRIT ×${+cm.toFixed(1)}` });
+            this.callout("crit", `CRIT ×${+cm.toFixed(1)}`, "#ffd93b", u.x, u.y - 60, u.uid);
+          }
+          break;
+      }
+    }
+    if (!chained) this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
   }
 }
 

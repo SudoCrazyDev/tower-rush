@@ -11,7 +11,7 @@ import { isSupport, supportSummary } from "./support.ts";
 
 export const DEFAULT_EFFECTS = {
   splash: { radius: 85, radiusPerRank: 4, splash: 0.6 },
-  burn: { radius: 85, radiusPerRank: 4, splash: 0.5, burnDps: 0.45, burnTime: 3 },
+  burn: { burnDps: 0.45, burnTime: 3 },
   chain: { jumps: 2, ranksPerJump: 2, legendaryJumps: 1, range: 200, falloff: 0.85 },
   pierce: { targets: 2, ranksPerTarget: 3, range: 120, damage: 0.7 },
   slow: { base: 0.2, perRank: 0.04, perRarity: 0.04, max: 0.6, bossMult: 0.5, duration: 2 },
@@ -89,9 +89,6 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     splash: PCT("Damage to the others (0.6 = 60% of the hit)", 2),
   },
   burn: {
-    radius: F("Splash radius in pixels", 5, 400),
-    radiusPerRank: F("…plus this per rank", 1, 50),
-    splash: PCT("Damage to the others (0.5 = 50% of the hit)", 2),
     burnDps: PCT("Burn damage per second (0.45 = 45% of the hit)", 5),
     burnTime: F("Burn lasts (seconds)", 0.5, 20),
   },
@@ -274,7 +271,7 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
 // ---------------------------------------------------------------- formulas
 
 /** `rarity` is the rarity's index: common 0 ... mythic 4. */
-export const splashRadius = (arch: "splash" | "burn", rank: number, e = EFFECTS) => e[arch].radius + e[arch].radiusPerRank * rank;
+export const splashRadius = (rank: number, e = EFFECTS) => e.splash.radius + e.splash.radiusPerRank * rank;
 export const chainJumps = (rank: number, rarity: number, e = EFFECTS) =>
   e.chain.jumps + Math.floor(rank / e.chain.ranksPerJump) + (rarity >= 3 ? e.chain.legendaryJumps : 0);
 export const pierceTargets = (rank: number, e = EFFECTS) => e.pierce.targets + Math.floor(rank / e.pierce.ranksPerTarget);
@@ -337,7 +334,7 @@ export function unitEffectSummary(effect: UnitEffect, rank: number, e = EFFECTS)
 export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFECTS, mult = 1): string | null {
   switch (arch) {
     case "splash":
-      return `Splash ${Math.round(splashRadius("splash", rank, e))}px · ${pct(e.splash.splash)} damage`;
+      return `Splash ${Math.round(splashRadius(rank, e))}px · ${pct(e.splash.splash)} damage`;
     case "burn":
       return `Burns ${pct(e.burn.burnDps)} per second for ${secs(e.burn.burnTime)}`;
     case "chain":

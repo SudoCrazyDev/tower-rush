@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale } from "../assets";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
+import { kitPrimary } from "../../../shared/kit.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
 import type { SimUnit } from "../../../shared/sim.ts";
 import { NAVY, txt } from "../ui";
@@ -318,7 +319,7 @@ export class Unit {
       this.sprite.anims.timeScale = 1;
     }
 
-    const arch = this.def.arch;
+    const arch = kitPrimary(this.def);
     if (arch === "buff" || arch === "aura" || arch === "aegis") {
       // Muse's "attack" clip is her buff pulse, the Aegis Knight's a shield pulse.
       this.showOff -= dt;
@@ -343,11 +344,11 @@ export class Unit {
     const scene = this.scene;
     const s = this.sim;
     const progress = scene.sim.supportProgress(s.slot);
-    switch (this.def.arch) {
+    switch (kitPrimary(this.def)) {
       case "mime":
       case "portal": {
         const p = progress ?? 0;
-        this.drawSupportRing(p, this.def.arch === "mime" ? 0x59d64a : 0xff8a3b);
+        this.drawSupportRing(p, kitPrimary(this.def) === "mime" ? 0x59d64a : 0xff8a3b);
         const ready = p >= 1;
         if (ready && !this.wasReady) this.playOnce("skill");
         this.wasReady = ready;

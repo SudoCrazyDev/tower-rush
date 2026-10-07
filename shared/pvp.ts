@@ -4,6 +4,7 @@
  * See PVP.md.
  */
 import { UNITS, deckable } from "./units.ts";
+import { kitPrimary } from "./kit.ts";
 import { HEROES } from "./heroes.ts";
 import { ARENAS } from "./arenas.ts";
 import { MONSTER_BY_ID } from "./monsters.ts";
@@ -333,7 +334,7 @@ export function botLoadout(mode: PvpMode, player: Loadout, seed: number): Loadou
   const trophies = Math.max(0, player.trophies + Math.round((r() - 0.5) * 120));
   const rating = Math.max(0, (player.rating ?? PVP.rules.ratingStart) + Math.round((r() - 0.5) * 80));
   if (mode === "mirror") return { ...player, name, trophies, rating, bot: true };
-  const pool = UNITS.filter((u) => deckable(u) && u.arch !== "mana");
+  const pool = UNITS.filter((u) => deckable(u) && kitPrimary(u) !== "mana");
   const deck: string[] = [];
   // Rarer cards as trophies climb, like a real player's collection.
   const rarest = player.trophies < 400 ? 1 : player.trophies < 1500 ? 2 : player.trophies < 3000 ? 3 : 4;
