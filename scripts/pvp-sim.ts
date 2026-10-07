@@ -54,3 +54,4 @@ console.log(`avg length ${(total / n / 60).toFixed(1)} min, waves ${Math.min(...
 console.log(`ended by`, ends, `wins A/B/draw`, wins, `avg sends`, sends.map((s) => (s / n).toFixed(1)));
 console.log(`replays exact: ${replayOk}/${n}`);
 console.log(`sudden death from wave ${PVP.rules.suddenDeathWave}, max ${PVP.rules.maxWave}`);
+if (replayOk !== n) process.exitCode = 1;

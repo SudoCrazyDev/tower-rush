@@ -9,6 +9,7 @@
     "deploy": "npm run build && npm run db:remote && wrangler deploy",
     "db:local": "wrangler d1 migrations apply tower-rush --local",
     "db:remote": "wrangler d1 migrations apply tower-rush --remote",
+    "test": "node scripts/golden.ts && node scripts/pvp-sim.ts 20",
     "typecheck": "npm --prefix server run typecheck && cd game && npx tsc --noEmit && cd ../admin && npx tsc --noEmit"
   },
   "devDependencies": {
