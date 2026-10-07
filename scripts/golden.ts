@@ -9,7 +9,9 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { applyConfig, defaultConfig } from "../shared/config.ts";
 import { DEFAULT_UNITS } from "../shared/units.ts";
 import { ARENAS } from "../shared/arenas.ts";
-import { Sim, type BoardUnit, type SimSetup, type SimFx } from "../shared/sim.ts";
+import { Sim, type BoardUnit, type SimSetup, type SimFx, type SimOptions, type SimResult } from "../shared/sim.ts";
+import { ECONOMY } from "../shared/economy.ts";
+import { findChapter } from "../shared/stories.ts";
 
 applyConfig(defaultConfig());
 
@@ -46,6 +48,10 @@ function run(board: (BoardUnit | null)[], hero: string | null, seed = SEED) {
   };
   const sim = new GoldenSim(setup);
   const r = sim.run();
+  return summary(sim, r);
+}
+
+function summary(sim: GoldenSim, r: SimResult) {
   return {
     damage: sig(r.totalDamage),
     heroDamage: sig(r.heroDamage),
@@ -85,6 +91,99 @@ for (const [name, ids] of Object.entries(decks)) {
     const board = Array.from({ length: 15 }, (_, i) => ({ id: ids[(i * 7 + 3) % ids.length], rank: ranks[i % ranks.length] }));
     out[`deck:${name}${hero ? ":hero" : ""}`] = run(board, hero);
   }
+}
+
+// ---------------------------------------------------------------- v2 P1b: whole-battle runs
+
+/** Run a sim to the end, calling `hook` before every step and counting the structured events. */
+function drive(sim: GoldenSim, hook?: (s: GoldenSim) => void) {
+  const events: Record<string, number> = {};
+  let tetherSteps = 0;
+  let guard = 0;
+  while (!sim.over && guard++ < 1e6) {
+    hook?.(sim);
+    sim.step();
+    if (sim.tethers.length) tetherSteps++;
+    for (const e of sim.drainEvents()) events[e.type] = (events[e.type] ?? 0) + 1;
+  }
+  const r = sim.result();
+  return {
+    ...summary(sim, r),
+    stars: r.stars,
+    counts: Object.entries(r.counts).map(([k, v]) => `${k}=${sig(v)}`).join(","),
+    events: Object.keys(events).sort().map((k) => `${k}=${events[k]}`).join(","),
+    tetherSteps,
+    lives: sim.lives,
+    bubbles: sim.bubbles.length,
+  };
+}
+
+const mixedIds = decks.mixed;
+const mixedBoard = (): BoardUnit[] => Array.from({ length: 15 }, (_, i) => ({ id: mixedIds[(i * 7 + 3) % mixedIds.length], rank: ranks[i % ranks.length] }));
+const levels = Object.fromEntries([...mixedIds, "gnome_brewer", "hooded_archer", "goblin_bomber", "penguin_wizard", "tesla_gnome", "flame_adept", "aegis_knight", "berserker_sellsword", "princess_muse", "lucky_cat", "mime", "portal_imp"].map((id) => [id, 5]));
+
+// Story chapters: scripted waves, shuffle, boss first, per-wave hp, hpScale, win and stars. Chapters with
+// bosses on most waves (boss-first queues), Chaos Taffy tethers, a split boss, layers, charm and a portal boss.
+const storyDeck = ["aegis_knight", "berserker_sellsword", "hooded_archer", "goblin_bomber", "penguin_wizard", "tesla_gnome", "flame_adept", "princess_muse"];
+for (const id of ["s1c1", "s2c2", "s2c3", "s3c3"]) {
+  const f = findChapter(id);
+  if (!f) throw new Error(`golden: story chapter ${id} missing`);
+  const board: BoardUnit[] = Array.from({ length: 15 }, (_, i) => ({ id: storyDeck[(i * 5 + 1) % storyDeck.length], rank: ranks[(i + 2) % ranks.length] }));
+  const setup: SimSetup = {
+    arena: f.chapter.layout,
+    board,
+    cardLevel: 5,
+    powerUp: 0,
+    hero: "young_king",
+    seed: SEED,
+    maxTime: 2400,
+    scenario: { kind: "run", from: 1, to: Infinity },
+  };
+  out[`story:${id}`] = drive(new GoldenSim(setup, { story: f.chapter, deck: storyDeck, levels, startMana: ECONOMY.startMana }));
+}
+
+// Boss powers that changed in P1b: the portal boss (minions step out 0.6 s later) and layers (pulse skips dragged units).
+for (const boss of ["portal_wizard", "chaos_jawbreaker", "sour_gummy_hydra"]) {
+  const setup: SimSetup = { arena: ARENAS[2].id, board: mixedBoard(), cardLevel: 5, powerUp: 1, hero: "young_king", heroCharged: true, seed: SEED, maxTime: 400, scenario: { kind: "boss", boss, wave: 10, escort: true } };
+  out[`boss:${boss}`] = drive(new GoldenSim(setup, { levels }), boss === "chaos_jawbreaker" ? (s) => s.setDragging(4, s.now > 5 && s.now < 60) : undefined);
+}
+
+// A unit dragged for 25 seconds across a boss wave: it freezes, and boss powers and neighbour effects skip it.
+for (const slot of [7, 8]) {
+  const setup: SimSetup = { arena: ARENAS[0].id, board: mixedBoard(), cardLevel: 5, powerUp: 0, hero: "young_king", heroCharged: true, seed: SEED, maxTime: MAX_TIME, scenario: { kind: "run", from: 1, to: WAVES } };
+  out[`drag:slot${slot}`] = drive(new GoldenSim(setup), (s) => {
+    if (s.now >= 15 && s.now < 40) s.setDragging(slot, true);
+    else s.setDragging(slot, false);
+  });
+}
+
+// Brewers with bubbles: tapped as soon as they appear (+tapBonus) against left alone (they pop by themselves).
+{
+  const board: BoardUnit[] = Array.from({ length: 15 }, (_, i) => ({ id: i % 3 === 0 ? "gnome_brewer" : "hooded_archer", rank: 2 + (i % 4) }));
+  for (const taps of [false, true]) {
+    const setup: SimSetup = { arena: ARENAS[0].id, board, cardLevel: 5, powerUp: 0, hero: null, seed: SEED, maxTime: MAX_TIME, scenario: { kind: "run", from: 1, to: WAVES } };
+    out[`brew:${taps ? "taps" : "notaps"}`] = drive(new GoldenSim(setup, { bubbles: true }), taps ? (s) => s.bubbles.filter((b) => s.now - b.at >= 0.3).forEach((b) => s.collectBrew(b.id)) : undefined);
+  }
+}
+
+// A scripted player: summon, merge, copy, swap, hop, power-ups and a manual hero cast on a growing board,
+// with a tutorial pick for the first two summons.
+{
+  const deck = ["hooded_archer", "goblin_bomber", "penguin_wizard", "lucky_cat", "mime", "portal_imp", "gnome_brewer", "aegis_knight"];
+  const setup: SimSetup = { arena: ARENAS[1].id, board: new Array(15).fill(null), cardLevel: 5, powerUp: 0, hero: "young_king", seed: SEED, maxTime: 600, scenario: { kind: "run", from: 1, to: Infinity } };
+  const sim = new GoldenSim(setup, { deck, levels, startMana: ECONOMY.startMana, autoHero: false, bubbles: true, awakens: (id) => id === "hooded_archer" });
+  sim.tutorialPick = { id: "hooded_archer", slot: 6 };
+  let tick = 0;
+  out["actions:scripted"] = drive(sim, (s) => {
+    tick++;
+    if (tick % 15 === 0) s.summon();
+    if (tick % 45 === 0) for (let a = 0; a < 15; a++) for (let b = a + 1; b < 15; b++) if (s.merge(a, b)) return;
+    if (tick % 90 === 0) for (let a = 0; a < 15; a++) { if (s.mimeReady(a)) for (let b = 0; b < 15; b++) if (s.copy(a, b)) return; }
+    if (tick % 100 === 0) for (let a = 0; a < 15; a++) if (s.portalReady(a)) { const free = s.units.findIndex((u) => !u); if (free >= 0 && s.hop(a, free)) return; }
+    if (tick % 120 === 0) s.powerUp(deck[(tick / 120) % deck.length]);
+    if (tick % 300 === 0) s.useHero();
+    s.bubbles.forEach((b) => s.now - b.at >= 0.5 && s.collectBrew(b.id));
+  });
 }
 
 const sorted = (o: Record<string, Record<string, unknown>>) =>
