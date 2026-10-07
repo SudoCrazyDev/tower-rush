@@ -177,7 +177,7 @@ export function cardView(
   const portrait = scene.add.image(0, 0, art).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
   const parts: Phaser.GameObjects.GameObject[] = [frame, portrait];
   // Element badge in the corner (an icon, so it doesn't read as a notification dot).
-  parts.push(scene.add.image(size * 0.35, -size * 0.35, `element:${def.element}`).setDisplaySize(size * 0.24, size * 0.24));
+  parts.push(fitImage(scene.add.image(size * 0.35, -size * 0.35, `element:${def.element}`), size * 0.24));
   if (opts.level !== undefined) {
     const lv = txt(scene, 0, size * 0.39, `LV ${opts.level}`, Math.round(size * 0.15));
     parts.push(lv);
@@ -281,11 +281,38 @@ export function modal(scene: Phaser.Scene, w: number, h: number, title: string, 
   return Object.assign(root, { close, cx: W / 2, cy: H / 2 });
 }
 
-/** A small "RACE / Human" plate in the race's colour. */
+/** Scale an image to fit inside a size x size box, keeping its aspect (element emblems are not square). */
+export function fitImage<T extends Phaser.GameObjects.Image>(img: T, size: number): T {
+  const f = img.frame;
+  const k = size / Math.max(f.realWidth, f.realHeight, 1);
+  return img.setDisplaySize(f.realWidth * k, f.realHeight * k) as T;
+}
+
+/** Element emblem fitted into a size x size box. */
+export const elementIcon = (scene: Phaser.Scene, x: number, y: number, element: string, size: number) =>
+  fitImage(scene.add.image(x, y, `element:${element}`), size);
+
+/**
+ * Archetype or perk icon (`arch:<id>` / `perk:<id>`) fitted into size x size, or null when that
+ * art isn't loaded (not uploaded yet, or pending generation). Callers skip or fall back on null.
+ */
+export function kitIcon(scene: Phaser.Scene, kind: "arch" | "perk", id: string, size: number, x = 0, y = 0) {
+  const key = `${kind}:${id}`;
+  return scene.textures.exists(key) ? fitImage(scene.add.image(x, y, key), size) : null;
+}
+
+/** A small "RACE / Human" plate in the race's colour; shows the race crest when that art is loaded. */
 export function raceBadge(scene: Phaser.Scene, x: number, y: number, race: Race) {
+  const color = RACES[race]?.color ?? 0xffffff;
+  const crest = scene.textures.exists(`race:${race}`);
+  const h = crest ? 100 : 72;
   const g = scene.add.graphics();
-  g.fillStyle(0x0b1530, 0.85).fillRoundedRect(-64, -36, 128, 72, 16);
-  g.lineStyle(3, RACES[race]?.color ?? 0xffffff, 1).strokeRoundedRect(-64, -36, 128, 72, 16);
+  g.fillStyle(0x0b1530, 0.85).fillRoundedRect(-64, -h / 2, 128, h, 16);
+  g.lineStyle(3, color, 1).strokeRoundedRect(-64, -h / 2, 128, h, 16);
+  if (crest) {
+    const img = fitImage(scene.add.image(0, -14, `race:${race}`), 64);
+    return scene.add.container(x, y, [g, img, txt(scene, 0, 34, raceLabel(race).toUpperCase(), 18, raceCss(race))]);
+  }
   return scene.add.container(x, y, [g, txt(scene, 0, -14, "RACE", 18, "#c9d2ff"), txt(scene, 0, 12, raceLabel(race).toUpperCase(), 20, raceCss(race))]);
 }
 

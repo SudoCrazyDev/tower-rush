@@ -19,6 +19,10 @@ export interface AssetIndex {
   boss_banners: string[];
   emotes: string[];
   stats: string[];
+  /** v2 UI art; each missing in older builds, and entries may be absent while art is pending. */
+  "ui/races"?: string[];
+  "ui/archs"?: string[];
+  "ui/perks"?: string[];
   anims: Record<string, string[]>;
   /** Frame size per sheet folder, including the `<folder>_hd` twins. */
   frameSize: Record<string, number>;

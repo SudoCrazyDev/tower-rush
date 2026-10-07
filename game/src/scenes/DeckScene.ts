@@ -11,7 +11,7 @@ import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
-import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, raceBadge } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, raceBadge, kitIcon, elementIcon } from "../ui";
 import { topBar } from "./LobbyScene";
 import { storyUnlocking } from "../../../shared/stories.ts";
 import { coach, setTutorialDone, tutorialDue } from "../tutorial";
@@ -327,7 +327,7 @@ export class DeckScene extends Phaser.Scene {
     let x = cx - rowW / 2 + dot / 2;
     for (const e of ELEMENTS) {
       const face = bakedImage(this);
-      const icon = this.add.image(0, 0, `element:${e}`).setDisplaySize(dot, dot);
+      const icon = elementIcon(this, 0, 0, e, dot);
       const c = this.add.container(x, y2, [face, icon]).setSize(dot, dot);
       const paint = (on: boolean, dim: boolean) => {
         face.draw((g) => {
@@ -571,7 +571,10 @@ export class DeckScene extends Phaser.Scene {
     const style =
       (def.role ? `${def.role.toUpperCase()} · ` : "") +
       (def.arch === "buff" || (silent && def.role) ? "" : isSupport(def.arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `);
-    info.add(txt(this, cx, cy - 82, style + (isSupport(def.arch) ? SUPPORT_TEXT[def.arch] : ARCHETYPES[def.arch].label), isSupport(def.arch) ? 22 : 26, "#ffffff"));
+    const archLabel = txt(this, cx, cy - 82, style + (isSupport(def.arch) ? SUPPORT_TEXT[def.arch] : ARCHETYPES[def.arch].label), isSupport(def.arch) ? 22 : 26, "#ffffff");
+    info.add(archLabel);
+    const archIcon = kitIcon(this, "arch", def.arch, 40, archLabel.x - archLabel.displayWidth / 2 - 28, cy - 82);
+    if (archIcon) info.add(archIcon);
     // The archetype's numbers for this unit as summoned (rank 1), and a Knight's or Mercenary's own effect.
     const effect = effectSummary(def.arch, 1, rarityIndex(def.rarity), EFFECTS, levelMult(owned?.level ?? 1));
     let lineY = cy - 48;
@@ -582,7 +585,10 @@ export class DeckScene extends Phaser.Scene {
     }
     if (def.perk !== "none") {
       const perk = PERKS[def.perk];
-      info.add(txt(this, cx, lineY, `${def.arch === "buff" ? "Neighbours get " : ""}${perk.label}: ${perk.text}`, 20, "#ffd27a"));
+      const perkLine = txt(this, cx, lineY, `${def.arch === "buff" ? "Neighbours get " : ""}${perk.label}: ${perk.text}`, 20, "#ffd27a");
+      info.add(perkLine);
+      const perkIcon = kitIcon(this, "perk", def.perk, 34, perkLine.x - perkLine.displayWidth / 2 - 24, lineY);
+      if (perkIcon) info.add(perkIcon);
       lineY += 32;
     }
     info.add(txt(this, cx, lineY, `"${def.blurb}"`, 20, "#c9d2ff"));
