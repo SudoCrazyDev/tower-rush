@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { auraBonus, buffBonus, EFFECTS } from "../../../shared/effects.ts";
 import { noAttack } from "../../../shared/support.ts";
+import { PERKS } from "../../../shared/perks.ts";
 import { ARCH_KIND, kitPrimary, kitSummary, perkSummary } from "../../../shared/kit.ts";
 import {
   SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
@@ -592,6 +593,36 @@ export class DeckScene extends Phaser.Scene {
     info.add(archLabel);
     const archIcon = kitIcon(this, "arch", arch, 40, archLabel.x - archLabel.displayWidth / 2 - 28, cy - 82);
     if (archIcon) info.add(archIcon);
+    // Tap an arch or perk icon for a small bubble with that slot's line; tap anywhere else to close it.
+    let tip: Phaser.GameObjects.Container | null = null;
+    const closeTip = () => {
+      tip?.destroy();
+      tip = null;
+    };
+    const showTip = (icon: Phaser.GameObjects.Image, title: string, body: string) => {
+      closeTip();
+      const t1 = txt(this, 0, 0, title, 22, "#fff4c2");
+      const t2 = txt(this, 0, 0, body, 19, "#ffffff").setWordWrapWidth(380).setAlign("center");
+      const w = Math.max(t1.displayWidth, t2.displayWidth) + 36;
+      const h = t1.displayHeight + t2.displayHeight + 30;
+      const bx = Phaser.Math.Clamp(icon.x, cx - 320 + w / 2 + 10, cx + 320 - w / 2 - 10);
+      const by = icon.y - icon.displayHeight / 2 - h / 2 - 12;
+      const g = this.add.graphics();
+      g.fillStyle(0x0b1530, 0.96).fillRoundedRect(-w / 2, -h / 2, w, h, 14);
+      g.lineStyle(3, 0xffd93b, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 14);
+      t1.setPosition(0, -h / 2 + 14 + t1.displayHeight / 2);
+      t2.setPosition(0, -h / 2 + 18 + t1.displayHeight + t2.displayHeight / 2);
+      const blocker = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.001).setInteractive();
+      blocker.once("pointerup", closeTip);
+      tip = this.add.container(0, 0, [blocker, this.add.container(bx, by, [g, t1, t2])]);
+      m.add(tip);
+    };
+    const tapIcon = (icon: Phaser.GameObjects.Image | null, title: string, body: string) => {
+      if (icon) pressable(icon, () => showTip(icon, title, body));
+    };
+    const slotName = (a: string) => a.charAt(0).toUpperCase() + a.slice(1).replace(/_/g, " ");
+    const slotLines = def.kit.map((s) => kitSummary({ ...def, kit: [s] }, 1, levelMult(owned?.level ?? 1))[0] ?? "");
+    tapIcon(archIcon, slotName(def.kit[0].arch), slotLines[0] ?? "");
     // Every kit slot with this unit's numbers as summoned (rank 1), then one line per perk, then the blurb.
     // Lines wrap and stack by their real height; a long kit pushes the stats row and the buttons down.
     let cursor = cy - 64;
@@ -604,12 +635,19 @@ export class DeckScene extends Phaser.Scene {
       }
       cursor += t.displayHeight + 6;
     };
-    for (const line of kitSummary(def, 1, levelMult(owned?.level ?? 1))) place(txt(this, cx, cursor, line, 19, "#7fffd4"), null);
+    def.kit.forEach((slot, i) => {
+      if (!slotLines[i]) return;
+      const icon = i === 0 ? null : kitIcon(this, "arch", slot.arch, 32);
+      tapIcon(icon, slotName(slot.arch), slotLines[i]);
+      place(txt(this, cx, cursor, slotLines[i], 19, "#7fffd4"), icon);
+    });
     const perkLines = perkSummary(def);
     def.perks.forEach((p, i) => {
       const text = `${arch === "buff" ? "Neighbours get " : ""}${perkLines[i]}`;
       const line = txt(this, cx, cursor, text, 19, "#ffd27a");
-      place(line, kitIcon(this, "perk", p.perk, 32));
+      const pIcon = kitIcon(this, "perk", p.perk, 32);
+      tapIcon(pIcon, PERKS[p.perk].label, text);
+      place(line, pIcon);
     });
     place(txt(this, cx, cursor, `"${def.blurb}"`, 19, "#c9d2ff"), null);
     const extra = Math.min(110, Math.max(0, Math.round(cursor + 40 - (cy + 76))));
