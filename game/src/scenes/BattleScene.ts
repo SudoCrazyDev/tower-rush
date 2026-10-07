@@ -14,6 +14,7 @@ import { findChapter, type StoryChapter, type StoryDef } from "../../../shared/s
 import { square3 } from "../../../shared/statuses.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { SUPPORT_TIP, canBecome, mimePrep, neighbours, noAttack, type SupportArch } from "../../../shared/support.ts";
+import { kitPrimary } from "../../../shared/kit.ts";
 import type { HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
 import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
@@ -163,7 +164,7 @@ export class BattleScene extends Phaser.Scene {
       mode: "solo",
       levels: Object.fromEntries(this.deck.map((id) => [id, this.cardLevel(id)])),
       deck: this.deck,
-      awakens: (id) => canAwaken(id, UNIT_BY_ID[id]?.arch),
+      awakens: (id) => canAwaken(id, (UNIT_BY_ID[id] ? kitPrimary(UNIT_BY_ID[id]) : undefined)),
       bossIntro: (id) => hasAnim("bosses", `${id}_intro`),
       autoHero: this.autoCast,
       story: this.story?.chapter,
@@ -672,14 +673,14 @@ export class BattleScene extends Phaser.Scene {
         this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(95));
       };
       // Princess Muse: a soft pink mark on the 3×3 square her Last Call reaches.
-      if (u.def.arch === "aura") {
+      if (kitPrimary(u.def) === "aura") {
         for (const s of square3(u.slot)) {
           const p = this.slotPos(s);
           this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(94).setTint(0xff8fd8).setAlpha(0.55));
         }
       }
-      const mime = u.def.arch === "mime" && this.sim.mimeReady(u.slot);
-      const portal = u.def.arch === "portal" && this.sim.portalReady(u.slot);
+      const mime = kitPrimary(u.def) === "mime" && this.sim.mimeReady(u.slot);
+      const portal = kitPrimary(u.def) === "portal" && this.sim.portalReady(u.slot);
       this.sim.units.forEach((other, slot) => {
         if (!other) {
           if (portal) mark(slot);
@@ -719,12 +720,12 @@ export class BattleScene extends Phaser.Scene {
       };
       if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank()) {
         done(sim.merge(from, target.slot));
-      } else if (target && target !== u && u.def.arch === "mime") {
+      } else if (target && target !== u && kitPrimary(u.def) === "mime") {
         if (!sim.mimeReady(from)) this.refuse(u, `Ready in ${Math.ceil(mimePrep(this.supportMult(u)) - u.sim.timer)}s`);
         else if (target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
         else if (!canBecome(u.sim, target.sim)) this.refuse(u, target.awakened ? "Can't copy awakened" : "Can't copy support");
         else done(sim.copy(from, target.slot));
-      } else if (u.def.arch === "portal" && (target ? target !== u : this.emptySlotAt(obj.x, obj.y) >= 0)) {
+      } else if (kitPrimary(u.def) === "portal" && (target ? target !== u : this.emptySlotAt(obj.x, obj.y) >= 0)) {
         if (!sim.portalReady(from)) this.refuse(u, `Ready in ${Math.ceil(u.sim.timer)}s`);
         else if (target && target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
         else done(target ? sim.swap(from, target.slot) : sim.hop(from, this.emptySlotAt(obj.x, obj.y)));
@@ -898,9 +899,9 @@ export class BattleScene extends Phaser.Scene {
     if (u.awakened) this.requestAwakenedArt(u.def.id);
     u.sprite.setScale(0);
     this.tweens.add({ targets: u.sprite, scale: u.baseScale, duration: u.awakened ? 420 : 260, ease: "Back.Out" });
-    const tip = SUPPORT_TIP[u.def.arch as SupportArch];
-    if (tip && !this.sim.tutorialHold && !tipsSeen().includes(u.def.arch)) {
-      markTipSeen(u.def.arch);
+    const tip = SUPPORT_TIP[kitPrimary(u.def) as SupportArch];
+    if (tip && !this.sim.tutorialHold && !tipsSeen().includes(kitPrimary(u.def))) {
+      markTipSeen(kitPrimary(u.def));
       this.time.delayedCall(400, () => toast(this, tip));
     }
   }
@@ -922,7 +923,7 @@ export class BattleScene extends Phaser.Scene {
         this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 10, 150);
         if (e.lucky) {
           this.vfx("coin_burst", u.sprite.x, u.sprite.y - 30, 150);
-          for (const j of neighbours(e.slot)) if (this.sim.units[j]?.def.arch === "lucky") this.unitInSlot(j)?.playOnce("skill");
+          for (const j of neighbours(e.slot)) if ((this.sim.units[j] && kitPrimary(this.sim.units[j]!.def)) === "lucky") this.unitInSlot(j)?.playOnce("skill");
         }
         this.events.emit("tutorial", "merge", u);
         break;
@@ -962,7 +963,7 @@ export class BattleScene extends Phaser.Scene {
         const herald = e.uid === null ? undefined : this.units.get(e.uid);
         herald?.playOnce("skill");
         herald?.callout("WAR CRY!", "#ff8a3b");
-        for (const v of this.units.values()) if (!noAttack(v.def.arch)) this.vfx("fire_explosion", v.sprite.x, v.sprite.y - 20, 90);
+        for (const v of this.units.values()) if (!noAttack(kitPrimary(v.def))) this.vfx("fire_explosion", v.sprite.x, v.sprite.y - 20, 90);
         break;
       }
       case "powerup": {
@@ -1105,7 +1106,7 @@ export class BattleScene extends Phaser.Scene {
         this.bark(e);
         break;
       case "mana": {
-        if (e.source === "harvest") for (const u of this.units.values()) if (u.def.arch === "brewer") u.playOnce("skill");
+        if (e.source === "harvest") for (const u of this.units.values()) if (kitPrimary(u.def) === "brewer") u.playOnce("skill");
         if (e.source === "pulse" && e.x !== null && e.y !== null) this.unitNear(e.x, e.y + 50)?.playOnce("skill");
         if (e.x === null || e.y === null) break;
         if (e.source === "hero") {
@@ -1153,7 +1154,7 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case "encore": {
-        for (const u of this.units.values()) if (u.def.arch === "echo") u.playOnce("attack");
+        for (const u of this.units.values()) if (kitPrimary(u.def) === "echo") u.playOnce("attack");
         this.floater(e.x, e.y - 70, "ENCORE!", "#9ff0ff", 28);
         if (!e.strike) break;
         const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);

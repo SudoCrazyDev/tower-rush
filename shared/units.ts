@@ -63,7 +63,8 @@ export interface UnitDef {
   rarity: Rarity;
   element: Element;
   race: Race;
-  arch: Arch;
+  /** @deprecated v1 migration input only: withKits turns it into `kit` and strips it. Use kitPrimary(def). */
+  arch?: Arch;
   proj: Proj;
   blurb: string;
   /** Damage per hit at rank 1, card level 1, no power-ups. */
@@ -72,8 +73,8 @@ export interface UnitDef {
   speed: number;
   /** Fighting style: trades hit size for attack speed (seeds damage and speed). */
   style: Style;
-  /** Signature perk (see perks.ts). */
-  perk: Perk;
+  /** @deprecated v1 migration input only: withKits turns it into `perks` and strips it. */
+  perk?: Perk;
   /** Disabled units don't drop from chests and can't be put in a deck. */
   enabled: boolean;
   /** Shown in place of the fighting style ("Barkeeper", "Knight", "Mercenary"). */
@@ -82,14 +83,14 @@ export interface UnitDef {
   storyOnly?: boolean;
   /** Earned from a story first; drops from chests only once the player owns a copy. */
   storyReward?: boolean;
-  /** A unit-specific effect on top of its archetype (v1.2 Knights and Mercenaries; numbers in effects.ts). */
+  /** @deprecated v1 migration input only: withKits turns it into a kit signature and strips it. Use kitHas(def, "bane"). */
   effect?: UnitEffect;
   /**
    * v2 kit (kit.ts): kit[0] is how it attacks or its job, then riders and signatures, each with
-   * optional number overrides. The source of truth; v1 configs get it from arch/effect (withKits).
+   * optional number overrides. The source of truth; v1 configs get it from arch/effect (kitFromLegacy).
    */
   kit: ArchSlot[];
-  /** v2 perks, each with an optional value; v1 configs get it from `perk` (withKits). */
+  /** v2 perks, each with an optional value; v1 configs get it from `perk` (kitFromLegacy). */
   perks: PerkSlot[];
   /** v2: melee weapon sprite thrown instead of the projectile (vfx/weapons/<weapon>.webp); unset = use proj. */
   weapon?: string;
@@ -207,7 +208,7 @@ export function withStyles(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
     if (STYLES[u.style]) return u;
     const d = defaults.find((x) => x.id === u.id);
     const style = d?.style ?? "balanced";
-    return { ...u, ...restyle(u, "balanced", style), style, perk: d?.perk ?? "none" };
+    return { ...u, ...restyle(u, "balanced", style), style, perk: d?.perks?.[0]?.perk ?? "none" };
   });
 }
 

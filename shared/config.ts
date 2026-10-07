@@ -2,8 +2,7 @@
  * The whole editable game balance as one JSON document. The server stores versions of
  * it, the admin panel edits it, and the game applies it at boot with applyConfig().
  */
-import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, ARCHS, PROJECTILES, STYLE_IDS, UNIT_EFFECTS, WEAPON_KEYS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
-import { PERK_IDS } from "./perks.ts";
+import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, PROJECTILES, STYLE_IDS, WEAPON_KEYS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
 import { BOOK, DEFAULT_BOOK, storyProblems, type BookDef } from "./stories.ts";
 import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts";
@@ -55,7 +54,7 @@ export interface GameConfig {
  */
 const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]> }> = {
   "1.2.1": {
-    units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["effect"] },
+    units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["kit"] },
     effects: { rally: ["time"], oath: ["perKnight"] },
   },
   // The Lucky Cat never attacks, so its neighbours' merges always keep their unit.
@@ -115,7 +114,7 @@ function replace<T>(target: T[], items: T[]) {
 
 /** Swap the live tables for the ones in `cfg` (in place, so existing imports see them). */
 export function applyConfig(cfg: GameConfig) {
-  // v2: every unit gets its kit (derived from the legacy fields while they exist, see kit.ts).
+  // v2: every unit gets its kit (a v1 unit derives it from its legacy fields, then loses them: see kit.ts).
   replace(UNITS, withKits(withAddedUnits(withStyles(withRaces(cfg.units, DEFAULT_UNITS), DEFAULT_UNITS), DEFAULT_UNITS), withEffectDefaults(cfg.effects)));
   replace(MONSTERS, withAdded(withRaces(cfg.monsters, DEFAULT_MONSTERS), DEFAULT_MONSTERS, ADDED_MONSTERS));
   replace(BOSSES, withAdded(withRaces(cfg.bosses, DEFAULT_BOSSES), DEFAULT_BOSSES, ADDED_BOSSES));
@@ -174,15 +173,12 @@ export function validateConfig(cfg: GameConfig): string[] {
     oneOf(u.rarity, RARITIES, `${w} rarity`);
     oneOf(u.element, ELEMENTS, `${w} element`);
     oneOf(u.race, RACE_IDS, `${w} race`);
-    oneOf(u.arch, ARCHS, `${w} archetype`);
     oneOf(u.proj, PROJECTILES, `${w} projectile`);
     oneOf(u.style, STYLE_IDS, `${w} style`);
-    oneOf(u.perk, PERK_IDS, `${w} perk`);
     num(u.damage, `${w} damage`);
     num(u.speed, `${w} speed`);
-    if (u.effect !== undefined) oneOf(u.effect, UNIT_EFFECTS, `${w} effect`);
     if (u.weapon !== undefined) oneOf(u.weapon, WEAPON_KEYS, `${w} weapon`);
-    if (u.kit !== undefined || u.perks !== undefined) errs.push(...kitProblems(u, w));
+    errs.push(...kitProblems(u, w));
   }
   const monsterIds = ids(cfg.monsters, "monster");
   for (const m of cfg.monsters) {

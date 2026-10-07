@@ -6,6 +6,7 @@
  */
 import { ELEMENTS, UNITS, type Element, type Rarity } from "./units.ts";
 import { noAttack, isSupport } from "./support.ts";
+import { kitPrimary } from "./kit.ts";
 import { PERKS, PERK_IDS } from "./perks.ts";
 import { TRAITS } from "./monsters.ts";
 import { RACES, RACE_IDS } from "./races.ts";
@@ -96,7 +97,7 @@ function awakened(have: HaveArt): ArtRequest[] {
   const stills = new Set(have.units_awakened), portraits = new Set(have.portraits_awakened);
   const out: ArtRequest[] = [];
   for (const u of UNITS) {
-    if (u.storyOnly || !canAwaken(u.arch)) continue;
+    if (u.storyOnly || !canAwaken(kitPrimary(u))) continue;
     const needStill = !stills.has(u.id);
     const needPortrait = !portraits.has(u.id);
     if (!needStill && !needPortrait) continue;
@@ -113,7 +114,7 @@ function awakened(have: HaveArt): ArtRequest[] {
         prompt:
           `${STYLE} The awakened, max-level form of this exact character, ${who}: keep the same face, species, colors and silhouette so it is instantly recognizable, ` +
           `but make it ${GRANDEUR[u.rarity]}: ${AURA[u.element]}, ornate armor or robes, a bigger, fancier version of its signature weapon or prop. ` +
-          `${noAttack(u.arch) ? "Confident commanding pose" : "Heroic ready-to-attack pose"}, facing slightly right. ${GREEN}`,
+          `${noAttack(kitPrimary(u)) ? "Confident commanding pose" : "Heroic ready-to-attack pose"}, facing slightly right. ${GREEN}`,
       });
     if (needPortrait)
       out.push({
