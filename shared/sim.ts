@@ -151,7 +151,18 @@ export type SimEvent =
   | { type: "shot_lost"; t: number; uid: number; x: number; y: number }
   | { type: "brew"; t: number; bubble: number; uid: number; slot: number; amount: number; x: number; y: number }
   | { type: "brew_collect"; t: number; bubble: number; uid: number; tapped: boolean; amount: number; x: number; y: number }
-  | { type: "end"; t: number; outcome: SimResult["outcome"]; why: string | null; stars: number | null };
+  | { type: "end"; t: number; outcome: SimResult["outcome"]; why: string | null; stars: number | null }
+  // View-only events, emitted only with the `view` option (the solo scene): they never change a rule.
+  /** A hit landed on `target`: main hit of a shot or ultimate, a pierce or chain extra, or a Lance Knight's bane chain. */
+  | { type: "hit"; t: number; uid: number; target: number; kind: "main" | "pierce" | "chain" | "bane"; element: Element; x: number; y: number; size: number }
+  /** A big damage number over a monster (crit, boss execute, sniper, hero meteor). */
+  | { type: "bighit"; t: number; target: number; x: number; y: number; dmg: number; color: string }
+  /** A proc on a monster: frozen, stunned, executed. */
+  | { type: "proc"; t: number; kind: "frozen" | "stun" | "execute"; x: number; y: number }
+  /** A lightning bolt segment: chain n (0 first), a Lance Knight's bane chain, or a hero storm bolt. */
+  | { type: "zap"; t: number; kind: "chain" | "bane" | "storm"; n: number; x: number; y: number; x2: number; y2: number; color: string }
+  /** A healer monster's pulse. */
+  | { type: "heal_pulse"; t: number; x: number; y: number };
 
 export type SimMode = "solo" | "pvp";
 
@@ -182,6 +193,8 @@ export interface SimOptions {
   timelineCap?: number;
   /** Collect the structured event stream (default true). */
   events?: boolean;
+  /** Also emit the view-only events (hit, bighit, proc, zap, heal_pulse). Default false: tests and PvP never see them. */
+  view?: boolean;
 }
 
 export interface SimCounts {
@@ -644,6 +657,11 @@ export class Sim {
     if (this.o.events !== false && this.feed.length < 20000) this.feed.push(e);
   }
 
+  /** A view-only event (see SimOptions.view). */
+  protected view(e: SimEvent) {
+    if (this.o.view) this.emit(e);
+  }
+
   /** Take every event since the last call. */
   drainEvents(): SimEvent[] {
     const out = this.feed;
@@ -959,6 +977,7 @@ export class Sim {
       if (healPulse && m.has("healer")) {
         for (const o of this.nearby(m.pos, 130)) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.08);
         this.mark("ring", m.pos.x, m.pos.y, "#7dff7a", { x2: 130 });
+        this.view({ type: "heal_pulse", t: now, x: m.pos.x, y: m.pos.y });
       }
       if (m.dist >= m.path.length) {
         this.leak(m);
@@ -1092,7 +1111,7 @@ export class Sim {
   }
 
   /** Apply damage; returns true if it killed. */
-  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly Perk[] } = {}) {
+  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly Perk[]; crit?: boolean; color?: string } = {}) {
     if (m.dead) return false;
     if (this.now < m.shieldUntil) {
       this.blocked += amount;
@@ -1107,6 +1126,7 @@ export class Sim {
     }
     let dmg = amount * (1 + m.curse) * perkMult(perks, m);
     if (m.has("armored") && !perks.includes("armor_breaker")) dmg *= 0.7;
+    if (opts.crit && !opts.quiet) this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b" });
     const dealt = Math.min(Math.max(0, m.hp), dmg);
     if (src === "hero") this.heroDamage += dealt;
     else this.damageBySlot[src] += dealt;
@@ -1389,7 +1409,7 @@ export class Sim {
     const hpUnit = this.baseHp(Math.max(1, this.wave));
     switch (h.power) {
       case "meteor":
-        for (const m of targets) this.hurt(m, h.amount * hpUnit, "hero", { sure: true });
+        for (const m of targets) this.hurt(m, h.amount * hpUnit, "hero", { sure: true, crit: true, color: "#c58bff" });
         break;
       case "storm":
         this.stormUntil = now + h.duration;
@@ -1438,6 +1458,7 @@ export class Sim {
     if (!targets.length) return;
     const m = targets[Math.floor(this.rand() * targets.length)];
     this.mark("zap", m.pos.x, m.pos.y - 320, "#d9a3ff", { x2: m.pos.x, y2: m.pos.y });
+    this.view({ type: "zap", t: this.now, kind: "storm", n: 0, x: m.pos.x, y: m.pos.y - 320, x2: m.pos.x, y2: m.pos.y, color: "#d9a3ff" });
     this.hurt(m, this.hero.amount * this.baseHp(Math.max(1, this.wave)), "hero", { sure: true });
   }
 
@@ -1874,11 +1895,16 @@ export class Sim {
       cur = next;
     }
     let p = from;
-    for (const m of hit) {
-      this.mark("zap", p.x, p.y, u.def.element === "lightning" ? "#fff27a" : "#9ff0ff", { x2: m.pos.x, y2: m.pos.y });
+    const zapColor = u.def.element === "lightning" ? "#fff27a" : "#9ff0ff";
+    hit.forEach((m, n) => {
+      this.mark("zap", p.x, p.y, zapColor, { x2: m.pos.x, y2: m.pos.y });
+      this.view({ type: "zap", t: this.now, kind: "chain", n, x: p.x, y: p.y, x2: m.pos.x, y2: m.pos.y, color: zapColor });
       p = m.pos;
-    }
-    hit.forEach((m, i) => this.hurt(m, damage * Math.pow(EFFECTS.chain.falloff, i), u.slot, { perks: u.perks }));
+    });
+    hit.forEach((m, i) => {
+      this.view({ type: "hit", t: this.now, uid: u.uid, target: m.uid, kind: "chain", element: u.def.element, x: m.pos.x, y: m.pos.y, size: 80 });
+      this.hurt(m, damage * Math.pow(EFFECTS.chain.falloff, i), u.slot, { perks: u.perks });
+    });
   }
 
   /** Up to `jumps` more monsters, each the nearest within chain range of the last, skipping `skip`. */
@@ -1935,7 +1961,8 @@ export class Sim {
     const rarityIdx = rarityIndex(def.rarity);
     const bane = (o: SimMonster) => (def.effect === "bane" && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage);
     // Rogue Knight: nearly every blow crits.
-    const damage = bane(m) * (def.effect === "irritate" && this.rand() < e.irritate.critChance ? e.irritate.critMult : 1);
+    const rogue = def.effect === "irritate" && this.rand() < e.irritate.critChance;
+    const damage = bane(m) * (rogue ? e.irritate.critMult : 1);
     if (def.effect === "shellshock" && this.units[u.slot] === u && this.rand() < e.shellshock.chance) {
       const near = neighbours(u.slot).map((j) => this.units[j]).filter((v): v is SimUnit => !!v && !v.dragging);
       const v = near[Math.floor(this.rand() * near.length)];
@@ -1943,8 +1970,9 @@ export class Sim {
     }
     const pos = m.pos;
     const isBoss = !!m.boss;
-    const P = { perks: u.perks };
+    const P = { perks: u.perks, crit: rogue };
     const chilled = chills(u.perks, m);
+    let vfxSize = 70;
     this.mark("hit", pos.x, pos.y, ELEMENT_CSS[def.element]);
 
     switch (def.arch) {
@@ -1961,6 +1989,7 @@ export class Sim {
           }
         }
         this.mark("ring", pos.x, pos.y, ELEMENT_CSS[def.element], { x2: splashRadius(def.arch, rank) });
+        vfxSize = 130 + rank * 6;
         break;
       }
       case "pierce": {
@@ -1968,9 +1997,20 @@ export class Sim {
         const behind = this.nearby(pos, e.pierce.range, m)
           .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
           .slice(0, pierceTargets(rank));
-        for (const o of behind) this.hurt(o, damage * e.pierce.damage, src, { ...P, sure: true });
+        for (const o of behind) {
+          this.view({ type: "hit", t: now, uid: u.uid, target: o.uid, kind: "pierce", element: def.element, x: o.pos.x, y: o.pos.y, size: 50 });
+          this.hurt(o, damage * e.pierce.damage, src, { ...P, sure: true });
+        }
         // Lance Knight: the hit also chains on to more monsters.
-        if (def.effect === "bane") this.chainOn(m, [m, ...behind], e.bane.chain).forEach((o, i) => this.hurt(o, bane(o) * Math.pow(e.chain.falloff, i + 1), src, { ...P, sure: true }));
+        if (def.effect === "bane") {
+          let from = m.pos;
+          this.chainOn(m, [m, ...behind], e.bane.chain).forEach((o, i) => {
+            this.view({ type: "zap", t: now, kind: "bane", n: i, x: from.x, y: from.y, x2: o.pos.x, y2: o.pos.y, color: "#fff27a" });
+            from = o.pos;
+            this.view({ type: "hit", t: now, uid: u.uid, target: o.uid, kind: "bane", element: def.element, x: o.pos.x, y: o.pos.y, size: 0 });
+            this.hurt(o, bane(o) * Math.pow(e.chain.falloff, i + 1), src, { ...P, sure: true });
+          });
+        }
         break;
       }
       case "slow":
@@ -1985,6 +2025,7 @@ export class Sim {
         if (chilled && this.rand() < freezeChance(rank, rarityIdx)) {
           m.frozenUntil = now + (isBoss ? e.freeze.bossDuration : e.freeze.duration);
           this.mark("text", pos.x, pos.y - 30, "#7fd8ff", { text: "FROZEN" });
+          this.view({ type: "proc", t: now, kind: "frozen", x: pos.x, y: pos.y - 30 });
         }
         break;
       case "stun":
@@ -1992,6 +2033,7 @@ export class Sim {
         if (this.rand() < stunChance(rank, rarityIdx)) {
           m.stunUntil = now + (isBoss ? e.stun.bossDuration : e.stun.duration);
           this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "STUN" });
+          this.view({ type: "proc", t: now, kind: "stun", x: pos.x, y: pos.y - 30 });
         }
         break;
       case "poison":
@@ -2001,8 +2043,9 @@ export class Sim {
         break;
       case "crit": {
         const crit = this.rand() < critChance(rank);
-        this.hurt(m, crit ? damage * critMult(rank) : damage, src, P);
+        this.hurt(m, crit ? damage * critMult(rank) : damage, src, { ...P, crit: rogue || crit });
         if (crit) {
+          vfxSize = 110;
           this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT", slot: src, callout: `CRIT ×${+critMult(rank).toFixed(1)}` });
           this.callout("crit", `CRIT ×${+critMult(rank).toFixed(1)}`, "#ffd93b", u.x, u.y - 60, u.uid);
         }
@@ -2017,17 +2060,24 @@ export class Sim {
           if (isBoss) {
             this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: `×${e.execute.bossMult}`, slot: src, callout: `×${e.execute.bossMult}` });
             this.callout("execute", `×${e.execute.bossMult}`, "#ff7ad9", u.x, u.y - 60, u.uid);
-            this.hurt(m, damage * e.execute.bossMult, src, P);
+            this.hurt(m, damage * e.execute.bossMult, src, { ...P, crit: true, color: "#ff7ad9" });
           } else {
             this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE", slot: src, callout: "EXECUTE" });
             this.callout("execute", "EXECUTE", "#ff7ad9", u.x, u.y - 60, u.uid);
+            this.view({ type: "proc", t: now, kind: "execute", x: pos.x, y: pos.y - 30 });
             this.hurt(m, m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, src, { ...P, sure: true });
           }
+          vfxSize = 130;
         } else this.hurt(m, damage, src, P);
+        break;
+      case "sniper":
+        this.hurt(m, damage, src, { ...P, crit: true, color: "#ffffff" });
+        vfxSize = 120;
         break;
       default:
         this.hurt(m, damage, src, P);
     }
+    this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
   }
 }
 
