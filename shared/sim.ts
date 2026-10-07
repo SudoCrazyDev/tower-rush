@@ -4,8 +4,10 @@
  * Mirrors the combat rules of game/src/scenes/BattleScene.ts, Unit.ts and Monster.ts
  * (targeting, archetype effects, awakened ultimates, boss powers, hero abilities, wave
  * spawning) without Phaser, using a seeded random source so a run can be repeated.
- * The board is fixed for the whole run: no summoning, merging or buying power-ups.
- * Keep it in step with BattleScene when combat rules change.
+ * Since v2 P1b it is the whole battle engine: it also runs the player's actions (summon,
+ * merge, copy, swap, hop, power-up, hero cast), story chapters, brew bubbles and drags, and
+ * publishes a structured event stream (SimEvent, drainEvents) for a renderer. The Playground
+ * still runs it with a fixed board and no actions. Keep BattleScene in step until it is a view.
  *
  * Reads the live tables (UNITS, EFFECTS, ECONOMY...), so call applyConfig() first to
  * simulate a particular config.
@@ -33,7 +35,9 @@ import {
 } from "./effects.ts";
 import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "./monsters.ts";
-import { UNIT_BY_ID, boostMult, rarityIndex, unitStats, type Element, type UnitDef } from "./units.ts";
+import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Element, type UnitDef } from "./units.ts";
+import { raceLabel } from "./races.ts";
+import { starsFor, type StoryChapter, type StoryLine } from "./stories.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { PERK, chills, perkMult, withPerk, type Perk } from "./perks.ts";
@@ -44,11 +48,14 @@ import {
   harvestMana,
   heraldBonus,
   isSupport,
+  luckyChance,
+  mimePrep,
   mirrorInterval,
   neighbours,
   noAttack,
   owlCharge,
   owlSpeed,
+  portalCooldown,
 } from "./support.ts";
 
 /** Simulation step in seconds. */
@@ -93,10 +100,103 @@ export interface SimSetup {
 /** Damage source: a board slot (0-14) or the hero. */
 export type Source = number | "hero";
 
-export interface SimEvent {
+/** One line of the text log (Playground event list). The structured stream is SimEvent. */
+export interface SimLogEntry {
   t: number;
   text: string;
   kind: "boss" | "hero" | "leak" | "kill" | "wave" | "unit";
+}
+
+export type ManaSource = "kill" | "wave" | "harvest" | "brew" | "pulse" | "lantern" | "ultimate" | "echo" | "plunder" | "hero" | "income" | "other";
+export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald";
+
+/**
+ * Structured events for a renderer, drained with drainEvents(). Unit uids are stable per
+ * physical unit: summon, merge and become (Mime copy, Mirror Slime) each create a NEW uid
+ * (the old sprite is gone); swap and hop keep the uid and only change slot and position.
+ * Monster uids are the SimMonster uids.
+ */
+export type SimEvent =
+  | { type: "summon"; t: number; uid: number; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean }
+  /** `gone` are the two merged units; `uid` is the new one on the target slot. `lucky`: a Lucky Cat kept the unit. */
+  | { type: "merge"; t: number; uid: number; gone: [number, number]; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean; lucky: boolean }
+  /** `gone` was replaced by `uid` (a Mime copy or a Mirror Slime turning). */
+  | { type: "become"; t: number; uid: number; gone: number; why: "copy" | "mirror"; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean }
+  /** Portal Imp: `other` is the unit it traded with (null for a hop to an empty tile). */
+  | { type: "swap"; t: number; uid: number; other: number | null; from: number; to: number }
+  | { type: "awaken"; t: number; uid: number; id: string; slot: number; x: number; y: number }
+  | { type: "powerup"; t: number; id: string; level: number }
+  | { type: "wave"; t: number; wave: number; total: number | null; boss: string | null; banner: string; sub: string | null; final: boolean; monsters: number }
+  | { type: "spawn"; t: number; uid: number; id: string; boss: boolean; x: number; y: number; hp: number; path: number }
+  | { type: "kill"; t: number; uid: number; id: string; boss: boolean; x: number; y: number; mana: number; slot: number | "hero" }
+  | { type: "leak"; t: number; uid: number; id: string; boss: boolean; x: number; y: number; livesLost: number; lives: number }
+  /** An HP stage of a split, portal or layers boss (stage 1.., text e.g. SPLIT, BLINK, LAYER BROKEN, THE CORE). */
+  | { type: "boss_stage"; t: number; uid: number; id: string; power: BossPower; stage: number; text: string; x: number; y: number }
+  | { type: "boss_power"; t: number; uid: number; id: string; power: BossPower; text: string; x: number; y: number }
+  /** Minions released around a boss or a splitter breaking up (`kind`). */
+  | { type: "split"; t: number; uid: number; kind: "splitter" | "boss"; children: number[]; x: number; y: number }
+  /** A boss portal opens at (x, y); its minions step out `delay` seconds later. */
+  | { type: "portal"; t: number; uid: number; x: number; y: number; delay: number }
+  | { type: "bark"; t: number; who: string; text: string }
+  | { type: "mana"; t: number; amount: number; x: number | null; y: number | null; source: ManaSource }
+  | { type: "wages"; t: number; uid: number; slot: number; cost: number; paid: boolean; x: number; y: number }
+  | { type: "callout"; t: number; kind: CalloutKind; text: string; color: string; uid: number | null; x: number; y: number }
+  /** A debuff landed on a unit (shellshock and boss powers only; the rest is in the status). */
+  | { type: "afflict"; t: number; uid: number; kind: "irritation" | "fatigue" | "shellshock"; x: number; y: number }
+  | { type: "hero"; t: number; power: HeroDef["power"]; ability: string; auto: boolean }
+  | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana"; x: number; y: number; radius: number }
+  | { type: "encore"; t: number; x: number; y: number; radius: number; strike: boolean }
+  | { type: "herald_cry"; t: number; uid: number | null }
+  /** A shot arrived but its target was already gone (play an impact). */
+  | { type: "shot_lost"; t: number; uid: number; x: number; y: number }
+  | { type: "brew"; t: number; bubble: number; uid: number; slot: number; amount: number; x: number; y: number }
+  | { type: "brew_collect"; t: number; bubble: number; uid: number; tapped: boolean; amount: number; x: number; y: number }
+  | { type: "end"; t: number; outcome: SimResult["outcome"]; why: string | null; stars: number | null };
+
+export type SimMode = "solo" | "pvp";
+
+export interface SimOptions {
+  /** "solo" (default) or "pvp". PvP brewers always pay instantly (no bubbles). */
+  mode?: SimMode;
+  /** Card level per unit id (falls back to setup.cardLevel). */
+  levels?: Record<string, number>;
+  /** The deck summons and merges draw from (also gives every id a power-up level of 0). */
+  deck?: string[];
+  /** Whether a unit awakens at max rank (the game knows from its art; elsewhere none do). */
+  awakens?: (id: string) => boolean;
+  /** Whether a boss has an intro clip (then it stands still 1.4 s). Default: every boss does. */
+  bossIntro?: (id: string) => boolean;
+  /** Cast the hero by itself when ready. Default true. */
+  autoHero?: boolean;
+  /** Hold the first wave's intro timer (tutorial). */
+  tutorialHold?: boolean;
+  /** Monster HP multiplier replacing the arena's own (a story chapter's hpScale; PvP overrides baseHp). */
+  hpScale?: number;
+  /** A story chapter: scripted waves, per-wave hp, boss first, last wave cleared = "won", stars from lives. */
+  story?: StoryChapter;
+  /** Starting mana (default 0). */
+  startMana?: number;
+  /** Brewer mana waits in a bubble to be tapped (+tapBonus) or pops by itself (solo only). Default false: instant. */
+  bubbles?: boolean;
+  /** Most timeline samples kept; past it the timeline is thinned (default 20000). */
+  timelineCap?: number;
+  /** Collect the structured event stream (default true). */
+  events?: boolean;
+}
+
+export interface SimCounts {
+  summons: number;
+  merges: number;
+  awakens: number;
+  heroCasts: number;
+  copies: number;
+  swaps: number;
+  /** Mana brewed by Gnome Brewers (brews, taps and harvests). */
+  brewed: number;
+  bossesKilled: number;
+  lucky: number;
+  /** PvP only. */
+  sends: number;
 }
 
 export interface SimSample {
@@ -109,7 +209,7 @@ export interface SimSample {
 }
 
 export interface SimResult {
-  outcome: "cleared" | "lost" | "timeout" | "done";
+  outcome: "cleared" | "lost" | "timeout" | "done" | "won";
   time: number;
   /** Highest wave started (run scenario), else the scenario's wave. */
   wave: number;
@@ -132,8 +232,11 @@ export interface SimResult {
   /** Damage soaked by boss shields (blocked hits). */
   blocked: number;
   dodged: number;
-  events: SimEvent[];
+  events: SimLogEntry[];
   timeline: SimSample[];
+  counts: SimCounts;
+  /** Story chapters: 1-3 stars from the lives left on a win, else 0; null outside stories. */
+  stars: number | null;
 }
 
 // ---------------------------------------------------------------- helpers
@@ -193,6 +296,10 @@ export class SimUnit {
   readonly rank: number;
   /** Slot and position change when a Portal Imp swaps or hops. */
   slot: number;
+  /** Stable id of this physical unit (see SimEvent): assigned by the Sim, 0 until then. */
+  uid = 0;
+  /** Being dragged by the player: it skips its update and neighbour effects (see Sim.setDragging). */
+  dragging = false;
   readonly awakened: boolean;
   x: number;
   y: number;
@@ -361,11 +468,20 @@ export class Sim {
   readonly hero: HeroDef | null;
   readonly maxTime: number;
   protected readonly rand: () => number;
+  /** The constructor options (mode, story, levels...). */
+  readonly o: SimOptions;
+  readonly mode: SimMode;
+  readonly story: StoryChapter | null;
+  readonly deck: string[];
+  /** In-battle power-up level per deck unit id. */
+  readonly powerUps: Record<string, number>;
 
   now = 0;
   wave = 0;
   lives: number;
   mana = 0;
+  /** Cost of the next summon: grows with every summon. */
+  summonCost: number = ECONOMY.summonCostStart;
   monsters: SimMonster[] = [];
   shots: SimShot[] = [];
   fx: SimFx[] = [];
@@ -374,8 +490,31 @@ export class Sim {
   /** Cast the hero by itself whenever it is ready (PvP lets the player switch this off). */
   autoHero = true;
   outcome: SimResult["outcome"] | null = null;
+  /** Why the battle was ended from outside (end(why)), else null. */
+  endWhy: string | null = null;
+  /** Story stars (1-3) once a chapter is won, else null. */
+  stars: number | null = null;
+  /** Hold the first wave's intro timer (tutorial). */
+  tutorialHold = false;
+  /** The next summon is forced onto this unit and tile (tutorial); used once if the tile is still empty. */
+  tutorialPick: { id: string; slot: number } | null = null;
+  /** HP multiplier of the current story wave. */
+  waveHp = 1;
+  /** Chaos Taffy tethers this step: the taffy and the unit it holds (for drawing the chain). */
+  tethers: { monster: SimMonster; unit: SimUnit }[] = [];
+  /** Open brew bubbles (solo with the `bubbles` option). */
+  bubbles: { id: number; unit: SimUnit; amount: number; at: number; expires: number; x: number; y: number }[] = [];
+  /** Structured events not yet drained. */
+  feed: SimEvent[] = [];
 
   private uid = 0;
+  private unitUid = 0;
+  private bubbleId = 0;
+  private hpScale: number | undefined;
+  /** Story barks and portal minions waiting for their moment. */
+  private barks: { at: number; line: StoryLine }[] = [];
+  private portals: { at: number; boss: SimMonster; dist: number }[] = [];
+  private timelineEvery = 0.25;
   private queue: { def?: MonsterDef; boss?: BossDef }[] = [];
   private spawnTimer = 0;
   private spawnInterval = 1;
@@ -403,11 +542,9 @@ export class Sim {
   livesLost = 0;
   spawned = 0;
   wavesCleared = 0;
-  heroCasts = 0;
   heroDamage = 0;
   manaGained = 0;
-  /** Mana from Gnome Brewers (brews and harvests). */
-  brewed = 0;
+  counts: SimCounts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0, copies: 0, swaps: 0, brewed: 0, bossesKilled: 0, lucky: 0, sends: 0 };
   blocked = 0;
   dodged = 0;
   bossHpLeft: number | null = null;
@@ -415,24 +552,43 @@ export class Sim {
   bossTime: number | null = null;
   damageBySlot = new Array(15).fill(0);
   killsBySlot = new Array(15).fill(0);
-  events: SimEvent[] = [];
+  /** The text log (kept for the Playground; the structured stream is `feed`). */
+  events: SimLogEntry[] = [];
   timeline: SimSample[] = [];
 
-  constructor(setup: SimSetup) {
+  get heroCasts() {
+    return this.counts.heroCasts;
+  }
+
+  /** Mana from Gnome Brewers (brews, taps and harvests). */
+  get brewed() {
+    return this.counts.brewed;
+  }
+
+  constructor(setup: SimSetup, opts: SimOptions = {}) {
     this.setup = setup;
-    this.arena = ARENA_BY_ID[setup.arena] ?? ARENAS[0];
+    this.o = opts;
+    this.mode = opts.mode ?? "solo";
+    this.story = opts.story ?? null;
+    this.arena = (this.story && ARENA_BY_ID[this.story.layout]) || ARENA_BY_ID[setup.arena] || ARENAS[0];
     this.rand = rng(setup.seed);
     const geo = arenaGeometry(this.arena);
     this.paths = geo.paths;
     this.targetFrom = geo.targetFrom;
     this.lives = ECONOMY.lives;
+    this.deck = [...(opts.deck ?? [])];
+    this.powerUps = Object.fromEntries(this.deck.map((id) => [id, 0]));
+    this.hpScale = opts.hpScale ?? this.story?.hpScale;
+    this.mana = opts.startMana ?? 0;
+    if (opts.autoHero !== undefined) this.autoHero = opts.autoHero;
+    this.tutorialHold = !!opts.tutorialHold;
     const h = setup.hero ? HERO_BY_ID[setup.hero] : undefined;
-    this.hero = h ?? null;
+    this.hero = h?.enabled ? h : null;
     this.heroReadyAt = this.hero && !setup.heroCharged ? this.hero.cooldown * 0.4 : 0;
 
     this.units = setup.board.slice(0, 15).map((b, slot) =>
       b && UNIT_BY_ID[b.id]
-        ? new SimUnit(b, slot, slotPos(this.arena, slot), setup.cardLevel, setup.powerUp, 0.3 + this.rand() * 0.4, setup.growthStart ?? 0)
+        ? this.adopt(new SimUnit(b, slot, slotPos(this.arena, slot), setup.cardLevel, setup.powerUp, 0.3 + this.rand() * 0.4, setup.growthStart ?? 0))
         : null,
     );
     while (this.units.length < 15) this.units.push(null);
@@ -467,14 +623,36 @@ export class Sim {
 
   // ---------------------------------------------------------------- setup helpers
 
-  /** Card level of a unit on this board (the Playground uses one level for every card). */
-  protected levelOf(_id: string) {
-    return this.setup.cardLevel;
+  /** Card level of a unit on this board: the per-id map, else the setup's one level for every card. */
+  protected levelOf(id: string) {
+    return this.o.levels?.[id] ?? this.setup.cardLevel;
   }
 
-  /** In-battle power-ups bought for a unit. */
-  protected powerOf(_id: string) {
-    return this.setup.powerUp;
+  /** In-battle power-ups bought for a unit (the setup's flat level for ids outside the deck). */
+  protected powerOf(id: string) {
+    return this.powerUps[id] ?? this.setup.powerUp;
+  }
+
+  /** Give a new unit its stable uid. */
+  private adopt(u: SimUnit) {
+    u.uid = ++this.unitUid;
+    return u;
+  }
+
+  /** Structured event for a renderer (see drainEvents). */
+  protected emit(e: SimEvent) {
+    if (this.o.events !== false && this.feed.length < 20000) this.feed.push(e);
+  }
+
+  /** Take every event since the last call. */
+  drainEvents(): SimEvent[] {
+    const out = this.feed;
+    this.feed = [];
+    return out;
+  }
+
+  private callout(kind: CalloutKind, text: string, color: string, x: number, y: number, uid: number | null = null) {
+    this.emit({ type: "callout", t: this.now, kind, text, color, uid, x, y });
   }
 
   /** Card level × power-up multiplier of a unit's effect (support units never awaken). */
@@ -518,7 +696,7 @@ export class Sim {
         const mult = this.supportMult(u);
         for (const j of neighbours(i)) {
           const v = this.units[j];
-          if (!v || v.def.arch === "buff" || isSupport(v.def.arch)) continue;
+          if (!v || noAttack(v.def.arch)) continue;
           if (v.awakened) v.charge += owlCharge(u.rank, mult);
           else v.haste += owlSpeed(u.rank, mult);
         }
@@ -538,22 +716,43 @@ export class Sim {
     });
     const h = herald as SimUnit | null;
     const awake = this.units.filter((u) => u?.awakened).length;
+    const before = this.heraldMult;
     this.heraldMult = h ? 1 + heraldBonus(h.rank, awake, this.supportMult(h)) : 1;
+    if (h && this.heraldMult > before) this.callout("herald", `+${Math.round((this.heraldMult - 1) * 100)}% DMG`, "#ff8a3b", h.x, h.y - 60, h.uid);
   }
 
   /** A unit awakened: the Banner Herald's war cry. */
   protected onAwaken() {
-    if (this.units.some((u) => u?.def.arch === "herald")) {
+    const herald = this.units.find((u) => u?.def.arch === "herald");
+    if (herald) {
       this.shoutUntil = this.now + EFFECTS.herald.shoutTime;
       this.log("Banner Herald: war cry", "unit");
+      this.emit({ type: "herald_cry", t: this.now, uid: herald.uid });
     }
   }
 
-  /** Swap a unit onto another tile (a Mime copy, a Mirror Slime turning): same slot, new unit. */
-  protected become(u: SimUnit, id: string, rank: number) {
-    const v = new SimUnit({ id, rank }, u.slot, { x: u.x, y: u.y }, this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0);
-    this.units[u.slot] = v;
+  /** Whether a unit of this id and rank awakens (max rank, not a support, and the game has the art). */
+  private awakensAt(id: string, rank: number) {
+    return rank >= maxRank() && !isSupport(UNIT_BY_ID[id]?.arch ?? "shot") && !!this.o.awakens?.(id);
+  }
+
+  /** Put a new unit on a tile (summon, merge, become): fresh uid, buffs, awaken events. */
+  private place(id: string, rank: number, slot: number, pos: Pt = slotPos(this.arena, slot)) {
+    const awakened = this.awakensAt(id, rank);
+    const u = this.adopt(new SimUnit({ id, rank, awakened }, slot, pos, this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0));
+    this.units[slot] = u;
     this.recomputeBuffs();
+    if (awakened) {
+      this.onAwaken();
+      this.emit({ type: "awaken", t: this.now, uid: u.uid, id, slot, x: u.x, y: u.y });
+    }
+    return u;
+  }
+
+  /** Swap a unit onto another tile (a Mime copy, a Mirror Slime turning): same slot, new unit, new uid. */
+  protected become(u: SimUnit, id: string, rank: number, why: "copy" | "mirror" = "copy") {
+    const v = this.place(id, rank, u.slot, { x: u.x, y: u.y });
+    this.emit({ type: "become", t: this.now, uid: v.uid, gone: u.uid, why, id, rank, slot: v.slot, x: v.x, y: v.y, awakened: v.awakened });
     return v;
   }
 
@@ -562,8 +761,8 @@ export class Sim {
     for (const u of this.units) {
       if (u?.def.arch !== "brewer") continue;
       const m = harvestMana(u.rank, ended, this.supportMult(u) * this.brewMult());
-      this.gainMana(m);
-      this.brewed += m;
+      this.gainMana(m, u.x, u.y - 60, "harvest");
+      this.counts.brewed += m;
       this.mark("text", u.x, u.y - 60, "#7fd8ff", { text: `+${m}` });
     }
   }
@@ -584,25 +783,35 @@ export class Sim {
   // ---------------------------------------------------------------- waves
 
   baseHp(n: number) {
+    // A story chapter (or an explicit hpScale) replaces the arena's own place-in-the-list scale.
+    if (this.hpScale !== undefined) return ECONOMY.waveHpBase * Math.pow(ECONOMY.waveHpGrowth, n - 1) * this.hpScale;
     return waveBaseHp(this.arena, n);
+  }
+
+  /** Hired Blades take their wages as a wave starts; one that can't be paid sulks for the wave. */
+  private payWages() {
+    for (const u of this.units) {
+      if (u?.def.effect !== "wages") continue;
+      const cost = wagesFor(u.rank);
+      u.sulking = this.mana < cost;
+      if (u.sulking) this.callout("unpaid", "UNPAID!", "#ff8080", u.x, u.y - 60, u.uid);
+      else this.mana -= cost;
+      this.emit({ type: "wages", t: this.now, uid: u.uid, slot: u.slot, cost, paid: !u.sulking, x: u.x, y: u.y - 60 });
+    }
   }
 
   private startWave(forceBoss?: BossDef, escort = true) {
     this.wave++;
     const n = this.wave;
     const e = ECONOMY;
-    const isBoss = !!forceBoss || n % e.bossEvery === 0;
+    const scripted = this.story?.waves[n - 1];
+    const isBoss = !!forceBoss || (scripted ? !!scripted.boss : n % e.bossEvery === 0);
     if (n > 1 && this.setup.scenario.kind === "run") {
-      this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
+      this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave), null, null, "wave");
       this.harvest(n - 1);
     }
-    // Hired Blades take their wages; one that can't be paid sulks for the wave.
-    for (const u of this.units) {
-      if (u?.def.effect !== "wages") continue;
-      const cost = wagesFor(u.rank);
-      u.sulking = this.mana < cost;
-      if (!u.sulking) this.mana -= cost;
-    }
+    this.payWages();
+    if (scripted) return this.startScriptedWave(scripted, n);
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
     const pick = () => {
       const weights = pool.map((m) => (m.traits.includes("tank") ? Math.min(1, n / 12) : 1));
@@ -617,10 +826,12 @@ export class Sim {
       this.queue.push({ boss });
       if (escort) for (let i = 0; i < 4 + Math.floor(n / e.bossEvery); i++) this.queue.push({ def: pick() });
       this.log(`Wave ${n}: boss ${boss.name}`, "wave");
+      this.announce(n, boss, this.queue.length);
     } else {
       const count = Math.min(e.waveSizeMax, Math.round(e.waveSizeBase + n * e.waveSizePerWave));
       for (let i = 0; i < count; i++) this.queue.push({ def: pick() });
       this.log(`Wave ${n}: ${count} monsters`, "wave");
+      this.announce(n, null, count);
     }
     this.spawnInterval = Math.max(e.spawnIntervalMin, e.spawnIntervalStart - n * e.spawnIntervalStep);
     this.spawnTimer = isBoss ? 1.6 : 0.5;
@@ -628,23 +839,55 @@ export class Sim {
     this.waveState = "spawning";
   }
 
+  /** A story wave: exactly the monsters its script lists (shuffled), the boss first. */
+  private startScriptedWave(w: StoryChapter["waves"][number], n: number) {
+    const e = ECONOMY;
+    this.waveHp = w.hp;
+    const list: { def?: MonsterDef; boss?: BossDef }[] = w.spawns.flatMap((s) => (MONSTER_BY_ID[s.id] ? Array.from({ length: s.n }, () => ({ def: MONSTER_BY_ID[s.id] })) : []));
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rand() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    this.queue = [];
+    const boss = w.boss ? BOSS_BY_ID[w.boss] : undefined;
+    if (boss) this.queue.push({ boss });
+    this.queue.push(...list);
+    this.log(boss ? `Wave ${n}: boss ${boss.name}` : `Wave ${n}: ${list.length} monsters`, "wave");
+    this.announce(n, boss ?? null, this.queue.length);
+    if (w.bark) this.barks.push({ at: this.now + (boss ? 1.9 : 0.9), line: w.bark });
+    this.spawnInterval = Math.max(e.spawnIntervalMin, e.spawnIntervalStart - n * e.spawnIntervalStep);
+    this.spawnTimer = boss ? 1.6 : 0.5;
+    this.waveTimer = 0;
+    this.waveState = "spawning";
+  }
+
+  /** The wave event: banner text like the solo scene shows it. */
+  protected announce(n: number, boss: BossDef | null, monsters: number) {
+    const total = this.story?.waves.length ?? null;
+    const final = total !== null && n === total;
+    const banner = boss ? `${final ? "FINAL BOSS" : "BOSS"}: ${boss.name}` : total !== null ? (final ? "FINAL WAVE" : `WAVE ${n} / ${total}`) : `WAVE ${n}`;
+    this.emit({ type: "wave", t: this.now, wave: n, total, boss: boss?.id ?? null, banner, sub: boss ? raceLabel(boss.race).toUpperCase() : null, final, monsters });
+  }
+
   protected spawn(q: { def?: MonsterDef; boss?: BossDef }, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
     const path = at?.path ?? this.paths[this.rand() < 0.5 ? 0 : 1];
     const n = this.wave;
     this.spawned++;
+    let m: SimMonster;
     if (q.boss) {
-      const hp = this.baseHp(n) * ECONOMY.bossHpMult * q.boss.hp;
-      const m = new SimMonster(++this.uid, { boss: q.boss }, path, hp, { mana: 150 + n * 15 });
+      const hp = this.baseHp(n) * ECONOMY.bossHpMult * q.boss.hp * this.waveHp;
+      m = new SimMonster(++this.uid, { boss: q.boss }, path, hp, { mana: 150 + n * 15 });
       m.powerTimer = 5;
-      m.intro = BOSS_INTRO;
+      m.intro = this.o.bossIntro && !this.o.bossIntro(q.boss.id) ? 0 : BOSS_INTRO;
       this.boss = this.trackedBoss = m;
-      this.monsters.push(m);
-      return m;
+    } else {
+      const def = q.def!;
+      const hp = this.baseHp(n) * def.hp * hpMult * this.waveHp;
+      m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     }
-    const def = q.def!;
-    const hp = this.baseHp(n) * def.hp * hpMult;
-    const m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     this.monsters.push(m);
+    const f = m.foot;
+    this.emit({ type: "spawn", t: this.now, uid: m.uid, id: m.id, boss: !!q.boss, x: f.x, y: f.y, hp: m.maxHp, path: Math.max(0, this.paths.indexOf(path)) });
     return m;
   }
 
@@ -652,7 +895,7 @@ export class Sim {
     const kind = this.setup.scenario.kind;
     if (kind === "dummies") return;
     if (this.waveState === "intro") {
-      this.introTimer -= dt;
+      if (!this.tutorialHold) this.introTimer -= dt;
       if (this.introTimer <= 0) {
         if (kind === "run" && this.wave >= (this.setup.scenario as Extract<Scenario, { kind: "run" }>).to) return this.finish("cleared");
         this.startWave();
@@ -673,7 +916,13 @@ export class Sim {
         if (!alive) this.finish("cleared");
         return;
       }
-      if (!bossAlive && (!alive || this.waveTimer > 20)) {
+      if (this.story && this.wave >= this.story.waves.length) {
+        // The last story wave: cleared with lives left wins the chapter.
+        if (!bossAlive && !alive) {
+          this.wavesCleared = this.wave;
+          this.finish("won");
+        }
+      } else if (!bossAlive && (!alive || this.waveTimer > 20)) {
         if (!alive) this.wavesCleared = this.wave;
         this.waveState = "intro";
         this.introTimer = alive ? 0.5 : 1.5;
@@ -689,6 +938,8 @@ export class Sim {
     const now = this.now;
     this.flow(dt);
     if (this.over) return;
+    if (this.barks.length) this.updateBarks();
+    if (this.portals.length) this.updatePortals();
 
     this.healTimer -= dt;
     const healPulse = this.healTimer <= 0;
@@ -717,15 +968,17 @@ export class Sim {
     this.monsters = this.monsters.filter((m) => !m.gone);
     if (this.boss?.gone) this.boss = null;
 
+    this.updateTethers();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
     this.updateShots(dt);
-    if (this.hero && this.autoHero && now >= this.heroReadyAt) this.castHero();
+    if (this.bubbles.length) this.updateBubbles();
+    if (this.hero && this.autoHero && now >= this.heroReadyAt) this.castHero(true);
 
     this.sampleTimer -= dt;
     if (this.sampleTimer <= 0) {
-      this.sampleTimer = 0.25;
+      this.sampleTimer = this.timelineEvery;
       this.sample();
     }
     if (this.fx.length) this.fx = this.fx.filter((f) => now - f.t < 0.8);
@@ -749,7 +1002,21 @@ export class Sim {
       this.bossHpLeft = Math.max(0, b.hp / b.maxHp);
     }
     if (outcome === "cleared" && this.setup.scenario.kind !== "run") this.wavesCleared = this.wave;
+    if (outcome === "won") this.stars = starsFor(this.lives, ECONOMY.lives);
+    else if (this.story) this.stars = 0;
     this.sample();
+    this.emit({ type: "end", t: this.now, outcome, why: this.endWhy, stars: this.stars });
+  }
+
+  /**
+   * End the battle from outside: "done" (the match ended elsewhere), or any other text as the
+   * reason of a forced loss (surrender, "Continued on another device"); "lost" is a plain loss.
+   */
+  end(why: "lost" | "done" | (string & {}) = "lost") {
+    if (this.over) return;
+    if (why === "done") return this.finish("done");
+    if (why !== "lost") this.endWhy = why;
+    this.finish("lost");
   }
 
   result(): SimResult {
@@ -775,6 +1042,8 @@ export class Sim {
       dodged: this.dodged,
       events: this.events,
       timeline: this.timeline,
+      counts: { ...this.counts },
+      stars: this.stars,
     };
   }
 
@@ -787,9 +1056,14 @@ export class Sim {
       alive: alive.length,
       fieldHp: alive.reduce((s, m) => s + Math.max(0, m.hp), 0),
     });
+    // Endless runs: thin the timeline (keep every other sample, sample half as often) instead of growing forever.
+    if (this.timeline.length > (this.o.timelineCap ?? 20000)) {
+      this.timeline = this.timeline.filter((_, i) => i % 2 === 0);
+      this.timelineEvery *= 2;
+    }
   }
 
-  protected log(text: string, kind: SimEvent["kind"]) {
+  protected log(text: string, kind: SimLogEntry["kind"]) {
     if (this.events.length < 400) this.events.push({ t: this.now, text, kind });
   }
 
@@ -797,9 +1071,11 @@ export class Sim {
     if (this.fx.length < 300) this.fx.push({ t: this.now, kind, x, y, color, ...extra });
   }
 
-  gainMana(amount: number) {
+  /** Add mana. `x`, `y` and `source` only label the "mana" event (where to float the number, why). */
+  gainMana(amount: number, x: number | null = null, y: number | null = null, source: ManaSource = "other") {
     this.mana += amount;
     this.manaGained += amount;
+    this.emit({ type: "mana", t: this.now, amount, x, y, source });
   }
 
   // ---------------------------------------------------------------- monsters
@@ -811,20 +1087,22 @@ export class Sim {
     else m.dist += m.speed(now) * dt;
 
     m.poison = m.poison.filter((p) => p.until > now);
-    for (const p of m.poison) if (!m.dead) this.hurt(m, p.dps * dt, p.src, { sure: true });
-    if (m.burn.until > now && !m.dead) this.hurt(m, m.burn.dps * dt, m.burn.src, { sure: true });
+    for (const p of m.poison) if (!m.dead) this.hurt(m, p.dps * dt, p.src, { sure: true, quiet: true });
+    if (m.burn.until > now && !m.dead) this.hurt(m, m.burn.dps * dt, m.burn.src, { sure: true, quiet: true });
   }
 
   /** Apply damage; returns true if it killed. */
-  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; perks?: readonly Perk[] } = {}) {
+  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly Perk[] } = {}) {
     if (m.dead) return false;
     if (this.now < m.shieldUntil) {
       this.blocked += amount;
+      if (!opts.quiet) this.callout("block", "BLOCK", "#9fb4ff", m.pos.x, m.pos.y - 20);
       return false;
     }
     const perks = opts.perks ?? [];
     if (!opts.sure && m.has("dodge") && !perks.includes("true_strike") && this.rand() < 0.15) {
       this.dodged++;
+      this.callout("dodge", "MISS", "#dddddd", m.pos.x, m.pos.y - 20);
       return false;
     }
     let dmg = amount * (1 + m.curse) * perkMult(perks, m);
@@ -835,7 +1113,7 @@ export class Sim {
     m.hp -= dmg;
     if (m.hp <= 0) {
       this.kill(m, src);
-      if (perks.includes("plunder")) this.gainMana(PERK.plunder);
+      if (perks.includes("plunder")) this.gainMana(PERK.plunder, m.pos.x, m.pos.y - 40, "plunder");
       return true;
     }
     return false;
@@ -846,9 +1124,11 @@ export class Sim {
     m.dead = m.gone = true;
     this.kills++;
     if (src !== "hero") this.killsBySlot[src]++;
-    this.gainMana(m.mana);
+    this.gainMana(m.mana, null, null, "kill");
     const p = m.pos;
+    this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
     if (m.boss) {
+      this.counts.bossesKilled++;
       if (m === this.trackedBoss) {
         this.bossKilled = true;
         this.bossHpLeft = 0;
@@ -867,10 +1147,13 @@ export class Sim {
     if (m.def?.traits.includes("splitter") && m.size > 60) {
       const child = MONSTER_BY_ID[SPLITS_INTO[m.def.id]] ?? m.def;
       if (child) {
+        const children: number[] = [];
         for (const off of SPLIT_COUNT[m.def.id] === 3 ? [-24, 0, 24] : [-18, 18]) {
           const c = this.spawn({ def: child }, { path: m.path, dist: Math.max(0, m.dist + off) }, 0.7, 0.35);
           c.mana = 3;
+          children.push(c.uid);
         }
+        this.emit({ type: "split", t: this.now, uid: m.uid, kind: "splitter", children, x: p.x, y: p.y });
       }
     }
   }
@@ -887,12 +1170,19 @@ export class Sim {
       this.bossTime = this.now;
     }
     this.log(`${(m.boss ?? m.def)!.name} got through (${Math.round((100 * m.hp) / m.maxHp)}% health left)`, "leak");
+    this.emitLeak(m, lost);
     if (this.lives <= 0) this.finish("lost");
+  }
+
+  /** The leak event (`lost` is lives in solo, HP in PvP). */
+  protected emitLeak(m: SimMonster, lost: number) {
+    const f = m.foot;
+    this.emit({ type: "leak", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: f.x, y: f.y, livesLost: lost, lives: this.lives });
   }
 
   /** Units a boss power may hit (shuffled with the run's random numbers), at most `n`. */
   private someUnits(n: number) {
-    const units = this.units.filter((u): u is SimUnit => !!u);
+    const units = this.units.filter((u): u is SimUnit => !!u && !u.dragging);
     for (let i = units.length - 1; i > 0; i--) {
       const j = Math.floor(this.rand() * (i + 1));
       [units[i], units[j]] = [units[j], units[i]];
@@ -906,10 +1196,12 @@ export class Sim {
   }
 
   /** Put a debuff on a unit; false when an Aegis Knight protects it. */
-  private afflict(u: SimUnit, kind: "irritation" | "fatigue" | "shellshock", time: number, miss = EFFECTS.irritate.miss) {
+  private afflict(u: SimUnit, kind: "irritation" | "fatigue" | "shellshock", time: number, miss = EFFECTS.irritate.miss, loud = false) {
     if (this.shielded(u)) return false;
     const s = u.status;
     const until = this.now + time;
+    // Shellshock shows a flash on a unit that wasn't shocked yet; boss powers show every landing.
+    if (loud || (kind === "shellshock" && this.now >= s.shockedUntil)) this.emit({ type: "afflict", t: this.now, uid: u.uid, kind, x: u.x, y: u.y - 40 });
     if (kind === "irritation") {
       s.irritatedUntil = Math.max(s.irritatedUntil, until);
       s.miss = miss;
@@ -918,10 +1210,32 @@ export class Sim {
     return true;
   }
 
+  /** Chaos Taffy: tethers the nearest unit, which has Fatigue until the taffy dies. */
+  private updateTethers() {
+    this.tethers.length = 0;
+    for (const m of this.monsters) {
+      if (m.gone || !m.has("tether") || m.intro > 0 || m.dist < this.targetFrom) continue;
+      const mp = m.pos;
+      let best: SimUnit | null = null;
+      let bestD = Infinity;
+      for (const u of this.units) {
+        if (!u || u.dragging) continue;
+        const d = Math.hypot(u.x - mp.x, u.y - mp.y);
+        if (d < bestD) [best, bestD] = [u, d];
+      }
+      const u = best as SimUnit | null;
+      if (!u || !this.afflict(u, "fatigue", 0.25)) continue;
+      this.tethers.push({ monster: m, unit: u });
+    }
+  }
+
   private minions(m: SimMonster, count: number, at = m.dist, spread = 35) {
     const def = MONSTER_BY_ID[m.boss?.minion ?? ""];
     if (!def) return;
-    for (let i = 0; i < count; i++) this.spawn({ def }, { path: m.path, dist: Math.max(0, at - 20 - i * spread) }, 0.9, 0.8);
+    const children: number[] = [];
+    for (let i = 0; i < count; i++) children.push(this.spawn({ def }, { path: m.path, dist: Math.max(0, at - 20 - i * spread) }, 0.9, 0.8).uid);
+    const p = m.pos;
+    this.emit({ type: "split", t: this.now, uid: m.uid, kind: "boss", children, x: p.x, y: p.y });
   }
 
   /** HP stages of split, layers and portal bosses (each quarter, or third, of HP lost). */
@@ -932,6 +1246,8 @@ export class Sim {
     const stage = Math.min(parts - 1, Math.floor((1 - Math.max(0, m.hp) / m.maxHp) * parts));
     while (m.stage < stage && !m.dead) {
       m.stage++;
+      const text = b.power === "split" ? "SPLIT!" : b.power === "portal" ? "BLINK!" : m.stage >= 3 ? "THE CORE!" : "LAYER BROKEN!";
+      const from = m.pos;
       if (b.power === "split") this.minions(m, 3, m.dist + 40);
       else if (b.power === "portal") m.dist = Math.min(m.path.length * 0.85, m.dist + 220);
       else {
@@ -939,6 +1255,7 @@ export class Sim {
         for (const u of this.someUnits(b.targets ?? 3)) this.afflict(u, "shellshock", 1.5);
         this.minions(m, 4, m.dist + 60, 30);
       }
+      this.emit({ type: "boss_stage", t: this.now, uid: m.uid, id: m.id, power: b.power, stage: m.stage, text, x: from.x, y: from.y });
       this.log(`${b.name}: stage ${m.stage}`, "boss");
     }
   }
@@ -948,9 +1265,11 @@ export class Sim {
     const p = m.pos;
     const power: BossPower = b.rage && m.hp < m.maxHp / 2 ? b.rage : b.power;
     const targets = b.targets ?? 3;
+    const say = (text: string) => this.emit({ type: "boss_power", t: this.now, uid: m.uid, id: m.id, power, text, x: p.x, y: p.y });
     switch (power) {
       case "charm":
-        for (const u of this.someUnits(targets)) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
+        say("CHARM");
+        for (const u of this.someUnits(targets)) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5, EFFECTS.irritate.miss, true);
         this.log(`${b.name} charms ${targets} units`, "boss");
         this.mark("text", p.x, p.y - 60, "#ff9ae6", { text: "CHARM" });
         break;
@@ -958,28 +1277,43 @@ export class Sim {
         if (m.hp >= m.maxHp / 2) break;
         if (!m.roared) {
           m.roared = true;
+          say("ROAR!");
           for (const u of this.someUnits(targets)) this.afflict(u, "shellshock", 2);
           this.log(`${b.name} roars`, "boss");
           this.mark("text", p.x, p.y - 60, "#ff8a3b", { text: "ROAR" });
-        } else m.hasteUntil = this.now + 3;
+        } else {
+          say("RAGE");
+          m.hasteUntil = this.now + 3;
+        }
         break;
       case "layers":
         if (m.stage >= 3) {
-          for (const u of this.units) if (u) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
+          say("CHAOS PULSE");
+          for (const u of this.units) if (u && !u.dragging) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
         } else this.minions(m, 2);
         break;
-      case "portal":
-        this.minions(m, 3, Math.min(m.path.length * 0.85, m.dist + 180 + this.rand() * 220) + 40, 30);
+      case "portal": {
+        // A portal opens further along the path; its minions step out 0.6 s later (if the boss still lives).
+        const at = Math.min(m.path.length * 0.85, m.dist + 180 + this.rand() * 220);
+        const spot = m.path.at(at);
+        this.portals.push({ at: this.now + 0.6, boss: m, dist: at + 40 });
+        say("PORTAL");
+        this.emit({ type: "portal", t: this.now, uid: m.uid, x: spot.x, y: spot.y - 20, delay: 0.6 });
         this.log(`${b.name} opens a portal`, "boss");
         break;
+      }
       case "summon": {
         const def = b.minion ? MONSTER_BY_ID[b.minion] : undefined;
         if (!def) break;
-        for (let i = 0; i < 3; i++) this.spawn({ def }, { path: m.path, dist: Math.max(0, m.dist - 30 - i * 35) }, 0.9, 0.8);
+        say("SUMMON");
+        const children: number[] = [];
+        for (let i = 0; i < 3; i++) children.push(this.spawn({ def }, { path: m.path, dist: Math.max(0, m.dist - 30 - i * 35) }, 0.9, 0.8).uid);
+        this.emit({ type: "split", t: this.now, uid: m.uid, kind: "boss", children, x: p.x, y: p.y });
         this.log(`${b.name} summons 3 ${def.name}`, "boss");
         break;
       }
       case "heal": {
+        say("HEAL");
         const before = m.hp;
         m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.08);
         this.log(`${b.name} heals ${Math.round(((m.hp - before) / m.maxHp) * 100)}%`, "boss");
@@ -987,21 +1321,25 @@ export class Sim {
         break;
       }
       case "haste":
+        say("RAGE");
         m.hasteUntil = this.now + 3;
         this.log(`${b.name} rages (×1.8 speed for 3s)`, "boss");
         this.mark("text", p.x, p.y - 60, "#ff8a3b", { text: "RAGE" });
         break;
       case "shield":
+        say("SHIELD");
         m.shieldUntil = this.now + 2.5;
         this.log(`${b.name} shields (2.5s)`, "boss");
         this.mark("text", p.x, p.y - 60, "#9fb4ff", { text: "SHIELD" });
         break;
       case "teleport":
+        say("TELEPORT");
         m.dist = Math.min(m.path.length * 0.92, m.dist + 160);
         this.log(`${b.name} teleports ahead`, "boss");
         this.mark("text", m.pos.x, m.pos.y - 60, "#c58bff", { text: "TELEPORT" });
         break;
       case "freeze_units": {
+        say("FREEZE");
         const units = this.someUnits(targets);
         for (const u of units) u.frozenUntil = this.now + 3;
         this.log(`${b.name} freezes ${units.length} units (3s)`, "boss");
@@ -1020,13 +1358,33 @@ export class Sim {
     return this.hero?.power === "rage" && this.now < this.rageUntil ? 1 + this.hero.amount : 1;
   }
 
-  /** Same rules as the game's auto-cast. Returns whether it fired. */
-  protected castHero() {
-    const h = this.hero!;
+  /** Seconds until the hero is ready (0 when ready or without a hero). */
+  get heroLeft() {
+    return this.hero ? Math.max(0, this.heroReadyAt - this.now) : 0;
+  }
+
+  /** The hero's power is ready (it may still hold fire with nothing to hit). */
+  get heroReady() {
+    return !!this.hero && this.now >= this.heroReadyAt;
+  }
+
+  /** Player cast: refused while recharging; haste and rage need no monsters, the rest do. */
+  useHero() {
+    return this.castHero(false);
+  }
+
+  /**
+   * Cast the hero. `auto` is the auto-cast: it also holds haste and rage until there is something to
+   * fight. Returns whether it fired.
+   */
+  protected castHero(auto = false) {
+    const h = this.hero;
+    if (!h || this.over || this.now < this.heroReadyAt) return false;
     const targets = this.monsters.filter((m) => !m.gone && m.intro <= 0);
-    if (h.power !== "mana" && !targets.length) return false;
+    const needsTargets = h.power !== "mana" && (auto || (h.power !== "haste" && h.power !== "rage"));
+    if (needsTargets && !targets.length) return false;
     this.heroReadyAt = this.now + h.cooldown;
-    this.heroCasts++;
+    this.counts.heroCasts++;
     const now = this.now;
     const hpUnit = this.baseHp(Math.max(1, this.wave));
     switch (h.power) {
@@ -1040,7 +1398,7 @@ export class Sim {
       case "freeze":
         for (const m of targets) {
           m.frozenUntil = Math.max(m.frozenUntil, now + (m.boss ? h.duration / 3 : h.duration));
-          if (h.amount > 0) this.hurt(m, h.amount * hpUnit, "hero", { sure: true });
+          if (h.amount > 0) this.hurt(m, h.amount * hpUnit, "hero", { sure: true, quiet: true });
         }
         break;
       case "slow":
@@ -1050,7 +1408,7 @@ export class Sim {
         }
         break;
       case "mana":
-        this.gainMana(Math.round(h.amount * (1 + 0.1 * this.wave)));
+        this.gainMana(Math.round(h.amount * (1 + 0.1 * this.wave)), 375, 640, "hero");
         break;
       case "haste":
         this.hasteUntil = now + h.duration;
@@ -1067,6 +1425,7 @@ export class Sim {
     }
     this.log(`Hero: ${h.ability}`, "hero");
     this.mark("text", 375, 640, "#ffd93b", { text: h.ability.toUpperCase() });
+    this.emit({ type: "hero", t: this.now, power: h.power, ability: h.ability, auto });
     return true;
   }
 
@@ -1080,6 +1439,192 @@ export class Sim {
     const m = targets[Math.floor(this.rand() * targets.length)];
     this.mark("zap", m.pos.x, m.pos.y - 320, "#d9a3ff", { x2: m.pos.x, y2: m.pos.y });
     this.hurt(m, this.hero.amount * this.baseHp(Math.max(1, this.wave)), "hero", { sure: true });
+  }
+
+  // ---------------------------------------------------------------- player actions
+  //
+  // Every action returns false (and changes nothing) when it isn't allowed right now. They are
+  // public so a scene or a PvP board can call them between steps; none of them logs by itself.
+
+  /** Switch the hero's auto-cast on or off. */
+  setAutoHero(on: boolean) {
+    this.autoHero = on;
+    return true;
+  }
+
+  /** Mark a unit as being dragged (it freezes and is skipped by neighbour effects and boss powers). */
+  setDragging(slot: number, on: boolean) {
+    const u = this.units[slot];
+    if (!u) return false;
+    u.dragging = on;
+    return true;
+  }
+
+  /** Whether a summon would work now (mana and an empty tile). */
+  get canSummon() {
+    return this.mana >= this.summonCost && this.units.some((u) => !u) && this.deck.length > 0;
+  }
+
+  /**
+   * Summon a deck unit onto an empty tile. `forced` picks the unit and/or tile (tutorial); with
+   * none given, a pending `tutorialPick` is used once. Costs `summonCost`, which then grows.
+   */
+  summon(forced?: { id?: string; slot?: number }) {
+    if (this.over) return false;
+    const empty = this.units.map((u, i) => (u ? -1 : i)).filter((i) => i >= 0);
+    if (!empty.length || this.mana < this.summonCost) return false;
+    const tp = this.tutorialPick && !this.units[this.tutorialPick.slot] ? this.tutorialPick : null;
+    const f = forced ?? tp;
+    if ((f?.id && !UNIT_BY_ID[f.id]) || (!f?.id && !this.deck.length)) return false;
+    this.tutorialPick = null;
+    this.mana -= this.summonCost;
+    this.summonCost += ECONOMY.summonCostStep;
+    this.counts.summons++;
+    const slot = f?.slot !== undefined && !this.units[f.slot] ? f.slot : empty[Math.floor(this.rand() * empty.length)];
+    const id = f?.id ?? this.deck[Math.floor(this.rand() * this.deck.length)];
+    const u = this.place(id, 1, slot);
+    this.emit({ type: "summon", t: this.now, uid: u.uid, id, rank: 1, slot, x: u.x, y: u.y, awakened: u.awakened });
+    return true;
+  }
+
+  /** Merge two same-id, same-rank units: one rank up on `to`, a random deck unit (or the same, with luck). */
+  merge(from: number, to: number) {
+    const x = this.units[from];
+    const y = this.units[to];
+    if (this.over || !x || !y || from === to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= maxRank() || !this.deck.length) return false;
+    this.units[from] = null;
+    this.units[to] = null;
+    // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
+    const luck = x.def.arch === "lucky" ? 0 : this.luckAt(to);
+    const keep = luck > 0 && this.rand() < luck;
+    if (keep) this.counts.lucky++;
+    const u = this.place(keep ? x.def.id : this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, to);
+    this.counts.merges++;
+    if (u.awakened) this.counts.awakens++;
+    this.emit({ type: "merge", t: this.now, uid: u.uid, gone: [x.uid, y.uid], id: u.def.id, rank: u.rank, slot: to, x: u.x, y: u.y, awakened: u.awakened, lucky: keep });
+    if (keep) this.callout("lucky", "LUCKY!", "#ffd93b", u.x, u.y - 60, u.uid);
+    return true;
+  }
+
+  /** Mime `from` becomes a copy of the same-rank unit on `to`. */
+  copy(from: number, to: number) {
+    const x = this.units[from];
+    const y = this.units[to];
+    if (this.over || !x || !y || from === to || !this.mimeReady(from) || !canBecome(x, y)) return false;
+    const v = this.become(x, y.def.id, x.rank, "copy");
+    this.counts.copies++;
+    this.callout("copy", "COPY!", "#ff9ae6", v.x, v.y - 60, v.uid);
+    return true;
+  }
+
+  /** Portal Imp `from` trades places with the same-rank, different-id unit on `to`. */
+  swap(from: number, to: number) {
+    const x = this.units[from];
+    const y = this.units[to];
+    if (this.over || !x || !y || from === to || !this.portalReady(from) || y.rank !== x.rank || y.def.id === x.def.id) return false;
+    x.moveTo(to, slotPos(this.arena, to));
+    y.moveTo(from, slotPos(this.arena, from));
+    x.dragging = y.dragging = false;
+    this.units[to] = x;
+    this.units[from] = y;
+    x.timer = portalCooldown(x.rank, this.supportMult(x));
+    y.rushUntil = this.now + EFFECTS.portal.rushTime;
+    this.counts.swaps++;
+    this.recomputeBuffs();
+    this.emit({ type: "swap", t: this.now, uid: x.uid, other: y.uid, from, to });
+    this.callout("rush", "RUSH!", "#ff8a3b", y.x, y.y - 60, y.uid);
+    return true;
+  }
+
+  /** Portal Imp `from` jumps to the empty tile `to`. */
+  hop(from: number, to: number) {
+    const x = this.units[from];
+    if (this.over || !x || to < 0 || to >= 15 || this.units[to] || !this.portalReady(from)) return false;
+    x.moveTo(to, slotPos(this.arena, to));
+    x.dragging = false;
+    this.units[to] = x;
+    this.units[from] = null;
+    x.timer = portalCooldown(x.rank, this.supportMult(x));
+    this.counts.swaps++;
+    this.recomputeBuffs();
+    this.emit({ type: "swap", t: this.now, uid: x.uid, other: null, from, to });
+    return true;
+  }
+
+  /** Buy the next power-up level of a deck unit (every unit of that id on the board gets stronger). */
+  powerUp(id: string) {
+    const lvl = this.powerUps[id];
+    if (this.over || lvl === undefined || lvl >= maxPowerUp() || this.mana < powerUpCost(lvl)) return false;
+    this.mana -= powerUpCost(lvl);
+    this.powerUps[id] = lvl + 1;
+    for (const u of this.units) {
+      if (u?.def.id === id) Object.assign(u.stats, boardUnitStats({ id: u.def.id, rank: u.rank, awakened: u.awakened }, this.levelOf(id), lvl + 1));
+    }
+    if (noAttack(UNIT_BY_ID[id]?.arch ?? "shot")) this.recomputeBuffs();
+    this.emit({ type: "powerup", t: this.now, id, level: lvl + 1 });
+    return true;
+  }
+
+  /** Whether the Mime on `slot` has been on the board long enough to copy. */
+  mimeReady(slot: number) {
+    const u = this.units[slot];
+    return !!u && u.def.arch === "mime" && u.timer >= mimePrep(this.supportMult(u));
+  }
+
+  /** Whether the Portal Imp on `slot` has recharged. */
+  portalReady(slot: number) {
+    const u = this.units[slot];
+    return !!u && u.def.arch === "portal" && u.timer <= 0;
+  }
+
+  /** How far a support unit's timer has run (1 = ready), or null for units without one (for the ring). */
+  supportProgress(slot: number) {
+    const u = this.units[slot];
+    if (!u) return null;
+    const m = this.supportMult(u);
+    switch (u.def.arch) {
+      case "mime":
+        return Math.min(1, u.timer / mimePrep(m));
+      case "portal":
+        return u.timer <= 0 ? 1 : 1 - u.timer / portalCooldown(u.rank, m);
+      case "mirror":
+        return u.timer / mirrorInterval(u.rank, m);
+      default:
+        return null;
+    }
+  }
+
+  /** The best Lucky Cat chance next to tile `slot` (0 without one). */
+  luckAt(slot: number) {
+    let best = 0;
+    for (const j of neighbours(slot)) {
+      const c = this.units[j];
+      if (c?.def.arch === "lucky") best = Math.max(best, luckyChance(c.rank, this.supportMult(c)));
+    }
+    return best;
+  }
+
+  /** Power-up level bought for a deck unit id (0 outside the deck). */
+  powerLevel(id: string) {
+    return this.powerUps[id] ?? 0;
+  }
+
+  // ---------------------------------------------------------------- scripted pieces
+
+  /** Story barks (a speech line some seconds after a wave starts). */
+  private updateBarks() {
+    const due = this.barks.filter((b) => b.at <= this.now);
+    if (!due.length) return;
+    this.barks = this.barks.filter((b) => b.at > this.now);
+    for (const b of due) this.emit({ type: "bark", t: this.now, who: b.line.who, text: b.line.text });
+  }
+
+  /** Portal boss minions step out 0.6 s after the portal opened, if the boss still lives. */
+  private updatePortals() {
+    const due = this.portals.filter((p) => p.at <= this.now);
+    if (!due.length) return;
+    this.portals = this.portals.filter((p) => p.at > this.now);
+    for (const p of due) if (!p.boss.dead) this.minions(p.boss, 3, p.dist, 30);
   }
 
   // ---------------------------------------------------------------- units
@@ -1096,20 +1641,27 @@ export class Sim {
 
   private updateUnit(u: SimUnit, dt: number) {
     const now = this.now;
+    // A dragged unit does nothing at all (no timers, no pulses, no attacks).
+    if (u.dragging) return;
     if (now < u.frozenUntil || now < u.status.shockedUntil) return;
     u.alive += dt;
     if (u.def.effect === "irritate") {
       u.effectTimer += dt;
       if (u.effectTimer >= EFFECTS.irritate.every) {
         u.effectTimer = 0;
-        for (const j of neighbours(u.slot)) if (this.units[j]) this.afflict(this.units[j]!, "irritation", EFFECTS.irritate.time);
+        let any = false;
+        for (const j of neighbours(u.slot)) {
+          const v = this.units[j];
+          if (v && !v.dragging && this.afflict(v, "irritation", EFFECTS.irritate.time)) any = true;
+        }
+        if (any) this.callout("tsk", "TSK!", "#ff6a6a", u.x, u.y - 60, u.uid);
       }
     }
     if (u.def.effect === "lantern") {
       u.effectTimer += dt;
       if (u.effectTimer >= EFFECTS.lantern.every) {
         u.effectTimer = 0;
-        this.gainMana(lanternMana(this.units.filter((v) => v && isKnight(v.def)).length));
+        this.gainMana(lanternMana(this.units.filter((v) => v && isKnight(v.def)).length), u.x, u.y - 50, "lantern");
       }
     }
     if (u.def.arch === "buff" || u.def.arch === "aura" || u.def.arch === "aegis") return;
@@ -1118,7 +1670,7 @@ export class Sim {
       u.pulse += dt;
       if (u.pulse >= EFFECTS.mana.every) {
         u.pulse = 0;
-        this.gainMana(manaPerPulse(u.rank));
+        this.gainMana(manaPerPulse(u.rank), u.x, u.y - 50, "pulse");
       }
     }
     if (u.awakened) {
@@ -1178,12 +1730,13 @@ export class Sim {
         if (u.timer < every) break;
         const options = neighbours(u.slot)
           .map((j) => this.units[j])
-          .filter((v): v is SimUnit => !!v && canBecome(u, v));
+          .filter((v): v is SimUnit => !!v && !v.dragging && canBecome(u, v));
         if (!options.length) break;
         const v = options[Math.floor(this.rand() * options.length)];
         this.log(`Mirror Slime turned into ${v.def.name}`, "unit");
         this.mark("text", u.x, u.y - 60, "#d9b3ff", { text: "MIRROR" });
-        this.become(u, v.def.id, u.rank);
+        const w = this.become(u, v.def.id, u.rank, "mirror");
+        this.callout("mirror", "MIRROR!", "#d9b3ff", w.x, w.y - 60, w.uid);
         break;
       }
       case "brewer":
@@ -1192,12 +1745,44 @@ export class Sim {
           u.pulse = 0;
           u.firedAt = this.now;
           const m = brewMana(u.rank, mult * this.brewMult());
-          this.gainMana(m);
-          this.brewed += m;
+          if (this.o.bubbles && this.mode !== "pvp") {
+            // Solo: the mana waits in a bubble. Tap it (collectBrew) for +tapBonus, or it pops by itself.
+            const b = { id: ++this.bubbleId, unit: u, amount: m, at: this.now, expires: this.now + EFFECTS.brewer.tapWindow, x: u.x + 28, y: u.y - 64 };
+            this.bubbles.push(b);
+            this.emit({ type: "brew", t: this.now, bubble: b.id, uid: u.uid, slot: u.slot, amount: m, x: b.x, y: b.y });
+            break;
+          }
+          this.gainMana(m, u.x, u.y - 60, "brew");
+          this.counts.brewed += m;
           this.mark("text", u.x, u.y - 60, "#7fd8ff", { text: `+${m}` });
         }
         break;
     }
+  }
+
+  /** Tap a brew bubble: +tapBonus mana. False when it is gone (already popped or collected). */
+  collectBrew(id: number) {
+    return this.popBubble(id, true);
+  }
+
+  private popBubble(id: number, tapped: boolean) {
+    const i = this.bubbles.findIndex((b) => b.id === id);
+    if (i < 0 || this.over) return false;
+    const b = this.bubbles[i];
+    this.bubbles.splice(i, 1);
+    const m = tapped ? Math.round(b.amount * (1 + EFFECTS.brewer.tapBonus)) : b.amount;
+    const x = b.x;
+    const y = b.y;
+    this.counts.brewed += m;
+    this.gainMana(m, x, y, "brew");
+    this.mark("text", b.unit.x, b.unit.y - 60, "#7fd8ff", { text: `+${m}` });
+    this.emit({ type: "brew_collect", t: this.now, bubble: b.id, uid: b.unit.uid, tapped, amount: m, x, y });
+    return true;
+  }
+
+  /** Bubbles that waited out the tap window pop by themselves. */
+  private updateBubbles() {
+    for (const b of [...this.bubbles]) if (this.now >= b.expires) this.popBubble(b.id, false);
   }
 
   /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). */
@@ -1216,8 +1801,10 @@ export class Sim {
     this.echoes = this.echoes.filter((e) => e.at > this.now);
     for (const e of due) {
       this.mark("text", e.x, e.y - 70, "#9ff0ff", { text: "ENCORE" });
-      if (e.mana) this.gainMana(e.mana);
-      if (!e.damage) continue;
+      this.emit({ type: "encore", t: this.now, x: e.x, y: e.y, radius: ECONOMY.ultimateRadius, strike: e.damage > 0 });
+      if (e.mana) this.gainMana(e.mana, e.x, e.y - 30, "echo");
+      // The caster is gone (merged away, copied over, turned): no encore strike.
+      if (!e.damage || this.units[e.unit.slot] !== e.unit) continue;
       this.mark("ring", e.x, e.y, "#9ff0ff", { x2: ECONOMY.ultimateRadius });
       for (const m of this.nearby({ x: e.x, y: e.y }, ECONOMY.ultimateRadius)) this.applyHit(e.unit, e.damage, m);
     }
@@ -1226,11 +1813,13 @@ export class Sim {
   private ultimate(u: SimUnit, target: SimMonster | null) {
     if (u.def.arch === "mana" || !target) {
       const mana = Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave);
-      this.gainMana(mana);
+      this.gainMana(mana, u.x, u.y - 60, "ultimate");
+      this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "mana", x: u.x, y: u.y, radius: 0 });
       this.queueEcho(u, u.x, u.y, 0, mana);
       return;
     }
     const center = target.pos;
+    this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "strike", x: center.x, y: center.y, radius: ECONOMY.ultimateRadius });
     const damage = u.stats.damage * this.heroDamageMult * this.heraldMult * ECONOMY.ultimateDamageMult;
     this.queueEcho(u, center.x, center.y, damage, 0);
     this.mark("ring", center.x, center.y, "#ffd93b", { x2: ECONOMY.ultimateRadius });
@@ -1241,13 +1830,19 @@ export class Sim {
   private fire(u: SimUnit, target: SimMonster) {
     const now = this.now;
     // Irritation: the attack may miss.
-    if (now < u.status.irritatedUntil && this.rand() < u.status.miss) return;
+    if (now < u.status.irritatedUntil && this.rand() < u.status.miss) {
+      this.callout("miss", "MISS", "#ff9090", u.x, u.y - 70, u.uid);
+      return;
+    }
     if (u.def.effect === "rally" || u.def.effect === "fatigue") {
       for (const j of neighbours(u.slot)) {
         const v = this.units[j];
-        if (!v) continue;
+        if (!v || v.dragging) continue;
         if (u.def.effect === "fatigue") this.afflict(v, "fatigue", EFFECTS.fatigue.linger);
-        else if (!noAttack(v.def.arch)) v.status.rallyUntil = now + EFFECTS.rally.time;
+        else if (!noAttack(v.def.arch)) {
+          if (now >= v.status.rallyUntil) this.callout("rally", "RALLY!", "#ffd93b", v.x, v.y - 60, v.uid);
+          v.status.rallyUntil = now + EFFECTS.rally.time;
+        }
       }
     }
     let damage = u.stats.damage * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
@@ -1318,6 +1913,7 @@ export class Sim {
       if (d <= step + 4) {
         s.speed = -1;
         if (!s.target.gone) this.applyHit(s.unit, s.damage, s.target);
+        else this.emit({ type: "shot_lost", t: this.now, uid: s.unit.uid, x: s.aim.x, y: s.aim.y });
       } else {
         s.x += (dx / d) * step;
         s.y += (dy / d) * step;
@@ -1340,10 +1936,10 @@ export class Sim {
     const bane = (o: SimMonster) => (def.effect === "bane" && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage);
     // Rogue Knight: nearly every blow crits.
     const damage = bane(m) * (def.effect === "irritate" && this.rand() < e.irritate.critChance ? e.irritate.critMult : 1);
-    if (def.effect === "shellshock" && this.rand() < e.shellshock.chance) {
-      const near = neighbours(u.slot).map((j) => this.units[j]).filter((v): v is SimUnit => !!v);
+    if (def.effect === "shellshock" && this.units[u.slot] === u && this.rand() < e.shellshock.chance) {
+      const near = neighbours(u.slot).map((j) => this.units[j]).filter((v): v is SimUnit => !!v && !v.dragging);
       const v = near[Math.floor(this.rand() * near.length)];
-      if (v) this.afflict(v, "shellshock", e.shellshock.time);
+      if (v && this.afflict(v, "shellshock", e.shellshock.time)) this.callout("shellshock", "SHELLSHOCK", "#c9b08a", v.x, v.y - 60, v.uid);
     }
     const pos = m.pos;
     const isBoss = !!m.boss;
@@ -1357,7 +1953,7 @@ export class Sim {
         const splash = this.nearby(pos, splashRadius(def.arch, rank), m);
         const burnDps = def.arch === "burn" ? damage * e.burn.burnDps : 0;
         this.hurt(m, damage, src, P);
-        for (const o of splash) this.hurt(o, damage * e[def.arch].splash, src, { ...P, sure: true });
+        for (const o of splash) this.hurt(o, damage * e[def.arch].splash, src, { ...P, sure: true, quiet: true });
         if (burnDps) {
           for (const o of [m, ...splash]) {
             const keep = o.burn.until > now && o.burn.dps > burnDps;
@@ -1406,7 +2002,10 @@ export class Sim {
       case "crit": {
         const crit = this.rand() < critChance(rank);
         this.hurt(m, crit ? damage * critMult(rank) : damage, src, P);
-        if (crit) this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT", slot: src, callout: `CRIT ×${+critMult(rank).toFixed(1)}` });
+        if (crit) {
+          this.mark("text", pos.x, pos.y - 30, "#ffd93b", { text: "CRIT", slot: src, callout: `CRIT ×${+critMult(rank).toFixed(1)}` });
+          this.callout("crit", `CRIT ×${+critMult(rank).toFixed(1)}`, "#ffd93b", u.x, u.y - 60, u.uid);
+        }
         break;
       }
       case "curse":
@@ -1417,9 +2016,11 @@ export class Sim {
         if (this.rand() < executeChance(rank, rarityIdx)) {
           if (isBoss) {
             this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: `×${e.execute.bossMult}`, slot: src, callout: `×${e.execute.bossMult}` });
+            this.callout("execute", `×${e.execute.bossMult}`, "#ff7ad9", u.x, u.y - 60, u.uid);
             this.hurt(m, damage * e.execute.bossMult, src, P);
           } else {
             this.mark("text", pos.x, pos.y - 30, "#ff7ad9", { text: "EXECUTE", slot: src, callout: "EXECUTE" });
+            this.callout("execute", "EXECUTE", "#ff7ad9", u.x, u.y - 60, u.uid);
             this.hurt(m, m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, src, { ...P, sure: true });
           }
         } else this.hurt(m, damage, src, P);
