@@ -23,6 +23,8 @@ export interface AssetIndex {
   "ui/races"?: string[];
   "ui/archs"?: string[];
   "ui/perks"?: string[];
+  /** Melee weapon sprites (vfx/weapons/<key>.webp), loaded as `weapon:<key>`. */
+  "vfx/weapons"?: string[];
   anims: Record<string, string[]>;
   /** Frame size per sheet folder, including the `<folder>_hd` twins. */
   frameSize: Record<string, number>;

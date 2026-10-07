@@ -28,6 +28,7 @@ import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fm
 import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
 import { Monster } from "../battle/Monster";
 import { Unit, canAwaken } from "../battle/Unit";
+import { ShotView, fxEvent, fxHit } from "../battle/vfx";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
 
@@ -95,7 +96,7 @@ export class BattleScene extends Phaser.Scene {
   /** Sprites of the Sim's units and monsters, by uid. */
   private units = new Map<number, Unit>();
   private monsters = new Map<number, Monster>();
-  private shotImgs = new Map<SimShot, Phaser.GameObjects.Image>();
+  private shotImgs = new Map<SimShot, ShotView>();
   private bubbleImgs = new Map<number, Phaser.GameObjects.Image>();
   /** Boss uids that had a stage or a power event in the batch being handled (they play their own clip). */
   private clipped = new Set<number>();
@@ -830,16 +831,14 @@ export class BattleScene extends Phaser.Scene {
     const live = new Set<SimShot>(this.sim.shots);
     for (const [s, img] of this.shotImgs) {
       if (live.has(s)) continue;
-      img.destroy();
+      img.destroy(s.aim);
       this.shotImgs.delete(s);
     }
     for (const s of live) {
       let img = this.shotImgs.get(s);
       if (!img) {
         const def = s.unit.def;
-        const tex = def.proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${def.proj}`;
-        img = this.add.image(s.x, s.y, tex).setDepth(2000);
-        img.setScale((def.proj === "spark" ? 40 : 56) / img.width);
+        img = new ShotView(this, def, s.x, s.y);
         sfx("shoot", def.proj);
         this.shotImgs.set(s, img);
       }
@@ -847,8 +846,7 @@ export class BattleScene extends Phaser.Scene {
       const dy = s.aim.y - s.y;
       const d = Math.hypot(dx, dy) || 1;
       const glide = Math.min(Math.max(0, d - 4), s.speed * ahead);
-      img.setPosition(s.x + (dx / d) * glide, s.y + (dy / d) * glide);
-      img.rotation = Math.atan2(dy, dx);
+      img.move(s.x + (dx / d) * glide, s.y + (dy / d) * glide, Math.atan2(dy, dx));
     }
   }
 
@@ -871,7 +869,10 @@ export class BattleScene extends Phaser.Scene {
     if (!events.length) return;
     this.clipped.clear();
     for (const e of events) if (e.type === "boss_stage" || e.type === "boss_power") this.clipped.add(e.uid);
-    for (const e of events) this.handle(e);
+    for (const e of events) {
+      fxEvent(this, e);
+      this.handle(e);
+    }
   }
 
   private makeUnit(uid: number, slot: number) {
@@ -1180,10 +1181,13 @@ export class BattleScene extends Phaser.Scene {
       case "hit": {
         this.monsters.get(e.target)?.flash();
         if (e.kind === "main") {
-          this.vfx(HIT_VFX[e.element], e.x, e.y, e.size);
+          if (!fxHit(this, e)) this.vfx(HIT_VFX[e.element], e.x, e.y, e.size);
           sfx("hit", e.element);
-        } else if (e.kind === "pierce") this.vfx("hit_impact", e.x, e.y, e.size);
-        else if (e.kind === "chain") this.vfx("lightning_strike", e.x, e.y, e.size);
+        } else if (e.kind === "pierce") {
+          if (!fxHit(this, e)) this.vfx("hit_impact", e.x, e.y, e.size);
+        } else if (e.kind === "chain") {
+          if (!fxHit(this, e)) this.vfx("lightning_strike", e.x, e.y, e.size);
+        }
         break;
       }
       case "bighit":

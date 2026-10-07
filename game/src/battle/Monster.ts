@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale } from "../assets";
 import { fmt, txt } from "../ui";
+import { StatusFx, monsterStatuses } from "./vfx";
 import type { SimMonster } from "../../../shared/sim.ts";
 import type { BattleScene } from "../scenes/BattleScene";
 
@@ -32,11 +33,13 @@ export class Monster {
   private bob = Math.random() * 10;
   private flashUntil = 0;
   private labelShown = "";
+  private readonly statusFx: StatusFx;
 
   constructor(scene: BattleScene, sim: SimMonster, corruption: number) {
     this.scene = scene;
     this.sim = sim;
     this.corruption = corruption;
+    this.statusFx = new StatusFx(scene);
     this.folder = sim.boss ? "bosses" : "monsters";
     const p = sim.path.at(sim.dist);
     this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.id}_walk`));
@@ -96,6 +99,7 @@ export class Monster {
       this.labelShown = text;
       this.label.setText(text);
     }
+    this.statusFx.sync(p, m.size, 1200 + p.y, monsterStatuses(m, now));
     this.sprite.anims.timeScale = now < m.frozenUntil || now < m.stunUntil ? 0 : 1;
 
     let tint: number | null = null;
@@ -117,6 +121,7 @@ export class Monster {
     this.dead = true;
     this.diedAt = this.scene.sim.now;
     this.label.destroy();
+    this.statusFx.destroy();
     const key = animKey(this.folder, `${this.id}_death`);
     if (this.scene.anims.exists(key)) {
       this.sprite.clearTint();
@@ -134,10 +139,12 @@ export class Monster {
     this.dead = true;
     this.diedAt = this.scene.sim.now;
     this.label.destroy();
+    this.statusFx.destroy();
     this.scene.tweens.add({ targets: this.sprite, alpha: 0, duration: 200, onComplete: () => this.finish() });
   }
 
   private finish() {
+    this.statusFx.destroy();
     this.sprite.destroy();
     this.finished = true;
   }
