@@ -299,7 +299,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("spider_queen", "Spider Queen", "legendary", "poison", "slow", "poison", "Her webs snare the swiftest.", "beast", "balanced", "hunter"),
   U("star_astronomer", "Star Astronomer", "legendary", "arcane", "sniper", "arcane_orb", "Falling stars for the biggest foes.", "human", "balanced", "giant_slayer"),
   U("sun_priestess", "Sun Priestess", "legendary", "fire", "buff", "fireball", "Her light leaves nowhere to hide.", "celestial", "balanced", "true_strike"),
-  U("unicorn_knight", "Unicorn Knight", "legendary", "arcane", "pierce", "arcane_orb", "Charges through armor and line.", "fae", "balanced", "armor_breaker"),
+  { ...U("unicorn_knight", "Unicorn Knight", "legendary", "arcane", "pierce", "arcane_orb", "Charges through armor and line.", "fae", "balanced", "armor_breaker"), weapon: "lance" },
   U("valkyrie", "Valkyrie", "legendary", "lightning", "chain", "lightning", "Chooses who falls.", "celestial", "balanced", "finisher"),
   U("vampire_countess", "Vampire Countess", "legendary", "poison", "growth", "poison", "Every bite feeds her power.", "undead", "balanced", "plunder"),
   // mythic
