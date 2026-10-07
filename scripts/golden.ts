@@ -7,7 +7,8 @@
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { applyConfig, defaultConfig } from "../shared/config.ts";
-import { DEFAULT_UNITS } from "../shared/units.ts";
+import { DEFAULT_UNITS, UNITS, indexUnits, type UnitDef } from "../shared/units.ts";
+import type { ArchSlot, PerkSlot } from "../shared/kit.ts";
 import { ARENAS } from "../shared/arenas.ts";
 import { Sim, type BoardUnit, type SimSetup, type SimFx, type SimOptions, type SimResult } from "../shared/sim.ts";
 import { ECONOMY } from "../shared/economy.ts";
@@ -186,6 +187,53 @@ for (const slot of [7, 8]) {
   });
 }
 
+// ---------------------------------------------------------------- v2 P3: combat reads the kit
+
+/** Register a copy of a default unit with a new kit and/or perks, built programmatically. */
+function kitUnit(id: string, base: string, kit: ArchSlot[] | null, perks: PerkSlot[] | null): string {
+  const b = DEFAULT_UNITS.find((u) => u.id === base);
+  if (!b) throw new Error(`golden: unit ${base} missing`);
+  const u: UnitDef = structuredClone(b);
+  u.id = id;
+  if (kit) u.kit = kit;
+  if (perks) u.perks = perks;
+  UNITS.push(u);
+  indexUnits();
+  return id;
+}
+const kitRun = (id: string, rank = 4) => run(Array.from({ length: 15 }, () => ({ id, rank })), null);
+const kitRuns: Record<string, [string, ArchSlot[] | null, PerkSlot[] | null]> = {
+  lance_t3: ["lance_knight", [{ arch: "pierce", tune: { targets: 3 } }, { arch: "bane" }], null],
+  pierce_t5: ["fox_spearman", [{ arch: "pierce", tune: { targets: 5 } }], null],
+  sniper_execute: ["star_astronomer", [{ arch: "sniper" }, { arch: "execute", tune: { chance: 0.05 } }], null],
+  splash_freeze: ["goblin_bomber", [{ arch: "splash" }, { arch: "freeze" }], null],
+  chain_poison: ["tesla_gnome", [{ arch: "chain" }, { arch: "poison" }], null],
+  shot_crit_execute_slow: ["wolf_hunter", [{ arch: "shot" }, { arch: "crit" }, { arch: "execute" }, { arch: "slow" }], null],
+  two_perks: ["wind_sylph", null, [{ perk: "hunter", value: 0.8 }, { perk: "giant_slayer", value: 0.6 }]],
+  armor_breaker_half: ["clockwork_turret", null, [{ perk: "armor_breaker", value: 0.5 }]],
+  true_strike_half: ["hooded_archer", null, [{ perk: "true_strike", value: 0.5 }]],
+};
+for (const [name, [base, kit, perks]] of Object.entries(kitRuns)) out[`kit:${name}`] = kitRun(kitUnit(`kit_${name}`, base, kit, perks));
+
+// A buff unit hands its perk to a neighbour that has the same perk: the higher value wins either way.
+for (const [name, handed, own] of [["buff_high", 0.8, 0.2], ["buff_low", 0.2, 0.8]] as const) {
+  const buff = kitUnit(`kit_${name}_bard`, "lute_bard", null, [{ perk: "hunter", value: handed }]);
+  const shooter = kitUnit(`kit_${name}_shooter`, "wind_sylph", null, [{ perk: "hunter", value: own }]);
+  out[`kit:${name}`] = run(Array.from({ length: 15 }, (_, i) => ({ id: i % 2 ? shooter : buff, rank: 4 })), null);
+}
+
+// Training dummies of one monster, standing in a row: pierce reach, armor and dodges show up in the damage.
+function dummyRun(unit: string, monster: string, rank = 4, wave = 3) {
+  const setup: SimSetup = { arena: ARENAS[0].id, board: Array.from({ length: 15 }, () => ({ id: unit, rank })), cardLevel: 5, powerUp: 0, hero: null, seed: SEED, maxTime: 40, scenario: { kind: "dummies", count: 8, wave, duration: 30, monster } };
+  const sim = new GoldenSim(setup);
+  return summary(sim, sim.run());
+}
+const noBreaker = kitUnit("kit_no_breaker", "clockwork_turret", null, []);
+const noStrike = kitUnit("kit_no_strike", "hooded_archer", null, []);
+for (const id of ["lance_knight", "kit_lance_t3", "fox_spearman", "kit_pierce_t5"]) out[`dummies:${id}`] = dummyRun(id, "skeleton_soldier");
+for (const id of [noBreaker, "kit_armor_breaker_half", "clockwork_turret"]) out[`dummies:armored:${id}`] = dummyRun(id, "armored_beetle", 1, 12);
+for (const id of [noStrike, "kit_true_strike_half", "hooded_archer"]) out[`dummies:dodge:${id}`] = dummyRun(id, "flying_eyeball", 1);
+
 const sorted = (o: Record<string, Record<string, unknown>>) =>
   Object.fromEntries(Object.keys(o).sort().map((k) => [k, Object.fromEntries(Object.keys(o[k]).sort().map((m) => [m, o[k][m]]))]));
 const golden = sorted(out);
@@ -211,7 +259,7 @@ if (process.argv.includes("--write")) {
   }
   if (diffs.length) {
     console.log(`golden: ${diffs.length} differences`);
-    for (const d of diffs.slice(0, 60)) console.log("  " + d);
+    for (const d of process.argv.includes("--all") ? diffs : diffs.slice(0, 60)) console.log("  " + d);
     if (diffs.length > 60) console.log(`  ...and ${diffs.length - 60} more`);
     process.exit(1);
   }
