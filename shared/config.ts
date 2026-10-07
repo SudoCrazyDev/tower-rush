@@ -11,7 +11,8 @@ import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type Ch
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
 import { DEFAULT_LOGIN_REWARDS, DEFAULT_QUESTS, LOGIN_REWARDS, QUESTS, QUEST_GOAL_IDS, type QuestDef, type Reward } from "./daily.ts";
 import { DEFAULT_LEAGUES, LEAGUES, type LeagueDef } from "./leagues.ts";
-import { DEFAULT_EFFECTS, EFFECTS, effectProblems, type Effects } from "./effects.ts";
+import { DEFAULT_EFFECTS, EFFECTS, effectProblems, withEffectDefaults, type Effects } from "./effects.ts";
+import { DEFAULT_PERK_VALUES, PERK_VALUES, kitProblems, perkValueProblems, withKits, withPerkDefaults, type PerkValues } from "./kit.ts";
 import { RACE_IDS, withRaces } from "./races.ts";
 import { DEFAULT_EVENTS, DEFAULT_OFFERS, EVENTS, OFFERS, offerProblems, type EventDef, type OfferDef } from "./offers.ts";
 import { DEFAULT_PVP, PVP, pvpProblems, type PvpConfig } from "./pvp.ts";
@@ -36,6 +37,8 @@ export interface GameConfig {
   economy: Economy;
   /** Archetype effect numbers (slow %, crit chance, chain jumps...). */
   effects: Effects;
+  /** v2: default perk values (each unit's perks can override them). Filled from defaults if missing. */
+  perks?: PerkValues;
   /** PvP rules, sends and matchmaking (see PVP.md). */
   pvp: PvpConfig;
   /** Story mode (v1.2): the book, its stories, chapters and wave scripts. */
@@ -92,6 +95,7 @@ export function defaultConfig(): GameConfig {
     offers: DEFAULT_OFFERS,
     economy: DEFAULT_ECONOMY,
     effects: DEFAULT_EFFECTS,
+    perks: DEFAULT_PERK_VALUES,
     pvp: DEFAULT_PVP,
     book: DEFAULT_BOOK,
     hotfixes: Object.keys(HOTFIXES),
@@ -111,7 +115,8 @@ function replace<T>(target: T[], items: T[]) {
 
 /** Swap the live tables for the ones in `cfg` (in place, so existing imports see them). */
 export function applyConfig(cfg: GameConfig) {
-  replace(UNITS, withAddedUnits(withStyles(withRaces(cfg.units, DEFAULT_UNITS), DEFAULT_UNITS), DEFAULT_UNITS));
+  // v2: every unit gets its kit (derived from the legacy fields while they exist, see kit.ts).
+  replace(UNITS, withKits(withAddedUnits(withStyles(withRaces(cfg.units, DEFAULT_UNITS), DEFAULT_UNITS), DEFAULT_UNITS), withEffectDefaults(cfg.effects)));
   replace(MONSTERS, withAdded(withRaces(cfg.monsters, DEFAULT_MONSTERS), DEFAULT_MONSTERS, ADDED_MONSTERS));
   replace(BOSSES, withAdded(withRaces(cfg.bosses, DEFAULT_BOSSES), DEFAULT_BOSSES, ADDED_BOSSES));
   replace(ARENAS, cfg.arenas);
@@ -124,6 +129,7 @@ export function applyConfig(cfg: GameConfig) {
   replace(OFFERS, cfg.offers);
   Object.assign(ECONOMY, structuredClone(cfg.economy));
   Object.assign(EFFECTS, structuredClone(cfg.effects));
+  Object.assign(PERK_VALUES, withPerkDefaults(cfg.perks));
   const pvp = withPvpDefaults(cfg.pvp);
   PVP.rules = pvp.rules;
   PVP.sends = pvp.sends;
@@ -175,6 +181,7 @@ export function validateConfig(cfg: GameConfig): string[] {
     num(u.damage, `${w} damage`);
     num(u.speed, `${w} speed`);
     if (u.effect !== undefined) oneOf(u.effect, UNIT_EFFECTS, `${w} effect`);
+    if (u.kit !== undefined || u.perks !== undefined) errs.push(...kitProblems(u, w));
   }
   const monsterIds = ids(cfg.monsters, "monster");
   for (const m of cfg.monsters) {
@@ -284,6 +291,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   for (const id of e.starterDeck) if (!e.starterCards.includes(id)) errs.push(`starter deck unit "${id}" must also be in starterCards`);
 
   errs.push(...effectProblems(cfg.effects));
+  if (cfg.perks !== undefined) errs.push(...perkValueProblems(cfg.perks));
   errs.push(...pvpProblems(withPvpDefaults(cfg.pvp)));
   for (const r of CHEST_RARITIES) num(cfg.dropWeights?.[r], `dropWeights.${r}`);
   return errs;

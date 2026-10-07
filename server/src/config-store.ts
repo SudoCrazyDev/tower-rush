@@ -1,5 +1,6 @@
 import { applyConfig, defaultConfig, validateConfig, withHotfixes, withPvpDefaults, type GameConfig } from "../../shared/config.ts";
 import { withEffectDefaults } from "../../shared/effects.ts";
+import { withKits, withPerkDefaults } from "../../shared/kit.ts";
 import { withRaces } from "../../shared/races.ts";
 import { withAdded, withAddedUnits, withStyles } from "../../shared/units.ts";
 import { ADDED_BOSSES, ADDED_MONSTERS } from "../../shared/monsters.ts";
@@ -24,7 +25,7 @@ const CHECK_MS = 5_000;
 /** Older saved configs may predate newer fields; fill those in from the defaults. */
 function upgrade(cfg: GameConfig): GameConfig {
   const d = defaultConfig();
-  return withHotfixes({
+  const c = withHotfixes({
     ...d,
     ...cfg,
     units: withAddedUnits(withStyles(withRaces(cfg.units, d.units), d.units), d.units),
@@ -35,8 +36,11 @@ function upgrade(cfg: GameConfig): GameConfig {
     effects: withEffectDefaults(cfg.effects),
     pvp: withPvpDefaults(cfg.pvp),
     dropWeights: { ...d.dropWeights, ...cfg.dropWeights },
+    perks: withPerkDefaults(cfg.perks),
     hotfixes: cfg.hotfixes ?? [],
   });
+  // v2 kits come last, so they reflect any hotfixed legacy fields (kit.ts).
+  return { ...c, units: withKits(c.units, c.effects) };
 }
 
 function load(row: VersionRow) {

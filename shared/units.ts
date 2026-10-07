@@ -2,6 +2,8 @@ import { ECONOMY } from "./economy.ts";
 import type { Race } from "./races.ts";
 import type { Perk } from "./perks.ts";
 import { noAttack } from "./support.ts";
+import { DEFAULT_EFFECTS } from "./effects.ts";
+import { kitFromLegacy, withKits, type ArchSlot, type PerkSlot } from "./kit.ts";
 
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic" | "event";
 export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane";
@@ -82,6 +84,13 @@ export interface UnitDef {
   storyReward?: boolean;
   /** A unit-specific effect on top of its archetype (v1.2 Knights and Mercenaries; numbers in effects.ts). */
   effect?: UnitEffect;
+  /**
+   * v2 kit (kit.ts): kit[0] is how it attacks or its job, then riders and signatures, each with
+   * optional number overrides. Derived from arch/effect while those legacy fields exist (P2).
+   */
+  kit: ArchSlot[];
+  /** v2 perks, each with an optional value; derived from `perk` while it exists (P2). */
+  perks: PerkSlot[];
 }
 
 /**
@@ -196,10 +205,11 @@ const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arc
   ...restyle({ damage: SEED_DAMAGE[rarity] * ARCHETYPES[arch].dmg, speed: ARCHETYPES[arch].speed }, "balanced", noAttack(arch) ? "balanced" : style),
   style: noAttack(arch) ? "balanced" : style,
   perk,
+  ...kitFromLegacy({ arch, perk }, DEFAULT_EFFECTS),
   enabled: true,
 });
 
-export const DEFAULT_UNITS: UnitDef[] = [
+export const DEFAULT_UNITS: UnitDef[] = withKits([
   // common
   U("hooded_archer", "Hooded Archer", "common", "nature", "shot", "arrow", "Never misses, not even a flitting bat.", "human", "balanced", "true_strike"),
   U("fox_spearman", "Fox Spearman", "common", "nature", "pierce", "spark", "One thrust finishes what others started.", "beast", "balanced", "finisher"),
@@ -288,7 +298,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
   { ...U("berserker_sellsword", "Berserker Sellsword", "epic", "fire", "shot", "spark", "Hits like a landslide. Wears out everyone near him.", "human", "heavy", "none"), damage: 75, role: "Mercenary", storyOnly: true, effect: "fatigue" },
   { ...U("powder_grenadier", "Powder Grenadier", "epic", "fire", "splash", "cannonball", "Big blasts. Mind your ears.", "human", "balanced", "none"), damage: 52, role: "Mercenary", storyOnly: true, effect: "shellshock" },
   { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 60, speed: 1.25, role: "Mercenary", storyOnly: true, effect: "wages" },
-];
+], DEFAULT_EFFECTS);
 
 /** The v1.2 Story units: Muse, the Knights and the Mercenaries. */
 export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade"];
