@@ -263,6 +263,8 @@ A0 ─┬─► A1 ─► (A4 user) ─► A1 again               │
 
 ---
 
-## 8. Parity audit (filled by P1a)
+## 8. Parity audit
 
-*(to come)*
+Done 2026-10-07: see [PARITY.md](PARITY.md). In short, the base `Sim` has no player actions
+(they live in `PvpBoard`) and is missing story mode, the tutorial, dragging, brewer taps, the Chaos Taffy tether
+and a structured event stream for the renderer. P1b adds all of these.
