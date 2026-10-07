@@ -1,24 +1,23 @@
+/**
+ * The solo battle: a view over `Sim` (shared/sim.ts). The Sim runs every rule (waves, combat,
+ * bosses, heroes, stories, rewards math); this scene steps it at a fixed rate, draws what it
+ * says (Unit and Monster are sprite wrappers), turns its event stream into effects and sounds,
+ * and sends the player's input back to it as Sim actions.
+ */
 import Phaser from "phaser";
 import { ambientVideo } from "../backdrop";
 import { BASE, ensureAnim, hasAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale } from "../assets";
 import { ARENAS, ARENA_BY_ID, type ArenaDef } from "../data/arenas";
-import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "../data/monsters";
-import { maxRank, rarityIndex, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element, type UnitDef } from "../data/units";
-import { findChapter, starsFor, type StoryChapter, type StoryDef, type StoryLine } from "../../../shared/stories.ts";
-import { clearDebuffs, isKnight, isMercenary, square3 } from "../../../shared/statuses.ts";
-import { raceLabel } from "../../../shared/races.ts";
-import { chills, withPerk, type Perk } from "../../../shared/perks.ts";
+import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO } from "../data/monsters";
+import { maxRank, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element } from "../data/units";
+import { findChapter, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
+import { square3 } from "../../../shared/statuses.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
-import {
-  EFFECTS, auraBonus, buffBonus, wagesFor, lanternMana, chainJumps, critChance, critMult, curseStep, executeChance, freezeChance, growthMult, pierceTargets, slowAmount, splashRadius, stunChance,
-} from "../../../shared/effects.ts";
-import {
-  SUPPORT_TIP, brewMana, canBecome, echoStrength, harvestMana, heraldBonus, isSupport, luckyChance, mimePrep, mirrorInterval, neighbours, noAttack,
-  owlCharge, owlSpeed, portalCooldown, type SupportArch,
-} from "../../../shared/support.ts";
-import { HERO_BY_ID, type HeroDef } from "../data/heroes";
+import { SUPPORT_TIP, canBecome, mimePrep, neighbours, noAttack, type SupportArch } from "../../../shared/support.ts";
+import type { HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
 import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
+import { Sim, SIM_DT, type SimEvent, type SimSetup, type SimShot } from "../../../shared/sim.ts";
 import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, finishStory, type BattleResult, type StoryResult, type StoryStart } from "../save";
@@ -74,68 +73,35 @@ function saveAutoCast(on: boolean) {
   }
 }
 
-interface Shot {
-  img: Phaser.GameObjects.Image;
-  unit: Unit;
-  def: UnitDef;
-  rank: number;
-  damage: number;
-  perks: readonly Perk[];
-  target: Monster;
-  aim: Pt;
-  speed: number;
-}
-
-interface QueuedSpawn {
-  def?: MonsterDef;
-  boss?: BossDef;
-}
+/** Most Sim steps one frame may run (a long stall just slows the battle instead of freezing the page). */
+const MAX_STEPS = 12;
 
 export class BattleScene extends Phaser.Scene {
   arena!: ArenaDef;
   paths!: Path[];
-  targetFrom = 0;
-  now = 0;
+  /** The battle itself: every rule lives here. */
+  sim!: Sim;
+  /** Sim time left over after the last whole step (seconds), used to glide sprites between steps. */
+  private acc = 0;
   speedMult = 1;
   paused = false;
   over = false;
 
-  mana = 0;
-  summonCost = 0;
-  lives = 0;
   /** Server-side battle record; null if the server couldn't be reached at start. */
   private battleId: Promise<number | null> = Promise.resolve(null);
   private pauseMenu: ReturnType<typeof modal> | null = null;
-  wave = 0;
-  kills = 0;
-  bossesKilled = 0;
-  /** Counted for daily quests. */
-  private counts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0, copies: 0, swaps: 0, brewed: 0 };
-  /** Banner Herald: damage multiplier for every attacking unit. */
-  heraldMult = 1;
-  /** Banner Herald war cry: everyone attacks faster until then. */
-  private shoutUntil = 0;
-  /** Echo Spirit encores waiting to go off. */
-  private echoes: { at: number; unit: Unit; x: number; y: number; damage: number; mana: number }[] = [];
-  powerUps: Record<string, number> = {};
   deck: string[] = [];
 
-  board: (Unit | null)[] = [];
-  monsters: Monster[] = [];
-  shots: Shot[] = [];
+  /** Sprites of the Sim's units and monsters, by uid. */
+  private units = new Map<number, Unit>();
+  private monsters = new Map<number, Monster>();
+  private shotImgs = new Map<SimShot, Phaser.GameObjects.Image>();
+  private bubbleImgs = new Map<number, Phaser.GameObjects.Image>();
+  /** Boss uids that had a stage or a power event in the batch being handled (they play their own clip). */
+  private clipped = new Set<number>();
 
-  private queue: QueuedSpawn[] = [];
-  private spawnTimer = 0;
-  private spawnInterval = 1;
-  private waveTimer = 0;
-  private waveState: "intro" | "spawning" | "clearing" = "intro";
-  private introTimer = 2;
-  private healTimer = 0;
-  private boss: Monster | null = null;
   /** Story mode (v1.2): the chapter being played, and the deck and levels the server handed out. */
   story: { def: StoryDef; chapter: StoryChapter; start: StoryStart } | null = null;
-  /** HP multiplier of the current story wave. */
-  private waveHp = 1;
   /** Chaos Taffy tethers, redrawn every frame. */
   private tethers: Phaser.GameObjects.Graphics | null = null;
 
@@ -153,11 +119,6 @@ export class BattleScene extends Phaser.Scene {
 
   // Hero
   hero: HeroDef | null = null;
-  private heroReadyAt = 0;
-  private rageUntil = 0;
-  private hasteUntil = 0;
-  private stormUntil = 0;
-  private stormTimer = 0;
   /** Standing hero in the wide layout's side panel. */
   private heroSprite: Phaser.GameObjects.Sprite | null = null;
   /** Unit ids whose awakened sheets have been requested this battle. */
@@ -165,9 +126,6 @@ export class BattleScene extends Phaser.Scene {
   private heroBtn: { root: Phaser.GameObjects.Container; pie: Phaser.GameObjects.Graphics; time: Phaser.GameObjects.Text; glow: Phaser.GameObjects.Graphics; r: number } | null = null;
   /** Cast the hero ability by itself whenever it is ready (remembered between battles). */
   private autoCast = loadAutoCast();
-  /** First-battle tutorial: waves wait while it runs, and its summons are chosen for it. */
-  private tutorialHold = false;
-  private tutorialPick: { id: string; slot: number } | null = null;
 
   constructor() {
     super("Battle");
@@ -178,41 +136,46 @@ export class BattleScene extends Phaser.Scene {
     this.story = f && data.story ? { def: f.story, chapter: f.chapter, start: data.story.start } : null;
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
     this.deck = this.story ? [...this.story.start.deck] : [...profile.deck];
-    this.waveHp = 1;
     this.tethers = null;
-    this.now = 0;
+    this.acc = 0;
     this.speedMult = 1;
     this.paused = this.over = false;
-    this.mana = ECONOMY.startMana;
-    this.summonCost = ECONOMY.summonCostStart;
-    this.lives = ECONOMY.lives;
-    this.wave = this.kills = this.bossesKilled = 0;
-    this.counts = { summons: 0, merges: 0, awakens: 0, heroCasts: 0, copies: 0, swaps: 0, brewed: 0 };
-    this.heraldMult = 1;
-    this.shoutUntil = 0;
-    this.echoes = [];
-    this.powerUps = Object.fromEntries(this.deck.map((id) => [id, 0]));
-    this.board = new Array(15).fill(null);
-    this.monsters = [];
-    this.shots = [];
-    this.queue = [];
+    this.units = new Map();
+    this.monsters = new Map();
+    this.shotImgs = new Map();
+    this.bubbleImgs = new Map();
     this.hearts = [];
     this.deckCards = [];
     this.highlights = [];
-    this.boss = null;
     this.debug = null;
-    this.waveState = "intro";
-    this.introTimer = 1.5;
-    const hero = profile.hero ? HERO_BY_ID[profile.hero] : undefined;
-    this.hero = hero?.enabled ? hero : null;
-    // The first use is ready a bit sooner than a full recharge.
-    this.heroReadyAt = this.hero ? this.hero.cooldown * 0.4 : 0;
-    this.rageUntil = this.hasteUntil = this.stormUntil = this.stormTimer = 0;
+    this.autoCast = loadAutoCast();
+    const setup: SimSetup = {
+      arena: this.arena.id,
+      board: new Array(15).fill(null),
+      cardLevel: 1,
+      powerUp: 0,
+      hero: profile.hero ?? null,
+      scenario: { kind: "run", from: 1, to: Infinity },
+      seed: Math.floor(Math.random() * 2 ** 32),
+      maxTime: Infinity,
+    };
+    this.sim = new Sim(setup, {
+      mode: "solo",
+      levels: Object.fromEntries(this.deck.map((id) => [id, this.cardLevel(id)])),
+      deck: this.deck,
+      awakens: (id) => canAwaken(id, UNIT_BY_ID[id]?.arch),
+      bossIntro: (id) => hasAnim("bosses", `${id}_intro`),
+      autoHero: this.autoCast,
+      story: this.story?.chapter,
+      startMana: ECONOMY.startMana,
+      bubbles: true,
+      timelineCap: 64,
+      view: true,
+    });
+    this.hero = this.sim.hero;
     this.heroSprite = null;
     this.heroBtn = null;
     this.awakenedRequested = new Set();
-    this.tutorialHold = false;
-    this.tutorialPick = null;
   }
 
   preload() {
@@ -259,7 +222,6 @@ export class BattleScene extends Phaser.Scene {
     // A story chapter was started on the server before the scene (the server chose its deck).
     this.battleId = this.story ? Promise.resolve(this.story.start.battleId) : startBattle(a.id).catch(() => null);
     this.paths = arenaPaths(a);
-    this.targetFrom = Math.max(0, a.ring.top - a.entryY - 40);
     const tint = this.story?.chapter.tint ? Phaser.Display.Color.HexStringToColor(this.story.chapter.tint).color : null;
     const bg = this.add.image(0, 0, this.artKey).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
     if (tint !== null) bg.setTint(tint);
@@ -286,7 +248,8 @@ export class BattleScene extends Phaser.Scene {
       this.pauseMenu?.close();
       this.anims.resumeAll();
       this.paused = false;
-      this.endGame("Continued on another device");
+      this.sim.end("Continued on another device");
+      this.pump();
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       onPlayLost(null);
@@ -310,6 +273,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- helpers
+
+  /** Battle time in seconds (the Sim's clock). */
+  get now() {
+    return this.sim.now;
+  }
 
   slotPos(slot: number) {
     return slotPos(this.arena, slot);
@@ -346,13 +314,14 @@ export class BattleScene extends Phaser.Scene {
     s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => s.destroy());
   }
 
-  gainMana(amount: number, x?: number, y?: number) {
-    this.mana += amount;
-    if (x !== undefined && y !== undefined) {
-      this.floater(x, y, `+${amount}`, "#7fd8ff", 22);
-      sfx("coin");
-    }
-    this.refreshHud();
+  private unitInSlot(slot: number) {
+    const su = this.sim.units[slot];
+    return su ? this.units.get(su.uid) ?? null : null;
+  }
+
+  /** Card level × power-up multiplier of a unit's support effect (as the Sim computes it). */
+  private supportMult(u: Unit) {
+    return boostMult(this.cardLevel(u.def.id), this.sim.powerLevel(u.def.id));
   }
 
   // ---------------------------------------------------------------- HUD
@@ -498,6 +467,7 @@ export class BattleScene extends Phaser.Scene {
     root.setSize(tw + 10, th + (WIDE ? th + 10 : 10));
     pressable(root, () => {
       this.autoCast = !this.autoCast;
+      this.sim.setAutoHero(this.autoCast);
       saveAutoCast(this.autoCast);
       draw();
     });
@@ -507,7 +477,7 @@ export class BattleScene extends Phaser.Scene {
   private refreshHeroButton() {
     const b = this.heroBtn;
     if (!b || !this.hero) return;
-    const left = this.heroReadyAt - this.now;
+    const left = this.sim.heroLeft;
     b.pie.clear();
     b.glow.setVisible(left <= 0);
     if (left > 0) {
@@ -521,18 +491,18 @@ export class BattleScene extends Phaser.Scene {
 
   private refreshHud() {
     if (!this.manaText) return;
-    this.manaText.setText(fmt(this.mana));
-    this.summonCostText.setText(fmt(this.summonCost));
-    const canSummon = this.mana >= this.summonCost && this.board.includes(null);
-    this.summonBtn.setAlpha(canSummon ? 1 : 0.6);
-    const n = Math.max(1, this.wave);
+    const sim = this.sim;
+    this.manaText.setText(fmt(sim.mana));
+    this.summonCostText.setText(fmt(sim.summonCost));
+    this.summonBtn.setAlpha(sim.canSummon ? 1 : 0.6);
+    const n = Math.max(1, sim.wave);
     this.waveText.setText(this.story ? `WAVE ${n} / ${this.story.chapter.waves.length}` : `WAVE ${n}`);
-    this.hearts.forEach((h, i) => h.setAlpha(i < this.lives ? 1 : 0.2));
+    this.hearts.forEach((h, i) => h.setAlpha(i < sim.lives ? 1 : 0.2));
     for (const c of this.deckCards) {
-      const lvl = this.powerUps[c.id];
+      const lvl = sim.powerUps[c.id];
       const cost = powerUpCost(lvl);
       c.cost.setText(lvl >= maxPowerUp() ? "MAX" : fmt(cost));
-      c.root.setAlpha(lvl < maxPowerUp() && this.mana >= cost ? 1 : 0.65);
+      c.root.setAlpha(lvl < maxPowerUp() && sim.mana >= cost ? 1 : 0.65);
       c.pips.clear();
       for (let i = 0; i < maxPowerUp(); i++) {
         c.pips.fillStyle(NAVY, 1).fillCircle(-36 + i * 18, -46, 7);
@@ -541,135 +511,8 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  // ---------------------------------------------------------------- hero
-
-  /** Units' attack speed bonus from the hero (added to their haste). */
-  get heroHaste() {
-    return this.hero?.power === "haste" && this.now < this.hasteUntil ? this.hero.amount : 0;
-  }
-
-  get heroDamageMult() {
-    return this.hero?.power === "rage" && this.now < this.rageUntil ? 1 + this.hero.amount : 1;
-  }
-
-  castHero(auto = false) {
-    const h = this.hero;
-    if (!h || this.over || this.paused) return;
-    if (this.now < this.heroReadyAt) return void (auto || sfx("error"));
-    const targets = this.monsters.filter((m) => !m.gone && m.intro <= 0);
-    // Auto-cast also holds haste/rage until there is something to fight.
-    const needsTargets = h.power !== "mana" && (auto || (h.power !== "haste" && h.power !== "rage"));
-    if (needsTargets && !targets.length) {
-      if (auto) return;
-      sfx("error");
-      toast(this, "No monsters to hit yet");
-      return;
-    }
-    this.heroReadyAt = this.now + h.cooldown;
-    this.counts.heroCasts++;
-    sfx("hero");
-    this.heroCastAnim(h);
-    const now = this.now;
-    const hpUnit = this.baseHp(Math.max(1, this.wave));
-    const units = this.board.filter((u): u is Unit => !!u);
-
-    switch (h.power) {
-      case "meteor":
-        this.cameras.main.shake(300, 0.01);
-        for (const m of targets) {
-          this.vfx("shadow_smoke", m.pos.x, m.pos.y, 170);
-          m.damage(h.amount * hpUnit, { sure: true, crit: true, color: "#c58bff" });
-        }
-        break;
-      case "storm":
-        this.stormUntil = now + h.duration;
-        this.stormTimer = 0;
-        break;
-      case "freeze":
-        sfx("freeze");
-        for (const m of targets) {
-          m.frozenUntil = Math.max(m.frozenUntil, now + (m.boss ? h.duration / 3 : h.duration));
-          this.vfx("ice_burst", m.pos.x, m.pos.y, 140);
-          if (h.amount > 0) m.damage(h.amount * hpUnit, { sure: true, quiet: true });
-        }
-        break;
-      case "slow":
-        for (const m of targets) {
-          m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, h.amount * (m.boss ? 0.5 : 1));
-          m.slowUntil = now + h.duration;
-          this.vfx("poison_cloud", m.pos.x, m.pos.y, 130);
-        }
-        break;
-      case "mana": {
-        const amount = Math.round(h.amount * (1 + 0.1 * this.wave));
-        this.gainMana(amount);
-        this.floater(ARENA_W / 2, 640, `+${amount} MANA`, "#7fd8ff", 48);
-        this.vfx("coin_burst", ARENA_W / 2, 680, 260);
-        sfx("coin");
-        break;
-      }
-      case "haste":
-        this.hasteUntil = now + h.duration;
-        for (const u of units) this.vfx("lightning_strike", u.sprite.x, u.sprite.y - 20, 110);
-        break;
-      case "rage":
-        this.rageUntil = now + h.duration;
-        for (const u of units) this.vfx("fire_explosion", u.sprite.x, u.sprite.y - 20, 110);
-        break;
-      case "knockback":
-        this.cameras.main.shake(250, 0.006);
-        for (const m of targets) {
-          this.vfx("hit_impact", m.pos.x, m.pos.y, 120);
-          m.dist = Math.max(0, m.dist - (m.boss ? h.amount / 3 : h.amount));
-          m.stunUntil = Math.max(m.stunUntil, now + h.duration);
-          m.sync(now);
-          this.vfx("shadow_smoke", m.pos.x, m.pos.y, 120);
-        }
-        break;
-    }
-    this.refreshHeroButton();
-  }
-
-  /** The hero's skill clip: in the side panel (wide), or popping up over the arena (phone). */
-  private heroCastAnim(h: HeroDef) {
-    const skill = animKey("heroes", `${h.id}_skill`);
-    const idle = animKey("heroes", `${h.id}_idle`);
-    const banner = txt(this, ARENA_W / 2, 520, h.ability.toUpperCase(), 56, "#ffd93b").setDepth(2850).setScale(0.5);
-    this.tweens.add({ targets: banner, scale: 1, duration: 250, ease: "Back.Out" });
-    this.tweens.add({ targets: banner, alpha: 0, y: 480, delay: 900, duration: 300, onComplete: () => banner.destroy() });
-    if (!this.anims.exists(skill)) return;
-    if (this.heroSprite) {
-      this.heroSprite.play(skill);
-      this.heroSprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.heroSprite?.active && this.heroSprite.play(idle));
-      return;
-    }
-    const s = this.add.sprite(ARENA_W / 2, 720, skill).setDepth(2840).setScale(0);
-    this.tweens.add({ targets: s, scale: sheetScale("heroes", 360), duration: 200, ease: "Back.Out" });
-    s.play(skill);
-    s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () =>
-      this.tweens.add({ targets: s, alpha: 0, scale: 0, duration: 200, onComplete: () => s.destroy() }),
-    );
-  }
-
-  /** Arcane storm: a bolt from the sky every quarter second while it lasts. */
-  private updateStorm(dt: number) {
-    if (this.hero?.power !== "storm" || this.now >= this.stormUntil) return;
-    this.stormTimer -= dt;
-    if (this.stormTimer > 0) return;
-    this.stormTimer += 0.25;
-    const targets = this.monsters.filter((m) => !m.gone && m.intro <= 0);
-    if (!targets.length) return;
-    const m = targets[Math.floor(Math.random() * targets.length)];
-    const g = this.add.graphics().setDepth(2050);
-    this.zigzag(g, { x: m.pos.x + (Math.random() - 0.5) * 120, y: m.pos.y - 320 }, m.pos, 0xd9a3ff);
-    this.tweens.add({ targets: g, alpha: 0, duration: 200, onComplete: () => g.destroy() });
-    this.vfx("arcane_vortex", m.pos.x, m.pos.y, 110);
-    sfx("zap");
-    m.damage(this.hero.amount * this.baseHp(Math.max(1, this.wave)), { sure: true });
-  }
-
   private updateBossBar() {
-    const b = this.boss;
+    const b = this.sim.boss;
     if (!b || b.gone) {
       this.bossBar.setVisible(false);
       return;
@@ -682,55 +525,45 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- player actions
 
+  castHero() {
+    const h = this.hero;
+    if (!h || this.over || this.paused) return;
+    if (this.sim.heroLeft > 0) return void sfx("error");
+    if (!this.sim.useHero()) {
+      sfx("error");
+      toast(this, "No monsters to hit yet");
+      return;
+    }
+    this.pump();
+    this.refreshHeroButton();
+  }
+
   summon() {
     if (this.over || this.paused) return;
-    const empty = this.board.map((u, i) => (u ? -1 : i)).filter((i) => i >= 0);
-    if (!empty.length || this.mana < this.summonCost) {
+    if (!this.sim.summon()) {
       const x0 = this.summonBtn.getData("x0") ?? this.summonBtn.x;
       this.summonBtn.setData("x0", x0);
       this.tweens.add({ targets: this.summonBtn, x: { from: x0 - 8, to: x0 }, duration: 200, ease: "Bounce.Out" });
       sfx("error");
       return;
     }
-    this.mana -= this.summonCost;
-    this.summonCost += ECONOMY.summonCostStep;
-    this.counts.summons++;
-    const pick = this.tutorialPick && !this.board[this.tutorialPick.slot] ? this.tutorialPick : null;
-    this.tutorialPick = null;
-    const slot = pick?.slot ?? empty[Math.floor(Math.random() * empty.length)];
-    const id = pick?.id ?? this.deck[Math.floor(Math.random() * this.deck.length)];
-    this.spawnUnit(id, 1, slot);
+    this.pump();
     this.refreshHud();
-    this.events.emit("tutorial", "summon");
   }
 
-  private spawnUnit(id: string, rank: number, slot: number) {
-    const u = new Unit(this, UNIT_BY_ID[id], rank, slot);
-    this.board[slot] = u;
-    const p = this.slotPos(slot);
-    this.vfx("summon_circle", p.x, p.y + 20, u.awakened ? 200 : 130, 90);
-    if (u.awakened) this.celebrateAwakening(u);
-    else sfx(rank > 1 ? "merge" : "summon");
-    // Merges give a random deck unit, so once anything gets close to max rank, fetch the
-    // awakened art for the whole deck in the background.
-    if (rank >= maxRank() - 2) for (const d of this.deck) this.requestAwakenedArt(d);
-    if (u.awakened) this.requestAwakenedArt(id);
-    u.sprite.setScale(0);
-    this.tweens.add({ targets: u.sprite, scale: u.baseScale, duration: u.awakened ? 420 : 260, ease: "Back.Out" });
-    this.recomputeBuffs();
-    const tip = SUPPORT_TIP[u.def.arch as SupportArch];
-    if (tip && !this.tutorialHold && !tipsSeen().includes(u.def.arch)) {
-      markTipSeen(u.def.arch);
-      this.time.delayedCall(400, () => toast(this, tip));
-    }
-    return u;
+  private powerUp(id: string) {
+    if (this.over || this.paused) return;
+    if (!this.sim.powerUp(id)) return void sfx("error");
+    this.pump();
+    this.refreshHud();
   }
 
   // ---------------------------------------------------------------- tutorial
 
   /** The first battle teaches summon, merge and power-up before the first wave comes in. */
   private runTutorial() {
-    this.tutorialHold = true;
+    const sim = this.sim;
+    sim.tutorialHold = true;
     const cam = this.cameras.main;
     const screen = (p: Pt) => ({ x: p.x - cam.scrollX, y: p.y - cam.scrollY });
     const y = WIDE ? H - 230 : 1090;
@@ -738,10 +571,10 @@ export class BattleScene extends Phaser.Scene {
     let merged: Unit | null = null;
     let waitFor: string | null = null;
     // Mana for the next step, so an early power-up or extra summons can't leave them stuck.
-    const topUp = (need: number) => this.mana < need && this.gainMana(need - this.mana);
+    const topUp = (need: number) => sim.mana < need && sim.gainMana(need - sim.mana);
     const summonStep = (text: string, slot: number): CoachStep => {
-      topUp(this.summonCost);
-      this.tutorialPick = { id: this.deck[0], slot };
+      topUp(sim.summonCost);
+      sim.tutorialPick = { id: this.deck[0], slot };
       waitFor = "summon";
       const b = this.summonBtn;
       return { text, y, point: { x: b.x, y: b.y }, r: 62 * b.scaleY + 6 };
@@ -769,7 +602,7 @@ export class BattleScene extends Phaser.Scene {
         () => {
           const id = merged?.def.id ?? this.deck[0];
           const card = this.deckCards.find((d) => d.id === id) ?? this.deckCards[0];
-          topUp(powerUpCost(this.powerUps[card.id]));
+          topUp(powerUpCost(sim.powerUps[card.id]));
           waitFor = "powerup";
           const name = UNIT_BY_ID[card.id].name;
           return {
@@ -783,8 +616,8 @@ export class BattleScene extends Phaser.Scene {
       ],
       (skipped) => {
         this.events.off("tutorial", on);
-        this.tutorialHold = false;
-        this.tutorialPick = null;
+        sim.tutorialHold = false;
+        sim.tutorialPick = null;
         // Start the first wave with the usual mana, whatever the lessons spent.
         topUp(ECONOMY.startMana);
         if (!skipped) setTutorialDone("battle");
@@ -817,83 +650,21 @@ export class BattleScene extends Phaser.Scene {
       ensureAnim(this, "units_awakened", `${id}_attack`, 24, 0);
       ensureAnim(this, "units_awakened", `${id}_skill`, 24, 0);
     }
-    for (const u of this.board) {
-      if (u?.awakened && !u.dragging && !u.sprite.anims.currentAnim?.key.includes("units_awakened")) u.playIdle();
+    for (const u of this.units.values()) {
+      if (u.awakened && !u.dragging && !u.sprite.anims.currentAnim?.key.includes("units_awakened")) u.playIdle();
     }
   }
 
-  private celebrateAwakening(u: Unit) {
-    this.counts.awakens++;
-    sfx("awaken");
-    const p = this.slotPos(u.slot);
-    this.vfx("merge_levelup", p.x, p.y - 20, 220);
-    this.vfx("holy_heal", p.x, p.y - 10, 200);
-    this.floater(p.x, p.y - 80, "AWAKENED!", "#ffd93b", 34);
-    this.cameras.main.flash(180, 255, 230, 140);
-    const herald = this.board.find((h) => h?.def.arch === "herald");
-    if (herald) {
-      this.shoutUntil = this.now + EFFECTS.herald.shoutTime;
-      herald.playOnce("skill");
-      herald.callout("WAR CRY!", "#ff8a3b");
-      for (const v of this.board) if (v && !noAttack(v.def.arch)) this.vfx("fire_explosion", v.sprite.x, v.sprite.y - 20, 90);
-    }
-  }
-
-  /** An awakened unit's ultimate: its own hit, much stronger, on everything around the target. */
-  ultimate(unit: Unit, target: Monster | null) {
-    const e = ECONOMY;
-    const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
-    sfx("ultimate");
-    if (unit.def.arch === "mana" || !target) {
-      const mana = Math.round(EFFECTS.mana.ultimateBase + EFFECTS.mana.ultimatePerWave * this.wave);
-      this.gainMana(mana, from.x, from.y - 30);
-      this.vfx("coin_burst", from.x, from.y, 160);
-      this.queueEcho(unit, from.x, from.y, 0, mana);
-      return;
-    }
-    const center = target.pos;
-    const damage = unit.stats.damage * this.heroDamageMult * this.heraldMult * e.ultimateDamageMult;
-    this.queueEcho(unit, center.x, center.y, damage, 0);
-    const ring = this.add.graphics().setDepth(2060).setPosition(center.x, center.y);
-    ring.lineStyle(10, NAVY, 0.7).strokeCircle(0, 0, e.ultimateRadius);
-    ring.lineStyle(6, 0xffd93b, 1).strokeCircle(0, 0, e.ultimateRadius);
-    ring.setScale(0.2);
-    this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 380, ease: "Cubic.Out", onComplete: () => ring.destroy() });
-    const beam = this.add.graphics().setDepth(2050);
-    this.zigzag(beam, from, center, 0xffd93b);
-    this.tweens.add({ targets: beam, alpha: 0, duration: 260, onComplete: () => beam.destroy() });
-    this.vfx(HIT_VFX[unit.def.element], center.x, center.y, e.ultimateRadius * 1.6);
-    this.floater(center.x, center.y - 70, "ULTIMATE!", "#ffd93b", 30);
-    for (const m of this.nearby(center, e.ultimateRadius)) this.applyHit({ unit, def: unit.def, rank: unit.rank, damage, perks: unit.perks }, m);
-  }
-
-  private powerUp(id: string) {
-    if (this.over || this.paused) return;
-    const lvl = this.powerUps[id];
-    const cost = powerUpCost(lvl);
-    if (lvl >= maxPowerUp() || this.mana < cost) return void sfx("error");
-    sfx("powerup");
-    this.mana -= cost;
-    this.powerUps[id] = lvl + 1;
-    for (const u of this.board) {
-      if (u?.def.id === id) {
-        this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 20, 110);
-        u.playOnce("skill");
-      }
-    }
-    // Power-ups strengthen a buff unit's bonus too.
-    if (noAttack(UNIT_BY_ID[id]?.arch ?? "shot")) this.recomputeBuffs();
-    this.refreshHud();
-    this.events.emit("tutorial", "powerup");
-  }
+  // ---------------------------------------------------------------- drag and drop
 
   private setupDrag() {
     let origin: Unit | null = null;
     this.input.on("dragstart", (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Sprite & { unit?: Unit }) => {
       const u = obj.unit;
-      if (!u || this.over || this.paused) return;
+      if (!u || this.over || this.paused || !u.sprite.active) return;
       origin = u;
       u.dragging = true;
+      this.sim.setDragging(u.slot, true);
       u.setBuffVisible(false);
       obj.setDepth(2500);
       const mark = (slot: number) => {
@@ -907,16 +678,16 @@ export class BattleScene extends Phaser.Scene {
           this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(94).setTint(0xff8fd8).setAlpha(0.55));
         }
       }
-      const mime = u.def.arch === "mime" && this.supportReady(u);
-      const portal = u.def.arch === "portal" && this.supportReady(u);
-      this.board.forEach((other, slot) => {
+      const mime = u.def.arch === "mime" && this.sim.mimeReady(u.slot);
+      const portal = u.def.arch === "portal" && this.sim.portalReady(u.slot);
+      this.sim.units.forEach((other, slot) => {
         if (!other) {
           if (portal) mark(slot);
           return;
         }
-        if (other === u) return;
+        if (other === u.sim) return;
         const merges = other.def.id === u.def.id && other.rank === u.rank && u.rank < maxRank();
-        if (merges || (mime && canBecome(u, other)) || (portal && other.rank === u.rank)) mark(slot);
+        if (merges || (mime && canBecome(u.sim, other)) || (portal && other.rank === u.rank)) mark(slot);
       });
     });
     this.input.on("drag", (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Sprite & { unit?: Unit }, x: number, y: number) => {
@@ -929,6 +700,10 @@ export class BattleScene extends Phaser.Scene {
       if (!u || u !== origin) return;
       origin = null;
       u.dragging = false;
+      const sim = this.sim;
+      // The unit may be gone already (merged away by the Sim while held, or the battle ended).
+      if (!u.sprite.active || sim.units[u.slot] !== u.sim) return;
+      sim.setDragging(u.slot, false);
       const target = this.unitAt(obj.x, obj.y);
       const back = () => {
         u.place(u.slot);
@@ -936,17 +711,23 @@ export class BattleScene extends Phaser.Scene {
         u.playIdle();
       };
       if (this.over) return back();
+      const from = u.slot;
+      const done = (ok: boolean) => {
+        if (!ok) return back();
+        this.pump();
+        this.refreshHud();
+      };
       if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank()) {
-        this.merge(u, target);
+        done(sim.merge(from, target.slot));
       } else if (target && target !== u && u.def.arch === "mime") {
-        if (!this.supportReady(u)) this.refuse(u, `Ready in ${Math.ceil(mimePrep(this.supportMult(u)) - u.timer)}s`);
+        if (!sim.mimeReady(from)) this.refuse(u, `Ready in ${Math.ceil(mimePrep(this.supportMult(u)) - u.sim.timer)}s`);
         else if (target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
-        else if (!canBecome(u, target)) this.refuse(u, target.awakened ? "Can't copy awakened" : "Can't copy support");
-        else this.copy(u, target);
+        else if (!canBecome(u.sim, target.sim)) this.refuse(u, target.awakened ? "Can't copy awakened" : "Can't copy support");
+        else done(sim.copy(from, target.slot));
       } else if (u.def.arch === "portal" && (target ? target !== u : this.emptySlotAt(obj.x, obj.y) >= 0)) {
-        if (!this.supportReady(u)) this.refuse(u, `Ready in ${Math.ceil(u.timer)}s`);
+        if (!sim.portalReady(from)) this.refuse(u, `Ready in ${Math.ceil(u.sim.timer)}s`);
         else if (target && target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
-        else this.teleport(u, target ? target.slot : this.emptySlotAt(obj.x, obj.y));
+        else done(target ? sim.swap(from, target.slot) : sim.hop(from, this.emptySlotAt(obj.x, obj.y)));
       } else back();
     });
   }
@@ -956,12 +737,27 @@ export class BattleScene extends Phaser.Scene {
     let best = -1;
     let bestD = 60;
     for (let s = 0; s < 15; s++) {
-      if (this.board[s]) continue;
+      if (this.sim.units[s]) continue;
       const p = this.slotPos(s);
       const d = Math.hypot(p.x - x, p.y - y);
       if (d < bestD) {
         bestD = d;
         best = s;
+      }
+    }
+    return best;
+  }
+
+  private unitAt(x: number, y: number) {
+    let best: Unit | null = null;
+    let bestD = 60;
+    for (const u of this.units.values()) {
+      if (u.dragging) continue;
+      const p = this.slotPos(u.slot);
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = u;
       }
     }
     return best;
@@ -976,364 +772,6 @@ export class BattleScene extends Phaser.Scene {
     const x = u.sprite.x;
     this.tweens.add({ targets: u.sprite, x: { from: x - 10, to: x }, duration: 260, ease: "Bounce.Out" });
     this.floater(x, u.sprite.y - 80, why, "#ffb0b0", 24);
-  }
-
-  // ---------------------------------------------------------------- support units
-
-  /** Card level × power-up multiplier of a support unit's effect. */
-  supportMult(u: Unit) {
-    return boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0);
-  }
-
-  /** Every attack-speed bonus on a unit right now: buffs and owls, Muse, hero, portal rush, war cry, Rally. */
-  hasteOf(u: Unit) {
-    const now = this.now;
-    return (
-      u.haste +
-      u.auraSpeed +
-      this.heroHaste +
-      (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
-      (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
-      (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0) +
-      (u.def.effect === "oath" ? EFFECTS.oath.speedPerKnight * this.adjacentKnights(u) : 0)
-    );
-  }
-
-  private adjacentKnights(u: Unit) {
-    return neighbours(u.slot).filter((j) => this.board[j] && isKnight(this.board[j]!.def)).length;
-  }
-
-  /** Lantern Knight's pulse: extra mana, more for each Knight on the field. */
-  lanternPulse(u: Unit) {
-    const knights = this.board.filter((v) => v && isKnight(v.def)).length;
-    this.gainMana(lanternMana(knights), u.sprite.x, u.sprite.y - 50);
-  }
-
-  /** Attack-speed multiplier from Fatigue (a Berserker next door, or a Chaos Taffy's tether). */
-  slowOf(u: Unit) {
-    return this.now < u.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1;
-  }
-
-  /** An Aegis Knight next to `u` makes it immune to debuffs. */
-  private shielded(u: Unit) {
-    return neighbours(u.slot).some((j) => this.board[j]?.def.arch === "aegis");
-  }
-
-  /**
-   * Put a debuff on a unit for `time` seconds (Irritation also takes its miss chance). Returns
-   * false when an Aegis Knight protects it.
-   */
-  afflict(u: Unit, kind: "irritation" | "fatigue" | "shellshock", time: number, miss = EFFECTS.irritate.miss) {
-    if (this.shielded(u)) return false;
-    const s = u.status;
-    const until = this.now + time;
-    if (kind === "irritation") {
-      s.irritatedUntil = Math.max(s.irritatedUntil, until);
-      s.miss = miss;
-    } else if (kind === "fatigue") s.fatiguedUntil = Math.max(s.fatiguedUntil, until);
-    else {
-      if (this.now >= s.shockedUntil) this.vfx("lightning_strike", u.sprite.x, u.sprite.y - 40, 90);
-      s.shockedUntil = Math.max(s.shockedUntil, until);
-    }
-    return true;
-  }
-
-  /** Rogue Knight: every few seconds its neighbours get Irritation. */
-  irritateNeighbours(u: Unit) {
-    let any = false;
-    for (const j of neighbours(u.slot)) {
-      const v = this.board[j];
-      if (v && !v.dragging && this.afflict(v, "irritation", EFFECTS.irritate.time)) any = true;
-    }
-    if (any) {
-      u.playOnce("skill");
-      u.callout("TSK!", "#ff6a6a");
-    }
-  }
-
-  /** Units on the board that a boss power may hit (shuffled), at most `n`. */
-  private someUnits(n: number) {
-    const units = this.board.filter((u): u is Unit => !!u && !u.dragging);
-    Phaser.Utils.Array.Shuffle(units);
-    return units.slice(0, n);
-  }
-
-  /** Whether a Mime can copy or a Portal Imp can move right now. */
-  supportReady(u: Unit) {
-    if (u.def.arch === "mime") return u.timer >= mimePrep(this.supportMult(u));
-    if (u.def.arch === "portal") return u.timer <= 0;
-    return false;
-  }
-
-  /** One frame of a support unit (called from Unit.update). Haste speeds its timers up. */
-  updateSupport(u: Unit, dt: number) {
-    const t = dt * (1 + this.hasteOf(u));
-    const mult = this.supportMult(u);
-    switch (u.def.arch) {
-      case "mime": {
-        const prep = mimePrep(mult);
-        const was = u.timer >= prep;
-        u.timer += t;
-        u.drawSupportRing(Math.min(1, u.timer / prep), 0x59d64a);
-        if (!was && u.timer >= prep) u.playOnce("skill");
-        return;
-      }
-      case "portal": {
-        const cd = portalCooldown(u.rank, mult);
-        const was = u.timer > 0;
-        u.timer = Math.max(0, u.timer - t);
-        u.drawSupportRing(u.timer > 0 ? 1 - u.timer / cd : 1, 0xff8a3b);
-        if (was && u.timer <= 0) u.playOnce("skill");
-        return;
-      }
-      case "mirror": {
-        const every = mirrorInterval(u.rank, mult);
-        u.timer = Math.min(every, u.timer + t);
-        u.drawSupportRing(u.timer / every, 0xc58bff);
-        const options = neighbours(u.slot)
-          .map((j) => this.board[j])
-          .filter((v): v is Unit => !!v && !v.dragging && canBecome(u, v));
-        if (!options.length) return;
-        if (every - u.timer <= EFFECTS.mirror.warn && !u.sprite.getData("wobble")) {
-          u.sprite.setData("wobble", true);
-          this.tweens.add({ targets: u.sprite, angle: { from: -8, to: 8 }, yoyo: true, repeat: 5, duration: 140, onComplete: () => u.sprite.active && u.sprite.setAngle(0) });
-        }
-        if (u.timer < every) return;
-        const v = options[Math.floor(Math.random() * options.length)];
-        const p = this.slotPos(u.slot);
-        this.vfx("arcane_vortex", p.x, p.y - 20, 150);
-        const w = this.become(u, v.def.id);
-        w.callout("MIRROR!", "#d9b3ff");
-        return;
-      }
-      case "brewer":
-        u.pulse += t;
-        if (u.pulse >= EFFECTS.brewer.every) {
-          u.pulse = 0;
-          u.playOnce("attack");
-          this.brewBubble(u, brewMana(u.rank, mult));
-        }
-        return;
-      default:
-        // Auras (Lucky Cat, Hourglass Owl, Echo Spirit, Banner Herald) just show off now and then.
-        u.pulse -= dt;
-        if (u.pulse <= 0) {
-          u.pulse = 4;
-          u.playOnce("skill");
-        }
-    }
-  }
-
-  /** Replace a unit on its tile with another unit of the same rank (Mime copy, Mirror Slime). */
-  private become(u: Unit, id: string) {
-    const slot = u.slot;
-    const rank = u.rank;
-    this.board[slot] = null;
-    u.destroy();
-    return this.spawnUnit(id, rank, slot);
-  }
-
-  private copy(mime: Unit, target: Unit) {
-    this.counts.copies++;
-    const p = this.slotPos(mime.slot);
-    this.vfx("arcane_vortex", p.x, p.y - 20, 150);
-    const u = this.become(mime, target.def.id);
-    u.callout("COPY!", "#ff9ae6");
-    this.refreshHud();
-  }
-
-  /** Portal Imp: swap with `slot` (a same-rank unit) or hop onto it (empty). */
-  private teleport(imp: Unit, slot: number) {
-    const from = imp.slot;
-    const other = this.board[slot];
-    this.board[slot] = imp;
-    this.board[from] = other;
-    imp.place(slot);
-    imp.setBuffVisible(true);
-    imp.playOnce("attack");
-    if (other) {
-      other.place(from);
-      other.rushUntil = this.now + EFFECTS.portal.rushTime;
-      other.callout("RUSH!", "#ff8a3b");
-    }
-    imp.timer = portalCooldown(imp.rank, this.supportMult(imp));
-    for (const s of [from, slot]) {
-      const p = this.slotPos(s);
-      this.vfx("shadow_smoke", p.x, p.y - 10, 130);
-    }
-    sfx("summon");
-    this.counts.swaps++;
-    this.recomputeBuffs();
-  }
-
-  /** A Gnome Brewer's mana bubble: tap it for a bonus, or it pops by itself. */
-  private brewBubble(u: Unit, amount: number) {
-    const p = this.slotPos(u.slot);
-    const orb = this.add.image(p.x + 28, p.y - 64, "item:mana_orb").setDisplaySize(10, 10).setDepth(2400);
-    this.tweens.add({ targets: orb, displayWidth: 50, displayHeight: 50, y: p.y - 92, duration: 260, ease: "Back.Out" });
-    orb.setInteractive({ useHandCursor: true });
-    let done = false;
-    const collect = (tapped: boolean) => {
-      if (done || !orb.active) return;
-      done = true;
-      const m = tapped ? Math.round(amount * (1 + EFFECTS.brewer.tapBonus)) : amount;
-      this.counts.brewed += m;
-      this.gainMana(m, orb.x, orb.y);
-      if (tapped) this.vfx("coin_burst", orb.x, orb.y, 90);
-      orb.disableInteractive();
-      this.tweens.add({ targets: orb, scale: orb.scale * 1.6, alpha: 0, duration: 200, onComplete: () => orb.destroy() });
-    };
-    orb.on("pointerdown", () => collect(true));
-    this.time.delayedCall(EFFECTS.brewer.tapWindow * 1000, () => collect(false));
-  }
-
-  /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). */
-  private queueEcho(u: Unit, x: number, y: number, damage: number, mana: number) {
-    let best = 0;
-    let spirit: Unit | null = null;
-    for (const j of neighbours(u.slot)) {
-      const v = this.board[j];
-      if (v?.def.arch !== "echo") continue;
-      const s = echoStrength(v.rank, this.supportMult(v));
-      if (s > best) [best, spirit] = [s, v];
-    }
-    if (!spirit) return;
-    spirit.playOnce("attack");
-    this.echoes.push({ at: this.now + EFFECTS.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best) });
-  }
-
-  private updateEchoes() {
-    const due = this.echoes.filter((e) => e.at <= this.now);
-    if (!due.length) return;
-    this.echoes = this.echoes.filter((e) => e.at > this.now);
-    for (const e of due) {
-      this.floater(e.x, e.y - 70, "ENCORE!", "#9ff0ff", 28);
-      if (e.mana) this.gainMana(e.mana, e.x, e.y - 30);
-      if (!e.damage || !e.unit.sprite.active) continue;
-      const r = ECONOMY.ultimateRadius;
-      const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);
-      ring.lineStyle(6, 0x9ff0ff, 1).strokeCircle(0, 0, r).setScale(0.2);
-      this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 380, ease: "Cubic.Out", onComplete: () => ring.destroy() });
-      this.vfx("ice_burst", e.x, e.y, r * 1.4);
-      const u = e.unit;
-      for (const m of this.nearby({ x: e.x, y: e.y }, r)) this.applyHit({ unit: u, def: u.def, rank: u.rank, damage: e.damage, perks: u.perks }, m);
-    }
-  }
-
-  /** Gnome Brewers pay their harvest when wave `ended` is over. */
-  private harvest(ended: number) {
-    for (const u of this.board) {
-      if (u?.def.arch !== "brewer") continue;
-      const m = harvestMana(u.rank, ended, this.supportMult(u));
-      this.counts.brewed += m;
-      u.playOnce("skill");
-      this.gainMana(m, u.sprite.x, u.sprite.y - 60);
-    }
-  }
-
-  /** The best Lucky Cat chance next to tile `slot` (0 without one). */
-  private luckAt(slot: number) {
-    let best = 0;
-    for (const j of neighbours(slot)) {
-      const c = this.board[j];
-      if (c?.def.arch === "lucky") best = Math.max(best, luckyChance(c.rank, this.supportMult(c)));
-    }
-    return best;
-  }
-
-  private unitAt(x: number, y: number) {
-    let best: Unit | null = null;
-    let bestD = 60;
-    for (const u of this.board) {
-      if (!u || u.dragging) continue;
-      const p = this.slotPos(u.slot);
-      const d = Math.hypot(p.x - x, p.y - y);
-      if (d < bestD) {
-        bestD = d;
-        best = u;
-      }
-    }
-    return best;
-  }
-
-  private merge(a: Unit, b: Unit) {
-    const slot = b.slot;
-    this.board[a.slot] = null;
-    this.board[b.slot] = null;
-    a.destroy();
-    b.destroy();
-    // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
-    const luck = a.def.arch === "lucky" ? 0 : this.luckAt(slot);
-    const keep = luck > 0 && Math.random() < luck;
-    const id = keep ? a.def.id : this.deck[Math.floor(Math.random() * this.deck.length)];
-    const u = this.spawnUnit(id, a.rank + 1, slot);
-    this.counts.merges++;
-    this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 10, 150);
-    if (keep) {
-      this.vfx("coin_burst", u.sprite.x, u.sprite.y - 30, 150);
-      u.callout("LUCKY!", "#ffd93b");
-      for (const j of neighbours(slot)) if (this.board[j]?.def.arch === "lucky") this.board[j]!.playOnce("skill");
-    }
-    this.refreshHud();
-    this.events.emit("tutorial", "merge", u);
-  }
-
-  /** Buff units speed up their four neighbours (more with card level and power-ups) and hand them their perk. */
-  private recomputeBuffs() {
-    for (const u of this.board) {
-      if (!u) continue;
-      u.haste = 0;
-      u.charge = 0;
-      u.auraSpeed = 0;
-      u.auraDamage = 0;
-      u.perks = [];
-      withPerk(u.perks, u.def.perk);
-    }
-    // Princess Muse's Last Call: the 3×3 square around her; two Muses don't stack (the best counts).
-    // An Aegis Knight clears its neighbours' debuffs.
-    this.board.forEach((u, i) => {
-      if (u?.def.arch === "aegis") for (const j of neighbours(i)) if (this.board[j]) clearDebuffs(this.board[j]!.status);
-      if (u?.def.arch !== "aura") return;
-      const b = auraBonus(u.rank, this.supportMult(u));
-      for (const j of square3(i)) {
-        const v = this.board[j];
-        if (!v || noAttack(v.def.arch)) continue;
-        v.auraSpeed = Math.max(v.auraSpeed, b.speed);
-        v.auraDamage = Math.max(v.auraDamage, b.damage);
-      }
-    });
-    let herald: Unit | null = null;
-    this.board.forEach((u, i) => {
-      if (!u) return;
-      if (u.def.arch === "herald" && (!herald || u.rank > herald.rank)) herald = u;
-      if (u.def.arch === "hourglass") {
-        const mult = this.supportMult(u);
-        for (const j of neighbours(i)) {
-          const v = this.board[j];
-          if (!v || noAttack(v.def.arch)) continue;
-          if (v.awakened) v.charge += owlCharge(u.rank, mult);
-          else v.haste += owlSpeed(u.rank, mult);
-        }
-        return;
-      }
-      if (u.def.arch !== "buff") return;
-      const mult = boostMult(this.cardLevel(u.def.id), this.powerUps[u.def.id] ?? 0) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
-      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult);
-      for (const j of neighbours(i)) {
-        const v = this.board[j];
-        if (v && v.def.arch !== "buff") {
-          // Support units get the haste (it shortens their timers) but not the perk: they never hit.
-          v.haste += bonus;
-          if (!isSupport(v.def.arch)) withPerk(v.perks, u.def.perk);
-        }
-      }
-    });
-    const h = herald as Unit | null;
-    const awake = this.board.filter((u) => u?.awakened).length;
-    const before = this.heraldMult;
-    this.heraldMult = h ? 1 + heraldBonus(h.rank, awake, this.supportMult(h)) : 1;
-    if (h && this.heraldMult > before) h.callout(`+${Math.round((this.heraldMult - 1) * 100)}% DMG`, "#ff8a3b");
-    for (const u of this.board) u?.showBuff();
   }
 
   private pause() {
@@ -1352,128 +790,508 @@ export class BattleScene extends Phaser.Scene {
       m.close();
       this.anims.resumeAll();
       this.paused = false;
-      this.endGame();
+      this.sim.end("lost");
+      this.pump();
     }));
   }
 
-  // ---------------------------------------------------------------- combat
+  // ---------------------------------------------------------------- loop
 
-  pickTarget(mode: "first" | "strongest"): Monster | null {
-    let best: Monster | null = null;
-    for (const m of this.monsters) {
-      // Monsters are fair game once they leave the gate corridor and reach the ring.
-      if (m.gone || m.intro > 0 || m.dist < this.targetFrom) continue;
-      if (!best) best = m;
-      else if (mode === "first" ? m.progress > best.progress : m.hp > best.hp) best = m;
+  update(_time: number, delta: number) {
+    if (this.paused || this.over) return;
+    const sim = this.sim;
+    this.acc += (Math.min(delta, 50) / 1000) * this.speedMult;
+    let steps = 0;
+    while (this.acc >= SIM_DT && !sim.over && !this.over) {
+      sim.step();
+      this.acc -= SIM_DT;
+      this.pump();
+      if (++steps >= MAX_STEPS) {
+        this.acc = 0;
+        break;
+      }
+    }
+    if (this.over) return;
+    const ahead = this.acc;
+    for (const u of this.units.values()) u.update((delta / 1000) * this.speedMult);
+    for (const [uid, m] of this.monsters) {
+      if (m.finished) this.monsters.delete(uid);
+      else m.update(ahead);
+    }
+    this.updateShots(ahead);
+    this.updateTethers();
+    this.refreshHeroButton();
+    this.updateBossBar();
+    this.refreshHud();
+  }
+
+  /** Sim shots become projectile sprites: one per shot, gliding on between steps. */
+  private updateShots(ahead: number) {
+    const live = new Set<SimShot>(this.sim.shots);
+    for (const [s, img] of this.shotImgs) {
+      if (live.has(s)) continue;
+      img.destroy();
+      this.shotImgs.delete(s);
+    }
+    for (const s of live) {
+      let img = this.shotImgs.get(s);
+      if (!img) {
+        const def = s.unit.def;
+        const tex = def.proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${def.proj}`;
+        img = this.add.image(s.x, s.y, tex).setDepth(2000);
+        img.setScale((def.proj === "spark" ? 40 : 56) / img.width);
+        sfx("shoot", def.proj);
+        this.shotImgs.set(s, img);
+      }
+      const dx = s.aim.x - s.x;
+      const dy = s.aim.y - s.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const glide = Math.min(Math.max(0, d - 4), s.speed * ahead);
+      img.setPosition(s.x + (dx / d) * glide, s.y + (dy / d) * glide);
+      img.rotation = Math.atan2(dy, dx);
+    }
+  }
+
+  /** Chaos Taffy tethers, redrawn every frame. */
+  private updateTethers() {
+    const g = this.tethers;
+    g?.clear();
+    for (const t of this.sim.tethers) {
+      const mp = t.monster.pos;
+      g?.lineStyle(7, NAVY, 0.6).lineBetween(mp.x, mp.y, t.unit.x, t.unit.y - 30);
+      g?.lineStyle(4, 0xc58bff, 0.9).lineBetween(mp.x, mp.y, t.unit.x, t.unit.y - 30);
+    }
+  }
+
+  // ---------------------------------------------------------------- Sim events
+
+  /** Handle everything the Sim reported since the last call. */
+  private pump() {
+    const events = this.sim.drainEvents();
+    if (!events.length) return;
+    this.clipped.clear();
+    for (const e of events) if (e.type === "boss_stage" || e.type === "boss_power") this.clipped.add(e.uid);
+    for (const e of events) this.handle(e);
+  }
+
+  private makeUnit(uid: number, slot: number) {
+    const su = this.sim.units[slot];
+    if (!su || su.uid !== uid) return null;
+    const u = new Unit(this, su);
+    this.units.set(uid, u);
+    return u;
+  }
+
+  private dropUnit(uid: number) {
+    this.units.get(uid)?.destroy();
+    this.units.delete(uid);
+  }
+
+  /** A unit appears on its tile (summon, merge, copy, mirror). */
+  private spawnUnit(u: Unit) {
+    const p = this.slotPos(u.slot);
+    this.vfx("summon_circle", p.x, p.y + 20, u.awakened ? 200 : 130, 90);
+    if (!u.awakened) sfx(u.rank > 1 ? "merge" : "summon");
+    // Merges give a random deck unit, so once anything gets close to max rank, fetch the
+    // awakened art for the whole deck in the background.
+    if (u.rank >= maxRank() - 2) for (const d of this.deck) this.requestAwakenedArt(d);
+    if (u.awakened) this.requestAwakenedArt(u.def.id);
+    u.sprite.setScale(0);
+    this.tweens.add({ targets: u.sprite, scale: u.baseScale, duration: u.awakened ? 420 : 260, ease: "Back.Out" });
+    const tip = SUPPORT_TIP[u.def.arch as SupportArch];
+    if (tip && !this.sim.tutorialHold && !tipsSeen().includes(u.def.arch)) {
+      markTipSeen(u.def.arch);
+      this.time.delayedCall(400, () => toast(this, tip));
+    }
+  }
+
+  private handle(e: SimEvent) {
+    switch (e.type) {
+      case "summon": {
+        const u = this.makeUnit(e.uid, e.slot);
+        if (!u) break;
+        this.spawnUnit(u);
+        this.events.emit("tutorial", "summon");
+        break;
+      }
+      case "merge": {
+        for (const g of e.gone) this.dropUnit(g);
+        const u = this.makeUnit(e.uid, e.slot);
+        if (!u) break;
+        this.spawnUnit(u);
+        this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 10, 150);
+        if (e.lucky) {
+          this.vfx("coin_burst", u.sprite.x, u.sprite.y - 30, 150);
+          for (const j of neighbours(e.slot)) if (this.sim.units[j]?.def.arch === "lucky") this.unitInSlot(j)?.playOnce("skill");
+        }
+        this.events.emit("tutorial", "merge", u);
+        break;
+      }
+      case "become": {
+        this.vfx("arcane_vortex", e.x, e.y - 20, 150);
+        this.dropUnit(e.gone);
+        const u = this.makeUnit(e.uid, e.slot);
+        if (u) this.spawnUnit(u);
+        break;
+      }
+      case "swap": {
+        const imp = this.units.get(e.uid);
+        const other = e.other === null ? null : this.units.get(e.other);
+        if (imp) {
+          imp.place(imp.slot);
+          imp.setBuffVisible(true);
+          imp.playOnce("attack");
+        }
+        other?.place(other.slot);
+        for (const s of [e.from, e.to]) {
+          const p = this.slotPos(s);
+          this.vfx("shadow_smoke", p.x, p.y - 10, 130);
+        }
+        sfx("summon");
+        break;
+      }
+      case "awaken": {
+        sfx("awaken");
+        this.vfx("merge_levelup", e.x, e.y - 20, 220);
+        this.vfx("holy_heal", e.x, e.y - 10, 200);
+        this.floater(e.x, e.y - 80, "AWAKENED!", "#ffd93b", 34);
+        this.cameras.main.flash(180, 255, 230, 140);
+        break;
+      }
+      case "herald_cry": {
+        const herald = e.uid === null ? undefined : this.units.get(e.uid);
+        herald?.playOnce("skill");
+        herald?.callout("WAR CRY!", "#ff8a3b");
+        for (const v of this.units.values()) if (!noAttack(v.def.arch)) this.vfx("fire_explosion", v.sprite.x, v.sprite.y - 20, 90);
+        break;
+      }
+      case "powerup": {
+        sfx("powerup");
+        for (const u of this.units.values()) {
+          if (u.def.id !== e.id) continue;
+          this.vfx("merge_levelup", u.sprite.x, u.sprite.y - 20, 110);
+          u.playOnce("skill");
+        }
+        this.events.emit("tutorial", "powerup");
+        break;
+      }
+      case "wave": {
+        if (e.boss) {
+          this.showBanner(e.banner, true, e.boss, e.sub ?? undefined);
+          sfx("boss");
+          music("boss");
+        } else {
+          this.showBanner(e.banner);
+          sfx("wave");
+        }
+        break;
+      }
+      case "spawn": {
+        const sm = this.sim.monsters.find((m) => m.uid === e.uid);
+        if (!sm) break;
+        const corruption = this.story?.chapter.corruption ?? 0;
+        // Corrupted bosses glow violet; the tint is the chapter's corruption.
+        const corrupted = !!sm.boss?.corrupted;
+        const m = new Monster(this, sm, corrupted ? Math.max(0.3, corruption) : corruption);
+        if (corrupted) m.sprite.preFX?.addGlow(0x9b4dff, 4, 0, false, 0.1, 12);
+        this.monsters.set(e.uid, m);
+        break;
+      }
+      case "kill": {
+        this.monsters.get(e.uid)?.die();
+        if (!e.boss) sfx("die");
+        else {
+          sfx("boss_die");
+          music("battle");
+          this.floater(e.x, e.y - 40, "BOSS DEFEATED!", "#ffd93b", 40);
+          this.vfx("coin_burst", e.x, e.y, 220);
+        }
+        if (MONSTER_BY_ID[e.id]?.traits.includes("rich")) this.vfx("coin_burst", e.x, e.y, 120);
+        break;
+      }
+      case "leak": {
+        this.monsters.get(e.uid)?.remove();
+        this.cameras.main.shake(250, 0.008);
+        sfx("hurt");
+        this.cameras.main.flash(200, 255, 40, 40);
+        break;
+      }
+      case "boss_stage": {
+        const m = this.monsters.get(e.uid);
+        if (e.power === "split") {
+          this.floater(e.x, e.y - 60, "SPLIT!", "#b8ffb0", 32);
+          this.vfx("poison_cloud", e.x, e.y, 200);
+        } else if (e.power === "portal") {
+          // Blink forward once a phase.
+          this.vfx("shadow_smoke", e.x, e.y, 220);
+          const at = m?.sim.pos ?? e;
+          this.vfx("arcane_vortex", at.x, at.y, 220);
+          this.floater(at.x, at.y - 60, "BLINK!", "#c58bff", 32);
+        } else {
+          // A Jawbreaker layer breaks: units are shaken, it sheds, speeds up and releases chaos-born.
+          this.cameras.main.shake(300, 0.012);
+          this.floater(e.x, e.y - 70, e.text, "#ffd93b", 34);
+          this.vfx("hit_impact", e.x, e.y, 260);
+          if (e.stage >= 3) m?.playBoss(animKey("bosses", `${e.id}_crack`));
+        }
+        break;
+      }
+      case "boss_power": {
+        const portal = animKey("bosses", `${e.id}_portal`);
+        this.monsters.get(e.uid)?.playBoss(e.power === "portal" && this.anims.exists(portal) ? portal : animKey("bosses", `${e.id}_attack`));
+        const { x, y } = e;
+        switch (e.power) {
+          case "charm":
+            this.floater(x, y - 60, "CHARM", "#ff9ae6", 32);
+            this.vfx("arcane_vortex", x, y, 200);
+            break;
+          case "roar":
+            if (e.text === "ROAR!") {
+              this.cameras.main.shake(400, 0.014);
+              this.floater(x, y - 70, "ROAR!", "#ff8a3b", 40);
+            } else {
+              this.vfx("fire_explosion", x, y, 200);
+              this.floater(x, y - 60, "RAGE", "#ff8a3b", 32);
+            }
+            break;
+          case "layers":
+            this.floater(x, y - 70, "CHAOS PULSE", "#c58bff", 34);
+            this.vfx("arcane_vortex", x, y, 280);
+            break;
+          case "summon":
+            this.vfx("summon_circle", x, y + 40, 200, 90);
+            break;
+          case "heal":
+            this.vfx("holy_heal", x, y, 220);
+            this.floater(x, y - 60, "HEAL", "#7dff7a", 32);
+            break;
+          case "haste":
+            this.vfx("fire_explosion", x, y, 200);
+            this.floater(x, y - 60, "RAGE", "#ff8a3b", 32);
+            break;
+          case "shield":
+            this.vfx("arcane_vortex", x, y, 230);
+            this.floater(x, y - 60, "SHIELD", "#9fb4ff", 32);
+            break;
+          case "teleport": {
+            this.vfx("shadow_smoke", x, y, 220);
+            const at = this.monsters.get(e.uid)?.sim.pos;
+            if (at) this.vfx("shadow_smoke", at.x, at.y, 220);
+            break;
+          }
+        }
+        break;
+      }
+      case "split": {
+        // The layers boss's minion phase has no power event of its own: it still plays its attack clip.
+        if (e.kind === "boss" && !this.clipped.has(e.uid)) {
+          this.clipped.add(e.uid);
+          const m = this.monsters.get(e.uid);
+          m?.playBoss(animKey("bosses", `${m.id}_attack`));
+        }
+        break;
+      }
+      case "portal": {
+        // A portal opens further along the path and minions step out of it.
+        const ring = this.add.graphics().setPosition(e.x, e.y).setDepth(90 + e.y + 20);
+        ring.fillStyle(0x6a2bbf, 0.5).fillEllipse(0, 0, 130, 54).lineStyle(6, 0xc58bff, 1).strokeEllipse(0, 0, 130, 54);
+        ring.setScale(0.2);
+        this.tweens.add({ targets: ring, scale: 1, duration: 300, ease: "Back.Out" });
+        this.tweens.add({ targets: ring, alpha: 0, delay: 2200, duration: 400, onComplete: () => ring.destroy() });
+        this.vfx("summon_circle", e.x, e.y + 20, 170, 90 + e.y + 20);
+        break;
+      }
+      case "bark":
+        this.bark(e);
+        break;
+      case "mana": {
+        if (e.source === "harvest") for (const u of this.units.values()) if (u.def.arch === "brewer") u.playOnce("skill");
+        if (e.source === "pulse" && e.x !== null && e.y !== null) this.unitNear(e.x, e.y + 50)?.playOnce("skill");
+        if (e.x === null || e.y === null) break;
+        if (e.source === "hero") {
+          this.floater(ARENA_W / 2, 640, `+${e.amount} MANA`, "#7fd8ff", 48);
+          this.vfx("coin_burst", ARENA_W / 2, 680, 260);
+        } else this.floater(e.x, e.y, `+${e.amount}`, "#7fd8ff", 22);
+        sfx("coin");
+        break;
+      }
+      case "wages":
+        if (e.paid) this.floater(e.x, e.y, `-${e.cost}`, "#ffb0b0", 22);
+        break;
+      case "callout": {
+        if (e.kind === "block" || e.kind === "dodge") this.floater(e.x, e.y, e.text, e.color, 20);
+        else if (e.kind === "miss") this.floater(e.x, e.y, e.text, e.color, 22);
+        else if (e.uid !== null) this.units.get(e.uid)?.callout(e.text, e.color);
+        break;
+      }
+      case "afflict":
+        if (e.kind === "shellshock") this.vfx("lightning_strike", e.x, e.y, 90);
+        else if (e.kind === "irritation") this.vfx("arcane_vortex", e.x, e.y + 10, 110);
+        break;
+      case "hero":
+        this.heroEffects(e.power);
+        break;
+      case "ultimate": {
+        const u = this.units.get(e.uid);
+        u?.playOnce("skill");
+        sfx("ultimate");
+        const from = { x: u?.sprite.x ?? e.x, y: (u?.sprite.y ?? e.y) - 30 };
+        if (e.kind === "mana") {
+          this.vfx("coin_burst", from.x, from.y, 160);
+          break;
+        }
+        const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);
+        ring.lineStyle(10, NAVY, 0.7).strokeCircle(0, 0, e.radius);
+        ring.lineStyle(6, 0xffd93b, 1).strokeCircle(0, 0, e.radius);
+        ring.setScale(0.2);
+        this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 380, ease: "Cubic.Out", onComplete: () => ring.destroy() });
+        const beam = this.add.graphics().setDepth(2050);
+        this.zigzag(beam, from, e, 0xffd93b);
+        this.tweens.add({ targets: beam, alpha: 0, duration: 260, onComplete: () => beam.destroy() });
+        if (u) this.vfx(HIT_VFX[u.def.element], e.x, e.y, e.radius * 1.6);
+        this.floater(e.x, e.y - 70, "ULTIMATE!", "#ffd93b", 30);
+        break;
+      }
+      case "encore": {
+        for (const u of this.units.values()) if (u.def.arch === "echo") u.playOnce("attack");
+        this.floater(e.x, e.y - 70, "ENCORE!", "#9ff0ff", 28);
+        if (!e.strike) break;
+        const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);
+        ring.lineStyle(6, 0x9ff0ff, 1).strokeCircle(0, 0, e.radius).setScale(0.2);
+        this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 380, ease: "Cubic.Out", onComplete: () => ring.destroy() });
+        this.vfx("ice_burst", e.x, e.y, e.radius * 1.4);
+        break;
+      }
+      case "shot_lost":
+        this.vfx("hit_impact", e.x, e.y, 50);
+        break;
+      case "brew":
+        this.brewBubble(e.bubble, e.x, e.y);
+        break;
+      case "brew_collect": {
+        const orb = this.bubbleImgs.get(e.bubble);
+        this.bubbleImgs.delete(e.bubble);
+        if (!orb) break;
+        if (e.tapped) this.vfx("coin_burst", orb.x, orb.y, 90);
+        orb.disableInteractive();
+        this.tweens.add({ targets: orb, scale: orb.scale * 1.6, alpha: 0, duration: 200, onComplete: () => orb.destroy() });
+        break;
+      }
+      case "hit": {
+        this.monsters.get(e.target)?.flash();
+        if (e.kind === "main") {
+          this.vfx(HIT_VFX[e.element], e.x, e.y, e.size);
+          sfx("hit", e.element);
+        } else if (e.kind === "pierce") this.vfx("hit_impact", e.x, e.y, e.size);
+        else if (e.kind === "chain") this.vfx("lightning_strike", e.x, e.y, e.size);
+        break;
+      }
+      case "bighit":
+        this.monsters.get(e.target)?.flash();
+        this.critFloater(e.x, e.y, fmt(e.dmg) + "!", e.color);
+        break;
+      case "proc":
+        if (e.kind === "frozen") {
+          this.floater(e.x, e.y, "FROZEN", "#7fd8ff", 22);
+          sfx("freeze");
+        } else if (e.kind === "stun") this.floater(e.x, e.y, "STUN", "#ffd93b", 22);
+        else this.floater(e.x, e.y, "EXECUTE", "#ff7ad9", 26);
+        break;
+      case "zap": {
+        const color = Phaser.Display.Color.HexStringToColor(e.color).color;
+        const g = this.add.graphics().setDepth(e.kind === "storm" ? 2050 : 2050);
+        if (e.kind === "storm") {
+          this.zigzag(g, { x: e.x + (Math.random() - 0.5) * 120, y: e.y }, { x: e.x2, y: e.y2 }, color);
+          this.vfx("arcane_vortex", e.x2, e.y2, 110);
+          sfx("zap");
+        } else {
+          this.zigzag(g, { x: e.x, y: e.y }, { x: e.x2, y: e.y2 }, color);
+          if (e.kind === "chain" && e.n === 0) sfx("zap");
+        }
+        this.tweens.add({ targets: g, alpha: 0, duration: e.kind === "storm" ? 200 : 220, onComplete: () => g.destroy() });
+        break;
+      }
+      case "heal_pulse":
+        this.vfx("holy_heal", e.x, e.y, 120);
+        break;
+      case "end":
+        this.endGame(e.why ?? undefined, e.outcome === "won");
+        break;
+    }
+  }
+
+  /** The unit standing closest to (x, y), within a tile. */
+  private unitNear(x: number, y: number) {
+    let best: Unit | null = null;
+    let bestD = 60;
+    for (const u of this.units.values()) {
+      const d = Math.hypot(u.sprite.x - x, u.sprite.y - y);
+      if (d < bestD) [best, bestD] = [u, d];
     }
     return best;
   }
 
-  /** Damage multiplier from Muse's aura, an Oath Knight's sworn brothers and a Berserker's fellow Mercenaries. */
-  private damageMult(unit: Unit) {
-    let m = 1 + unit.auraDamage;
-    if (unit.def.effect === "oath") m *= 1 + EFFECTS.oath.perKnight * this.adjacentKnights(unit);
-    if (unit.def.effect === "fatigue") m *= 1 + EFFECTS.fatigue.perMercenary * this.board.filter((v) => v && isMercenary(v.def)).length;
-    return m;
+  /** Monsters a hero power just touched: on the field now, or killed by it this very instant. */
+  private heroTargets() {
+    const now = this.sim.now;
+    return [...this.monsters.values()].filter((m) => m.sim.intro <= 0 && (!m.dead || m.diedAt >= now - 1e-6));
   }
 
-  fire(unit: Unit, target: Monster) {
-    const def = unit.def;
-    const now = this.now;
-    // Irritation: the attack may miss (it still takes its time).
-    if (now < unit.status.irritatedUntil && Math.random() < unit.status.miss) {
-      this.floater(unit.sprite.x, unit.sprite.y - 70, "MISS", "#ff9090", 22);
+  /** The hero's cast: sound, banner, skill clip and the power's effect on the field. */
+  private heroEffects(power: HeroDef["power"]) {
+    const h = this.hero;
+    if (!h) return;
+    sfx("hero");
+    this.heroCastAnim(h);
+    const targets = this.heroTargets();
+    const units = [...this.units.values()];
+    switch (power) {
+      case "meteor":
+        this.cameras.main.shake(300, 0.01);
+        for (const m of targets) this.vfx("shadow_smoke", m.pos.x, m.pos.y, 170);
+        break;
+      case "freeze":
+        sfx("freeze");
+        for (const m of targets) this.vfx("ice_burst", m.pos.x, m.pos.y, 140);
+        break;
+      case "slow":
+        for (const m of targets) this.vfx("poison_cloud", m.pos.x, m.pos.y, 130);
+        break;
+      case "haste":
+        for (const u of units) this.vfx("lightning_strike", u.sprite.x, u.sprite.y - 20, 110);
+        break;
+      case "rage":
+        for (const u of units) this.vfx("fire_explosion", u.sprite.x, u.sprite.y - 20, 110);
+        break;
+      case "knockback":
+        this.cameras.main.shake(250, 0.006);
+        for (const m of targets) {
+          this.vfx("hit_impact", m.pos.x, m.pos.y, 120);
+          this.vfx("shadow_smoke", m.pos.x, m.pos.y, 120);
+        }
+        break;
+    }
+  }
+
+  /** The hero's skill clip: in the side panel (wide), or popping up over the arena (phone). */
+  private heroCastAnim(h: HeroDef) {
+    const skill = animKey("heroes", `${h.id}_skill`);
+    const idle = animKey("heroes", `${h.id}_idle`);
+    const banner = txt(this, ARENA_W / 2, 520, h.ability.toUpperCase(), 56, "#ffd93b").setDepth(2850).setScale(0.5);
+    this.tweens.add({ targets: banner, scale: 1, duration: 250, ease: "Back.Out" });
+    this.tweens.add({ targets: banner, alpha: 0, y: 480, delay: 900, duration: 300, onComplete: () => banner.destroy() });
+    if (!this.anims.exists(skill)) return;
+    if (this.heroSprite) {
+      this.heroSprite.play(skill);
+      this.heroSprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.heroSprite?.active && this.heroSprite.play(idle));
       return;
     }
-    // Knight and Mercenary effects that go off as it attacks.
-    if (def.effect === "rally" || def.effect === "fatigue") {
-      for (const j of neighbours(unit.slot)) {
-        const v = this.board[j];
-        if (!v || v.dragging) continue;
-        if (def.effect === "fatigue") this.afflict(v, "fatigue", EFFECTS.fatigue.linger);
-        else if (!noAttack(v.def.arch)) {
-          if (now >= v.status.rallyUntil) v.callout("RALLY!", "#ffd93b");
-          v.status.rallyUntil = now + EFFECTS.rally.time;
-        }
-      }
-    }
-    let damage = unit.stats.damage * this.heroDamageMult * this.heraldMult * this.damageMult(unit);
-    if (def.arch === "growth") damage *= growthMult(unit.alive);
-    const from = { x: unit.sprite.x, y: unit.sprite.y - 30 };
-
-    if (def.arch === "chain") {
-      this.chainLightning(unit, target, damage, from);
-      return;
-    }
-    const tex = def.proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${def.proj}`;
-    const img = this.add.image(from.x, from.y, tex).setDepth(2000);
-    img.setScale((def.proj === "spark" ? 40 : 56) / img.width);
-    sfx("shoot", def.proj);
-    this.shots.push({ img, unit, def, rank: unit.rank, damage, perks: unit.perks, target, aim: target.pos, speed: def.arch === "sniper" ? EFFECTS.sniper.shotSpeed : 1100 });
-  }
-
-  private chainLightning(unit: Unit, first: Monster, damage: number, from: Pt) {
-    const jumps = chainJumps(unit.rank, rarityIndex(unit.def.rarity));
-    const hit: Monster[] = [first];
-    let cur = first;
-    while (hit.length < jumps) {
-      let next: Monster | null = null;
-      let bestD = EFFECTS.chain.range;
-      for (const m of this.monsters) {
-        if (m.gone || hit.includes(m)) continue;
-        const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
-        if (d < bestD) {
-          bestD = d;
-          next = m;
-        }
-      }
-      if (!next) break;
-      hit.push(next);
-      cur = next;
-    }
-    sfx("zap");
-    const g = this.add.graphics().setDepth(2050);
-    const color = unit.def.element === "lightning" ? 0xfff27a : 0x9ff0ff;
-    let p = from;
-    for (const m of hit) {
-      this.zigzag(g, p, m.pos, color);
-      p = m.pos;
-    }
-    this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
-    hit.forEach((m, i) => {
-      this.vfx("lightning_strike", m.pos.x, m.pos.y, 80);
-      m.damage(damage * Math.pow(EFFECTS.chain.falloff, i), { perks: unit.perks });
-    });
-  }
-
-  /** Lance Knight's chain: up to `jumps` more monsters, each the nearest to the last, skipping `skip`. */
-  private chainOn(first: Monster, skip: Monster[], jumps: number, damageOf: (m: Monster) => number, perks: readonly Perk[]) {
-    const hit: Monster[] = [];
-    let cur = first;
-    while (hit.length < jumps) {
-      let next: Monster | null = null;
-      let bestD = EFFECTS.chain.range;
-      for (const m of this.monsters) {
-        if (m.gone || skip.includes(m) || hit.includes(m)) continue;
-        const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
-        if (d < bestD) {
-          bestD = d;
-          next = m;
-        }
-      }
-      if (!next) break;
-      hit.push(next);
-      cur = next;
-    }
-    if (!hit.length) return;
-    const g = this.add.graphics().setDepth(2050);
-    let p = first.pos;
-    for (const m of hit) {
-      this.zigzag(g, p, m.pos, 0xfff27a);
-      p = m.pos;
-    }
-    this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
-    hit.forEach((m, i) => m.damage(damageOf(m) * Math.pow(EFFECTS.chain.falloff, i + 1), { perks, sure: true }));
+    const s = this.add.sprite(ARENA_W / 2, 720, skill).setDepth(2840).setScale(0);
+    this.tweens.add({ targets: s, scale: sheetScale("heroes", 360), duration: 200, ease: "Back.Out" });
+    s.play(skill);
+    s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () =>
+      this.tweens.add({ targets: s, alpha: 0, scale: 0, duration: 200, onComplete: () => s.destroy() }),
+    );
   }
 
   private zigzag(g: Phaser.GameObjects.Graphics, a: Pt, b: Pt, color: number) {
@@ -1488,164 +1306,20 @@ export class BattleScene extends Phaser.Scene {
     g.lineStyle(4, color, 1).strokePoints(pts);
   }
 
-  private updateShots(dt: number) {
-    for (const s of this.shots) {
-      if (!s.target.gone) s.aim = s.target.pos;
-      const dx = s.aim.x - s.img.x;
-      const dy = s.aim.y - s.img.y;
-      const d = Math.hypot(dx, dy);
-      const step = s.speed * dt;
-      s.img.rotation = Math.atan2(dy, dx);
-      if (d <= step + 4) {
-        s.img.destroy();
-        if (!s.target.gone) this.applyHit(s, s.target);
-        else this.vfx("hit_impact", s.aim.x, s.aim.y, 50);
-      } else {
-        s.img.x += (dx / d) * step;
-        s.img.y += (dy / d) * step;
-      }
-    }
-    this.shots = this.shots.filter((s) => s.img.active);
-  }
-
-  private nearby(center: Pt, radius: number, except?: Monster) {
-    return this.monsters.filter((m) => !m.gone && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
-  }
-
-  private applyHit(s: Pick<Shot, "unit" | "def" | "rank" | "damage" | "perks">, m: Monster) {
-    const { unit, def, rank, perks } = s;
-    const e = EFFECTS;
-    const now = this.now;
-    const rarityIdx = rarityIndex(def.rarity);
-    // Lance Knight: extra damage to corrupted bosses.
-    const bane = (o: Monster) => (def.effect === "bane" && o.boss?.corrupted ? s.damage * (1 + e.bane.bossBonus) : s.damage);
-    // Rogue Knight: nearly every blow crits.
-    const rogueCrit = def.effect === "irritate" && Math.random() < e.irritate.critChance;
-    const damage = bane(m) * (rogueCrit ? e.irritate.critMult : 1);
-    // Powder Grenadier: a blast may shellshock a neighbour.
-    if (def.effect === "shellshock" && unit.sprite.active && Math.random() < e.shellshock.chance) {
-      const near = neighbours(unit.slot).map((j) => this.board[j]).filter((v): v is Unit => !!v && !v.dragging);
-      const v = near[Math.floor(Math.random() * near.length)];
-      if (v && this.afflict(v, "shellshock", e.shellshock.time)) v.callout("SHELLSHOCK", "#c9b08a");
-    }
-    const pos = m.pos;
-    const isBoss = !!m.boss;
-    const P = { perks, ...(rogueCrit && { crit: true }) };
-    const chilled = chills(perks, m);
-    let vfxSize = 70;
-
-    switch (def.arch) {
-      case "splash":
-      case "burn": {
-        const splash = this.nearby(pos, splashRadius(def.arch, rank), m);
-        const burnDps = def.arch === "burn" ? damage * e.burn.burnDps : 0;
-        m.damage(damage, P);
-        for (const o of splash) o.damage(damage * e[def.arch].splash, { ...P, sure: true, quiet: true });
-        if (burnDps) for (const o of [m, ...splash]) o.burn = { dps: Math.max(o.burn.until > now ? o.burn.dps : 0, burnDps), until: now + e.burn.burnTime };
-        vfxSize = 130 + rank * 6;
-        break;
-      }
-      case "pierce": {
-        m.damage(damage, P);
-        const behind = this.nearby(pos, e.pierce.range, m)
-          .sort((a, b) => Math.hypot(a.pos.x - pos.x, a.pos.y - pos.y) - Math.hypot(b.pos.x - pos.x, b.pos.y - pos.y))
-          .slice(0, pierceTargets(rank));
-        for (const o of behind) {
-          o.damage(damage * e.pierce.damage, { ...P, sure: true });
-          this.vfx("hit_impact", o.pos.x, o.pos.y, 50);
-        }
-        // Lance Knight: the hit also chains on to more monsters.
-        if (def.effect === "bane") this.chainOn(m, [m, ...behind], e.bane.chain, bane, perks);
-        break;
-      }
-      case "slow":
-        m.damage(damage, P);
-        if (chilled || def.element !== "ice") {
-          m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, slowAmount(rank, rarityIdx, isBoss));
-          m.slowUntil = now + e.slow.duration;
-        }
-        break;
-      case "freeze":
-        m.damage(damage, P);
-        if (chilled && Math.random() < freezeChance(rank, rarityIdx)) {
-          m.frozenUntil = now + (isBoss ? e.freeze.bossDuration : e.freeze.duration);
-          this.floater(pos.x, pos.y - 30, "FROZEN", "#7fd8ff", 22);
-          sfx("freeze");
-        }
-        break;
-      case "stun":
-        m.damage(damage, P);
-        if (Math.random() < stunChance(rank, rarityIdx)) {
-          m.stunUntil = now + (isBoss ? e.stun.bossDuration : e.stun.duration);
-          this.floater(pos.x, pos.y - 30, "STUN", "#ffd93b", 22);
-        }
-        break;
-      case "poison":
-        m.damage(damage, P);
-        m.poison.push({ dps: damage * e.poison.dps, until: now + e.poison.duration });
-        while (m.poison.length > e.poison.maxStacks) m.poison.shift();
-        break;
-      case "crit": {
-        const crit = Math.random() < critChance(rank);
-        m.damage(crit ? damage * critMult(rank) : damage, { ...P, crit });
-        if (crit) {
-          vfxSize = 110;
-          unit.callout(`CRIT ×${+critMult(rank).toFixed(1)}`, "#ffd93b");
-        }
-        break;
-      }
-      case "curse":
-        m.damage(damage, P);
-        m.curse = Math.min(e.curse.max, m.curse + curseStep(rank, rarityIdx));
-        break;
-      case "execute":
-        if (Math.random() < executeChance(rank, rarityIdx)) {
-          unit.callout(isBoss ? `×${e.execute.bossMult}` : "EXECUTE", "#ff7ad9");
-          if (isBoss) m.damage(damage * e.execute.bossMult, { ...P, crit: true, color: "#ff7ad9" });
-          else {
-            this.floater(pos.x, pos.y - 30, "EXECUTE", "#ff7ad9", 26);
-            m.damage(m.hp / (1 + m.curse) / (m.has("armored") ? 0.7 : 1) + 1, { ...P, sure: true });
-          }
-          vfxSize = 130;
-        } else m.damage(damage, P);
-        break;
-      case "sniper":
-        m.damage(damage, { ...P, crit: true, color: "#ffffff" });
-        vfxSize = 120;
-        break;
-      default:
-        m.damage(damage, P);
-    }
-    this.vfx(HIT_VFX[def.element], pos.x, pos.y, vfxSize);
-    sfx("hit", def.element);
-  }
-
-  // ---------------------------------------------------------------- waves
-
-  private baseHp(n: number) {
-    const e = ECONOMY;
-    // A story chapter has its own HP scale; an arena's grows with its place in the list.
-    const scale = this.story ? this.story.chapter.hpScale : 1 + ARENAS.indexOf(this.arena) * e.arenaHpStep;
-    return e.waveHpBase * Math.pow(e.waveHpGrowth, n - 1) * scale;
-  }
-
-  /** Hired Blades take their wages as a wave starts; one that can't be paid sulks for the wave. */
-  private payWages() {
-    for (const u of this.board) {
-      if (u?.def.effect !== "wages") continue;
-      const cost = wagesFor(u.rank);
-      u.sulking = this.mana < cost;
-      if (u.sulking) {
-        u.callout("UNPAID!", "#ff8080");
-        continue;
-      }
-      this.mana -= cost;
-      this.floater(u.sprite.x, u.sprite.y - 60, `-${cost}`, "#ffb0b0", 22);
-    }
+  /** A Gnome Brewer's mana bubble: tap it for a bonus, or the Sim pops it by itself. */
+  private brewBubble(id: number, x: number, y: number) {
+    const orb = this.add.image(x, y, "item:mana_orb").setDisplaySize(10, 10).setDepth(2400);
+    this.tweens.add({ targets: orb, displayWidth: 50, displayHeight: 50, y: y - 28, duration: 260, ease: "Back.Out" });
+    orb.setInteractive({ useHandCursor: true });
+    orb.on("pointerdown", () => {
+      if (this.over || this.paused) return;
+      if (this.sim.collectBrew(id)) this.pump();
+    });
+    this.bubbleImgs.set(id, orb);
   }
 
   /** A story speech bubble over the arena: the speaker's portrait and a line. */
-  private bark(line: StoryLine) {
+  private bark(line: { who: string; text: string }) {
     const key = UNIT_BY_ID[line.who] ? `portrait:${line.who}` : `story_portrait:${line.who}`;
     const w = 620;
     const g = this.add.graphics();
@@ -1658,81 +1332,6 @@ export class BattleScene extends Phaser.Scene {
     const c = this.add.container(ARENA_W / 2, 200, parts).setDepth(2850).setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, y: 180, duration: 250, ease: "Back.Out" });
     this.tweens.add({ targets: c, alpha: 0, delay: 3600, duration: 300, onComplete: () => c.destroy() });
-  }
-
-  private startWave() {
-    this.wave++;
-    const n = this.wave;
-    const e = ECONOMY;
-    const scripted = this.story?.chapter.waves[n - 1];
-    const isBoss = scripted ? !!scripted.boss : n % e.bossEvery === 0;
-    if (n > 1) {
-      this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave));
-      this.harvest(n - 1);
-    }
-    this.payWages();
-    if (scripted) {
-      this.startScriptedWave(scripted, n);
-      return;
-    }
-    const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]);
-    // Tanky monsters show up more in later waves.
-    const pick = () => {
-      const weights = pool.map((m) => (m.traits.includes("tank") ? Math.min(1, n / 12) : 1));
-      let x = Math.random() * weights.reduce((a, b) => a + b, 0);
-      for (let i = 0; i < pool.length; i++) if ((x -= weights[i]) <= 0) return pool[i];
-      return pool[0];
-    };
-    this.queue = [];
-    if (isBoss) {
-      const bosses = this.arena.bosses;
-      const boss = BOSS_BY_ID[bosses[(n / e.bossEvery - 1) % bosses.length]];
-      this.queue.push({ boss });
-      for (let i = 0; i < 4 + Math.floor(n / e.bossEvery); i++) this.queue.push({ def: pick() });
-      this.showBanner(`BOSS: ${boss.name}`, true, boss.id, raceLabel(boss.race).toUpperCase());
-      sfx("boss");
-      music("boss");
-    } else {
-      const count = Math.min(e.waveSizeMax, Math.round(e.waveSizeBase + n * e.waveSizePerWave));
-      for (let i = 0; i < count; i++) this.queue.push({ def: pick() });
-      this.showBanner(`WAVE ${n}`);
-      sfx("wave");
-    }
-    this.spawnInterval = Math.max(e.spawnIntervalMin, e.spawnIntervalStart - n * e.spawnIntervalStep);
-    this.spawnTimer = isBoss ? 1.6 : 0.5;
-    this.waveTimer = 0;
-    this.waveState = "spawning";
-    this.refreshHud();
-  }
-
-  /** A story wave: exactly the monsters its script lists (shuffled), the boss first. */
-  private startScriptedWave(w: StoryChapter["waves"][number], n: number) {
-    const e = ECONOMY;
-    const total = this.story!.chapter.waves.length;
-    this.waveHp = w.hp;
-    const list: QueuedSpawn[] = w.spawns.flatMap((s) => (MONSTER_BY_ID[s.id] ? Array.from({ length: s.n }, () => ({ def: MONSTER_BY_ID[s.id] })) : []));
-    Phaser.Utils.Array.Shuffle(list);
-    this.queue = [];
-    const boss = w.boss ? BOSS_BY_ID[w.boss] : undefined;
-    if (boss) {
-      this.queue.push({ boss });
-      this.showBanner(n === total ? `FINAL BOSS: ${boss.name}` : `BOSS: ${boss.name}`, true, boss.id, raceLabel(boss.race).toUpperCase());
-      sfx("boss");
-      music("boss");
-    } else {
-      this.showBanner(n === total ? "FINAL WAVE" : `WAVE ${n} / ${total}`);
-      sfx("wave");
-    }
-    this.queue.push(...list);
-    if (w.bark) {
-      const line = w.bark;
-      this.time.delayedCall(boss ? 1900 : 900, () => !this.over && this.bark(line));
-    }
-    this.spawnInterval = Math.max(e.spawnIntervalMin, e.spawnIntervalStart - n * e.spawnIntervalStep);
-    this.spawnTimer = boss ? 1.6 : 0.5;
-    this.waveTimer = 0;
-    this.waveState = "spawning";
-    this.refreshHud();
   }
 
   private showBanner(text: string, boss = false, bossId?: string, sub?: string) {
@@ -1759,292 +1358,6 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private spawn(q: QueuedSpawn, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
-    const path = at?.path ?? this.paths[Math.random() < 0.5 ? 0 : 1];
-    const n = this.wave;
-    const corruption = this.story?.chapter.corruption ?? 0;
-    if (q.boss) {
-      const hp = this.baseHp(n) * ECONOMY.bossHpMult * q.boss.hp * this.waveHp;
-      const m = new Monster(this, { boss: q.boss }, path, hp, { mana: 150 + n * 15 });
-      m.powerTimer = 5;
-      // Corrupted bosses glow violet; the tint is the chapter's corruption.
-      if (q.boss.corrupted) {
-        m.corruption = Math.max(0.3, corruption);
-        m.sprite.preFX?.addGlow(0x9b4dff, 4, 0, false, 0.1, 12);
-      }
-      this.boss = m;
-      this.monsters.push(m);
-      return m;
-    }
-    const def = q.def!;
-    const hp = this.baseHp(n) * def.hp * hpMult * this.waveHp;
-    const m = new Monster(this, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
-    m.corruption = corruption;
-    this.monsters.push(m);
-    return m;
-  }
-
-  onMonsterKilled(m: Monster) {
-    this.kills++;
-    this.gainMana(m.mana);
-    if (!m.boss) sfx("die");
-    if (m.boss) {
-      this.bossesKilled++;
-      sfx("boss_die");
-      music("battle");
-      this.floater(m.pos.x, m.pos.y - 40, "BOSS DEFEATED!", "#ffd93b", 40);
-      this.vfx("coin_burst", m.pos.x, m.pos.y, 220);
-    }
-    if (m.def?.traits.includes("rich")) this.vfx("coin_burst", m.pos.x, m.pos.y, 120);
-    // Splitters break into smaller ones once (some into something else: see SPLITS_INTO).
-    if (m.def?.traits.includes("splitter") && m.size > 60) {
-      const child = MONSTER_BY_ID[SPLITS_INTO[m.def.id]] ?? m.def;
-      const offs = SPLIT_COUNT[m.def.id] === 3 ? [-24, 0, 24] : [-18, 18];
-      for (const off of offs) {
-        const c = this.spawn({ def: child }, { path: m.path, dist: Math.max(0, m.dist + off) }, 0.7, 0.35);
-        c.mana = 3;
-      }
-    }
-  }
-
-  /** Release `count` of a boss's minions around a spot on its path (`at` is a path distance). */
-  private minions(m: Monster, count: number, at = m.dist, spread = 35) {
-    const def = MONSTER_BY_ID[m.boss?.minion ?? ""];
-    if (!def) return;
-    for (let i = 0; i < count; i++) this.spawn({ def }, { path: m.path, dist: Math.max(0, at - 20 - i * spread) }, 0.9, 0.8);
-  }
-
-  /** HP stages of split, layers and portal bosses: each quarter (portal: third) of HP lost. */
-  private bossStages(m: Monster) {
-    const b = m.boss!;
-    if (b.power !== "split" && b.power !== "layers" && b.power !== "portal") return;
-    const parts = b.power === "portal" ? 3 : 4;
-    const stage = Math.min(parts - 1, Math.floor((1 - Math.max(0, m.hp) / m.maxHp) * parts));
-    while (m.stage < stage && !m.dead) {
-      m.stage++;
-      const pos = m.pos;
-      if (b.power === "split") {
-        this.floater(pos.x, pos.y - 60, "SPLIT!", "#b8ffb0", 32);
-        this.vfx("poison_cloud", pos.x, pos.y, 200);
-        this.minions(m, 3, m.dist + 40);
-      } else if (b.power === "portal") {
-        // Blink forward once a phase.
-        this.vfx("shadow_smoke", pos.x, pos.y, 220);
-        m.dist = Math.min(m.path.length * 0.85, m.dist + 220);
-        m.sync(this.now);
-        this.vfx("arcane_vortex", m.pos.x, m.pos.y, 220);
-        this.floater(m.pos.x, m.pos.y - 60, "BLINK!", "#c58bff", 32);
-      } else {
-        // A Jawbreaker layer breaks: units are shaken, it sheds, speeds up and releases chaos-born.
-        const tints = [null, 0xff9ad5, 0x9ad5ff, 0xb070ff];
-        m.layerTint = tints[m.stage] ?? 0xb070ff;
-        m.speedMult *= 1.15;
-        this.cameras.main.shake(300, 0.012);
-        this.floater(pos.x, pos.y - 70, m.stage >= 3 ? "THE CORE!" : "LAYER BROKEN!", "#ffd93b", 34);
-        this.vfx("hit_impact", pos.x, pos.y, 260);
-        for (const u of this.someUnits(b.targets ?? 3)) this.afflict(u, "shellshock", 1.5);
-        this.minions(m, 4, m.dist + 60, 30);
-        const crack = animKey("bosses", `${b.id}_crack`);
-        if (m.stage >= 3 && this.anims.exists(crack)) {
-          m.sprite.play(crack);
-          m.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => !m.dead && m.sprite.play(animKey("bosses", `${b.id}_walk`)));
-        }
-      }
-    }
-  }
-
-  /** Chaos Taffy: tethers the nearest unit, which has Fatigue until the taffy dies. */
-  private updateTethers() {
-    const g = this.tethers;
-    g?.clear();
-    for (const m of this.monsters) {
-      if (m.gone || !m.has("tether") || m.intro > 0 || m.dist < this.targetFrom) continue;
-      let best: Unit | null = null;
-      let bestD = Infinity;
-      for (const u of this.board) {
-        if (!u || u.dragging) continue;
-        const d = Math.hypot(u.sprite.x - m.pos.x, u.sprite.y - m.pos.y);
-        if (d < bestD) [best, bestD] = [u, d];
-      }
-      const u = best as Unit | null;
-      if (!u || !this.afflict(u, "fatigue", 0.25)) continue;
-      g?.lineStyle(7, NAVY, 0.6).lineBetween(m.pos.x, m.pos.y, u.sprite.x, u.sprite.y - 30);
-      g?.lineStyle(4, 0xc58bff, 0.9).lineBetween(m.pos.x, m.pos.y, u.sprite.x, u.sprite.y - 30);
-    }
-  }
-
-  private bossPower(m: Monster) {
-    const b = m.boss!;
-    // Some bosses change power below half HP (the Sugar Plum Tyrant drops its shield and rages).
-    const power: BossPower = b.rage && m.hp < m.maxHp / 2 ? b.rage : b.power;
-    // The Bear only roars once it's hurt; split and layer bosses work by HP stages instead.
-    if ((power === "roar" && m.hp >= m.maxHp / 2) || power === "split") return;
-    const portal = animKey("bosses", `${b.id}_portal`);
-    const key = power === "portal" && this.anims.exists(portal) ? portal : animKey("bosses", `${b.id}_attack`);
-    if (this.anims.exists(key)) {
-      m.sprite.play(key);
-      m.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => !m.dead && m.sprite.play(animKey("bosses", `${b.id}_walk`)));
-    }
-    const pos = m.pos;
-    const targets = b.targets ?? 3;
-    switch (power) {
-      case "charm":
-        this.floater(pos.x, pos.y - 60, "CHARM", "#ff9ae6", 32);
-        this.vfx("arcane_vortex", pos.x, pos.y, 200);
-        for (const u of this.someUnits(targets)) {
-          if (this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5)) this.vfx("arcane_vortex", u.sprite.x, u.sprite.y - 30, 110);
-        }
-        break;
-      case "roar":
-        if (!m.roared) {
-          m.roared = true;
-          this.cameras.main.shake(400, 0.014);
-          this.floater(pos.x, pos.y - 70, "ROAR!", "#ff8a3b", 40);
-          for (const u of this.someUnits(targets)) this.afflict(u, "shellshock", 2);
-        } else {
-          m.hasteUntil = this.now + 3;
-          this.vfx("fire_explosion", pos.x, pos.y, 200);
-          this.floater(pos.x, pos.y - 60, "RAGE", "#ff8a3b", 32);
-        }
-        break;
-      case "layers":
-        if (m.stage >= 3) {
-          // The core: every unit gets Irritation in pulses.
-          this.floater(pos.x, pos.y - 70, "CHAOS PULSE", "#c58bff", 34);
-          this.vfx("arcane_vortex", pos.x, pos.y, 280);
-          for (const u of this.board) if (u && !u.dragging) this.afflict(u, "irritation", EFFECTS.irritate.time * 1.5);
-        } else this.minions(m, 2);
-        break;
-      case "portal": {
-        // A portal opens further along the path and minions step out of it.
-        const at = Math.min(m.path.length * 0.85, m.dist + 180 + Math.random() * 220);
-        const p = m.path.at(at);
-        const ring = this.add.graphics().setPosition(p.x, p.y - 20).setDepth(90 + p.y);
-        ring.fillStyle(0x6a2bbf, 0.5).fillEllipse(0, 0, 130, 54).lineStyle(6, 0xc58bff, 1).strokeEllipse(0, 0, 130, 54);
-        ring.setScale(0.2);
-        this.tweens.add({ targets: ring, scale: 1, duration: 300, ease: "Back.Out" });
-        this.tweens.add({ targets: ring, alpha: 0, delay: 2200, duration: 400, onComplete: () => ring.destroy() });
-        this.vfx("summon_circle", p.x, p.y, 170, 90 + p.y);
-        this.time.delayedCall(600, () => !m.dead && !this.over && this.minions(m, 3, at + 40, 30));
-        break;
-      }
-      case "summon":
-        for (let i = 0; i < 3; i++) this.spawn({ def: MONSTER_BY_ID[b.minion!] }, { path: m.path, dist: Math.max(0, m.dist - 30 - i * 35) }, 0.9, 0.8);
-        this.vfx("summon_circle", pos.x, pos.y + 40, 200, 90);
-        break;
-      case "heal":
-        m.heal(m.maxHp * 0.08);
-        this.vfx("holy_heal", pos.x, pos.y, 220);
-        this.floater(pos.x, pos.y - 60, "HEAL", "#7dff7a", 32);
-        break;
-      case "haste":
-        m.hasteUntil = this.now + 3;
-        this.vfx("fire_explosion", pos.x, pos.y, 200);
-        this.floater(pos.x, pos.y - 60, "RAGE", "#ff8a3b", 32);
-        break;
-      case "shield":
-        m.shieldUntil = this.now + 2.5;
-        this.vfx("arcane_vortex", pos.x, pos.y, 230);
-        this.floater(pos.x, pos.y - 60, "SHIELD", "#9fb4ff", 32);
-        break;
-      case "teleport":
-        this.vfx("shadow_smoke", pos.x, pos.y, 220);
-        m.dist = Math.min(m.path.length * 0.92, m.dist + 160);
-        m.sync(this.now);
-        this.vfx("shadow_smoke", m.pos.x, m.pos.y, 220);
-        break;
-      case "freeze_units": {
-        for (const u of this.someUnits(targets)) {
-          u.frozenUntil = this.now + 3;
-          this.vfx("ice_burst", u.sprite.x, u.sprite.y - 20, 140);
-        }
-        break;
-      }
-    }
-  }
-
-  private loseLife(m: Monster) {
-    this.lives = Math.max(0, this.lives - (m.boss ? ECONOMY.lives : 1));
-    this.cameras.main.shake(250, 0.008);
-    sfx("hurt");
-    this.cameras.main.flash(200, 255, 40, 40);
-    this.refreshHud();
-    if (this.lives <= 0) this.endGame();
-  }
-
-  // ---------------------------------------------------------------- loop
-
-  update(_time: number, delta: number) {
-    if (this.paused || this.over) return;
-    const dt = (Math.min(delta, 50) / 1000) * this.speedMult;
-    this.now += dt;
-    const now = this.now;
-
-    // Wave flow.
-    if (this.waveState === "intro") {
-      if (!this.tutorialHold) this.introTimer -= dt;
-      if (this.introTimer <= 0) this.startWave();
-    } else if (this.waveState === "spawning") {
-      this.spawnTimer -= dt;
-      if (this.spawnTimer <= 0 && this.queue.length) {
-        this.spawn(this.queue.shift()!);
-        this.spawnTimer = this.spawnInterval;
-      }
-      if (!this.queue.length) this.waveState = "clearing";
-      this.waveTimer += dt;
-    } else {
-      this.waveTimer += dt;
-      const bossAlive = this.boss && !this.boss.gone;
-      const alive = this.monsters.some((m) => !m.gone);
-      if (this.story && this.wave >= this.story.chapter.waves.length) {
-        // The last story wave: cleared with lives left wins the chapter.
-        if (!bossAlive && !alive) return this.endGame(undefined, true);
-      } else if (!bossAlive && (!alive || this.waveTimer > 20)) {
-        this.waveState = "intro";
-        this.introTimer = alive ? 0.5 : 1.5;
-      }
-    }
-
-    // Monsters.
-    this.healTimer -= dt;
-    const healPulse = this.healTimer <= 0;
-    if (healPulse) this.healTimer = 3;
-    for (const m of this.monsters) {
-      if (m.gone) continue;
-      m.update(dt, now);
-      if (m.gone) continue;
-      if (m.boss && m.intro <= 0) {
-        this.bossStages(m);
-        m.powerTimer -= dt;
-        if (m.powerTimer <= 0) {
-          m.powerTimer = 6;
-          this.bossPower(m);
-        }
-      }
-      if (healPulse && m.has("healer")) {
-        for (const o of this.nearby(m.pos, 130)) o.heal(o.maxHp * 0.08);
-        this.vfx("holy_heal", m.pos.x, m.pos.y, 120);
-      }
-      if (m.dist >= m.path.length) {
-        m.remove();
-        this.loseLife(m);
-        if (this.over) return;
-      }
-    }
-    this.monsters = this.monsters.filter((m) => !m.gone);
-    if (this.boss?.gone) this.boss = null;
-
-    this.updateTethers();
-    for (const u of this.board) u?.update(dt, now);
-    if (this.echoes.length) this.updateEchoes();
-    this.updateStorm(dt);
-    this.updateShots(dt);
-    if (this.autoCast && this.hero && now >= this.heroReadyAt) this.castHero(true);
-    this.refreshHeroButton();
-    this.updateBossBar();
-    this.refreshHud();
-  }
-
   // ---------------------------------------------------------------- end
 
   /** `why`: shown under the headline when the battle didn't end by itself. `won`: a story chapter was won. */
@@ -2053,13 +1366,26 @@ export class BattleScene extends Phaser.Scene {
     this.over = true;
     this.pauseMenu = null;
     releasePlay();
+    const sim = this.sim;
     // Left mid-tutorial (surrendered): it still only runs once.
-    if (this.tutorialHold) setTutorialDone("battle");
+    if (sim.tutorialHold) setTutorialDone("battle");
     music(null);
-    const stats = { wave: this.wave, kills: this.kills, bosses: this.bossesKilled, ...this.counts };
+    const c = sim.counts;
+    const stats = {
+      wave: sim.wave,
+      kills: sim.kills,
+      bosses: c.bossesKilled,
+      summons: c.summons,
+      merges: c.merges,
+      awakens: c.awakens,
+      heroCasts: c.heroCasts,
+      copies: c.copies,
+      swaps: c.swaps,
+      brewed: c.brewed,
+    };
     if (this.story) {
       const story = this.story;
-      const lives = this.lives;
+      const lives = sim.lives;
       const result: Promise<StoryResult | null> = this.battleId
         .then((id) => (id === null ? null : finishStory(id, { ...stats, won, lives })))
         .catch(() => null);
@@ -2070,7 +1396,7 @@ export class BattleScene extends Phaser.Scene {
         this.floater(ARENA_W / 2, 600, "VICTORY!", "#ffd93b", 72);
       }
       this.time.delayedCall(won ? 1200 : 500, () =>
-        storyResult(this, { story: story.def, chapter: story.chapter, won, why, stars: won ? starsFor(lives, ECONOMY.lives) : 0, wave: this.wave, result }),
+        storyResult(this, { story: story.def, chapter: story.chapter, won, why, stars: won ? sim.stars ?? 0 : 0, wave: stats.wave, result }),
       );
       return;
     }
@@ -2174,4 +1500,3 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 }
-

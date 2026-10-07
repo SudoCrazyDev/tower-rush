@@ -1,11 +1,9 @@
 import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale } from "../assets";
-import { ELEMENT_COLOR, maxRank, unitStats, type UnitDef } from "../data/units";
-import { ECONOMY } from "../../../shared/economy.ts";
-import { EFFECTS, manaPerPulse } from "../../../shared/effects.ts";
-import { withPerk, type Perk } from "../../../shared/perks.ts";
-import { isSupport } from "../../../shared/support.ts";
-import { newStatus } from "../../../shared/statuses.ts";
+import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
+import { EFFECTS } from "../../../shared/effects.ts";
+import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
+import type { SimUnit } from "../../../shared/sim.ts";
 import { NAVY, txt } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
 
@@ -16,42 +14,21 @@ export const AWAKENED_PX = 132;
 /** Whether a unit has awakened art (and so awakens at max rank). */
 export const canAwaken = (id: string, arch?: string) => (!arch || !isSupport(arch as never)) && hasAnim("units_awakened", `${id}_idle`);
 
-/** A defender standing on one of the 15 board tiles. */
+/**
+ * A defender standing on one of the 15 board tiles: the sprite and badges for a SimUnit.
+ * It holds no combat state; everything it shows is read from the Sim every frame.
+ */
 export class Unit {
   readonly scene: BattleScene;
+  readonly sim: SimUnit;
   readonly def: UnitDef;
   readonly rank: number;
-  slot: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly pips: Phaser.GameObjects.Graphics;
-  cooldown: number;
-  alive = 0;
-  /** Attack speed bonus from neighbouring buff units (0.25 = +25%). */
-  haste = 0;
-  /** Its own perk plus those from neighbouring buff units. */
-  perks: Perk[] = [];
-  frozenUntil = 0;
-  pulse = 0;
+  /** Being dragged by the player (the Sim has it frozen too: see Sim.setDragging). */
   dragging = false;
   /** Max rank with awakened art: stronger, and fires ultimates. */
   readonly awakened: boolean;
-  /** Seconds charged toward the next ultimate. */
-  ult = 0;
-  /** Extra ultimate charge rate from neighbouring Hourglass Owls (0.5 = +50%). */
-  charge = 0;
-  /** Support timer: Mime prep and Mirror Slime progress count up, Portal Imp recharge counts down. */
-  timer = 0;
-  /** Portal rush: attacks faster until then. */
-  rushUntil = 0;
-  /** v1.2 statuses: Rally, Irritation, Fatigue, Shellshock (see statuses.ts). */
-  status = newStatus();
-  /** Princess Muse's Last Call on this unit: attack speed and damage bonus. */
-  auraSpeed = 0;
-  auraDamage = 0;
-  /** Hired Blade whose wages weren't paid this wave: no attacks. */
-  sulking = false;
-  /** Timer for a unit effect that goes off every few seconds (Rogue Knight's Irritation). */
-  effectTimer = 0;
   private statusIcons: Phaser.GameObjects.Container | null = null;
   private statusDrawn = "";
   private heart: Phaser.GameObjects.Text | null = null;
@@ -64,38 +41,41 @@ export class Unit {
   private buffRing: Phaser.GameObjects.Graphics | null = null;
   /** When the last callout went up, so rapid-fire units don't stack them. */
   private calloutAt = -1;
+  // What the last frame saw, to turn Sim state changes into animations.
+  private firedSeen: number;
+  private buffSeen = "";
+  private slotSeen: number;
+  private wasFrozen = false;
+  private wasReady = false;
+  /** Idle show-off timer of buff and support units that have no real action to animate. */
+  private showOff = 0;
 
-  constructor(scene: BattleScene, def: UnitDef, rank: number, slot: number) {
+  constructor(scene: BattleScene, sim: SimUnit) {
     this.scene = scene;
-    this.def = def;
-    this.rank = rank;
-    this.slot = slot;
-    this.awakened = rank >= maxRank() && canAwaken(def.id, def.arch);
-    withPerk(this.perks, def.perk);
-    const p = scene.slotPos(slot);
+    this.sim = sim;
+    this.def = sim.def;
+    this.rank = sim.rank;
+    this.slotSeen = sim.slot;
+    this.firedSeen = sim.firedAt;
+    this.awakened = sim.awakened;
+    const p = scene.slotPos(sim.slot);
     if (this.awakened) {
       this.aura = scene.add.graphics();
       this.aura.fillStyle(0xffd93b, 0.28).fillEllipse(0, 0, 112, 46);
       this.aura.fillStyle(0xffffff, 0.22).fillEllipse(0, 0, 70, 26);
       scene.tweens.add({ targets: this.aura, scale: { from: 0.85, to: 1.12 }, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     }
-    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${def.id}_idle`));
+    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.def.id}_idle`));
     this.sprite.setScale(this.baseScale).setOrigin(0.5, 0.62);
     this.playIdle();
     this.pips = scene.add.graphics();
-    this.cooldown = 0.3 + Math.random() * 0.4;
-    this.place(slot);
+    this.place(sim.slot);
     this.sprite.setInteractive({ draggable: true, useHandCursor: true });
     (this.sprite as Phaser.GameObjects.Sprite & { unit?: Unit }).unit = this;
   }
 
-  get stats() {
-    const s = unitStats(this.def, this.rank, this.scene.cardLevel(this.def.id), this.scene.powerUps[this.def.id] ?? 0);
-    if (this.awakened) {
-      s.damage *= ECONOMY.awakenDamageMult;
-      s.speed *= ECONOMY.awakenSpeedMult;
-    }
-    return s;
+  get slot() {
+    return this.sim.slot;
   }
 
   /** Display height in pixels. */
@@ -114,7 +94,7 @@ export class Unit {
   }
 
   place(slot: number) {
-    this.slot = slot;
+    this.slotSeen = slot;
     const p = this.scene.slotPos(slot);
     this.sprite.setPosition(p.x, p.y).setDepth(100 + p.y);
     this.aura?.setPosition(p.x, p.y + 30).setDepth(99 + p.y);
@@ -158,7 +138,7 @@ export class Unit {
 
   /** Muse's heart badge on a unit inside her Last Call square. */
   private showHeart() {
-    const on = this.auraSpeed > 0 || this.auraDamage > 0;
+    const on = this.sim.auraSpeed > 0 || this.sim.auraDamage > 0;
     if (!on) {
       this.heart?.destroy();
       this.heart = null;
@@ -175,11 +155,11 @@ export class Unit {
 
   /** Status icons over the head (Rally, Irritation, Fatigue, Shellshock), redrawn when they change. */
   drawStatus(now: number) {
-    const s = this.status;
+    const s = this.sim.status;
     const on = [
       now < s.rallyUntil && "rally",
       now < s.irritatedUntil && "irritation",
-      (now < s.fatiguedUntil || this.sulking) && "fatigue",
+      (now < s.fatiguedUntil || this.sim.sulking) && "fatigue",
       now < s.shockedUntil && "shellshock",
     ].filter(Boolean) as string[];
     const key = on.join(",") + (this.dragging ? "d" : "");
@@ -199,8 +179,8 @@ export class Unit {
     this.showHeart();
     const scene = this.scene;
     // Owl charge on an awakened unit shows in teal; any attack-speed bonus in gold.
-    const teal = this.haste <= 0 && this.charge > 0;
-    const amount = teal ? this.charge : this.haste;
+    const teal = this.sim.haste <= 0 && this.sim.charge > 0;
+    const amount = teal ? this.sim.charge : this.sim.haste;
     const color = teal ? 0x3fe0d0 : 0xffd93b;
     if (amount <= 0 || (this.buffBadge && this.buffBadge.getData("color") !== color)) {
       this.buffBadge?.destroy();
@@ -309,11 +289,27 @@ export class Unit {
     });
   }
 
-  update(dt: number, now: number) {
+  /** Every frame: dress the sprite for what the Sim says this unit is doing. */
+  update(dt: number) {
     if (this.dragging) return;
+    const s = this.sim;
+    const scene = this.scene;
+    const now = scene.sim.now;
+    if (s.slot !== this.slotSeen) this.place(s.slot);
     this.drawStatus(now);
-    if (now < this.frozenUntil || now < this.status.shockedUntil) {
-      this.sprite.setTint(now < this.frozenUntil ? 0x7fd8ff : 0xb0a890);
+
+    // Buff badge and Muse's heart follow the Sim's haste, charge and aura numbers.
+    const buff = `${s.haste.toFixed(3)}:${s.charge.toFixed(3)}:${s.auraSpeed > 0 || s.auraDamage > 0}`;
+    if (buff !== this.buffSeen) {
+      this.buffSeen = buff;
+      this.showBuff();
+    }
+
+    const frozen = now < s.frozenUntil;
+    if (frozen && !this.wasFrozen) scene.vfx("ice_burst", this.sprite.x, this.sprite.y - 20, 140);
+    this.wasFrozen = frozen;
+    if (frozen || now < s.status.shockedUntil) {
+      this.sprite.setTint(frozen ? 0x7fd8ff : 0xb0a890);
       this.sprite.anims.timeScale = 0;
       return;
     }
@@ -321,69 +317,63 @@ export class Unit {
       this.sprite.clearTint();
       this.sprite.anims.timeScale = 1;
     }
-    this.alive += dt;
 
-    if (this.def.effect === "irritate") {
-      this.effectTimer += dt;
-      if (this.effectTimer >= EFFECTS.irritate.every) {
-        this.effectTimer = 0;
-        this.scene.irritateNeighbours(this);
-      }
-    }
-    if (this.def.effect === "lantern") {
-      this.effectTimer += dt;
-      if (this.effectTimer >= EFFECTS.lantern.every) {
-        this.effectTimer = 0;
-        this.scene.lanternPulse(this);
-      }
-    }
-    if (this.def.arch === "buff" || this.def.arch === "aura" || this.def.arch === "aegis") {
-      this.pulse -= dt;
-      if (this.pulse <= 0) {
-        this.pulse = 4;
-        // Muse's "attack" clip is her buff pulse, the Aegis Knight's a shield pulse.
-        this.playOnce(this.def.arch === "buff" ? "skill" : "attack");
+    const arch = this.def.arch;
+    if (arch === "buff" || arch === "aura" || arch === "aegis") {
+      // Muse's "attack" clip is her buff pulse, the Aegis Knight's a shield pulse.
+      this.showOff -= dt;
+      if (this.showOff <= 0) {
+        this.showOff = 4;
+        this.playOnce(arch === "buff" ? "skill" : "attack");
       }
       return;
     }
-    if (isSupport(this.def.arch)) {
-      this.scene.updateSupport(this, dt);
-      return;
-    }
-    if (this.def.arch === "mana") {
-      this.pulse += dt;
-      if (this.pulse >= EFFECTS.mana.every) {
-        this.pulse = 0;
-        this.playOnce("skill");
-        this.scene.gainMana(manaPerPulse(this.rank), this.sprite.x, this.sprite.y - 50);
-      }
-    }
+    if (isSupport(arch)) this.updateSupport(dt);
 
-    if (this.awakened) {
-      this.ult += dt * (1 + this.charge);
-      if (this.ult >= ECONOMY.ultimateCooldown) {
-        const target = this.def.arch === "mana" ? null : this.scene.pickTarget(this.def.arch === "sniper" ? "strongest" : "first");
-        if (target || this.def.arch === "mana") {
-          this.ult = 0;
-          this.playOnce("skill");
-          this.scene.ultimate(this, target);
-          this.cooldown = Math.max(this.cooldown, 0.5);
-          return;
+    // It attacked (or brewed) since the last frame: play the clip, faster if the unit fires faster than it plays.
+    if (s.firedAt !== this.firedSeen) {
+      this.firedSeen = s.firedAt;
+      const rate = s.stats.speed * (1 + scene.sim.hasteOf(s)) * (now < s.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1);
+      this.playOnce("attack", Math.max(1, (16 / 24) * rate));
+    }
+  }
+
+  /** Support units: the timer ring, ready flashes, the Mirror Slime's wobble, idle show-offs. */
+  private updateSupport(dt: number) {
+    const scene = this.scene;
+    const s = this.sim;
+    const progress = scene.sim.supportProgress(s.slot);
+    switch (this.def.arch) {
+      case "mime":
+      case "portal": {
+        const p = progress ?? 0;
+        this.drawSupportRing(p, this.def.arch === "mime" ? 0x59d64a : 0xff8a3b);
+        const ready = p >= 1;
+        if (ready && !this.wasReady) this.playOnce("skill");
+        this.wasReady = ready;
+        return;
+      }
+      case "mirror": {
+        const p = progress ?? 0;
+        this.drawSupportRing(p, 0xc58bff);
+        const every = mirrorInterval(s.rank, boostMult(scene.cardLevel(this.def.id), scene.sim.powerLevel(this.def.id)));
+        const options = neighbours(s.slot).some((j) => { const v = scene.sim.units[j]; return !!v && !v.dragging && canBecome(s, v); });
+        if (options && every * (1 - p) <= EFFECTS.mirror.warn && !this.sprite.getData("wobble")) {
+          this.sprite.setData("wobble", true);
+          scene.tweens.add({ targets: this.sprite, angle: { from: -8, to: 8 }, yoyo: true, repeat: 5, duration: 140, onComplete: () => this.sprite.active && this.sprite.setAngle(0) });
         }
+        return;
       }
+      case "brewer":
+        return;
+      default:
+        // Auras (Lucky Cat, Hourglass Owl, Echo Spirit, Banner Herald) just show off now and then.
+        this.showOff -= dt;
+        if (this.showOff <= 0) {
+          this.showOff = 4;
+          this.playOnce("skill");
+        }
     }
-
-    const { speed } = this.stats;
-    const rate = speed * (1 + this.scene.hasteOf(this)) * this.scene.slowOf(this);
-    this.cooldown -= dt;
-    if (this.cooldown > 0 || this.sulking) return;
-    const target = this.scene.pickTarget(this.def.arch === "sniper" ? "strongest" : "first");
-    if (!target) return;
-    this.cooldown = 1 / rate;
-    // Speed the attack animation up if the unit fires faster than it plays.
-    const animLen = 16 / 24;
-    this.playOnce("attack", Math.max(1, animLen * rate));
-    this.scene.fire(this, target);
   }
 
   destroy() {
