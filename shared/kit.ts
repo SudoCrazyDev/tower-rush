@@ -6,8 +6,8 @@
  * specials (the v1.2 Knight and Mercenary effects). Each slot can override ("tune") any number of
  * that archetype's effect block. Perks work the same way: a list, each with its own value.
  *
- * Transition (P2): the kit is derived from the legacy `arch`, `effect` and `perk` fields, which
- * the battle code still reads. P3 switches combat to the kit and drops the legacy fields.
+ * The kit is the source of truth. A unit from a v1 saved config has none, so withKits derives it
+ * from the legacy `arch`, `effect` and `perk` fields (kitFromLegacy). P3 moves combat onto the kit.
  */
 import { EFFECTS, EFFECT_FIELDS, effectSummary, unitEffectSummary, type Effects, type EffectArch, type EffectField } from "./effects.ts";
 import { PERKS, PERK_IDS, type Perk } from "./perks.ts";
@@ -123,11 +123,11 @@ export function kitFromLegacy(u: LegacyUnit, e: Effects = EFFECTS): { kit: ArchS
 }
 
 /**
- * Give every unit its kit. While a unit still has the legacy `arch` field (every v1 saved config,
- * and every unit during the P2 transition), the legacy fields win and the kit is derived from them.
+ * Give every unit its kit. A unit that has a kit keeps it (the kit is the source of truth); a unit
+ * from a v1 saved config has none, so it is derived from the legacy `arch`, `effect` and `perk`.
  */
 export function withKits<T extends UnitDef>(list: T[], e: Effects = EFFECTS): T[] {
-  return list.map((u) => (u.arch ? { ...u, ...kitFromLegacy(u, e) } : u));
+  return list.map((u) => (Array.isArray(u.kit) && u.kit.length ? u : { ...u, ...kitFromLegacy(u, e) }));
 }
 
 // ---------------------------------------------------------------- numbers

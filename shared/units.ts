@@ -3,7 +3,7 @@ import type { Race } from "./races.ts";
 import type { Perk } from "./perks.ts";
 import { noAttack } from "./support.ts";
 import { DEFAULT_EFFECTS } from "./effects.ts";
-import { kitFromLegacy, withKits, type ArchSlot, type PerkSlot } from "./kit.ts";
+import { withKits, type ArchSlot, type PerkSlot } from "./kit.ts";
 
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic" | "event";
 export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane";
@@ -86,10 +86,10 @@ export interface UnitDef {
   effect?: UnitEffect;
   /**
    * v2 kit (kit.ts): kit[0] is how it attacks or its job, then riders and signatures, each with
-   * optional number overrides. Derived from arch/effect while those legacy fields exist (P2).
+   * optional number overrides. The source of truth; v1 configs get it from arch/effect (withKits).
    */
   kit: ArchSlot[];
-  /** v2 perks, each with an optional value; derived from `perk` while it exists (P2). */
+  /** v2 perks, each with an optional value; v1 configs get it from `perk` (withKits). */
   perks: PerkSlot[];
 }
 
@@ -205,7 +205,9 @@ const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arc
   ...restyle({ damage: SEED_DAMAGE[rarity] * ARCHETYPES[arch].dmg, speed: ARCHETYPES[arch].speed }, "balanced", noAttack(arch) ? "balanced" : style),
   style: noAttack(arch) ? "balanced" : style,
   perk,
-  ...kitFromLegacy({ arch, perk }, DEFAULT_EFFECTS),
+  // Filled by withKits (below), after the spreads that add a Knight's or Mercenary's effect.
+  kit: [],
+  perks: [],
   enabled: true,
 });
 
