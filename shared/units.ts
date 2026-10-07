@@ -91,6 +91,8 @@ export interface UnitDef {
   kit: ArchSlot[];
   /** v2 perks, each with an optional value; v1 configs get it from `perk` (withKits). */
   perks: PerkSlot[];
+  /** v2: melee weapon sprite thrown instead of the projectile (vfx/weapons/<weapon>.webp); unset = use proj. */
+  weapon?: string;
 }
 
 /**
@@ -172,6 +174,24 @@ export const STYLES: Record<Style, { label: string; text: string; speed: number;
 };
 export const STYLE_IDS = Object.keys(STYLES) as Style[];
 
+/** Generic and signature weapon keys for melee units (see art-requests.ts WEAPONS and SIGNATURE_WEAPONS). */
+export const WEAPON_KEYS: string[] = [
+  // Blades
+  "sword", "katana", "greatsword", "dagger", "twin_daggers", "sabre", "scimitar", "rapier", "cutlass", "cleaver",
+  // Axes and blunt
+  "axe", "double_axe", "hammer", "mace", "flail", "morning_star", "club", "anchor",
+  // Polearms
+  "spear", "lance", "trident", "halberd", "scythe", "sickle", "staff", "bo_staff",
+  // Thrown
+  "shuriken", "kunai", "chakram", "boomerang", "throwing_knife", "bola",
+  // Body attacks
+  "palm_wave", "fist_shockwave", "claw_swipe", "bite", "tail_swipe", "horn_charge", "stomp_crack",
+  // Quirky
+  "frying_pan", "wrench", "saw_blade", "ladle", "war_fan", "bone", "pitchfork",
+  // Signature weapons
+  "sig_monkey_king", "sig_fox_samurai", "sig_rogue_knight", "sig_pentagonal_knight", "sig_berserker_sellsword", "sig_lance_knight",
+];
+
 const round = (v: number, step: number) => Math.round(v / step) * step;
 /** Damage and speed for `u` after switching it from style `from` to `to`. */
 export function restyle(u: Pick<UnitDef, "damage" | "speed">, from: Style, to: Style) {
@@ -214,7 +234,7 @@ const U = (id: string, name: string, rarity: Rarity, element: Element, arch: Arc
 export const DEFAULT_UNITS: UnitDef[] = withKits([
   // common
   U("hooded_archer", "Hooded Archer", "common", "nature", "shot", "arrow", "Never misses, not even a flitting bat.", "human", "balanced", "true_strike"),
-  U("fox_spearman", "Fox Spearman", "common", "nature", "pierce", "spark", "One thrust finishes what others started.", "beast", "balanced", "finisher"),
+  { ...U("fox_spearman", "Fox Spearman", "common", "nature", "pierce", "spark", "One thrust finishes what others started.", "beast", "balanced", "finisher"), weapon: "spear" },
   U("goblin_bomber", "Goblin Bomber", "common", "fire", "splash", "cannonball", "Lobs bombs faster than goblins can run.", "goblin", "rapid", "hunter"),
   U("flame_adept", "Flame Adept", "common", "fire", "burn", "fireball", "Burns the stragglers down to ash.", "human", "balanced", "finisher"),
   U("penguin_wizard", "Penguin Wizard", "common", "ice", "slow", "ice_shard", "Cold enough to chill even a yeti.", "beast", "balanced", "frostbite"),
@@ -222,7 +242,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("cactus_gunslinger", "Cactus Gunslinger", "common", "nature", "crit", "cannonball", "Heavy slugs punch through plate.", "sylvan", "heavy", "armor_breaker"),
   U("clockwork_turret", "Clockwork Turret", "common", "lightning", "shot", "cannonball", "Slow to reload. Cracks any shell.", "construct", "heavy", "armor_breaker"),
   U("wind_sylph", "Wind Sylph", "common", "nature", "shot", "arrow", "Faster than the fastest runner.", "elemental", "rapid", "hunter"),
-  U("shield_knight", "Shield Knight", "common", "arcane", "curse", "spark", "Cracks the biggest brutes like eggs.", "human", "heavy", "giant_slayer"),
+  { ...U("shield_knight", "Shield Knight", "common", "arcane", "curse", "spark", "Cracks the biggest brutes like eggs.", "human", "heavy", "giant_slayer"), weapon: "sword" },
   U("wolf_hunter", "Wolf Hunter", "common", "nature", "crit", "arrow", "Runs down anything with legs.", "human", "rapid", "hunter"),
   U("pirate_gunner", "Pirate Gunner", "common", "fire", "splash", "cannonball", "Every kill pays. Fire in the hole!", "human", "heavy", "plunder"),
   // rare
@@ -230,12 +250,12 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("frost_sorceress", "Frost Sorceress", "rare", "ice", "slow", "ice_shard", "Her frost bites even the frost-proof.", "elf", "balanced", "frostbite"),
   U("frog_alchemist", "Frog Alchemist", "rare", "poison", "poison", "poison", "Ribbit. Bubble. Melt the weakened.", "beast", "balanced", "finisher"),
   U("bee_keeper", "Bee Keeper", "rare", "nature", "poison", "poison", "The bees catch whatever runs.", "human", "rapid", "hunter"),
-  U("bear_rider", "Bear Rider", "rare", "nature", "stun", "spark", "The bear wrestles giants for fun.", "dwarf", "heavy", "giant_slayer"),
+  { ...U("bear_rider", "Bear Rider", "rare", "nature", "stun", "spark", "The bear wrestles giants for fun.", "dwarf", "heavy", "giant_slayer"), weapon: "fist_shockwave" },
   U("gear_engineer", "Gear Engineer", "rare", "lightning", "splash", "cannonball", "Twin gear cannons shred armor.", "gnome", "rapid", "armor_breaker"),
   U("imp_hunter", "Imp Hunter", "rare", "fire", "crit", "fireball", "Hunts down the quick little things.", "demon", "balanced", "hunter"),
   U("lute_bard", "Lute Bard", "rare", "arcane", "buff", "arcane_orb", "Plays fast. Neighbours chase the quick.", "elf", "balanced", "hunter"),
   U("raccoon_thief", "Raccoon Thief", "rare", "nature", "mana", "spark", "Picks the pockets of every fallen foe.", "beast", "rapid", "plunder"),
-  U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "A palm strike no one can dodge.", "human", "rapid", "true_strike"),
+  { ...U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "A palm strike no one can dodge.", "human", "rapid", "true_strike"), weapon: "palm_wave" },
   U("snowglobe_fairy", "Snowglobe Fairy", "rare", "ice", "freeze", "ice_shard", "Her snow freezes even the yetis.", "fae", "balanced", "frostbite"),
   U("spore_sage", "Spore Sage", "rare", "poison", "poison", "poison", "Big spores for big monsters.", "sylvan", "heavy", "giant_slayer"),
   U("storm_totem", "Storm Totem", "rare", "lightning", "chain", "lightning", "Its lightning never misses.", "construct", "balanced", "true_strike"),
@@ -253,19 +273,19 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   // epic
   U("crystal_golem", "Crystal Golem", "epic", "arcane", "splash", "arcane_orb", "Crystal shards split any armor.", "elemental", "heavy", "armor_breaker"),
   U("cyclops_smith", "Cyclops Smith", "epic", "fire", "buff", "fireball", "Forges neighbours blades that cut armor.", "giant", "balanced", "armor_breaker"),
-  U("fox_samurai", "Fox Samurai", "epic", "arcane", "crit", "spark", "One cut. Through any armor.", "beast", "heavy", "armor_breaker"),
+  { ...U("fox_samurai", "Fox Samurai", "epic", "arcane", "crit", "spark", "One cut. Through any armor.", "beast", "heavy", "armor_breaker"), weapon: "sig_fox_samurai" },
   U("lava_golem", "Lava Golem", "epic", "fire", "burn", "fireball", "Melts down the biggest brutes.", "elemental", "heavy", "giant_slayer"),
   U("magnet_robot", "Magnet Robot", "epic", "lightning", "curse", "lightning", "Pulls armor right off. Fast.", "construct", "rapid", "armor_breaker"),
-  U("minotaur_gladiator", "Minotaur Gladiator", "epic", "nature", "stun", "spark", "Lives to fight giants.", "beast", "heavy", "giant_slayer"),
+  { ...U("minotaur_gladiator", "Minotaur Gladiator", "epic", "nature", "stun", "spark", "Lives to fight giants.", "beast", "heavy", "giant_slayer"), weapon: "horn_charge" },
   U("moon_oracle", "Moon Oracle", "epic", "arcane", "mana", "arcane_orb", "Every fallen foe feeds the moon.", "elf", "heavy", "plunder"),
   U("lantern_ghost", "Lantern Ghost", "epic", "arcane", "mana", "arcane_orb", "Its light finds whatever hides.", "undead", "rapid", "true_strike"),
   U("phoenix_chick", "Phoenix Chick", "epic", "fire", "burn", "fireball", "Small bird, fast fire, no survivors.", "beast", "rapid", "finisher"),
   U("plague_alchemist", "Plague Alchemist", "epic", "poison", "poison", "poison", "Finishes the ones still coughing.", "human", "balanced", "finisher"),
   U("sand_worm", "Sand Worm", "epic", "nature", "splash", "cannonball", "Bursts up under the runners.", "beast", "balanced", "hunter"),
-  U("shadow_ninja", "Shadow Ninja", "epic", "poison", "crit", "spark", "Nothing dodges the shadow.", "human", "rapid", "true_strike"),
+  { ...U("shadow_ninja", "Shadow Ninja", "epic", "poison", "crit", "spark", "Nothing dodges the shadow.", "human", "rapid", "true_strike"), weapon: "shuriken" },
   U("storm_whelp", "Storm Whelp", "epic", "lightning", "chain", "lightning", "Baby dragon, faster than its prey.", "dragon", "rapid", "hunter"),
   U("tide_mermaid", "Tide Mermaid", "epic", "ice", "slow", "ice_shard", "Her tide chills even ice-born foes.", "fae", "balanced", "frostbite"),
-  U("treant_guardian", "Treant Guardian", "epic", "nature", "stun", "spark", "Old roots trip the quickest feet.", "sylvan", "balanced", "hunter"),
+  { ...U("treant_guardian", "Treant Guardian", "epic", "nature", "stun", "spark", "Old roots trip the quickest feet.", "sylvan", "balanced", "hunter"), weapon: "staff" },
   U("bone_necromancer", "Bone Necromancer", "epic", "poison", "curse", "poison", "Marks the dying for the grave.", "undead", "heavy", "finisher"),
   U("card_jester", "Card Jester", "epic", "arcane", "crit", "arcane_orb", "Always holds the ace. And your mana.", "human", "balanced", "plunder"),
   // v1.1 Supporting Cast Arrival: support units (epic)
@@ -286,20 +306,20 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "arcane_orb", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
   U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "fireball", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
   U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "arcane_orb", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
-  U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"),
+  { ...U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"), weapon: "sig_monkey_king" },
   // v1.2 Stories: Princess Muse, the Story 1 reward and the first Event card.
   { ...U("princess_muse", "Princess Muse", "event", "arcane", "aura", "arcane_orb", "A round on the house, and the whole bar fights harder.", "human", "balanced", "none"), role: "Barkeeper" },
   // v1.2 Stories: Story 2's Knights and Mercenaries. Pentagonal and Rogue Knight are its reward
   // (normal Epic cards once earned); the other seven only exist in the story's Event deck.
-  { ...U("pentagonal_knight", "Pentagonal Knight", "epic", "lightning", "shot", "spark", "Every hammer blow rallies the line.", "human", "heavy", "none"), damage: 100, speed: 0.44, role: "Knight", storyReward: true, effect: "rally" },
-  { ...U("rogue_knight", "Rogue Knight", "epic", "fire", "shot", "spark", "Fast blades, short temper. Keep him on the edge.", "human", "rapid", "none"), damage: 24, speed: 4.8, role: "Mercenary", storyReward: true, effect: "irritate" },
+  { ...U("pentagonal_knight", "Pentagonal Knight", "epic", "lightning", "shot", "spark", "Every hammer blow rallies the line.", "human", "heavy", "none"), damage: 100, speed: 0.44, role: "Knight", storyReward: true, effect: "rally", weapon: "sig_pentagonal_knight" },
+  { ...U("rogue_knight", "Rogue Knight", "epic", "fire", "shot", "spark", "Fast blades, short temper. Keep him on the edge.", "human", "rapid", "none"), damage: 24, speed: 4.8, role: "Mercenary", storyReward: true, effect: "irritate", weapon: "sig_rogue_knight" },
   { ...U("aegis_knight", "Aegis Knight", "epic", "arcane", "aegis", "spark", "Stand by the shield and nothing shakes you.", "human", "balanced", "none"), role: "Knight", storyOnly: true },
-  { ...U("lance_knight", "Lance Knight", "epic", "lightning", "pierce", "spark", "Runs the whole line through. Hates corruption most.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "bane" },
-  { ...U("oath_knight", "Oath Knight", "epic", "fire", "shot", "spark", "Stronger with every sworn brother beside him.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "oath" },
+  { ...U("lance_knight", "Lance Knight", "epic", "lightning", "pierce", "spark", "Runs the whole line through. Hates corruption most.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "bane", weapon: "sig_lance_knight" },
+  { ...U("oath_knight", "Oath Knight", "epic", "fire", "shot", "spark", "Stronger with every sworn brother beside him.", "human", "balanced", "none"), role: "Knight", storyOnly: true, effect: "oath", weapon: "sword" },
   { ...U("lantern_knight", "Lantern Knight", "epic", "arcane", "mana", "arcane_orb", "His lantern finds mana in the dark.", "human", "balanced", "plunder"), role: "Knight", storyOnly: true, effect: "lantern" },
-  { ...U("berserker_sellsword", "Berserker Sellsword", "epic", "fire", "shot", "spark", "Hits like a landslide. Wears out everyone near him.", "human", "heavy", "none"), damage: 75, role: "Mercenary", storyOnly: true, effect: "fatigue" },
+  { ...U("berserker_sellsword", "Berserker Sellsword", "epic", "fire", "shot", "spark", "Hits like a landslide. Wears out everyone near him.", "human", "heavy", "none"), damage: 75, role: "Mercenary", storyOnly: true, effect: "fatigue", weapon: "sig_berserker_sellsword" },
   { ...U("powder_grenadier", "Powder Grenadier", "epic", "fire", "splash", "cannonball", "Big blasts. Mind your ears.", "human", "balanced", "none"), damage: 52, role: "Mercenary", storyOnly: true, effect: "shellshock" },
-  { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 60, speed: 1.25, role: "Mercenary", storyOnly: true, effect: "wages" },
+  { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 60, speed: 1.25, role: "Mercenary", storyOnly: true, effect: "wages", weapon: "sword" },
 ], DEFAULT_EFFECTS);
 
 /** The v1.2 Story units: Muse, the Knights and the Mercenaries. */
