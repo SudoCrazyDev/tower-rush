@@ -1,6 +1,6 @@
 # v2.0.0 "The Grand Revamp"
 
-**Status:** Design (decisions locked 2026-10-07) · **Target version:** `2.0.0` (tag `v2.0.0`) ·
+**Status:** Building (branch `v2-grand-revamp`; code feature-complete 2026-10-07, playtest pending) · **Target version:** `2.0.0` (tag `v2.0.0`) ·
 **Promo kit:** [PROMO.md](PROMO.md) (to write)
 
 The first major version. It has three parts:
@@ -268,3 +268,41 @@ A0 ─┬─► A1 ─► (A4 user) ─► A1 again               │
 Done 2026-10-07: see [PARITY.md](PARITY.md). In short, the base `Sim` has no player actions
 (they live in `PvpBoard`) and is missing story mode, the tutorial, dragging, brewer taps, the Chaos Taffy tether
 and a structured event stream for the renderer. P1b adds all of these.
+
+---
+
+## 9. Progress (2026-10-07)
+
+| Phase | State | Notes |
+|---|---|---|
+| P0 golden test | ✅ | `npm test` = golden (275 runs) + pvp-sim replays |
+| P1a parity audit | ✅ | [PARITY.md](PARITY.md) |
+| P1b Sim parity | ✅ | Player actions in Sim, story, tutorial, drag, tether, brew bubbles, event stream |
+| P1c solo on Sim | ✅ | BattleScene 2177 → ~1500 lines; agent playtest with a hidden tab only |
+| P2 kit model | ✅ | `shared/kit.ts` |
+| P3 kit combat | ✅ | Riders in kit order, per-unit numbers, perk values; legacy fields removed; 254 original golden runs identical |
+| P4a admin | ✅ | Kit and perks editors, Perks page, weapon picker |
+| P4b text surfaces | ✅ | Card detail, story, PvP, website export, card prompts |
+| P5 card icons | 🔨 | |
+| A0 art pipeline | ✅ | `scripts/process-art.mjs`; 82 items keyed and built locally |
+| A1 upload + mark done | ⏸ | Needs the user's OK (live R2 and D1) |
+| A2 emblems, crests, icons | ✅ | |
+| A3 VFX layer, weapons | ✅ | Paths stay dormant until the art exists |
+| A4 remaining art (~115) | ⏸ | User generates it in Higgsfield |
+| A5 weapon keys | ✅ | 16 melee units |
+| R1 docs, What's new | 🔨 | |
+| Playtest gate | ⏸ | User |
+| R2 promo video, R3 release | ⏸ | |
+
+**Rule decisions taken while building:**
+- Echo is skipped when its caster is gone.
+- Portal-boss minions arrive after 0.6 s.
+- Heroes need `enabled`.
+- Manual haste or rage can be cast with no monsters on the field.
+- A Portal swap with a unit of the same id is refused.
+- Crit is one roll per attack.
+- Execute applies to the main target only.
+- Slow, freeze, stun, poison, burn and curse apply to every monster hit, in hit order.
+- Damage over time uses the attack's own damage.
+- `armor_breaker` v: the armor multiplier is 0.7 + 0.3·v.
+- `true_strike` v: the dodge chance is 0.15·(1−v).
