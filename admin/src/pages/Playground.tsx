@@ -31,14 +31,14 @@ import {
 import { applyConfig, type GameConfig } from "../../../shared/config.ts";
 import { ARENAS, ARENA_BY_ID } from "../../../shared/arenas.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
-import { EFFECTS, effectSummary } from "../../../shared/effects.ts";
+import { kitSummary, perkSummary } from "../../../shared/kit.ts";
+import { primaryArch, kitLine } from "../kitEditor";
 import { HEROES, HERO_BY_ID, HERO_POWERS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
 import { BOSSES, BOSS_BY_ID, MONSTER_BY_ID, type BossDef } from "../../../shared/monsters.ts";
-import { ARCHETYPES, maxRank, RARITY_ORDER, STYLES, UNITS, UNIT_BY_ID, boostMult, deckable, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
+import { ARCHETYPES, maxRank, STYLES, UNITS, UNIT_BY_ID, boostMult, deckable, maxCardLevel, maxPowerUp } from "../../../shared/units.ts";
 import { PVP } from "../../../shared/pvp.ts";
 import { deckProblem, runDecks, type DeckSide, type SideStats } from "../deckSim";
 import { noAttack } from "../../../shared/support.ts";
-import { PERKS } from "../../../shared/perks.ts";
 import { arenaGeometry, boardUnitStats, bossAppearances, simulate, simulateMany, waveBaseHp, type SimSetup, type SimSummary } from "../../../shared/sim.ts";
 
 type Tab = "units" | "bosses" | "heroes" | "deck";
@@ -191,7 +191,6 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
   const level = Math.min(s.cardLevel, maxCardLevel());
   const powerUp = Math.min(s.powerUp, maxPowerUp());
   const stats = boardUnitStats({ id: def.id, rank: s.rank, awakened }, level, powerUp);
-  const rarityIdx = RARITY_ORDER.indexOf(def.rarity);
   const hp = waveBaseHp(arena, s.wave);
   const [watch, setWatch] = useState<"one" | "pack" | "wave">("pack");
   const [sort, setSort] = useState<"pack" | "one" | "raw" | "name">("pack");
@@ -218,7 +217,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
     () =>
       UNITS.map((u) => {
         const st = boardUnitStats({ id: u.id, rank: s.rank, awakened: s.rank >= maxRank() && canAwaken.has(u.id) }, level, powerUp);
-        return { u, raw: noAttack(u.arch) ? 0 : st.damage * st.speed, one: measure(u.id, 1, 2), pack: measure(u.id, PACK, 2) };
+        return { u, raw: noAttack(primaryArch(u)) ? 0 : st.damage * st.speed, one: measure(u.id, 1, 2), pack: measure(u.id, PACK, 2) };
       }),
     deps,
     250,
@@ -260,24 +259,24 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                 {def.name} {awakened && <span className="badge ok">Awakened</span>} {!def.enabled && <span className="badge err">Off</span>}
               </h2>
               <div>
-                <span className={`rarity ${def.rarity}`}>{def.rarity}</span> · {def.element} · <strong>{def.arch}</strong>
+                <span className={`rarity ${def.rarity}`}>{def.rarity}</span> · {def.element} · <strong>{kitLine(def)}</strong>
               </div>
-              <div className="muted small">{ARCHETYPES[def.arch].label}</div>
+              <div className="muted small">{ARCHETYPES[primaryArch(def)].label}</div>
             </div>
           </div>
           <table className="kv">
             <tbody>
-              <tr><td>Damage per hit</td><td>{noAttack(def.arch) ? "—" : f1(stats.damage)}</td></tr>
-              <tr><td>Attacks per second</td><td>{noAttack(def.arch) ? "—" : stats.speed.toFixed(2)}</td></tr>
-              <tr><td>Damage per second (on paper)</td><td><strong>{noAttack(def.arch) ? "—" : f1(stats.damage * stats.speed)}</strong></td></tr>
-              <tr><td>Effect</td><td>{effectSummary(def.arch, s.rank, rarityIdx, EFFECTS, boostMult(level, powerUp) * (awakened ? ECONOMY.awakenDamageMult : 1)) ?? "—"}</td></tr>
-              <tr><td>Style</td><td>{noAttack(def.arch) ? "—" : `${STYLES[def.style].label} — ${STYLES[def.style].text}`}</td></tr>
-              <tr><td>Perk</td><td>{def.perk === "none" ? "—" : `${noAttack(def.arch) ? "Neighbours get " : ""}${PERKS[def.perk].label}: ${PERKS[def.perk].text}`}</td></tr>
+              <tr><td>Damage per hit</td><td>{noAttack(primaryArch(def)) ? "—" : f1(stats.damage)}</td></tr>
+              <tr><td>Attacks per second</td><td>{noAttack(primaryArch(def)) ? "—" : stats.speed.toFixed(2)}</td></tr>
+              <tr><td>Damage per second (on paper)</td><td><strong>{noAttack(primaryArch(def)) ? "—" : f1(stats.damage * stats.speed)}</strong></td></tr>
+              <tr><td>Effect</td><td>{kitSummary(def, s.rank, boostMult(level, powerUp) * (awakened ? ECONOMY.awakenDamageMult : 1)).map((l, i) => <div key={i}>{l}</div>)}{kitSummary(def, s.rank).length === 0 && "—"}</td></tr>
+              <tr><td>Style</td><td>{noAttack(primaryArch(def)) ? "—" : `${STYLES[def.style].label} — ${STYLES[def.style].text}`}</td></tr>
+              <tr><td>Perks</td><td>{def.perks.length === 0 ? "—" : perkSummary(def).map((l, i) => <div key={i}>{noAttack(primaryArch(def)) ? "Neighbours get " : ""}{l}</div>)}</td></tr>
               {awakened && (
                 <tr>
                   <td>Ultimate</td>
                   <td>
-                    {def.arch === "mana"
+                    {primaryArch(def) === "mana"
                       ? `+${f0(cfg.effects.mana.ultimateBase + cfg.effects.mana.ultimatePerWave * s.wave)} mana`
                       : `${f0(stats.damage * ECONOMY.ultimateDamageMult)} in ${ECONOMY.ultimateRadius}px`}{" "}
                     every {ECONOMY.ultimateCooldown}s
@@ -285,7 +284,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                 </tr>
               )}
               <tr><td>Normal monster on wave {s.wave}</td><td>{f0(hp)} HP</td></tr>
-              {!noAttack(def.arch) && stats.damage > 0 && (
+              {!noAttack(primaryArch(def)) && stats.damage > 0 && (
                 <tr><td>Hits to kill one</td><td>{Math.ceil(hp / stats.damage)} ({secs(hp / (stats.damage * stats.speed))})</td></tr>
               )}
             </tbody>
@@ -346,8 +345,8 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                   <td>
                     {u.name} <span className={`rarity ${u.rarity} small`}>{u.rarity}</span>
                   </td>
-                  <td>{u.arch}</td>
-                  <td className="num-cell">{noAttack(u.arch) ? "—" : f1(raw)}</td>
+                  <td>{kitLine(u)}</td>
+                  <td className="num-cell">{noAttack(primaryArch(u)) ? "—" : f1(raw)}</td>
                   <td className="num-cell">{f1(one.dps)}</td>
                   <td className="num-cell"><strong>{f1(pack.dps)}</strong></td>
                   <td>
@@ -356,7 +355,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
                       <div style={{ width: `${(100 * one.dps) / best}%` }} />
                     </div>
                   </td>
-                  <td className="muted small">{effectSummary(u.arch, s.rank, RARITY_ORDER.indexOf(u.rarity)) ?? (noAttack(u.arch) ? "Speeds up neighbours" : "")}</td>
+                  <td className="muted small">{kitSummary(u, s.rank).join(" · ") || (noAttack(primaryArch(u)) ? "Speeds up neighbours" : "")}</td>
                 </tr>
               ))}
             </tbody>

@@ -355,7 +355,7 @@ function CardsPanel({ profile, onEdit, onGive }: { profile: Profile; onEdit: (ca
   const groups: { key: string; label: string; color?: string; rows: typeof rows }[] = [];
   if (group === "none") groups.push({ key: "all", label: "", rows });
   else {
-    const keyOf = (r: (typeof rows)[number]) => (group === "level" ? String(r.c?.level ?? 0) : r.u[group]);
+    const keyOf = (r: (typeof rows)[number]) => (group === "level" ? String(r.c?.level ?? 0) : group === "arch" ? String(r.u.kit?.[0]?.arch ?? "shot") : r.u[group]);
     const order: string[] =
       group === "rarity" ? [...RARITIES].reverse()
       : group === "element" ? ELEMENTS

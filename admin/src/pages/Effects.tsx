@@ -25,7 +25,12 @@ export function EffectsPage() {
       c.effects = withEffectDefaults(c.effects);
       (c.effects[a] as Record<string, number>)[k] = v;
     });
-  const usedBy = (a: EffectArch) => draft.units.filter((u) => u.arch === a || u.effect === a).length;
+  const usedBy = (a: EffectArch) => draft.units.filter((u) => u.kit?.some((s) => s.arch === a)).length;
+  const overriddenBy = (a: EffectArch) =>
+    draft.units.flatMap((u) => {
+      const t = u.kit?.find((s) => s.arch === a)?.tune;
+      return t && Object.keys(t).length ? [{ name: u.name, fields: Object.keys(t).join(", ") }] : [];
+    });
 
   return (
     <>
@@ -45,6 +50,10 @@ export function EffectsPage() {
                 {a} <span className="muted small">· {usedBy(a)} units</span>
               </h2>
               <p className="muted small">{isArch(a) ? ARCHETYPES[a].label : EFFECT_LABELS[a]}</p>
+              {(() => {
+                const ov = overriddenBy(a);
+                return ov.length > 0 && <p className="muted small">Overridden by: {ov.map((o) => `${o.name} (${o.fields})`).join("; ")}</p>;
+              })()}
               <table className="kv">
                 <tbody>
                   {fields.map(([k, f]) => (

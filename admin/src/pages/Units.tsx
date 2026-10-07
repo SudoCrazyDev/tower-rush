@@ -1,23 +1,23 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useConfig } from "../config";
 import { Num, Text, Select, Toggle, Thumb, PageHead } from "../components";
 import { asset } from "../api";
-import { ARCHETYPES, ARCHS, ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
+import { ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
 import { noAttack } from "../../../shared/support.ts";
-import { PERKS, PERK_IDS } from "../../../shared/perks.ts";
+import { KitEditor, kitLine, perksLine, primaryArch } from "../kitEditor";
 import { RACE_IDS, RACES } from "../../../shared/races.ts";
 
 const RACE_LABELS = Object.fromEntries(RACE_IDS.map((r) => [r, RACES[r].label]));
 
-const ARCH_LABELS = Object.fromEntries(ARCHS.map((a) => [a, `${a} — ${ARCHETYPES[a].label}`]));
 const STYLE_LABELS = Object.fromEntries(STYLE_IDS.map((s) => [s, `${STYLES[s].label} — ${STYLES[s].text}`]));
-const PERK_LABELS = Object.fromEntries(PERK_IDS.map((p) => [p, p === "none" ? "None" : `${PERKS[p].label} — ${PERKS[p].text}`]));
 
 export function UnitsPage() {
   const { draft, saved, edit } = useConfig();
   const [q, setQ] = useState("");
   const [rarity, setRarity] = useState<Rarity | "all">("all");
   const [rank, setRank] = useState(1);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setOpen((o) => { const n = new Set(o); if (!n.delete(id)) n.add(id); return n; });
 
   const rows = useMemo(
     () =>
@@ -76,9 +76,9 @@ export function UnitsPage() {
               <th>Rarity</th>
               <th>Element</th>
               <th>Race</th>
-              <th>Archetype</th>
+              <th title="Archetypes: how it attacks, then riders and signatures">Kit</th>
               <th title="Heavy: slow, big hits. Rapid: fast, light hits. Changing it rescales damage and speed">Style</th>
-              <th title="Buff units hand their perk to the neighbours they buff">Perk</th>
+              <th title="Buff units hand their perks to the neighbours they buff">Perks</th>
               <th>Projectile</th>
               <th>Damage</th>
               <th>Speed</th>
@@ -91,7 +91,8 @@ export function UnitsPage() {
             {rows.map(({ u, i }) => {
               const s = unitStats(u, rank, 1, 0);
               return (
-                <tr key={u.id} className={u.enabled ? "" : "disabled"}>
+                <Fragment key={u.id}>
+                <tr className={u.enabled ? "" : "disabled"}>
                   <td><Thumb src={asset("portraits", u.id)} /></td>
                   <td><Thumb src={asset("portraits_awakened", u.id)} /></td>
                   <td className={changed(u, "name")}>
@@ -101,16 +102,26 @@ export function UnitsPage() {
                   <td className={changed(u, "rarity")}><Select value={u.rarity} options={RARITIES} onChange={(v) => set(i, "rarity", v)} /></td>
                   <td className={changed(u, "element")}><Select value={u.element} options={ELEMENTS} onChange={(v) => set(i, "element", v)} /></td>
                   <td className={changed(u, "race")}><Select value={u.race} options={RACE_IDS} labels={RACE_LABELS} onChange={(v) => set(i, "race", v)} /></td>
-                  <td className={changed(u, "arch")}><Select value={u.arch} options={ARCHS} onChange={(v) => set(i, "arch", v)} labels={ARCH_LABELS} /></td>
+                  <td className={changed(u, "kit")}>
+                    <button className="btn small ghost" onClick={() => toggle(u.id)}>{open.has(u.id) ? "Close" : "Edit"}</button> {kitLine(u)}
+                  </td>
                   <td className={changed(u, "style")}><Select value={u.style} options={STYLE_IDS} labels={STYLE_LABELS} onChange={(v) => setStyle(i, v)} /></td>
-                  <td className={changed(u, "perk")}><Select value={u.perk} options={PERK_IDS} labels={PERK_LABELS} onChange={(v) => set(i, "perk", v)} /></td>
+                  <td className={changed(u, "perks")}>{perksLine(u)}</td>
                   <td className={changed(u, "proj")}><Select value={u.proj} options={PROJECTILES} onChange={(v) => set(i, "proj", v)} /></td>
                   <td className={changed(u, "damage")}><Num value={u.damage} step={0.5} min={0} onChange={(v) => set(i, "damage", v)} /></td>
                   <td className={changed(u, "speed")}><Num value={u.speed} step={0.05} min={0} onChange={(v) => set(i, "speed", v)} /></td>
-                  <td className="num-cell">{noAttack(u.arch) ? "—" : (s.damage * s.speed).toFixed(1)}</td>
+                  <td className="num-cell">{noAttack(primaryArch(u)) ? "—" : (s.damage * s.speed).toFixed(1)}</td>
                   <td className={changed(u, "enabled")}><Toggle value={u.enabled} onChange={(v) => set(i, "enabled", v)} /></td>
                   <td className={changed(u, "blurb")}><Text value={u.blurb} onChange={(v) => set(i, "blurb", v)} width={220} /></td>
                 </tr>
+                {open.has(u.id) && (
+                  <tr>
+                    <td colSpan={15}>
+                      <KitEditor unit={u} rank={rank} effects={draft.effects} perkValues={draft.perks} onKit={(kit) => set(i, "kit", kit)} onPerks={(perks) => set(i, "perks", perks)} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>

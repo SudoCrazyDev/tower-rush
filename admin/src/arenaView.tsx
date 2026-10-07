@@ -219,7 +219,7 @@ function draw(c: HTMLCanvasElement | null, s: Sim, width: number, height: number
     ctx.strokeStyle = "#14183a";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(sh.x, sh.y, sh.unit.def.arch === "sniper" ? 10 : 7, 0, Math.PI * 2);
+    ctx.arc(sh.x, sh.y, sh.unit.def.kit[0]?.arch === "sniper" ? 10 : 7, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }

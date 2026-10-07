@@ -7,7 +7,8 @@ import { Modal, Select, Thumb } from "./components";
 import { ASSETS, asset } from "./api";
 import { ARCHETYPES, maxRank, RARITIES, STYLES, UNITS, UNIT_BY_ID, type UnitDef } from "../../shared/units.ts";
 import { noAttack } from "../../shared/support.ts";
-import { PERKS } from "../../shared/perks.ts";
+import { kitSummary, perkSummary } from "../../shared/kit.ts";
+import { kitLine, primaryArch } from "./kitEditor";
 import { ECONOMY } from "../../shared/economy.ts";
 import { boardUnitStats, type BoardUnit, type SimSetup } from "../../shared/sim.ts";
 
@@ -138,7 +139,7 @@ export function simBoard(board: (BoardUnit | null)[], canAwaken: Set<string>) {
 export function boardDps(board: (BoardUnit | null)[], cardLevel: number, powerUp: number) {
   let total = 0;
   for (const b of board) {
-    if (!b || !UNIT_BY_ID[b.id] || noAttack(UNIT_BY_ID[b.id].arch)) continue;
+    if (!b || !UNIT_BY_ID[b.id] || noAttack(primaryArch(UNIT_BY_ID[b.id]))) continue;
     const s = boardUnitStats(b, cardLevel, powerUp);
     total += s.damage * s.speed;
   }
@@ -195,7 +196,7 @@ export function UnitSelect({ value, onChange, units }: { value: string; onChange
             .filter((u) => u.rarity === r)
             .map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name} · {u.arch}
+                {u.name} · {kitLine(u)}
                 {u.enabled ? "" : " (off)"}
               </option>
             ))}
@@ -336,9 +337,9 @@ export function BoardEditor({
                   <RankPicker value={edit.rank} onChange={(rank) => setTile(editing, { ...edit, rank })} />
                 </div>
                 <p className="muted small">
-                  {ARCHETYPES[UNIT_BY_ID[edit.id]?.arch ?? "shot"].label}.{" "}
-                  {UNIT_BY_ID[edit.id] && !noAttack(UNIT_BY_ID[edit.id].arch) && `${STYLES[UNIT_BY_ID[edit.id].style].label} style. `}
-                  {UNIT_BY_ID[edit.id] && UNIT_BY_ID[edit.id].perk !== "none" && `${PERKS[UNIT_BY_ID[edit.id].perk].label}: ${PERKS[UNIT_BY_ID[edit.id].perk].text}. `}
+                  {ARCHETYPES[primaryArch(UNIT_BY_ID[edit.id] ?? { kit: [] })].label}.{" "}
+                  {UNIT_BY_ID[edit.id] && !noAttack(primaryArch(UNIT_BY_ID[edit.id])) && `${STYLES[UNIT_BY_ID[edit.id].style].label} style. `}
+                  {UNIT_BY_ID[edit.id] && [...kitSummary(UNIT_BY_ID[edit.id], edit.rank).slice(1), ...perkSummary(UNIT_BY_ID[edit.id])].map((l) => `${l}. `).join("")}
                   {canAwaken.has(edit.id) ? `Awakens at rank ${maxRank()}.` : "No awakened art, so it doesn't awaken."}
                 </p>
               </>
