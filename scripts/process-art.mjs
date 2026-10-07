@@ -17,7 +17,7 @@ const onlyIdx = args.indexOf("--only");
 const only = onlyIdx >= 0 ? (args[onlyIdx + 1] ?? "").toLowerCase() : "";
 const ROOT = join(import.meta.dirname, "..");
 const DB = "tower-rush";
-const SCOPE = /^(Perk icons|Archetype icons|Element emblems|Race crests|VFX: .*|Weapons \((generic|signature)\))$/;
+const SCOPE = /^(Monster trait icons|Perk icons|Archetype icons|Element emblems|Race crests|VFX: .*|Weapons \((generic|signature)\))$/;
 
 const wrangler = (cmd) =>
   JSON.parse(execFileSync("npx", ["wrangler", "d1", "execute", DB, "--remote", "--json", "--command", `"${cmd}"`], { cwd: ROOT, shell: true, encoding: "utf8", maxBuffer: 1 << 26 }))[0].results;

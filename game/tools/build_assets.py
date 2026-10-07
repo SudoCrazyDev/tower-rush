@@ -160,6 +160,7 @@ STATIC = [
     # v2.0: static VFX sprites (top-level vfx/*.png above), melee weapon sprites, and UI icon sets.
     ("vfx/weapons", "vfx/weapons", 160),
     ("ui/perks", "ui/perks", 128),
+    ("ui/traits", "ui/traits", 128),
     ("ui/archs", "ui/archs", 128),
     ("ui/races", "ui/races", 160),
     # v1.2 Story mode: book covers, illustrated panels and dialogue portraits.
