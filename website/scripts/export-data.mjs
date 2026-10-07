@@ -6,12 +6,12 @@ import { DEFAULT_UNITS, ARCHETYPES, STYLES, maxRank, maxPowerUp, powerUpCost, ra
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES } from "../../shared/monsters.ts";
 import { DEFAULT_ARENAS } from "../../shared/arenas.ts";
 import { DEFAULT_LEAGUES } from "../../shared/leagues.ts";
-import { PERKS } from "../../shared/perks.ts";
+import { kitPrimary, kitSummary, perkSummary } from "../../shared/kit.ts";
 import { DEFAULT_HEROES, heroAbilityText } from "../../shared/heroes.ts";
 import { RACES } from "../../shared/races.ts";
 import { ECONOMY, DEFAULT_CHESTS } from "../../shared/economy.ts";
 import { DEFAULT_PVP, PVP_MODE_INFO } from "../../shared/pvp.ts";
-import { EFFECTS, auraBonus, buffBonus, effectSummary, unitEffectSummary } from "../../shared/effects.ts";
+import { EFFECTS, auraBonus, buffBonus } from "../../shared/effects.ts";
 import {
   SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
 } from "../../shared/support.ts";
@@ -50,21 +50,21 @@ function supportCell(arch, rank, mult) {
 
 const awakenArt = new Set(index.units_awakened);
 function cardInfo(u) {
-  const support = isSupport(u.arch) ? u.arch : null;
-  const silent = noAttack(u.arch);
+  const arch = kitPrimary(u);
+  const support = isSupport(arch) ? arch : null;
+  const silent = noAttack(arch);
   const ri = rarityIndex(u.rarity);
   const awakens = !support && awakenArt.has(u.id);
   const st = STYLES[u.style];
-  const perk = u.perk !== "none" ? PERKS[u.perk] : null;
 
   // Details tab.
-  const role = (u.role ? `${u.role} · ` : "") + (u.arch === "buff" || (silent && u.role) ? "" : support ? "Support · " : `${st.label} · `);
-  const effects = [effectSummary(u.arch, 1, ri, EFFECTS, 1), u.effect ? unitEffectSummary(u.effect, 1) : null].filter(Boolean);
-  const perkLine = perk ? `${u.arch === "buff" ? "Neighbours get " : ""}${perk.label}: ${perk.text}` : null;
+  const role = (u.role ? `${u.role} · ` : "") + (arch === "buff" || (silent && u.role) ? "" : support ? "Support · " : `${st.label} · `);
+  const effects = kitSummary(u, 1, 1);
+  const perkLines = perkSummary(u).map((l) => `${arch === "buff" ? "Neighbours get " : ""}${l}`);
   const now = unitStats(u, 1, 1, 0);
-  const quick = support || u.arch === "aegis" ? [["stats/attack_speed", "never attacks"]]
-    : u.arch === "buff" ? [["stats/attack_speed", `neighbours +${pct(buffBonus(1, ri, 1))} faster`]]
-    : u.arch === "aura" ? [["stats/attack_speed", `3×3 +${pct(auraBonus(1, 1).speed)} speed, +${pct(auraBonus(1, 1).damage)} dmg`]]
+  const quick = support || arch === "aegis" ? [["stats/attack_speed", "never attacks"]]
+    : arch === "buff" ? [["stats/attack_speed", `neighbours +${pct(buffBonus(1, ri, 1))} faster`]]
+    : arch === "aura" ? [["stats/attack_speed", `3×3 +${pct(auraBonus(1, 1).speed)} speed, +${pct(auraBonus(1, 1).damage)} dmg`]]
     : [["stats/damage", fmt(now.damage)], ["stats/attack_speed", `every ${+(1 / now.speed).toFixed(2)}s`]];
 
   // Stats tab: merge ranks and in-battle power-ups.
@@ -72,7 +72,7 @@ function cardInfo(u) {
   const every = (s) => (silent ? "—" : `${+(1 / s).toFixed(2)}s`);
   const buff = (rank, up, mult = 1) => {
     const m = (1 + up * ECONOMY.powerUpBonus) * mult;
-    return support ? supportCell(support, rank, m) : u.arch === "aura" ? `+${pct(auraBonus(rank, m).speed)}` : u.arch === "aegis" ? "—" : `+${pct(buffBonus(rank, ri, m))}`;
+    return support ? supportCell(support, rank, m) : arch === "aura" ? `+${pct(auraBonus(rank, m).speed)}` : arch === "aegis" ? "—" : `+${pct(buffBonus(rank, ri, m))}`;
   };
   const buffIcon = support ? SUPPORT_STAT[support][0] : "stats/attack_speed";
   const boost = (r, mult) => (awakens && r === maxRank() ? mult : 1);
@@ -83,9 +83,9 @@ function cardInfo(u) {
     raceLabel: RACES[u.race]?.label ?? u.race,
     raceColor: hex(RACES[u.race]?.color ?? 0xffffff),
     awakens,
-    role: role + (support ? SUPPORT_TEXT[support] : ARCHETYPES[u.arch].label),
+    role: role + (support ? SUPPORT_TEXT[support] : ARCHETYPES[arch].label),
     effects,
-    perkLine,
+    perkLines,
     quick,
     styleLine: silent ? null : `${st.label}: ${st.text}${u.style === "balanced" ? "" : ` · ×${+st.dmg.toFixed(2)} damage, ×${st.speed} speed`}`,
     rankNote: support
@@ -112,7 +112,7 @@ function cardInfo(u) {
     },
     foot: support
       ? `${SUPPORT_STAT[support][1]}. ${SUPPORT_TEXT[support]}; it never attacks.`
-      : u.arch === "aura"
+      : arch === "aura"
       ? "Units in the 3×3 around it attack this much faster."
       : silent
       ? `Its four neighbours attack this much faster (max +${pct(EFFECTS.buff.max)}).`

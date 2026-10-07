@@ -5,8 +5,8 @@
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { DEFAULT_UNITS, ARCHETYPES, STYLES } from "../shared/units.ts";
-import { PERKS } from "../shared/perks.ts";
-import { EFFECT_LABELS } from "../shared/effects.ts";
+import { ARCH_KIND, kitPrimary, kitSummary, perkSummary } from "../shared/kit.ts";
+import type { Arch } from "../shared/units.ts";
 import { noAttack } from "../shared/support.ts";
 
 const RARITY: Record<string, { name: string; hex: string; finish: string }> = {
@@ -88,12 +88,17 @@ for (const u of sorted) {
   }
   const r = RARITY[u.rarity];
   const el = ELEMENT[u.element];
-  const arch = ARCHETYPES[u.arch];
-  const silent = noAttack(u.arch);
+  const primary = kitPrimary(u) as Arch;
+  const arch = ARCHETYPES[primary];
+  const silent = noAttack(primary);
   const role = (u.role ?? (silent ? "Support" : STYLES[u.style].label)).toUpperCase();
-  const effect = u.effect ? EFFECT_LABELS[u.effect]?.replace(/^[^:]+:\s*/, "") : undefined;
-  const ability = `${u.arch.toUpperCase()} — ${arch.label}${effect ? `. ${effect[0].toUpperCase() + effect.slice(1)}` : ""}`;
-  const perk = u.perk !== "none" ? `${PERKS[u.perk].label.toUpperCase()} ${PERKS[u.perk].text}` : undefined;
+  // Riders and signatures after the primary, each described with this unit's own numbers.
+  const extras = u.kit.slice(1).map((slot) => kitSummary({ ...u, kit: [slot] }, 1)[0]).filter(Boolean);
+  const ability = `${primary.toUpperCase()} — ${arch.label}${extras.length ? `. ${extras.join(". ")}` : ""}`;
+  const perks = perkSummary(u);
+  const perk = perks.length ? perks.join("; ") : undefined;
+  // The art follows the last rider (a freezer freezes, a burner burns); otherwise the primary.
+  const actionKey = [...u.kit].reverse().find((slot) => ARCH_KIND[slot.arch] === "rider" && ACTION[slot.arch])?.arch ?? primary;
 
   const stats = silent
     ? `STAT ROW: one wide ${r.name} metal plaque just under the nameplate, with a shield-and-star icon and the bold word "${role}".`
@@ -108,7 +113,7 @@ for (const u of sorted) {
   out.push("```");
   out.push(`Collectible fantasy trading card, vertical 2:3, front face only, centered on a plain dark background, no hands, no table.
 
-CHARACTER: ${u.name}, matching reference image 1 exactly (same face, outfit, colors, proportions), ${ACTION[u.arch] ?? "in a heroic action pose"}. Stylized painterly mobile-game art, vibrant colors, soft rim light.
+CHARACTER: ${u.name}, matching reference image 1 exactly (same face, outfit, colors, proportions), ${ACTION[actionKey] ?? "in a heroic action pose"}. Stylized painterly mobile-game art, vibrant colors, soft rim light.
 
 LAYOUT: use the same frame layout as reference image 2 (art window, top gem, corner emblem, nameplate banner, parchment text box, bottom ribbon), recolored for this card.
 

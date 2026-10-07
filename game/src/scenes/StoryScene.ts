@@ -7,8 +7,7 @@ import { UNIT_BY_ID } from "../data/units";
 import { W, H, WIDE, txt, button, iconButton, modal, pressable, cardView, attempt, onSwipe, ornateFrame } from "../ui";
 import { cover, topBar } from "./LobbyScene";
 import { starRow, storyPanels } from "./storyUi";
-import { effectSummary, unitEffectSummary } from "../../../shared/effects.ts";
-import { rarityIndex } from "../../../shared/units.ts";
+import { kitSummary } from "../../../shared/kit.ts";
 import { BOOK, chapterLock, chapterWon, deckChecks, eventPickProblem, storyById, storyFinished, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
 
 const PICK_KEY = "tower-rush-story-pick";
@@ -238,7 +237,7 @@ export class StoryScene extends Phaser.Scene {
         if (picked.has(id)) picked.delete(id);
         else if (picked.size < ed.pick) picked.add(id);
         else sfx("error");
-        const effect = def.effect ? unitEffectSummary(def.effect, 1) : effectSummary(def.arch, 1, rarityIndex(def.rarity)) ?? "";
+        const effect = kitSummary(def, 1).join("\n");
         info.setText(`${def.name} (${def.role}): ${def.blurb}\n${effect}`);
         refresh();
       });
