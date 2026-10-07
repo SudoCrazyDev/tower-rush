@@ -157,6 +157,11 @@ STATIC = [
     ("ui/emotes", "emotes", 128),
     ("ui/stats", "stats", 96),
     ("vfx", "vfx", 128),
+    # v2.0: static VFX sprites (top-level vfx/*.png above), melee weapon sprites, and UI icon sets.
+    ("vfx/weapons", "vfx/weapons", 160),
+    ("ui/perks", "ui/perks", 128),
+    ("ui/archs", "ui/archs", 128),
+    ("ui/races", "ui/races", 160),
     # v1.2 Story mode: book covers, illustrated panels and dialogue portraits.
     ("story/covers", "story/covers", 768),
     ("story/panels", "story/panels", 1344),
@@ -182,9 +187,21 @@ for i in index["locations"]:
 ELEMENT_ORDER = ["fire", "ice", "lightning", "nature", "poison", "arcane"]
 
 
+# v2.0 element emblems (assets/ui/elements/<e>.png, keyed) replace the cut-out badges: they build to
+# the same ui/element_<e>.webp name BootScene loads, and rebuild whenever the emblem is newer.
+index["elements"] = [e for e in ELEMENT_ORDER if os.path.exists(f"{SRC}/ui/elements/{e}.png")]
+for e in index["elements"]:
+    jobs.append(lambda e=e: (
+        os.path.exists(f"{OUT}/ui/element_{e}.webp")
+        and os.path.getmtime(f"{OUT}/ui/element_{e}.webp") < os.path.getmtime(f"{SRC}/ui/elements/{e}.png")
+        and os.remove(f"{OUT}/ui/element_{e}.webp")
+    ) or fit(f"{SRC}/ui/elements/{e}.png", f"{OUT}/ui/element_{e}.webp", 128))
+
+
 @task
 def element_badges():
-    dsts = [f"{OUT}/ui/element_{e}.webp" for e in ELEMENT_ORDER]
+    # Elements without an emblem fall back to the old atlas badges.
+    dsts = [f"{OUT}/ui/element_{e}.webp" for e in ELEMENT_ORDER if e not in index["elements"]]
     if not any(need(d) for d in dsts):
         return
     im = Image.open(f"{SRC}/ui/element_icons.png").convert("RGBA")
@@ -193,7 +210,10 @@ def element_badges():
     side = int(np.ceil(2 * r)) + 4
     yy, xx = np.mgrid[0:side, 0:side] + 0.5 - side / 2
     mask = np.clip(r - np.hypot(xx, yy) + 0.5, 0, 1)  # 1px anti-aliased edge
-    for i, dst in enumerate(dsts):
+    for i, e in enumerate(ELEMENT_ORDER):
+        dst = f"{OUT}/ui/element_{e}.webp"
+        if e in index["elements"] or not need(dst):
+            continue
         cx, cy = (94.5 + i * 167.1) * k, 340 * k
         x0, y0 = round(cx - side / 2), round(cy - side / 2)
         a = np.asarray(im.crop((x0, y0, x0 + side, y0 + side))).copy()

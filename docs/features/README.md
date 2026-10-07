@@ -8,6 +8,7 @@ document and a promo kit for social media. The release timeline is in [ROADMAP.m
 | v1.1.0 | **Supporting Cast Arrival** | Live (2026-10-06) | [README.md](v1.1-supporting-cast-arrival/README.md) | [PROMO.md](v1.1-supporting-cast-arrival/PROMO.md) |
 | v1.2.0 | **Stories** | Live (2026-10-06) | [README.md](v1.2-stories/README.md) | [PROMO.md](v1.2-stories/PROMO.md) |
 | v1.3.0 | **Branding Revamp** | Live (2026-10-06) | [README.md](v1.3-branding-revamp/README.md) | [PROMO.md](v1.3-branding-revamp/PROMO.md) |
+| v2.0.0 | **The Grand Revamp** | Design | [README.md](v2.0-the-grand-revamp/README.md) | (to write) |
 
 ## Conventions
 
