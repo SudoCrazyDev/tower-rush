@@ -63,13 +63,21 @@
     { key: "trick", title: "Tricksters", sub: "Slow, freeze, stun and curse", icon: "stats/slow", archs: ["slow", "freeze", "stun", "poison", "curse"] },
     { key: "support", title: "Barkeeps", sub: "Buffs, mana and luck", icon: "items/mana_orb", archs: ["buff", "aura", "mana", "lucky"] },
   ];
-  const ROLE_ARCHS = ROLES.flatMap((r) => r.archs);
+  // A unit sits under one role (mirrors DeckScene roleOf): a solo archetype is its own role, otherwise the
+  // last kit slot that belongs to a role wins (shot + freeze is a Trickster). No role means supporting cast.
+  const ATTACKS = ["shot", "sniper", "pierce", "splash", "chain"];
+  const roleOf = (u) => {
+    const kit = u.kit.map((s) => s.arch);
+    const slots = ATTACKS.includes(kit[0]) ? [...kit].reverse() : [kit[0]];
+    for (const a of slots) { const r = ROLES.find((x) => x.archs.includes(a)); if (r) return r.key; }
+    return "cast";
+  };
   const GROUPS = {
     rarity: () => RARITY_DESC.map((r) => ({ key: r, title: cap(r), sub: RARITY_GROUPS[r], icon: `cards/frame_${r}.webp`, color: RARITY_COLOR[r], match: (u) => u.rarity === r })),
     element: () => ELEMENTS.map((e) => ({ key: e, title: cap(e), sub: ELEMENT_GROUPS[e], icon: `ui/element_${e}.webp`, color: ELEMENT_COLOR[e], match: (u) => u.element === e })),
     role: () => [
-      ...ROLES.map((r) => ({ ...r, match: (u) => r.archs.includes(u.arch) })),
-      { key: "cast", title: "Supporting cast", sub: "Never attack: copy, swap, brew", icon: "items/star_shard", match: (u) => !ROLE_ARCHS.includes(u.arch) },
+      ...ROLES.map((r) => ({ ...r, match: (u) => roleOf(u) === r.key })),
+      { key: "cast", title: "Supporting cast", sub: "Never attack: copy, swap, brew", icon: "items/star_shard", match: (u) => roleOf(u) === "cast" },
     ].map((g) => ({ ...g, icon: `${g.icon}.webp` })),
   };
   const state = { by: "rarity", q: "", open: new Set() };
@@ -101,7 +109,7 @@
     </button>`;
 
   function renderShelves() {
-    const list = units.filter((u) => !state.q || `${u.name} ${u.race} ${u.arch} ${u.role ?? ""} ${u.element} ${u.rarity}`.toLowerCase().includes(state.q));
+    const list = units.filter((u) => !state.q || `${u.name} ${u.race} ${u.kit.map((k) => k.arch).join(" ")} ${u.role ?? ""} ${u.element} ${u.rarity}`.toLowerCase().includes(state.q));
     const perRow = narrow.matches ? 4 : mid.matches ? 6 : 8;
     const html = GROUPS[state.by]().map((g) => {
       const us = list.filter(g.match).sort((a, b) => RARITY_DESC.indexOf(a.rarity) - RARITY_DESC.indexOf(b.rarity) || a.name.localeCompare(b.name));
@@ -157,7 +165,7 @@
           ${c.awakeText ? `<div class="dlg__awake" id="dlgAwake" hidden>${c.awakeText}</div>` : ""}
           <div class="dlg__role">${c.role}</div>
           ${c.effects.map((l) => `<div class="dlg__fx">${l}</div>`).join("")}
-          ${c.perkLine ? `<div class="dlg__perk">${c.perkLine}</div>` : ""}
+          ${c.perkLines.map((l) => `<div class="dlg__perk">${l}</div>`).join("")}
           <div class="dlg__blurb">"${u.blurb}"</div>
         </div>
         <div class="dlg__quick">${c.quick.map(([icon, v]) => `<span>${img(`${icon}.webp`)}${v}</span>`).join("")}</div>
@@ -167,7 +175,7 @@
       <div class="dlg__pane" data-pane="stats">
         <div class="dlg__lines">
           ${c.styleLine ? `<div class="dlg__role">${c.styleLine}</div>` : ""}
-          ${c.perkLine ? `<div class="dlg__perk">${c.perkLine}</div>` : ""}
+          ${c.perkLines.map((l) => `<div class="dlg__perk">${l}</div>`).join("")}
         </div>
         <div class="dlg__sec"><h4>Merge rank</h4><p>${c.rankNote}</p></div>
         ${table(c.ranks)}

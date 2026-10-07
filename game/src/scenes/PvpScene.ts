@@ -28,6 +28,7 @@ import { PvpBot, botSkill } from "../../../shared/pvpbot.ts";
 import type { SimFx, SimMonster, SimShot, SimUnit } from "../../../shared/sim.ts";
 import type { Promotion } from "../../../shared/profile.ts";
 import { canBecome } from "../../../shared/support.ts";
+import { kitPrimary } from "../../../shared/kit.ts";
 
 /** The opponent's board sits this far right in the world; only the small camera sees it. */
 const OX = 6000;
@@ -730,7 +731,7 @@ export class PvpScene extends Phaser.Scene {
     const step = Math.round(progress * 40);
     if (step === v.ringAt) return;
     v.ringAt = step;
-    const color = v.u.def.arch === "mime" ? 0x59d64a : v.u.def.arch === "portal" ? 0xff8a3b : 0xc58bff;
+    const color = kitPrimary(v.u.def) === "mime" ? 0x59d64a : kitPrimary(v.u.def) === "portal" ? 0xff8a3b : 0xc58bff;
     const g = v.ring.clear().lineStyle(7, NAVY, 0.7).strokeEllipse(0, 0, 88, 30);
     if (step >= 40) {
       g.lineStyle(5, color, 1).strokeEllipse(0, 0, 88, 30).fillStyle(color, 0.18).fillEllipse(0, 0, 88, 30);
@@ -1098,9 +1099,9 @@ export class PvpScene extends Phaser.Scene {
       const p = slotPos(this.arena, from);
       obj.setPosition(p.x, p.y).setDepth(100 + p.y);
       // Why a Mime or Portal Imp drop didn't work.
-      const active = x && (x.def.arch === "mime" || x.def.arch === "portal") && to >= 0 && (y || x.def.arch === "portal");
+      const active = x && (kitPrimary(x.def) === "mime" || kitPrimary(x.def) === "portal") && to >= 0 && (y || kitPrimary(x.def) === "portal");
       if (active) {
-        const ready = x.def.arch === "mime" ? b.mimeReady(from) : b.portalReady(from);
+        const ready = kitPrimary(x.def) === "mime" ? b.mimeReady(from) : b.portalReady(from);
         sfx("error");
         floatText(this, p.x, p.y - 80, !ready ? "Not ready yet" : y && y.rank !== x.rank ? `Needs ★${x.rank}` : "Can't copy that", "#ffb0b0", 24);
       }

@@ -32,7 +32,7 @@ NAMEPLATE: banner under the art reading "HOODED ARCHER" in bold fantasy serif ca
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "20", lightning bolt "1.25/s", flame burst "25 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SHOT — Rapid shots at the leading monster"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Never misses, not even a flitting bat."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -57,7 +57,7 @@ NAMEPLATE: banner under the art reading "FOX SPEARMAN" in bold fantasy serif cap
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "20", lightning bolt "0.9/s", flame burst "18 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "PIERCE — Hits the target and those behind it"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "One thrust finishes what others started."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -82,7 +82,7 @@ NAMEPLATE: banner under the art reading "GOBLIN BOMBER" in bold fantasy serif ca
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "13.8", lightning bolt "1.28/s", flame burst "18 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SPLASH — Area damage around the target"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Lobs bombs faster than goblins can run."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -106,8 +106,8 @@ FRAME: ornate carved metal border in silver-gray (#9AA5B8) with plain matte meta
 NAMEPLATE: banner under the art reading "FLAME ADEPT" in bold fantasy serif capitals.
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "16", lightning bolt "0.8/s", flame burst "13 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "BURN — Area damage that keeps burning"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SPLASH — Area damage around the target. Burns 45% per second for 3s"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Burns the stragglers down to ash."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -131,8 +131,8 @@ FRAME: ornate carved metal border in silver-gray (#9AA5B8) with plain matte meta
 NAMEPLATE: banner under the art reading "PENGUIN WIZARD" in bold fantasy serif capitals.
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "12", lightning bolt "1/s", flame burst "12 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SLOW — Slows monsters on hit"
-  - small gold perk tag: "FROSTBITE chills frost-proof monsters, +30% to them"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Slows 24% for 2s"
+  - small gold perk tag: "Frostbite: chills frost-proof monsters, +30% to them"
   - small italic flavor text: "Cold enough to chill even a yeti."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -157,7 +157,7 @@ NAMEPLATE: banner under the art reading "TESLA GNOME" in bold fantasy serif capi
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "11.3", lightning bolt "1.28/s", flame burst "14 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "CHAIN — Lightning jumps between monsters"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Pocket thunder that never misses."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -181,8 +181,8 @@ FRAME: ornate carved metal border in silver-gray (#9AA5B8) with plain matte meta
 NAMEPLATE: banner under the art reading "CACTUS GUNSLINGER" in bold fantasy serif capitals.
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "25.7", lightning bolt "0.7/s", flame burst "18 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Heavy slugs punch through plate."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -207,7 +207,7 @@ NAMEPLATE: banner under the art reading "CLOCKWORK TURRET" in bold fantasy serif
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "28.6", lightning bolt "0.88/s", flame burst "25 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SHOT — Rapid shots at the leading monster"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Slow to reload. Cracks any shell."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -232,7 +232,7 @@ NAMEPLATE: banner under the art reading "WIND SYLPH" in bold fantasy serif capit
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "12.5", lightning bolt "2/s", flame burst "25 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SHOT — Rapid shots at the leading monster"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Faster than the fastest runner."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -256,8 +256,8 @@ FRAME: ornate carved metal border in silver-gray (#9AA5B8) with plain matte meta
 NAMEPLATE: banner under the art reading "SHIELD KNIGHT" in bold fantasy serif capitals.
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "17.2", lightning bolt "0.7/s", flame burst "12 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CURSE — Cursed monsters take extra damage"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Each hit: +3% damage taken (up to 60%)"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Cracks the biggest brutes like eggs."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -281,8 +281,8 @@ FRAME: ornate carved metal border in silver-gray (#9AA5B8) with plain matte meta
 NAMEPLATE: banner under the art reading "WOLF HUNTER" in bold fantasy serif capitals.
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "11.3", lightning bolt "1.6/s", flame burst "18 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Runs down anything with legs."
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -307,7 +307,7 @@ NAMEPLATE: banner under the art reading "PIRATE GUNNER" in bold fantasy serif ca
 STATS ROW: 3 small round silver-gray metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "31.5", lightning bolt "0.56/s", flame burst "18 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SPLASH — Area damage around the target"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "Every kill pays. Fire in the hole!"
 RARITY LABEL: small ribbon reading "COMMON" at the bottom center.
 
@@ -333,8 +333,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "EMBER WITCH" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "22.4", lightning bolt "0.8/s", flame burst "18 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "BURN — Area damage that keeps burning"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SPLASH — Area damage around the target. Burns 45% per second for 3s"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Her flames finish off the weak."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -358,8 +358,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "FROST SORCERESS" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "16.8", lightning bolt "1/s", flame burst "17 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SLOW — Slows monsters on hit"
-  - small gold perk tag: "FROSTBITE chills frost-proof monsters, +30% to them"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Slows 28% for 2s"
+  - small gold perk tag: "Frostbite: chills frost-proof monsters, +30% to them"
   - small italic flavor text: "Her frost bites even the frost-proof."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -383,8 +383,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "FROG ALCHEMIST" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "14", lightning bolt "1/s", flame burst "14 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "POISON — Stacking poison damage"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Poison 35% per second for 4s, stacks"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Ribbit. Bubble. Melt the weakened."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -408,8 +408,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "BEE KEEPER" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "8.8", lightning bolt "1.6/s", flame burst "14 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "POISON — Stacking poison damage"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Poison 35% per second for 4s, stacks"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "The bees catch whatever runs."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -433,8 +433,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "BEAR RIDER" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "36", lightning bolt "0.63/s", flame burst "23 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "STUN — Chance to stun on hit"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 12% chance to stun for 0.8s"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "The bear wrestles giants for fun."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -459,7 +459,7 @@ NAMEPLATE: banner under the art reading "GEAR ENGINEER" in bold fantasy serif ca
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "19.3", lightning bolt "1.28/s", flame burst "25 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SPLASH — Area damage around the target"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Twin gear cannons shred armor."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -483,8 +483,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "IMP HUNTER" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "25.2", lightning bolt "1/s", flame burst "25 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Hunts down the quick little things."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -509,7 +509,7 @@ NAMEPLATE: banner under the art reading "LUTE BARD" in bold fantasy serif capita
 STAT ROW: one wide sapphire blue metal plaque just under the nameplate, with a shield-and-star icon and the bold word "SUPPORT".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "BUFF — Speeds up neighbouring units"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Plays fast. Neighbours chase the quick."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -534,7 +534,7 @@ NAMEPLATE: banner under the art reading "RACCOON THIEF" in bold fantasy serif ca
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "7", lightning bolt "0.96/s", flame burst "7 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "MANA — Generates mana over time"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "Picks the pockets of every fallen foe."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -558,8 +558,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "SAND MONK" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "15.8", lightning bolt "1.44/s", flame burst "23 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "STUN — Chance to stun on hit"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 12% chance to stun for 0.8s"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "A palm strike no one can dodge."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -583,8 +583,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "SNOWGLOBE FAIRY" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "16.8", lightning bolt "0.9/s", flame burst "15 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "FREEZE — Chance to freeze monsters solid"
-  - small gold perk tag: "FROSTBITE chills frost-proof monsters, +30% to them"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 16% chance to freeze for 1.2s"
+  - small gold perk tag: "Frostbite: chills frost-proof monsters, +30% to them"
   - small italic flavor text: "Her snow freezes even the yetis."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -608,8 +608,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "SPORE SAGE" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "20", lightning bolt "0.7/s", flame burst "14 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "POISON — Stacking poison damage"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Poison 35% per second for 4s, stacks"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Big spores for big monsters."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -634,7 +634,7 @@ NAMEPLATE: banner under the art reading "STORM TOTEM" in bold fantasy serif capi
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "25.2", lightning bolt "0.8/s", flame burst "20 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "CHAIN — Lightning jumps between monsters"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Its lightning never misses."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -658,8 +658,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "THUNDER DWARF" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "36", lightning bolt "0.63/s", flame burst "23 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "STUN — Chance to stun on hit"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 12% chance to stun for 0.8s"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Hammer meets armor. Hammer wins."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -683,8 +683,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "VINE DRUID" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "10.5", lightning bolt "1.6/s", flame burst "17 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SLOW — Slows monsters on hit"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Slows 28% for 2s"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Roots grab the fastest ankles."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -708,8 +708,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "WITCH DOCTOR" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "16.8", lightning bolt "1/s", flame burst "17 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CURSE — Cursed monsters take extra damage"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Each hit: +4% damage taken (up to 60%)"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Hexes the weak into the grave."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -733,8 +733,8 @@ FRAME: ornate carved metal border in sapphire blue (#3D8BFF) with a light polish
 NAMEPLATE: banner under the art reading "PUMPKIN SCARECROW" in bold fantasy serif capitals.
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "25.2", lightning bolt "0.9/s", flame burst "23 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "STUN — Chance to stun on hit"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 12% chance to stun for 0.8s"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "Scares them stiff, keeps their mana."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -759,7 +759,7 @@ NAMEPLATE: banner under the art reading "OGRE CHEF" in bold fantasy serif capita
 STATS ROW: 3 small round sapphire blue metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "44", lightning bolt "0.56/s", flame burst "25 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SPLASH — Area damage around the target"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Big pots for big appetites."
 RARITY LABEL: small ribbon reading "RARE" at the bottom center.
 
@@ -906,7 +906,7 @@ NAMEPLATE: banner under the art reading "CRYSTAL GOLEM" in bold fantasy serif ca
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "62.9", lightning bolt "0.56/s", flame burst "35 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SPLASH — Area damage around the target"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Crystal shards split any armor."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -931,7 +931,7 @@ NAMEPLATE: banner under the art reading "CYCLOPS SMITH" in bold fantasy serif ca
 STAT ROW: one wide amethyst purple metal plaque just under the nameplate, with a shield-and-star icon and the bold word "SUPPORT".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "BUFF — Speeds up neighbouring units"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Forges neighbours blades that cut armor."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -955,8 +955,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "FOX SAMURAI" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "51.5", lightning bolt "0.7/s", flame burst "36 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "One cut. Through any armor."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -980,8 +980,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "LAVA GOLEM" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "45.8", lightning bolt "0.56/s", flame burst "26 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "BURN — Area damage that keeps burning"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - bold small caps: "SPLASH — Area damage around the target. Burns 45% per second for 3s"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Melts down the biggest brutes."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1005,8 +1005,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "MAGNET ROBOT" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "15", lightning bolt "1.6/s", flame burst "24 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CURSE — Cursed monsters take extra damage"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Each hit: +5% damage taken (up to 60%)"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Pulls armor right off. Fast."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1030,8 +1030,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "MINOTAUR GLADIATOR" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "51.5", lightning bolt "0.63/s", flame burst "32 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "STUN — Chance to stun on hit"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 12% chance to stun for 0.8s"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Lives to fight giants."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1056,7 +1056,7 @@ NAMEPLATE: banner under the art reading "MOON ORACLE" in bold fantasy serif capi
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "22.9", lightning bolt "0.42/s", flame burst "10 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "MANA — Generates mana over time"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "Every fallen foe feeds the moon."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1081,7 +1081,7 @@ NAMEPLATE: banner under the art reading "LANTERN GHOST" in bold fantasy serif ca
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "10", lightning bolt "0.96/s", flame burst "10 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "MANA — Generates mana over time"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Its light finds whatever hides."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1105,8 +1105,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "PHOENIX CHICK" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "20", lightning bolt "1.28/s", flame burst "26 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "BURN — Area damage that keeps burning"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SPLASH — Area damage around the target. Burns 45% per second for 3s"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Small bird, fast fire, no survivors."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1130,8 +1130,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "PLAGUE ALCHEMIST" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "20", lightning bolt "1/s", flame burst "20 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "POISON — Stacking poison damage"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Poison 35% per second for 4s, stacks"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Finishes the ones still coughing."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1156,7 +1156,7 @@ NAMEPLATE: banner under the art reading "SAND WORM" in bold fantasy serif capita
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "44", lightning bolt "0.8/s", flame burst "35 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SPLASH — Area damage around the target"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Bursts up under the runners."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1180,8 +1180,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "SHADOW NINJA" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "22.5", lightning bolt "1.6/s", flame burst "36 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Nothing dodges the shadow."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1206,7 +1206,7 @@ NAMEPLATE: banner under the art reading "STORM WHELP" in bold fantasy serif capi
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "22.5", lightning bolt "1.28/s", flame burst "29 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "CHAIN — Lightning jumps between monsters"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Baby dragon, faster than its prey."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1230,8 +1230,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "TIDE MERMAID" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "24", lightning bolt "1/s", flame burst "24 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SLOW — Slows monsters on hit"
-  - small gold perk tag: "FROSTBITE chills frost-proof monsters, +30% to them"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Slows 32% for 2s"
+  - small gold perk tag: "Frostbite: chills frost-proof monsters, +30% to them"
   - small italic flavor text: "Her tide chills even ice-born foes."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1255,8 +1255,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "TREANT GUARDIAN" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "36", lightning bolt "0.9/s", flame burst "32 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "STUN — Chance to stun on hit"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 12% chance to stun for 0.8s"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Old roots trip the quickest feet."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1280,8 +1280,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "BONE NECROMANCER" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "34.3", lightning bolt "0.7/s", flame burst "24 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CURSE — Cursed monsters take extra damage"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Each hit: +5% damage taken (up to 60%)"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Marks the dying for the grave."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1305,8 +1305,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "CARD JESTER" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "36", lightning bolt "1/s", flame burst "36 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "Always holds the ace. And your mana."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1402,7 +1402,7 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "PENTAGONAL KNIGHT" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "100", lightning bolt "0.44/s", flame burst "44 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SHOT — Rapid shots at the leading monster. Each hit gives adjacent units Rally"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Each hit: adjacent units +100% attack speed for 4s"
   - small italic flavor text: "Every hammer blow rallies the line."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1410,7 +1410,7 @@ All text spelled exactly as written, clean and readable. No other text, no water
 ```
 
 ### Rogue Knight
-Reference: `portraits/rogue_knight.webp` · fire · ATK 24 · 2.4/s · 58 DPS · Rapid
+Reference: `portraits/rogue_knight.webp` · fire · ATK 24 · 4.8/s · 115 DPS · Rapid
 
 ```
 Collectible fantasy trading card, vertical 2:3, front face only, centered on a plain dark background, no hands, no table.
@@ -1424,9 +1424,9 @@ ART WINDOW: the character fills the top 60% of the card and breaks slightly out 
 FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foil shimmer, a faceted amethyst purple gem at the top center, and a small flame emblem in the top-left corner.
 
 NAMEPLATE: banner under the art reading "ROGUE KNIGHT" in bold fantasy serif capitals.
-STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "24", lightning bolt "2.4/s", flame burst "58 DPS".
+STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "24", lightning bolt "4.8/s", flame burst "115 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SHOT — Rapid shots at the leading monster. Adjacent units get Irritation (attacks can miss)"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 95% crit ×3 · every 4s: adjacent units miss 25% of attacks for 2s"
   - small italic flavor text: "Fast blades, short temper. Keep him on the edge."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1474,7 +1474,7 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "LANCE KNIGHT" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "40", lightning bolt "0.9/s", flame burst "36 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "PIERCE — Hits the target and those behind it. Extra damage to corrupted bosses"
+  - bold small caps: "PIERCE — Hits the target and those behind it. +50% damage to corrupted bosses · each hit chains to 5 more"
   - small italic flavor text: "Runs the whole line through. Hates corruption most."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1498,7 +1498,7 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "OATH KNIGHT" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "40", lightning bolt "1.25/s", flame burst "50 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SHOT — Rapid shots at the leading monster. More damage per adjacent Knight"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. +10% damage and +5% attack speed for each adjacent Knight"
   - small italic flavor text: "Stronger with every sworn brother beside him."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1522,8 +1522,8 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "LANTERN KNIGHT" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "16", lightning bolt "0.6/s", flame burst "10 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "MANA — Generates mana over time"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - bold small caps: "MANA — Generates mana over time. +5 mana every 5s, +3 more per Knight on the field"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "His lantern finds mana in the dark."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1547,7 +1547,7 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "BERSERKER SELLSWORD" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "75", lightning bolt "0.88/s", flame burst "66 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SHOT — Rapid shots at the leading monster. Adjacent units attack slower (also the Chaos Taffy's tether)"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. While attacking: adjacent units attack 25% slower · +15% damage per Mercenary on the field"
   - small italic flavor text: "Hits like a landslide. Wears out everyone near him."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1571,7 +1571,7 @@ FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foi
 NAMEPLATE: banner under the art reading "POWDER GRENADIER" in bold fantasy serif capitals.
 STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "52", lightning bolt "0.8/s", flame burst "42 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SPLASH — Area damage around the target. Blasts may stun an adjacent unit"
+  - bold small caps: "SPLASH — Area damage around the target. Each blast: 15% chance to stun an adjacent unit for 1s"
   - small italic flavor text: "Big blasts. Mind your ears."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1579,7 +1579,7 @@ All text spelled exactly as written, clean and readable. No other text, no water
 ```
 
 ### Hired Blade
-Reference: `portraits/hired_blade.webp` · poison · ATK 46 · 1/s · 46 DPS · Balanced
+Reference: `portraits/hired_blade.webp` · poison · ATK 60 · 1.25/s · 75 DPS · Balanced
 
 ```
 Collectible fantasy trading card, vertical 2:3, front face only, centered on a plain dark background, no hands, no table.
@@ -1593,9 +1593,9 @@ ART WINDOW: the character fills the top 60% of the card and breaks slightly out 
 FRAME: ornate carved metal border in amethyst purple (#A24BFF) with a subtle foil shimmer, a faceted amethyst purple gem at the top center, and a small toxic droplet emblem in the top-left corner.
 
 NAMEPLATE: banner under the art reading "HIRED BLADE" in bold fantasy serif capitals.
-STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "46", lightning bolt "1/s", flame burst "46 DPS".
+STATS ROW: 3 small round amethyst purple metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "60", lightning bolt "1.25/s", flame burst "75 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "CRIT — Big critical hits. Costs mana every wave or sulks"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 28% chance of ×2.6 damage. Wages: 10 mana every wave, or no attacks that wave"
   - small italic flavor text: "The best blade money can buy. Pay him."
 RARITY LABEL: small ribbon reading "EPIC" at the bottom center.
 
@@ -1621,8 +1621,8 @@ FRAME: ornate carved metal border in gold (#FFB21E) with gold foil with soft lig
 NAMEPLATE: banner under the art reading "ANUBIS PRIEST" in bold fantasy serif capitals.
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "58", lightning bolt "0.7/s", flame burst "41 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "EXECUTE — Chance to instantly destroy a monster"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 7% chance to execute"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Weighs every soul. Takes the weak."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1646,8 +1646,8 @@ FRAME: ornate carved metal border in gold (#FFB21E) with gold foil with soft lig
 NAMEPLATE: banner under the art reading "CRYSTAL QUEEN" in bold fantasy serif capitals.
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "34.8", lightning bolt "0.9/s", flame burst "31 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "FREEZE — Chance to freeze monsters solid"
-  - small gold perk tag: "FROSTBITE chills frost-proof monsters, +30% to them"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 20% chance to freeze for 1.2s"
+  - small gold perk tag: "Frostbite: chills frost-proof monsters, +30% to them"
   - small italic flavor text: "Even the frost-born fall still."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1672,7 +1672,7 @@ NAMEPLATE: banner under the art reading "LION PALADIN" in bold fantasy serif cap
 STAT ROW: one wide gold metal plaque just under the nameplate, with a shield-and-star icon and the bold word "SUPPORT".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "BUFF — Speeds up neighbouring units"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Leads the charge against giants."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1696,8 +1696,8 @@ FRAME: ornate carved metal border in gold (#FFB21E) with gold foil with soft lig
 NAMEPLATE: banner under the art reading "SPIDER QUEEN" in bold fantasy serif capitals.
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "34.8", lightning bolt "1/s", flame burst "35 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SLOW — Slows monsters on hit"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Slows 36% for 2s"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "Her webs snare the swiftest."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1722,7 +1722,7 @@ NAMEPLATE: banner under the art reading "STAR ASTRONOMER" in bold fantasy serif 
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "185.6", lightning bolt "0.4/s", flame burst "74 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "SNIPER — Heavy shots at the toughest monster"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Falling stars for the biggest foes."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1747,7 +1747,7 @@ NAMEPLATE: banner under the art reading "SUN PRIESTESS" in bold fantasy serif ca
 STAT ROW: one wide gold metal plaque just under the nameplate, with a shield-and-star icon and the bold word "SUPPORT".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "BUFF — Speeds up neighbouring units"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Her light leaves nowhere to hide."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1772,7 +1772,7 @@ NAMEPLATE: banner under the art reading "UNICORN KNIGHT" in bold fantasy serif c
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "58", lightning bolt "0.9/s", flame burst "52 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "PIERCE — Hits the target and those behind it"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Charges through armor and line."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1797,7 +1797,7 @@ NAMEPLATE: banner under the art reading "VALKYRIE" in bold fantasy serif capital
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "52.2", lightning bolt "0.8/s", flame burst "42 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "CHAIN — Lightning jumps between monsters"
-  - small gold perk tag: "FINISHER +50% to monsters under 30% health"
+  - small gold perk tag: "Finisher: +50% to monsters under 30% health"
   - small italic flavor text: "Chooses who falls."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1821,8 +1821,8 @@ FRAME: ornate carved metal border in gold (#FFB21E) with gold foil with soft lig
 NAMEPLATE: banner under the art reading "VAMPIRE COUNTESS" in bold fantasy serif capitals.
 STATS ROW: 3 small round gold metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "40.6", lightning bolt "0.9/s", flame burst "37 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "GROWTH — Gets stronger the longer it stays"
-  - small gold perk tag: "PLUNDER +3 mana for each kill"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. +2% damage per second, up to +200%"
+  - small gold perk tag: "Plunder: +3 mana for each kill"
   - small italic flavor text: "Every bite feeds her power."
 RARITY LABEL: small ribbon reading "LEGENDARY" at the bottom center.
 
@@ -1848,8 +1848,8 @@ FRAME: ornate carved metal border in crimson-rose (#FF3B6B) with holographic rai
 NAMEPLATE: banner under the art reading "VOID TITAN" in bold fantasy serif capitals.
 STATS ROW: 3 small round crimson-rose metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "117.3", lightning bolt "0.49/s", flame burst "57 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "EXECUTE — Chance to instantly destroy a monster"
-  - small gold perk tag: "GIANT SLAYER +40% to tanks and bosses"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. 8% chance to execute"
+  - small gold perk tag: "Giant Slayer: +40% to tanks and bosses"
   - small italic flavor text: "Erases giants with a touch."
 RARITY LABEL: small ribbon reading "MYTHIC" at the bottom center.
 
@@ -1873,8 +1873,8 @@ FRAME: ornate carved metal border in crimson-rose (#FF3B6B) with holographic rai
 NAMEPLATE: banner under the art reading "DRAGON EGG" in bold fantasy serif capitals.
 STATS ROW: 3 small round crimson-rose metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "57.4", lightning bolt "0.9/s", flame burst "52 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "GROWTH — Gets stronger the longer it stays"
-  - small gold perk tag: "ARMOR BREAKER ignores armor"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. +2% damage per second, up to +200%"
+  - small gold perk tag: "Armor Breaker: ignores armor"
   - small italic flavor text: "Hatching fire melts any armor."
 RARITY LABEL: small ribbon reading "MYTHIC" at the bottom center.
 
@@ -1898,8 +1898,8 @@ FRAME: ornate carved metal border in crimson-rose (#FF3B6B) with holographic rai
 NAMEPLATE: banner under the art reading "CHRONO MAGE" in bold fantasy serif capitals.
 STATS ROW: 3 small round crimson-rose metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "30.7", lightning bolt "1.6/s", flame burst "49 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
-  - bold small caps: "SLOW — Slows monsters on hit"
-  - small gold perk tag: "TRUE STRIKE hits can't be dodged"
+  - bold small caps: "SHOT — Rapid shots at the leading monster. Slows 40% for 2s"
+  - small gold perk tag: "True Strike: hits can't be dodged"
   - small italic flavor text: "Time bends. No one dodges."
 RARITY LABEL: small ribbon reading "MYTHIC" at the bottom center.
 
@@ -1924,7 +1924,7 @@ NAMEPLATE: banner under the art reading "MONKEY KING" in bold fantasy serif capi
 STATS ROW: 3 small round crimson-rose metal medallions just under the nameplate, each with an icon and a bold number: crossed swords "46.1", lightning bolt "1.28/s", flame burst "59 DPS".
 TEXT BOX: parchment panel containing, top to bottom:
   - bold small caps: "CHAIN — Lightning jumps between monsters"
-  - small gold perk tag: "HUNTER +40% to fast monsters"
+  - small gold perk tag: "Hunter: +40% to fast monsters"
   - small italic flavor text: "His staff outruns any runner."
 RARITY LABEL: small ribbon reading "MYTHIC" at the bottom center.
 

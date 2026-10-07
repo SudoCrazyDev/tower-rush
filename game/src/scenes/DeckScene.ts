@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import { auraBonus, buffBonus, effectSummary, unitEffectSummary, EFFECTS } from "../../../shared/effects.ts";
+import { auraBonus, buffBonus, EFFECTS } from "../../../shared/effects.ts";
 import { noAttack } from "../../../shared/support.ts";
-import { PERKS } from "../../../shared/perks.ts";
+import { ARCH_KIND, kitPrimary, kitSummary, perkSummary } from "../../../shared/kit.ts";
 import {
   SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
 } from "../../../shared/support.ts";
@@ -86,6 +86,22 @@ const ROLES: { key: string; title: string; sub: string; icon: string; archs: Arc
   { key: "cast", title: "SUPPORTING CAST", sub: "Never attack: copy, swap, brew", icon: "item:star_shard", archs: SUPPORT_ARCHS.filter((a) => a !== "lucky") },
 ];
 
+/** The unit's primary archetype: how it attacks, or its whole job (kit[0]). */
+const primaryOf = (def: UnitDef) => kitPrimary(def) as Arch;
+
+/**
+ * The one role a unit is listed under. A solo archetype is its own role; otherwise the last kit slot
+ * that belongs to a role wins, so shot + freeze is a Trickster and splash + burn a Brawler.
+ */
+function roleOf(def: UnitDef) {
+  if (ARCH_KIND[primaryOf(def)] === "solo") return ROLES.find((r) => r.archs.includes(primaryOf(def)));
+  for (let i = def.kit.length - 1; i >= 0; i--) {
+    const r = ROLES.find((x) => x.archs.includes(def.kit[i].arch as Arch));
+    if (r) return r;
+  }
+  return undefined;
+}
+
 /** A support unit's effect in a few characters, for the stats tables. */
 function supportCell(arch: SupportArch, rank: number, mult: number) {
   const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -139,7 +155,7 @@ function groupsFor(by: GroupBy): Group[] {
       accent: ELEMENT_COLOR[e],
       match: (u) => u.element === e,
     }));
-  if (by === "role") return ROLES.map((r) => ({ ...r, match: (u) => r.archs.includes(u.arch) }));
+  if (by === "role") return ROLES.map((r) => ({ ...r, match: (u) => roleOf(u)?.key === r.key }));
   return [{ key: "all", title: "THE WHOLE SALOON", sub: "Every card, owned first", match: () => true }];
 }
 
@@ -567,41 +583,46 @@ export class DeckScene extends Phaser.Scene {
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
     // A role (Barkeeper, Knight, Mercenary) shows in place of the style for units that never attack.
-    const silent = noAttack(def.arch);
+    const arch = primaryOf(def);
+    const silent = noAttack(arch);
     const style =
       (def.role ? `${def.role.toUpperCase()} · ` : "") +
-      (def.arch === "buff" || (silent && def.role) ? "" : isSupport(def.arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `);
-    const archLabel = txt(this, cx, cy - 82, style + (isSupport(def.arch) ? SUPPORT_TEXT[def.arch] : ARCHETYPES[def.arch].label), isSupport(def.arch) ? 22 : 26, "#ffffff");
+      (arch === "buff" || (silent && def.role) ? "" : isSupport(arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `);
+    const archLabel = txt(this, cx, cy - 82, style + (isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label), isSupport(arch) ? 22 : 26, "#ffffff");
     info.add(archLabel);
-    const archIcon = kitIcon(this, "arch", def.arch, 40, archLabel.x - archLabel.displayWidth / 2 - 28, cy - 82);
+    const archIcon = kitIcon(this, "arch", arch, 40, archLabel.x - archLabel.displayWidth / 2 - 28, cy - 82);
     if (archIcon) info.add(archIcon);
-    // The archetype's numbers for this unit as summoned (rank 1), and a Knight's or Mercenary's own effect.
-    const effect = effectSummary(def.arch, 1, rarityIndex(def.rarity), EFFECTS, levelMult(owned?.level ?? 1));
-    let lineY = cy - 48;
-    for (const line of [effect, def.effect ? unitEffectSummary(def.effect, 1) : null]) {
-      if (!line) continue;
-      info.add(txt(this, cx, lineY, line, 20, "#7fffd4"));
-      lineY += 32;
-    }
-    if (def.perk !== "none") {
-      const perk = PERKS[def.perk];
-      const perkLine = txt(this, cx, lineY, `${def.arch === "buff" ? "Neighbours get " : ""}${perk.label}: ${perk.text}`, 20, "#ffd27a");
-      info.add(perkLine);
-      const perkIcon = kitIcon(this, "perk", def.perk, 34, perkLine.x - perkLine.displayWidth / 2 - 24, lineY);
-      if (perkIcon) info.add(perkIcon);
-      lineY += 32;
-    }
-    info.add(txt(this, cx, lineY, `"${def.blurb}"`, 20, "#c9d2ff"));
+    // Every kit slot with this unit's numbers as summoned (rank 1), then one line per perk, then the blurb.
+    // Lines wrap and stack by their real height; a long kit pushes the stats row and the buttons down.
+    let cursor = cy - 64;
+    const place = (t: Phaser.GameObjects.Text, icon: Phaser.GameObjects.Image | null) => {
+      t.setWordWrapWidth(540).setAlign("center").setY(cursor + t.displayHeight / 2);
+      info.add(t);
+      if (icon) {
+        icon.setPosition(cx - Math.min(t.displayWidth, 540) / 2 - 24, t.y);
+        info.add(icon);
+      }
+      cursor += t.displayHeight + 6;
+    };
+    for (const line of kitSummary(def, 1, levelMult(owned?.level ?? 1))) place(txt(this, cx, cursor, line, 19, "#7fffd4"), null);
+    const perkLines = perkSummary(def);
+    def.perks.forEach((p, i) => {
+      const text = `${arch === "buff" ? "Neighbours get " : ""}${perkLines[i]}`;
+      const line = txt(this, cx, cursor, text, 19, "#ffd27a");
+      place(line, kitIcon(this, "perk", p.perk, 32));
+    });
+    place(txt(this, cx, cursor, `"${def.blurb}"`, 19, "#c9d2ff"), null);
+    const extra = Math.min(110, Math.max(0, Math.round(cursor + 40 - (cy + 76))));
 
     const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
-      ...(isSupport(def.arch)
-        ? ([[SUPPORT_STAT[def.arch][0], "never attacks"]] as [string, string][])
-        : def.arch === "buff"
+      ...(isSupport(arch)
+        ? ([[SUPPORT_STAT[arch][0], "never attacks"]] as [string, string][])
+        : arch === "buff"
         ? ([["stat:attack_speed", `neighbours +${Math.round(buffBonus(1, rarityIndex(def.rarity), levelMult(level)) * 100)}% faster`]] as [string, string][])
-        : def.arch === "aura"
+        : arch === "aura"
         ? ([["stat:attack_speed", `3×3 +${Math.round(auraBonus(1, levelMult(level)).speed * 100)}% speed, +${Math.round(auraBonus(1, levelMult(level)).damage * 100)}% dmg`]] as [string, string][])
-        : def.arch === "aegis"
+        : arch === "aegis"
         ? ([["stat:attack_speed", "never attacks"]] as [string, string][])
         : ([
             ["stat:damage", fmt(now.damage)],
@@ -609,7 +630,7 @@ export class DeckScene extends Phaser.Scene {
           ] as [string, string][])),
     ];
     // Lay the icon+value pairs out by their real widths and centre the row.
-    const statY = cy + 76;
+    const statY = cy + 76 + extra;
     const pairs = rows.map(([icon, value]) => ({
       img: this.add.image(0, statY, icon).setDisplaySize(56, 56).setOrigin(0, 0.5),
       label: txt(this, 0, statY, value, 32, "#ffffff", [0, 0.5]),
@@ -622,13 +643,13 @@ export class DeckScene extends Phaser.Scene {
       p.label.setX(x + 68);
       x += pairW(p) + gap;
       info.add([p.img, p.label]);
-      if (celebrate && def.arch !== "buff" && !isSupport(def.arch)) {
+      if (celebrate && arch !== "buff" && !isSupport(arch)) {
         p.label.setColor("#7dff7a");
         this.tweens.add({ targets: p.label, scale: 1.25, yoyo: true, duration: 220, delay: 250, ease: "Quad.Out" });
         this.time.delayedCall(1400, () => p.label.active && p.label.setColor("#ffffff"));
       }
     }
-    this.cardActions(m, info, id, cx, cy);
+    this.cardActions(m, info, id, cx, cy + extra);
     // Filled before adding, so the modal pins every child to the screen.
     m.add([info, stats, ...tabs.map((x) => x.c)]);
     show(celebrate ? "info" : DeckScene.cardTab);
@@ -718,8 +739,9 @@ export class DeckScene extends Phaser.Scene {
    */
   private statsTab(def: UnitDef, level: number, cx: number, top: number) {
     const box = this.add.container(0, 0);
-    const support = isSupport(def.arch) ? def.arch : null;
-    const noAttack = def.arch === "buff" || def.arch === "aura" || def.arch === "aegis" || !!support;
+    const arch = primaryOf(def);
+    const support = isSupport(arch) ? arch : null;
+    const noAttack = arch === "buff" || arch === "aura" || arch === "aegis" || !!support;
     const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
     const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
     const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -729,9 +751,9 @@ export class DeckScene extends Phaser.Scene {
     const buff = (rank: number, lvl: number, up: number, mult = 1) =>
       support
         ? supportCell(support, rank, boostMult(lvl, up))
-        : def.arch === "aura"
+        : arch === "aura"
         ? `+${pct(auraBonus(rank, boostMult(lvl, up)).speed)}`
-        : def.arch === "aegis"
+        : arch === "aegis"
         ? "—"
         : `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
     const buffIcon = support ? SUPPORT_STAT[support][0] : "stat:attack_speed";
@@ -741,11 +763,11 @@ export class DeckScene extends Phaser.Scene {
     const st = STYLES[def.style];
     const vs = def.style === "balanced" ? "" : ` · ×${+st.dmg.toFixed(2)} damage, ×${st.speed} speed`;
     if (!noAttack) box.add(txt(this, cx, y, `${st.label.toUpperCase()}: ${st.text}${vs}`, 21, "#ffffff"));
-    if (def.perk !== "none") {
-      const perk = PERKS[def.perk];
-      box.add(txt(this, cx, noAttack ? y : y + 30, `${noAttack ? "Neighbours get " : ""}${perk.label}: ${perk.text}`, 20, "#ffd27a"));
-    }
-    y += 72;
+    const perkLines = perkSummary(def);
+    perkLines.forEach((line, i) => {
+      box.add(txt(this, cx, (noAttack ? y : y + 30) + i * 28, `${noAttack ? "Neighbours get " : ""}${line}`, 20, "#ffd27a").setWordWrapWidth(560).setAlign("center"));
+    });
+    y += 72 + Math.max(0, perkLines.length - 1) * 28;
     const section = (title: string, note: string) => {
       box.add(txt(this, cx, y, title, 26, "#ffd93b"));
       box.add(txt(this, cx, y + 28, note, 19, "#c9d2ff"));
@@ -801,7 +823,7 @@ export class DeckScene extends Phaser.Scene {
 
     // Merge ranks: two of the same unit at the same rank make one of the next rank.
     const ranks = Array.from({ length: maxRank() }, (_, i) => i + 1);
-    const awakens = canAwaken(def.id, def.arch);
+    const awakens = canAwaken(def.id, arch);
     const boost = (r: number, mult: number) => (awakens && r === maxRank() ? mult : 1);
     const mergeNote = support
       ? "Each merge: a stronger effect · support units never awaken"
