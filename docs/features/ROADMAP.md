@@ -6,9 +6,9 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 [ROADMAP.md](../../ROADMAP.md).
 
 ```
- v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          v1.3.0            next
- Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► Branding ────────► balance, then
- Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Books 2–4 (TBD)
+ v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          v1.3.0            v2.0.0              next
+ Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► Branding ────────► The Grand ────────► balance, then
+ Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Revamp (testing)    Books 2–4 (TBD)
 ```
 
 | Version | Title | Shipped | Git | Design doc |
@@ -20,6 +20,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.2.1 | Knights hotfix | 2026-10-06 | tag `v1.2.1` | [v1.2](v1.2-stories/README.md) (5.4) |
 | v1.2.2 | Story card unlocks hotfix | 2026-10-06 | tag `v1.2.2` | [v1.2](v1.2-stories/README.md) (5.7) |
 | v1.3.0 | **Branding Revamp** | 2026-10-06 | tag `v1.3.0` | [v1.3](v1.3-branding-revamp/README.md) |
+| v2.0.0 | **The Grand Revamp** | In testing | (not yet tagged) | [v2.0](v2.0-the-grand-revamp/README.md) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
 ---
@@ -105,6 +106,15 @@ once on load (`hotfixes` in the config, see `withHotfixes` in shared/config.ts).
 in the same style, a new app icon and favicon, share images, and a What's New popup announcing
 the name. Same colours, same game; logins, settings and progress carry over.
 [Design doc](v1.3-branding-revamp/README.md) · [Promo kit](v1.3-branding-revamp/PROMO.md)
+
+## v2.0.0: The Grand Revamp (in testing)
+
+**One unified combat engine, composable units with multiple archetypes and perks, and a visual
+refresh.** Solo battles now run on the same engine as PvP. Every unit can be built your way with
+multiple archetypes, each with its own numbers, and any number of perks. New art: archetype icons,
+perk icons, element emblems, race crests, all VFX groups, and generic and signature weapons with
+melee strike effects.
+[Design doc](v2.0-the-grand-revamp/README.md) · [Promo kit](v2.0-the-grand-revamp/PROMO.md)
 
 ## Next
 
