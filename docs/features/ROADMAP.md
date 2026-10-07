@@ -110,7 +110,7 @@ the name. Same colours, same game; logins, settings and progress carry over.
 ## v2.0.0: The Grand Revamp (in testing)
 
 **One unified combat engine, composable units with multiple archetypes and perks, and a visual
-refresh.** Solo battles now run on the same engine as PvP. Every unit can be built your way with
+refresh.** Solo battles now run on the same engine as PvP. A unit (built in the admin kit editor) can have
 multiple archetypes, each with its own numbers, and any number of perks. New art: archetype icons,
 perk icons, element emblems, race crests, all VFX groups, and generic and signature weapons with
 melee strike effects.
