@@ -95,6 +95,7 @@ export class BootScene extends Phaser.Scene {
     loadImages(this, "race", "ui/races", index["ui/races"] ?? []);
     loadImages(this, "arch", "ui/archs", index["ui/archs"] ?? []);
     loadImages(this, "perk", "ui/perks", index["ui/perks"] ?? []);
+    loadImages(this, "weapon", "vfx/weapons", index["vfx/weapons"] ?? []);
     loadImages(this, "loc", "locations", ["lobby_portrait", "lobby_landscape", "shop_background", "deck_room_background", "chest_vault_background", "world_map"]);
     for (let i = 0; i < index.atlas.buttons; i++) this.load.image(`button:${i}`, `${BASE}ui/button_${i}.webp`);
     for (let i = 0; i < index.atlas.icons; i++) this.load.image(`icon:${i}`, `${BASE}ui/icon_${i}.webp`);

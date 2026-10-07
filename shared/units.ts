@@ -43,7 +43,40 @@ export type Arch =
   | "aura" // Barkeeper: units in the 3×3 square around it attack faster and hit harder
   | "aegis"; // neighbours are immune to unit debuffs and lose any they have
 
-export type Proj = "arrow" | "fireball" | "ice_shard" | "lightning" | "poison" | "cannonball" | "arcane_orb" | "spark";
+export type Proj =
+  | "arrow"
+  | "fireball"
+  | "ice_shard"
+  | "lightning"
+  | "poison"
+  | "cannonball"
+  | "arcane_orb"
+  | "spark"
+  | "holy"
+  | "shadow"
+  | "rock"
+  | "bomb"
+  | "dagger"
+  | "shuriken"
+  | "spear"
+  | "axe"
+  | "bubble"
+  | "leaf"
+  | "thorn"
+  | "skull"
+  | "star"
+  | "note"
+  | "feather"
+  | "wind"
+  | "water"
+  | "meteor"
+  | "fireball_awakened"
+  | "ice_shard_awakened"
+  | "lightning_awakened"
+  | "poison_awakened"
+  | "arcane_orb_awakened"
+  | "arrow_awakened"
+  | "cannonball_awakened";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -55,7 +88,41 @@ export const CHEST_RARITIES: ChestRarity[] = ["common", "rare", "epic", "legenda
 /** A rarity's step for formulas (common 0 ... mythic 4). Event cards use Epic's numbers. */
 export const rarityIndex = (r: Rarity) => (r === "event" ? 2 : RARITIES.indexOf(r));
 export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane"];
-export const PROJECTILES: Proj[] = ["arrow", "fireball", "ice_shard", "lightning", "poison", "cannonball", "arcane_orb", "spark"];
+export const PROJECTILES: Proj[] = [
+  "arrow",
+  "fireball",
+  "ice_shard",
+  "lightning",
+  "poison",
+  "cannonball",
+  "arcane_orb",
+  "spark",
+  "holy",
+  "shadow",
+  "rock",
+  "bomb",
+  "dagger",
+  "shuriken",
+  "spear",
+  "axe",
+  "bubble",
+  "leaf",
+  "thorn",
+  "skull",
+  "star",
+  "note",
+  "feather",
+  "wind",
+  "water",
+  "meteor",
+  "fireball_awakened",
+  "ice_shard_awakened",
+  "lightning_awakened",
+  "poison_awakened",
+  "arcane_orb_awakened",
+  "arrow_awakened",
+  "cannonball_awakened",
+];
 
 export interface UnitDef {
   id: string;
@@ -192,6 +259,62 @@ export const WEAPON_KEYS: string[] = [
   // Signature weapons
   "sig_monkey_king", "sig_fox_samurai", "sig_rogue_knight", "sig_pentagonal_knight", "sig_berserker_sellsword", "sig_lance_knight",
 ];
+
+/** How each weapon sprite moves (art-requests.ts WEAPONS): spin turns in flight, straight points along it, strike has no flight. */
+export const WEAPON_MOTION: Record<string, "spin" | "straight" | "strike"> = {
+  sword: "spin",
+  katana: "spin",
+  greatsword: "spin",
+  dagger: "spin",
+  twin_daggers: "spin",
+  sabre: "spin",
+  scimitar: "spin",
+  rapier: "spin",
+  cutlass: "spin",
+  cleaver: "spin",
+  axe: "spin",
+  double_axe: "spin",
+  hammer: "spin",
+  mace: "spin",
+  flail: "spin",
+  morning_star: "spin",
+  club: "spin",
+  anchor: "spin",
+  spear: "straight",
+  lance: "straight",
+  trident: "straight",
+  halberd: "spin",
+  scythe: "spin",
+  sickle: "spin",
+  staff: "spin",
+  bo_staff: "spin",
+  shuriken: "spin",
+  kunai: "straight",
+  chakram: "spin",
+  boomerang: "spin",
+  throwing_knife: "straight",
+  bola: "spin",
+  palm_wave: "strike",
+  fist_shockwave: "strike",
+  claw_swipe: "strike",
+  bite: "strike",
+  tail_swipe: "strike",
+  horn_charge: "strike",
+  stomp_crack: "strike",
+  frying_pan: "spin",
+  wrench: "spin",
+  saw_blade: "spin",
+  ladle: "spin",
+  war_fan: "spin",
+  bone: "spin",
+  pitchfork: "straight",
+  sig_monkey_king: "spin",
+  sig_fox_samurai: "spin",
+  sig_rogue_knight: "spin",
+  sig_pentagonal_knight: "spin",
+  sig_berserker_sellsword: "spin",
+  sig_lance_knight: "straight",
+};
 
 const round = (v: number, step: number) => Math.round(v / step) * step;
 /** Damage and speed for `u` after switching it from style `from` to `to`. */

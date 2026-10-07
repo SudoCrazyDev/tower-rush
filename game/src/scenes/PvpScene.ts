@@ -24,6 +24,7 @@ import { arenaPaths, slotPos, type Path, type Pt } from "../../../shared/path.ts
 import { tierBadge } from "./ranked";
 import { PVP, matchModeName, tierFor, type BoardSnap, type MatchResult, type MatchSetup, type SendDef, type ServerMsg } from "../../../shared/pvp.ts";
 import { PvpBoard, SIM_DT } from "../../../shared/pvpsim.ts";
+import { ShotView } from "../battle/vfx";
 import { PvpBot, botSkill } from "../../../shared/pvpbot.ts";
 import type { SimFx, SimMonster, SimShot, SimUnit } from "../../../shared/sim.ts";
 import type { Promotion } from "../../../shared/profile.ts";
@@ -98,7 +99,7 @@ export class PvpScene extends Phaser.Scene {
 
   private units: (UnitView | null)[] = [];
   private mons = new Map<SimMonster, MonView>();
-  private shotViews = new Map<SimShot, Phaser.GameObjects.Image>();
+  private shotViews = new Map<SimShot, ShotView>();
   private seenFx = new WeakSet<SimFx>();
   private oppUnits: ({ key: string; sprite: Phaser.GameObjects.Sprite; pips: Phaser.GameObjects.Graphics } | null)[] = [];
   private oppMons = new Map<number, OppMon>();
@@ -884,17 +885,16 @@ export class PvpScene extends Phaser.Scene {
       let img = this.shotViews.get(s);
       if (!img) {
         const proj = s.unit.def.proj;
-        img = this.add.image(s.x, s.y, proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${proj}`).setDepth(2000);
-        img.setScale((proj === "spark" ? 40 : 56) / Math.max(1, img.width));
+        img = new ShotView(this, s.unit.def, s.x, s.y);
         this.shotViews.set(s, img);
         sfx("shoot", proj);
       }
-      img.setPosition(s.x, s.y).setRotation(Math.atan2(s.aim.y - s.y, s.aim.x - s.x));
+      img.move(s.x, s.y, Math.atan2(s.aim.y - s.y, s.aim.x - s.x));
     }
     for (const [s, img] of this.shotViews) {
       if (live.has(s)) continue;
       this.shotViews.delete(s);
-      img.destroy();
+      img.destroy(s.aim);
     }
   }
 

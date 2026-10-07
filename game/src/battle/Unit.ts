@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale } from "../assets";
+import { fxKey, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
@@ -37,6 +38,8 @@ export class Unit {
   private supportRing: Phaser.GameObjects.Graphics | null = null;
   private supportDrawn = "";
   private aura: Phaser.GameObjects.Graphics | null = null;
+  /** v2 art: the element aura ring under an awakened unit (drawn when aura_<element> is built). */
+  private auraRing: Phaser.GameObjects.Image | null = null;
   /** Shown while a neighbouring buff unit speeds this one up: icon and the bonus. */
   private buffBadge: Phaser.GameObjects.Container | null = null;
   private buffRing: Phaser.GameObjects.Graphics | null = null;
@@ -64,6 +67,12 @@ export class Unit {
       this.aura = scene.add.graphics();
       this.aura.fillStyle(0xffd93b, 0.28).fillEllipse(0, 0, 112, 46);
       this.aura.fillStyle(0xffffff, 0.22).fillEllipse(0, 0, 70, 26);
+      if (hasFx(scene, `aura_${this.def.element}`)) {
+        this.auraRing = scene.add.image(0, 0, fxKey(`aura_${this.def.element}`));
+        this.auraRing.setScale(140 / Math.max(1, this.auraRing.width));
+        scene.tweens.add({ targets: this.auraRing, alpha: { from: 1, to: 0.65 }, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
+        this.aura.setVisible(false);
+      }
       scene.tweens.add({ targets: this.aura, scale: { from: 0.85, to: 1.12 }, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     }
     this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.def.id}_idle`));
@@ -99,6 +108,7 @@ export class Unit {
     const p = this.scene.slotPos(slot);
     this.sprite.setPosition(p.x, p.y).setDepth(100 + p.y);
     this.aura?.setPosition(p.x, p.y + 30).setDepth(99 + p.y);
+    this.auraRing?.setPosition(p.x, p.y + 30).setDepth(99 + p.y);
     this.buffRing?.setPosition(p.x, p.y + 32).setDepth(98 + p.y);
     this.buffBadge?.setPosition(p.x + 36, p.y - 44).setDepth(160 + p.y);
     this.supportRing?.setPosition(p.x, p.y + 34).setDepth(97 + p.y);
@@ -381,6 +391,7 @@ export class Unit {
     this.heart?.destroy();
     this.statusIcons?.destroy();
     this.aura?.destroy();
+    this.auraRing?.destroy();
     this.buffBadge?.destroy();
     this.buffRing?.destroy();
     this.supportRing?.destroy();
