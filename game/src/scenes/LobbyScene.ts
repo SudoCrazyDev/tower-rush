@@ -281,22 +281,26 @@ export class LobbyScene extends Phaser.Scene {
   private modeCard(group: Phaser.GameObjects.Container) {
     this.cardFrame(group, false);
     const i = MODES.indexOf(mode);
+    this.artFade(group);
     if (mode === "arena") {
       const a = this.arena;
       this.arenaArt(group, a, a.trophies > profile.trophies);
-      this.namePlate(group, "ARENA");
-      group.add(txt(this, 0, 236, `${a.name} · Best wave ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
+      this.chips(group, [
+        { text: a.name },
+        { icon: "ui:wave_horn", text: `Best wave ${profile.arenaBest?.[a.id] ?? 0}` },
+      ]);
+      this.namePlate(group, "ARENA", "ui:icon_pvp");
     } else {
       this.storiesArt(group);
       const total = BOOK.stories.reduce((n, s) => n + storyStars(s), 0);
       const max = BOOK.stories.reduce((n, s) => n + s.chapters.length * 3, 0);
-      this.namePlate(group, "STORIES");
-      group.add(txt(this, 0, 236, `${BOOK.title} · ★ ${total} / ${max}`, 26, "#c9d2ff"));
+      this.chips(group, [{ text: BOOK.title }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
+      this.namePlate(group, "STORIES", "ui:icon_story");
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
-    const hint = txt(this, 0, 296, mode === "arena" ? "TAP TO PICK AN ARENA" : "TAP TO OPEN THE BOOKS", 26, "#ffd93b");
-    group.add(hint);
-    this.tweens.add({ targets: hint, alpha: 0.35, yoyo: true, repeat: -1, duration: 750 });
+    const cta = button(this, 0, 272, 340, 92, mode === "arena" ? "PICK ARENA" : "OPEN BOOKS", "green", () => this.open(true), 40);
+    group.add(cta);
+    this.tweens.add({ targets: cta, scale: 1.05, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     // Page dots under the card.
     const modes = BOOK.stories.length ? MODES : (["arena"] as Mode[]);
     if (modes.length > 1) {
@@ -359,13 +363,72 @@ export class LobbyScene extends Phaser.Scene {
     group.add([frame, trim]);
   }
 
-  /** A gold-edged plate behind a mode card's title, sitting on the bottom of the art window. */
-  private namePlate(group: Phaser.GameObjects.Container, label: string) {
+  /**
+   * A mode card's title on a gold-edged ribbon (folded tails out to the sides) over the bottom of
+   * the art window, with the mode's icon on a medallion at its left end.
+   */
+  private namePlate(group: Phaser.GameObjects.Container, label: string, icon: string) {
+    const y = 160;
     const g = this.add.graphics();
-    g.fillStyle(0x6b3f08, 1).fillRoundedRect(-196, 140, 392, 82, 22);
-    g.fillStyle(0xf2b630, 1).fillRoundedRect(-190, 146, 380, 70, 18);
-    g.fillStyle(0x2a1d5c, 1).fillRoundedRect(-184, 152, 368, 58, 14);
-    group.add([g, txt(this, 0, 180, label, 52)]);
+    // Tails: a notched end in gold edging, out past each end of the plate.
+    const tail = (sx: number, inset: number, color: number) => {
+      const P = (x: number, yy: number) => new Phaser.Math.Vector2(sx * x, y + yy);
+      const [a, b, n] = [200 + inset, 268 - inset * 2, 248 - inset];
+      g.fillStyle(color, 1).fillPoints([P(a, -22 + inset), P(b, -22 + inset), P(n, 4), P(b, 30 - inset), P(a, 30 - inset)], true);
+    };
+    for (const sx of [-1, 1]) {
+      tail(sx, 0, 0x6b3f08);
+      tail(sx, 5, 0xb8323f);
+    }
+    g.fillStyle(0x6b3f08, 1).fillRoundedRect(-206, y - 44, 412, 88, 24);
+    g.fillStyle(0xf2b630, 1).fillRoundedRect(-200, y - 38, 400, 76, 20);
+    g.fillGradientStyle(0xd23c48, 0xd23c48, 0x7a1626, 0x7a1626, 1).fillRect(-192, y - 30, 384, 60);
+    g.fillStyle(0xffffff, 0.18).fillRect(-192, y - 30, 384, 8);
+    // Medallion with the mode's icon.
+    g.fillStyle(0x6b3f08, 1).fillCircle(-196, y, 50);
+    g.fillStyle(0xf2b630, 1).fillCircle(-196, y, 45);
+    g.fillStyle(0x2a1d5c, 1).fillCircle(-196, y, 39);
+    const img = this.add.image(-196, y, icon);
+    img.setScale(66 / Math.max(img.width, img.height));
+    group.add([g, img, txt(this, 22, y - 2, label, 54, "#fff4c2")]);
+  }
+
+  /** A soft dark fade over the bottom of a mode card's art window, so the ribbon sits on it cleanly. */
+  private artFade(group: Phaser.GameObjects.Container) {
+    const g = this.add.graphics();
+    g.fillGradientStyle(NAVY, NAVY, NAVY, NAVY, 0, 0, 0.85, 0.85).fillRect(-270, 40, 540, 110);
+    g.fillGradientStyle(NAVY, NAVY, NAVY, NAVY, 0.7, 0.7, 0, 0).fillRect(-270, -320, 540, 80);
+    // Index 1 now; the art also goes in at 1 when it loads, so this stays just above the art.
+    group.addAt(g, 1);
+  }
+
+  /** Info pills along the top of a mode card's art window (an optional icon, then the text). */
+  private chips(group: Phaser.GameObjects.Container, items: { icon?: string; text: string; color?: string }[]) {
+    const gap = 14;
+    const built = items.map((it) => {
+      const t = txt(this, 0, 0, it.text, 24, it.color ?? "#ffffff");
+      const w = t.width + 36 + (it.icon ? 36 : 0);
+      return { it, t, w };
+    });
+    let x = -(built.reduce((n, b) => n + b.w, 0) + gap * (built.length - 1)) / 2;
+    const y = -282;
+    for (const { it, t, w } of built) {
+      const g = this.add.graphics();
+      g.fillStyle(0x000000, 0.55).fillRoundedRect(x, y - 21, w, 42, 21);
+      g.lineStyle(2, 0xf2b630, 0.9).strokeRoundedRect(x, y - 21, w, 42, 21);
+      const parts: Phaser.GameObjects.GameObject[] = [g];
+      let tx = x + 18;
+      if (it.icon) {
+        const img = this.add.image(tx + 15, y, it.icon);
+        img.setScale(34 / Math.max(img.width, img.height));
+        parts.push(img);
+        tx += 36;
+      }
+      t.setOrigin(0, 0.5).setPosition(tx, y - 1);
+      parts.push(t);
+      group.add(parts);
+      x += w + gap;
+    }
   }
 
   /** The arena page: the arena's board, best wave and BATTLE, with arrows to the other arenas. */
