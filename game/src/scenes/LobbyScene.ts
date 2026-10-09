@@ -489,7 +489,8 @@ export class LobbyScene extends Phaser.Scene {
       if (!group.active || !this.textures.exists(key)) return;
       const img = this.add.image(0, coverY, key).setDisplaySize(cw, ch);
       if (lock) img.setTint(0x55556a);
-      group.addAt(img, 1);
+      // Just above the frame's fill (the saga header sits before it in the group).
+      group.addAt(img, group.getIndex(frame) + 1);
     };
     if (this.textures.exists(key)) show();
     else loadStoryImages(this, [`covers/${s.cover}`], show);
@@ -523,12 +524,14 @@ export class LobbyScene extends Phaser.Scene {
       const x = (i - (BOOKS.length - 1) / 2) * (w + 10);
       const label = `Book ${i + 1}${b.title.includes(":") ? b.title.slice(b.title.indexOf(":")) : ""}`;
       const on = i === bookTab;
-      const tab = button(this, x, -380, w, 60, label, on ? "yellow" : "blue", () => {
+      // Built at full button height and scaled down: the 9-slice caps (84px) crush below that.
+      const k = 60 / 88;
+      const tab = button(this, x, -380, w / k, 88, label, on ? "yellow" : "blue", () => {
         if (on) return;
         bookTab = i;
         bookIdx = currentStory();
         this.drawCard({ slide: (i > 0 ? 1 : -1) * 120 });
-      }, 20);
+      }, 28).setScale(k);
       group.add(tab);
       if (bookLock(profile.story, i)) {
         const pad = this.add.image(x - w / 2 + 6, -380, "ui:padlock");

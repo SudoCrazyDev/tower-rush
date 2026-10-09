@@ -1,10 +1,11 @@
 """Convert a green-screen mp4 into transparent PNG frames + a sprite sheet.
-usage: python tospritesheet.py in.mp4 out_prefix [frames=16] [size=256]"""
+usage: python tospritesheet.py in.mp4 out_prefix [frames=16] [size=256] [green|magenta]"""
 import sys, os, subprocess, numpy as np, imageio_ffmpeg
 from PIL import Image
 src, out = sys.argv[1], sys.argv[2]
 N = int(sys.argv[3]) if len(sys.argv) > 3 else 16
 S = int(sys.argv[4]) if len(sys.argv) > 4 else 256
+KEY = sys.argv[5] if len(sys.argv) > 5 else "green"
 ff = imageio_ffmpeg.get_ffmpeg_exe()
 tmp = out + "_raw"; os.makedirs(tmp, exist_ok=True)
 subprocess.run([ff, "-loglevel", "error", "-y", "-i", src, os.path.join(tmp, "%04d.png")], check=True)
@@ -14,11 +15,17 @@ frames = []
 for i in idx:
     a = np.asarray(Image.open(os.path.join(tmp, raw[i])).convert("RGB")).astype(np.float32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    # green dominance -> alpha (soft key), then despill
-    dom = g - np.maximum(r, b)
-    alpha = np.clip(1 - (dom - 40) / 60, 0, 1)
-    g2 = np.minimum(g, np.maximum(r, b) + 10)
-    rgb = np.stack([r, np.where(dom > 0, g2, g), b], -1)
+    if KEY == "magenta":  # magenta (r+b over g) dominance -> alpha, then pull r/b spill down
+        dom = np.minimum(r, b) - g
+        alpha = np.clip(1 - (dom - 40) / 60, 0, 1)
+        cap = g + 10
+        rgb = np.stack([np.where(dom > 0, np.minimum(r, cap + (r - b).clip(0)), r), g,
+                        np.where(dom > 0, np.minimum(b, cap + (b - r).clip(0)), b)], -1)
+    else:  # green dominance -> alpha (soft key), then despill
+        dom = g - np.maximum(r, b)
+        alpha = np.clip(1 - (dom - 40) / 60, 0, 1)
+        g2 = np.minimum(g, np.maximum(r, b) + 10)
+        rgb = np.stack([r, np.where(dom > 0, g2, g), b], -1)
     frames.append(np.dstack([rgb, alpha * 255]).astype(np.uint8))
 # common bbox across frames so sprite doesn't jitter
 m = np.zeros(frames[0].shape[:2], bool)
