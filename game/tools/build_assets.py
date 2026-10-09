@@ -191,12 +191,27 @@ ELEMENT_ORDER = ["fire", "ice", "lightning", "nature", "poison", "arcane"]
 # v2.0 element emblems (assets/ui/elements/<e>.png, keyed) replace the cut-out badges: they build to
 # the same ui/element_<e>.webp name BootScene loads, and rebuild whenever the emblem is newer.
 index["elements"] = [e for e in ELEMENT_ORDER if os.path.exists(f"{SRC}/ui/elements/{e}.png")]
+
+
+def emblem(src, dst, size=128):
+    """Trim to the art and centre it on a square canvas: older clients draw element:<e> at a
+    square size (setDisplaySize(s, s)), so a tall 9:16 source would show squashed flat."""
+    if not need(dst):
+        return
+    im = Image.open(src).convert("RGBA")
+    im = im.crop(im.getchannel("A").getbbox() or (0, 0, im.width, im.height))
+    side = max(im.size)
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
+    save(sq.resize((size, size), Image.LANCZOS), dst, 90)
+
+
 for e in index["elements"]:
     jobs.append(lambda e=e: (
         os.path.exists(f"{OUT}/ui/element_{e}.webp")
         and os.path.getmtime(f"{OUT}/ui/element_{e}.webp") < os.path.getmtime(f"{SRC}/ui/elements/{e}.png")
         and os.remove(f"{OUT}/ui/element_{e}.webp")
-    ) or fit(f"{SRC}/ui/elements/{e}.png", f"{OUT}/ui/element_{e}.webp", 128))
+    ) or emblem(f"{SRC}/ui/elements/{e}.png", f"{OUT}/ui/element_{e}.webp"))
 
 
 @task

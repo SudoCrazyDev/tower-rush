@@ -20,6 +20,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.2.1 | Knights hotfix | 2026-10-06 | tag `v1.2.1` | [v1.2](v1.2-stories/README.md) (5.4) |
 | v1.2.2 | Story card unlocks hotfix | 2026-10-06 | tag `v1.2.2` | [v1.2](v1.2-stories/README.md) (5.7) |
 | v1.3.0 | **Branding Revamp** | 2026-10-06 | tag `v1.3.0` | [v1.3](v1.3-branding-revamp/README.md) |
+| v1.3.2 | Element emblems hotfix | 2026-10-09 | (art only, on R2) | — |
 | v2.0.0 | **The Grand Revamp** | In testing | (not yet tagged) | [v2.0](v2.0-the-grand-revamp/README.md) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
@@ -106,6 +107,14 @@ once on load (`hotfixes` in the config, see `withHotfixes` in shared/config.ts).
 in the same style, a new app icon and favicon, share images, and a What's New popup announcing
 the name. Same colours, same game; logins, settings and progress carry over.
 [Design doc](v1.3-branding-revamp/README.md) · [Promo kit](v1.3-branding-revamp/PROMO.md)
+
+## v1.3.2: Element emblems hotfix (2026-10-09)
+
+- **Element emblems no longer show squashed flat.** The v2.0 emblems (tall 9:16 art) were
+  uploaded to R2 under the same `ui/element_<e>.webp` names the live v1.3 game draws at a square
+  size. `build_assets.py` now trims each emblem and centres it on a square 128x128 canvas, so
+  both v1.3 and v2.0 draw it undistorted. The fire emblem's background, never keyed out, is
+  removed too. Art only: no game code or config change, so no `withHotfixes` entry.
 
 ## v2.0.0: The Grand Revamp (in testing)
 
