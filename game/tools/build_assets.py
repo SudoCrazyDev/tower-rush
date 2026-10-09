@@ -14,7 +14,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 SRC = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "assets"))
 OUT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "public", "assets"))
@@ -121,7 +121,25 @@ def xy_cut(alpha, min_gap=6, min_size=24):
     return boxes
 
 
-def slice_atlas(src, dst_prefix, size):
+def degloss(part):
+    """Paint out the white gloss streak in a button's top-left corner (it read as a slash)."""
+    a = np.asarray(part.convert("RGBA")).astype(int)
+    h, w = a.shape[:2]
+    lum = a[..., :3].mean(-1)
+    rx = int(w * 0.45)
+    x0, x1, y0, y1 = int(w * 0.06), int(w * 0.3), int(h * 0.14), int(h * 0.5)
+    m = np.zeros((h, w), bool)
+    m[y0:y1, x0:x1] = (a[y0:y1, x0:x1, 3] > 200) & (lum[y0:y1, x0:x1] > lum[y0:y1, rx : rx + 1] + 5)
+    m = np.asarray(Image.fromarray(m.astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(5))) > 0
+    m[:, :x0] = m[:, x1:] = False
+    m[:y0] = m[y1:] = False
+    m &= a[..., 3] > 200
+    ys, xs = np.nonzero(m)
+    a[ys, xs, :3] = a[ys, rx, :3]
+    return Image.fromarray(a.astype(np.uint8))
+
+
+def slice_atlas(src, dst_prefix, size, fix=None):
     im = Image.open(src).convert("RGBA")
     boxes = xy_cut(np.array(im)[:, :, 3])
     for i, b in enumerate(boxes):
@@ -131,7 +149,7 @@ def slice_atlas(src, dst_prefix, size):
             s = size / max(part.size)
             if s < 1:
                 part = part.resize((round(part.width * s), round(part.height * s)), Image.LANCZOS)
-            save(part, dst)
+            save(fix(part) if fix else part, dst)
     return len(boxes)
 
 
@@ -333,7 +351,7 @@ if __name__ == "__main__":
     with ThreadPoolExecutor(8) as ex:
         list(ex.map(lambda j: j(), jobs))
     index["atlas"] = {
-        "buttons": slice_atlas(f"{SRC}/ui/buttons_set.png", f"{OUT}/ui/button", 320),
+        "buttons": slice_atlas(f"{SRC}/ui/buttons_set.png", f"{OUT}/ui/button", 320, degloss),
         "icons": slice_atlas(f"{SRC}/ui/icon_buttons_set.png", f"{OUT}/ui/icon", 128),
         # League badges, lowest league first (a league's `icon` in the config is its slice number).
         "leagues": slice_atlas(f"{SRC}/ui/league_ranks.png", f"{OUT}/ui/league", 160),

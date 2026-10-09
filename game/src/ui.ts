@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import { BUTTON, ICON, type ButtonColor } from "./assets";
 import { UNIT_BY_ID, RARITY_STATS } from "./data/units";
-import type { UnitDef } from "../../shared/units.ts";
 import { sfx, audioSettings, setAudio } from "./audio";
 import { LAYOUT, RES } from "./display";
 import { RACES, raceCss, raceLabel, type Race } from "../../shared/races.ts";
@@ -183,10 +182,8 @@ export function cardView(
     const lv = txt(scene, 0, size * 0.39, `LV ${opts.level}`, Math.round(size * 0.15));
     parts.push(lv);
   }
-  const kitRow = size >= KIT_ROW_MIN_SIZE ? kitIconRow(scene, def, size) : [];
-  parts.push(...kitRow);
   if (opts.name) {
-    parts.push(txt(scene, 0, size * (kitRow.length ? 0.64 : 0.58), def.name, Math.round(size * 0.12), "#ffffff"));
+    parts.push(txt(scene, 0, size * 0.58, def.name, Math.round(size * 0.12), "#ffffff"));
   }
   if (opts.locked) {
     portrait.setTint(0x333344);
@@ -198,40 +195,6 @@ export function cardView(
   const c = scene.add.container(x, y, parts);
   c.setSize(size, size);
   return c;
-}
-
-/** Cards smaller than this (px) skip the kit icon row. */
-export const KIT_ROW_MIN_SIZE = 90;
-const KIT_ROW_MAX = 4;
-
-/**
- * Icons for a unit's kit slots that have art (primary first), then its perks, centred along the card's
- * bottom edge (below the LV text). More than 4 shows the first 3 plus a "+N" chip. Empty when no art is loaded.
- */
-function kitIconRow(scene: Phaser.Scene, def: UnitDef, size: number): Phaser.GameObjects.GameObject[] {
-  const slots = [
-    ...def.kit.map((s) => ({ kind: "arch" as const, id: s.arch as string })),
-    ...def.perks.map((p) => ({ kind: "perk" as const, id: p.perk as string })),
-  ].filter((s) => scene.textures.exists(`${s.kind}:${s.id}`));
-  if (!slots.length) return [];
-  const shown = slots.length > KIT_ROW_MAX ? slots.slice(0, KIT_ROW_MAX - 1) : slots;
-  const extra = slots.length - shown.length;
-  const icon = size * 0.15;
-  const gap = icon * 0.12;
-  const n = shown.length + (extra ? 1 : 0);
-  const y = size * 0.5;
-  let x = (-(n * icon + (n - 1) * gap) + icon) / 2;
-  const out: Phaser.GameObjects.GameObject[] = [];
-  const bg = scene.add.graphics();
-  const half = (n * icon + (n - 1) * gap) / 2 + icon * 0.15;
-  bg.fillStyle(0x0b1530, 0.8).fillRoundedRect(-half, y - icon * 0.62, half * 2, icon * 1.24, icon * 0.3);
-  out.push(bg);
-  for (const s of shown) {
-    out.push(fitImage(scene.add.image(x, y, `${s.kind}:${s.id}`), icon));
-    x += icon + gap;
-  }
-  if (extra) out.push(txt(scene, x, y, `+${extra}`, Math.round(icon * 0.8), "#ffffff"));
-  return out;
 }
 
 /** A hero card: gold frame + hero portrait, optionally locked. */

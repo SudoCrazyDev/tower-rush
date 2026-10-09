@@ -1340,12 +1340,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showBanner(text: string, boss = false, bossId?: string, sub?: string) {
+    if (boss && bossId && this.textures.exists(`boss_banner:${bossId}`)) return this.bossCard(bossId, text, sub);
     const parts: Phaser.GameObjects.GameObject[] = [];
-    if (boss && bossId && this.textures.exists(`boss_banner:${bossId}`)) {
-      const img = this.add.image(0, -40, `boss_banner:${bossId}`);
-      img.setScale(Math.min(560 / img.width, 300 / img.height));
-      parts.push(img);
-    } else if (boss) {
+    if (boss) {
       parts.push(this.add.image(0, -70, "ui:boss_warning").setDisplaySize(150, 150));
     } else {
       parts.push(this.add.image(-150, 0, "ui:wave_horn").setDisplaySize(110, 110));
@@ -1360,6 +1357,57 @@ export class BattleScene extends Phaser.Scene {
       duration: 300,
       ease: "Back.Out",
       onComplete: () => this.tweens.add({ targets: c, alpha: 0, y: 420, delay: boss ? 1400 : 700, duration: 300, onComplete: () => c.destroy() }),
+    });
+  }
+
+  /** The boss arrival card: dimmed arena, framed art cropped to fill, a BOSS ribbon and a name plate. */
+  private bossCard(bossId: string, text: string, sub?: string) {
+    const name = BOSS_BY_ID[bossId]?.name ?? text.replace(/^BOSS:\s*/i, "");
+    const cw = 600, ch = 470, iw = 560, ih = 300, iy = -70;
+    const dim = this.add.rectangle(ARENA_W / 2, ARENA_H / 2, ARENA_W, ARENA_H, 0x000000, 0.5).setDepth(2799).setAlpha(0);
+
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.45).fillRoundedRect(-cw / 2 + 6, -ch / 2 + 10, cw, ch, 26);
+    g.fillStyle(0x2a0f18, 0.97).fillRoundedRect(-cw / 2, -ch / 2, cw, ch, 26);
+    g.lineStyle(6, 0xc23a3a, 1).strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 26);
+    g.lineStyle(2, 0xffd27a, 0.9).strokeRoundedRect(-cw / 2 + 9, -ch / 2 + 9, cw - 18, ch - 18, 20);
+
+    // Cover-fit the art into the window, cropping the overflow instead of letterboxing.
+    const img = this.add.image(0, iy, `boss_banner:${bossId}`);
+    const s = Math.max(iw / img.width, ih / img.height);
+    const cropW = iw / s, cropH = ih / s;
+    img.setCrop((img.width - cropW) / 2, (img.height - cropH) / 2, cropW, cropH).setScale(s);
+    const frame = this.add.graphics();
+    frame.lineStyle(4, 0xffd27a, 1).strokeRect(-iw / 2, iy - ih / 2, iw, ih);
+
+    // Red "BOSS" ribbon over the top edge.
+    const rib = this.add.graphics();
+    rib.fillStyle(0xc23a3a, 1).fillRoundedRect(-90, -ch / 2 - 22, 180, 44, 14);
+    rib.lineStyle(3, 0xffd27a, 1).strokeRoundedRect(-90, -ch / 2 - 22, 180, 44, 14);
+    const ribText = txt(this, 0, -ch / 2, "BOSS", 30, "#fff4c2");
+
+    const nameY = iy + ih / 2 + 52;
+    const nameText = txt(this, 0, nameY, name, 44, "#ffd27a");
+    const parts: Phaser.GameObjects.GameObject[] = [g, img, frame, rib, ribText, nameText];
+    if (sub) {
+      const pill = this.add.graphics();
+      const pw = Math.max(160, sub.length * 16 + 48);
+      pill.fillStyle(0x000000, 0.4).fillRoundedRect(-pw / 2, nameY + 34, pw, 36, 18);
+      parts.push(pill, txt(this, 0, nameY + 52, sub, 22, "#ffd0d0"));
+    }
+
+    const c = this.add.container(ARENA_W / 2, 470, parts).setDepth(2800).setAlpha(0).setScale(0.7);
+    this.tweens.add({ targets: dim, alpha: 1, duration: 250 });
+    this.tweens.add({
+      targets: c,
+      alpha: 1,
+      scale: 1,
+      duration: 320,
+      ease: "Back.Out",
+      onComplete: () => {
+        this.tweens.add({ targets: dim, alpha: 0, delay: 1600, duration: 300, onComplete: () => dim.destroy() });
+        this.tweens.add({ targets: c, alpha: 0, y: 420, delay: 1600, duration: 300, onComplete: () => c.destroy() });
+      },
     });
   }
 

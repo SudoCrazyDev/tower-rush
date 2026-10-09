@@ -1,7 +1,5 @@
 import Phaser from "phaser";
 import { auraBonus, buffBonus, EFFECTS } from "../../../shared/effects.ts";
-import { noAttack } from "../../../shared/support.ts";
-import { PERKS } from "../../../shared/perks.ts";
 import { ARCH_KIND, kitPrimary, kitSummary, perkSummary } from "../../../shared/kit.ts";
 import {
   SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
@@ -12,7 +10,7 @@ import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
-import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, raceBadge, kitIcon, elementIcon } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage } from "../ui";
 import { topBar } from "./LobbyScene";
 import { storyUnlocking } from "../../../shared/stories.ts";
 import { coach, setTutorialDone, tutorialDue } from "../tutorial";
@@ -541,7 +539,6 @@ export class DeckScene extends Phaser.Scene {
       m.setScale(1).setAlpha(1).setPosition(0, 0);
       this.levelUpBurst(m, card);
     }
-    m.add(raceBadge(this, cx - 212, cardY - 40, def.race));
 
     // Two tabs under the card: the unit's details, and how its stats grow.
     const level = owned?.level ?? 1;
@@ -583,98 +580,46 @@ export class DeckScene extends Phaser.Scene {
       };
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
-    // A role (Barkeeper, Knight, Mercenary) shows in place of the style for units that never attack.
-    const arch = primaryOf(def);
-    const silent = noAttack(arch);
-    // Each part gets a small dim kind tag (ROLE / STYLE / ATTACK / SUPPORT) so players can tell what the words are.
+    // Race crest on the card's lower-left corner, mirroring the element badge at top-right.
+    if (this.textures.exists(`race:${def.race}`)) m.add(fitImage(this.add.image(cx - 260 * 0.35, cardY + 260 * 0.35, `race:${def.race}`), 260 * 0.24));
+
+    // Two-column info list: dim tag in the label column, value column to its right. Rows stack by real height.
     const TAG = "#9fb0e0";
+    const TAG_X = cx - 170;
+    const VAL_X = cx - 155;
+    const arch = primaryOf(def);
     const supportish = isSupport(arch) || arch === "buff";
-    const segs: [string, string][] = [];
-    if (def.role) segs.push(["ROLE", def.role.toUpperCase()]);
-    if (!(arch === "buff" || isSupport(arch) || (silent && def.role))) segs.push(["STYLE", STYLES[def.style].label.toUpperCase()]);
-    segs.push([supportish ? "SUPPORT" : "ATTACK", isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label]);
-    const rowObjs: Phaser.GameObjects.Text[] = [];
-    let rowW = 0;
-    for (const [tag, val] of segs) {
-      const tg = txt(this, 0, cy - 82, tag, 14, TAG, [0, 0.5]);
-      const v = txt(this, 0, cy - 82, val, isSupport(arch) ? 22 : 24, "#ffffff", [0, 0.5]);
-      rowObjs.push(tg, v);
-      rowW += tg.displayWidth + 6 + v.displayWidth + (rowObjs.length > 2 ? 18 : 0);
-    }
-    // Shrink the row to fit 540px if it is long, then centre it.
-    const rowS = Math.min(1, 540 / rowW);
-    let rx = cx - (rowW * rowS) / 2;
-    rowObjs.forEach((o, i) => {
-      if (i > 1 && i % 2 === 0) rx += 18 * rowS;
-      o.setScale(rowS).setX(rx);
-      rx += o.displayWidth + (i % 2 === 0 ? 6 * rowS : 0);
-      info.add(o);
-    });
-    const archIcon = kitIcon(this, "arch", arch, 40, cx - (rowW * rowS) / 2 - 28, cy - 82);
-    if (archIcon) info.add(archIcon);
-    // Tap an arch or perk icon for a small bubble with that slot's line; tap anywhere else to close it.
-    let tip: Phaser.GameObjects.Container | null = null;
-    const closeTip = () => {
-      tip?.destroy();
-      tip = null;
-    };
-    const showTip = (icon: Phaser.GameObjects.Image, title: string, body: string) => {
-      closeTip();
-      const t1 = txt(this, 0, 0, title, 22, "#fff4c2");
-      const t2 = txt(this, 0, 0, body, 19, "#ffffff").setWordWrapWidth(380).setAlign("center");
-      const w = Math.max(t1.displayWidth, t2.displayWidth) + 36;
-      const h = t1.displayHeight + t2.displayHeight + 30;
-      const bx = Phaser.Math.Clamp(icon.x, cx - 320 + w / 2 + 10, cx + 320 - w / 2 - 10);
-      const by = icon.y - icon.displayHeight / 2 - h / 2 - 12;
-      const g = this.add.graphics();
-      g.fillStyle(0x0b1530, 0.96).fillRoundedRect(-w / 2, -h / 2, w, h, 14);
-      g.lineStyle(3, 0xffd93b, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 14);
-      t1.setPosition(0, -h / 2 + 14 + t1.displayHeight / 2);
-      t2.setPosition(0, -h / 2 + 18 + t1.displayHeight + t2.displayHeight / 2);
-      const blocker = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.001).setInteractive();
-      blocker.once("pointerup", closeTip);
-      tip = this.add.container(0, 0, [blocker, this.add.container(bx, by, [g, t1, t2])]);
-      m.add(tip);
-    };
-    const tapIcon = (icon: Phaser.GameObjects.Image | null, title: string, body: string) => {
-      if (icon) pressable(icon, () => showTip(icon, title, body));
-    };
-    const slotName = (a: string) => a.charAt(0).toUpperCase() + a.slice(1).replace(/_/g, " ");
-    const slotLines = def.kit.map((s) => kitSummary({ ...def, kit: [s] }, 1, levelMult(owned?.level ?? 1))[0] ?? "");
-    tapIcon(archIcon, slotName(def.kit[0].arch), slotLines[0] ?? "");
-    // Every kit slot with this unit's numbers as summoned (rank 1), then one line per perk, then the blurb.
-    // Lines wrap and stack by their real height; a long kit pushes the stats row and the buttons down.
-    let cursor = cy - 64;
-    const place = (t: Phaser.GameObjects.Text, icon: Phaser.GameObjects.Image | null, tag = "") => {
-      // A kind tag sits left of the value (top-aligned); the pair is centred together.
-      const tg = tag ? txt(this, 0, cursor, tag, 14, TAG, [0, 0.5]) : null;
-      const tw = tg ? tg.displayWidth + 8 : 0;
-      t.setWordWrapWidth(540 - tw).setAlign("center").setY(cursor + t.displayHeight / 2);
-      const w = tw + Math.min(t.displayWidth, 540 - tw);
-      t.setX(cx - w / 2 + tw + Math.min(t.displayWidth, 540 - tw) / 2);
-      info.add(t);
-      if (tg) info.add(tg.setPosition(cx - w / 2, cursor + 11));
-      if (icon) {
-        icon.setPosition(cx - w / 2 - 24, t.y);
-        info.add(icon);
+    let cursor = cy - 82;
+    const value = (text: string, size: number, color: string) => txt(this, 0, 0, text, size, color, [0, 0]);
+    const row = (tag: string, vals: Phaser.GameObjects.Text[]) => {
+      info.add(txt(this, TAG_X, cursor, tag, 15, TAG, [1, 0]));
+      let h = 0;
+      for (const v of vals) {
+        v.setPosition(VAL_X, cursor + h).setWordWrapWidth(420).setAlign("left");
+        info.add(v);
+        h += v.displayHeight;
       }
-      cursor += t.displayHeight + 6;
+      cursor += h + 10;
     };
-    def.kit.forEach((slot, i) => {
-      if (!slotLines[i]) return;
-      const icon = i === 0 ? null : kitIcon(this, "arch", slot.arch, 32);
-      tapIcon(icon, slotName(slot.arch), slotLines[i]);
-      place(txt(this, cx, cursor, slotLines[i], 19, "#7fffd4"), icon, i === 0 ? "EFFECT" : "ABILITY");
+    // A role (Barkeeper, Knight, Mercenary) replaces the style for units that have one.
+    if (def.role) row("ROLE", [value(def.role, 22, "#ffffff")]);
+    else if (!supportish) row("STYLE", [value(STYLES[def.style].label, 22, "#ffffff")]);
+    // Attack archetype, with the slot-0 numbers stacked under it in the same row.
+    const slotLines = def.kit.map((s) => kitSummary({ ...def, kit: [s] }, 1, levelMult(owned?.level ?? 1))[0] ?? "");
+    const archName = isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label;
+    row(supportish ? "SUPPORT" : "ATTACK", [value(archName, 22, "#ffffff"), ...(slotLines[0] ? [value(slotLines[0], 18, "#7fffd4")] : [])]);
+    // One ability row per extra kit slot, then one perk row per perk.
+    slotLines.forEach((line, i) => {
+      if (i > 0 && line) row("ABILITY", [value(line, 19, "#7fffd4")]);
     });
     const perkLines = perkSummary(def);
-    def.perks.forEach((p, i) => {
-      const text = `${arch === "buff" ? "Neighbours get " : ""}${perkLines[i]}`;
-      const line = txt(this, cx, cursor, text, 19, "#ffd27a");
-      const pIcon = kitIcon(this, "perk", p.perk, 32);
-      tapIcon(pIcon, PERKS[p.perk].label, text);
-      place(line, pIcon, "PERK");
+    def.perks.forEach((_, i) => {
+      row("PERK", [value(`${arch === "buff" ? "Neighbours get " : ""}${perkLines[i]}`, 19, "#ffd27a")]);
     });
-    place(txt(this, cx, cursor, `"${def.blurb}"`, 19, "#c9d2ff"), null);
+    // Blurb centred under the rows, 8px below the last row's text.
+    const blurb = txt(this, cx, cursor - 2, `"${def.blurb}"`, 19, "#c9d2ff", [0.5, 0]).setWordWrapWidth(540).setAlign("center");
+    info.add(blurb);
+    cursor = blurb.y + blurb.displayHeight;
     const extra = Math.min(110, Math.max(0, Math.round(cursor + 40 - (cy + 76))));
 
     const now = unitStats(def, 1, level, 0);

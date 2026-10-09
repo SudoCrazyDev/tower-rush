@@ -334,7 +334,7 @@ export function unitEffectSummary(effect: UnitEffect, rank: number, e = EFFECTS)
 export function effectSummary(arch: Arch, rank: number, rarity: number, e = EFFECTS, mult = 1): string | null {
   switch (arch) {
     case "splash":
-      return `Splash ${Math.round(splashRadius(rank, e))}px · ${pct(e.splash.splash)} damage`;
+      return `Splash: ${pct(e.splash.splash)} damage to nearby monsters`;
     case "burn":
       return `Burns ${pct(e.burn.burnDps)} per second for ${secs(e.burn.burnTime)}`;
     case "chain":
