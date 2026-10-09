@@ -8,7 +8,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 ```
  v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          v1.3.0            v2.0.0              next
  Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► Branding ────────► The Grand ────────► balance, then
- Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Revamp (testing)    Books 2–4 (TBD)
+ Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Revamp, Oct 9       Books 2–4 (TBD)
 ```
 
 | Version | Title | Shipped | Git | Design doc |
@@ -21,7 +21,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.2.2 | Story card unlocks hotfix | 2026-10-06 | tag `v1.2.2` | [v1.2](v1.2-stories/README.md) (5.7) |
 | v1.3.0 | **Branding Revamp** | 2026-10-06 | tag `v1.3.0` | [v1.3](v1.3-branding-revamp/README.md) |
 | v1.3.2 | Element emblems hotfix | 2026-10-09 | (art only, on R2) | — |
-| v2.0.0 | **The Grand Revamp** | In testing | (not yet tagged) | [v2.0](v2.0-the-grand-revamp/README.md) |
+| v2.0.0 | **The Grand Revamp** | 2026-10-09 | tag `v2.0.0` | [v2.0](v2.0-the-grand-revamp/README.md) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
 ---
@@ -116,13 +116,15 @@ the name. Same colours, same game; logins, settings and progress carry over.
   both v1.3 and v2.0 draw it undistorted. The fire emblem's background, never keyed out, is
   removed too. Art only: no game code or config change, so no `withHotfixes` entry.
 
-## v2.0.0: The Grand Revamp (in testing)
+## v2.0.0: The Grand Revamp (2026-10-09)
 
 **One unified combat engine, composable units with multiple archetypes and perks, and a visual
 refresh.** Solo battles now run on the same engine as PvP. A unit (built in the admin kit editor) can have
 multiple archetypes, each with its own numbers, and any number of perks. New art: archetype icons,
 perk icons, element emblems, race crests, all VFX groups, and generic and signature weapons with
-melee strike effects.
+melee strike effects. Shipped with a UI polish pass: labelled card details, race crest on the
+card corner, a framed boss intro card, livelier lobby mode cards and buttons without the gloss
+streak.
 [Design doc](v2.0-the-grand-revamp/README.md) · [Promo kit](v2.0-the-grand-revamp/PROMO.md)
 
 ## Next
