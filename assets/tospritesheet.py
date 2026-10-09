@@ -1,11 +1,13 @@
 """Convert a green-screen mp4 into transparent PNG frames + a sprite sheet.
-usage: python tospritesheet.py in.mp4 out_prefix [frames=16] [size=256] [green|magenta]"""
+usage: python tospritesheet.py in.mp4 out_prefix [frames=16] [size=256] [green|magenta, + suffix to flood-clear a drifting backdrop]"""
 import sys, os, subprocess, numpy as np, imageio_ffmpeg
 from PIL import Image
 src, out = sys.argv[1], sys.argv[2]
 N = int(sys.argv[3]) if len(sys.argv) > 3 else 16
 S = int(sys.argv[4]) if len(sys.argv) > 4 else 256
 KEY = sys.argv[5] if len(sys.argv) > 5 else "green"
+FLOOD = KEY.endswith("+")  # e.g. magenta+: also flood-clear a drifting backdrop
+KEY = KEY.rstrip("+")
 ff = imageio_ffmpeg.get_ffmpeg_exe()
 tmp = out + "_raw"; os.makedirs(tmp, exist_ok=True)
 subprocess.run([ff, "-loglevel", "error", "-y", "-i", src, os.path.join(tmp, "%04d.png")], check=True)
@@ -26,6 +28,23 @@ for i in idx:
         alpha = np.clip(1 - (dom - 40) / 60, 0, 1)
         g2 = np.minimum(g, np.maximum(r, b) + 10)
         rgb = np.stack([r, np.where(dom > 0, g2, g), b], -1)
+    if FLOOD:  # backdrop drifted off the key colour (smoke, dimming): grow the background in from
+        # the frame edge through smoothly changing pixels; the dark cartoon outlines stop it
+        q = a[::2, ::2]
+        gx = np.abs(q[:, 1:] - q[:, :-1]).sum(-1); gy = np.abs(q[1:] - q[:-1]).sum(-1)
+        edge = np.zeros(q.shape[:2]); edge[:, 1:] = np.maximum(edge[:, 1:], gx); edge[:, :-1] = np.maximum(edge[:, :-1], gx)
+        edge[1:] = np.maximum(edge[1:], gy); edge[:-1] = np.maximum(edge[:-1], gy)
+        lum = q.mean(-1)
+        ok = (edge < 36) & (lum > 45)  # smooth and not an outline
+        bg = np.zeros_like(ok); bg[0] = bg[-1] = True; bg[:, 0] = bg[:, -1] = True; bg &= ok
+        for _ in range(600):
+            grown = bg.copy()
+            grown[1:] |= bg[:-1]; grown[:-1] |= bg[1:]; grown[:, 1:] |= bg[:, :-1]; grown[:, :-1] |= bg[:, 1:]
+            grown &= ok
+            if (grown == bg).all(): break
+            bg = grown
+        bg = np.repeat(np.repeat(bg, 2, 0), 2, 1)[: a.shape[0], : a.shape[1]]
+        alpha = np.where(bg, 0, alpha)
     frames.append(np.dstack([rgb, alpha * 255]).astype(np.uint8))
 # common bbox across frames so sprite doesn't jitter
 m = np.zeros(frames[0].shape[:2], bool)
