@@ -570,7 +570,7 @@ export class DeckScene extends Phaser.Scene {
       m.add(thumb);
       const label = txt(this, cx + 225, cardY + 12, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
       m.add(label);
-      const awakeText = txt(this, cx, cy - 120, `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ultimate every ${ECONOMY.ultimateCooldown}s`, 22, "#ffd93b");
+      const awakeText = txt(this, cx, cy - 120, `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ULTIMATE every ${ECONOMY.ultimateCooldown}s`, 22, "#ffd93b");
       info.add(awakeText.setVisible(false));
       const flip = () => {
         const showAwake = !awake.visible;
@@ -586,12 +586,31 @@ export class DeckScene extends Phaser.Scene {
     // A role (Barkeeper, Knight, Mercenary) shows in place of the style for units that never attack.
     const arch = primaryOf(def);
     const silent = noAttack(arch);
-    const style =
-      (def.role ? `${def.role.toUpperCase()} · ` : "") +
-      (arch === "buff" || (silent && def.role) ? "" : isSupport(arch) ? "SUPPORT · " : `${STYLES[def.style].label.toUpperCase()} · `);
-    const archLabel = txt(this, cx, cy - 82, style + (isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label), isSupport(arch) ? 22 : 26, "#ffffff");
-    info.add(archLabel);
-    const archIcon = kitIcon(this, "arch", arch, 40, archLabel.x - archLabel.displayWidth / 2 - 28, cy - 82);
+    // Each part gets a small dim kind tag (ROLE / STYLE / ATTACK / SUPPORT) so players can tell what the words are.
+    const TAG = "#9fb0e0";
+    const supportish = isSupport(arch) || arch === "buff";
+    const segs: [string, string][] = [];
+    if (def.role) segs.push(["ROLE", def.role.toUpperCase()]);
+    if (!(arch === "buff" || isSupport(arch) || (silent && def.role))) segs.push(["STYLE", STYLES[def.style].label.toUpperCase()]);
+    segs.push([supportish ? "SUPPORT" : "ATTACK", isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label]);
+    const rowObjs: Phaser.GameObjects.Text[] = [];
+    let rowW = 0;
+    for (const [tag, val] of segs) {
+      const tg = txt(this, 0, cy - 82, tag, 14, TAG, [0, 0.5]);
+      const v = txt(this, 0, cy - 82, val, isSupport(arch) ? 22 : 24, "#ffffff", [0, 0.5]);
+      rowObjs.push(tg, v);
+      rowW += tg.displayWidth + 6 + v.displayWidth + (rowObjs.length > 2 ? 18 : 0);
+    }
+    // Shrink the row to fit 540px if it is long, then centre it.
+    const rowS = Math.min(1, 540 / rowW);
+    let rx = cx - (rowW * rowS) / 2;
+    rowObjs.forEach((o, i) => {
+      if (i > 1 && i % 2 === 0) rx += 18 * rowS;
+      o.setScale(rowS).setX(rx);
+      rx += o.displayWidth + (i % 2 === 0 ? 6 * rowS : 0);
+      info.add(o);
+    });
+    const archIcon = kitIcon(this, "arch", arch, 40, cx - (rowW * rowS) / 2 - 28, cy - 82);
     if (archIcon) info.add(archIcon);
     // Tap an arch or perk icon for a small bubble with that slot's line; tap anywhere else to close it.
     let tip: Phaser.GameObjects.Container | null = null;
@@ -626,11 +645,17 @@ export class DeckScene extends Phaser.Scene {
     // Every kit slot with this unit's numbers as summoned (rank 1), then one line per perk, then the blurb.
     // Lines wrap and stack by their real height; a long kit pushes the stats row and the buttons down.
     let cursor = cy - 64;
-    const place = (t: Phaser.GameObjects.Text, icon: Phaser.GameObjects.Image | null) => {
-      t.setWordWrapWidth(540).setAlign("center").setY(cursor + t.displayHeight / 2);
+    const place = (t: Phaser.GameObjects.Text, icon: Phaser.GameObjects.Image | null, tag = "") => {
+      // A kind tag sits left of the value (top-aligned); the pair is centred together.
+      const tg = tag ? txt(this, 0, cursor, tag, 14, TAG, [0, 0.5]) : null;
+      const tw = tg ? tg.displayWidth + 8 : 0;
+      t.setWordWrapWidth(540 - tw).setAlign("center").setY(cursor + t.displayHeight / 2);
+      const w = tw + Math.min(t.displayWidth, 540 - tw);
+      t.setX(cx - w / 2 + tw + Math.min(t.displayWidth, 540 - tw) / 2);
       info.add(t);
+      if (tg) info.add(tg.setPosition(cx - w / 2, cursor + 11));
       if (icon) {
-        icon.setPosition(cx - Math.min(t.displayWidth, 540) / 2 - 24, t.y);
+        icon.setPosition(cx - w / 2 - 24, t.y);
         info.add(icon);
       }
       cursor += t.displayHeight + 6;
@@ -639,7 +664,7 @@ export class DeckScene extends Phaser.Scene {
       if (!slotLines[i]) return;
       const icon = i === 0 ? null : kitIcon(this, "arch", slot.arch, 32);
       tapIcon(icon, slotName(slot.arch), slotLines[i]);
-      place(txt(this, cx, cursor, slotLines[i], 19, "#7fffd4"), icon);
+      place(txt(this, cx, cursor, slotLines[i], 19, "#7fffd4"), icon, i === 0 ? "EFFECT" : "ABILITY");
     });
     const perkLines = perkSummary(def);
     def.perks.forEach((p, i) => {
@@ -647,7 +672,7 @@ export class DeckScene extends Phaser.Scene {
       const line = txt(this, cx, cursor, text, 19, "#ffd27a");
       const pIcon = kitIcon(this, "perk", p.perk, 32);
       tapIcon(pIcon, PERKS[p.perk].label, text);
-      place(line, pIcon);
+      place(line, pIcon, "PERK");
     });
     place(txt(this, cx, cursor, `"${def.blurb}"`, 19, "#c9d2ff"), null);
     const extra = Math.min(110, Math.max(0, Math.round(cursor + 40 - (cy + 76))));
@@ -664,7 +689,7 @@ export class DeckScene extends Phaser.Scene {
         ? ([["stat:attack_speed", "never attacks"]] as [string, string][])
         : ([
             ["stat:damage", fmt(now.damage)],
-            ["stat:attack_speed", `every ${+(1 / now.speed).toFixed(2)}s`],
+            ["stat:attack_speed", `${+(1 / now.speed).toFixed(2)}s`],
           ] as [string, string][])),
     ];
     // Lay the icon+value pairs out by their real widths and centre the row.
