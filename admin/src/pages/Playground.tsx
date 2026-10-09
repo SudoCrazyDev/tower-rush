@@ -381,6 +381,7 @@ const BOSS_POWER_TEXT: Record<BossDef["power"], string> = {
   split: "Each quarter of its health lost: 3 minions burst out",
   layers: "4 layers: each break stuns units, speeds it up and releases minions; the core gives every unit Irritation",
   portal: "Every 6s: opens a portal ahead that minions step out of; blinks forward each third of its health",
+  none: "No timed power: only its skills (v2.1)",
 };
 
 function BossesTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConfig }) {

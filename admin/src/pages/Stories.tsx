@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useConfig } from "../config";
 import { Num, Text, Select, PageHead } from "../components";
-import { DEFAULT_BOOK, type StoryChapter, type StoryDef, type StorySpawn, type StoryWave } from "../../../shared/stories.ts";
+import { DEFAULT_BOOK2, SAGA, booksOf, type StoryChapter, type StoryDef, type StorySpawn, type StoryWave } from "../../../shared/stories.ts";
 import type { GameConfig } from "../../../shared/config.ts";
 
 const NONE = "(none)";
@@ -21,17 +21,21 @@ const parseSpawns = (t: string): StorySpawn[] =>
 export function StoriesPage() {
   const { draft, saved, edit } = useConfig();
   const [open, setOpen] = useState<string | null>(null);
+  const [bi, setBi] = useState(0);
   if (!draft || !saved) return <div className="muted">Loading…</div>;
-  const book = draft.book ?? DEFAULT_BOOK;
-  const before = saved.book ?? DEFAULT_BOOK;
+  const books = booksOf(draft);
+  const bookIdx = Math.min(bi, books.length - 1);
+  const book = books[bookIdx];
+  const before = booksOf(saved)[bookIdx] ?? DEFAULT_BOOK2;
   const monsters = draft.monsters.map((m) => m.id);
   const bosses = draft.bosses.map((b) => b.id);
   const arenas = draft.arenas.map((a) => a.id);
   const chests = draft.chests.map((c) => c.id);
-  const editBook = (fn: (b: NonNullable<GameConfig["book"]>) => void) =>
+  const editBook = (fn: (b: GameConfig["books"][number]) => void) =>
     edit((c) => {
-      c.book ??= structuredClone(DEFAULT_BOOK);
-      fn(c.book);
+      c.books = structuredClone(booksOf(c));
+      delete c.book;
+      fn(c.books[bookIdx]);
     });
   const editChapter = (si: number, ci: number, fn: (c: StoryChapter) => void) => editBook((b) => fn(b.stories[si].chapters[ci]));
   const changed = (a: unknown, b: unknown) => (JSON.stringify(a) !== JSON.stringify(b) ? "changed" : "");
@@ -44,6 +48,14 @@ export function StoriesPage() {
         desc="Story mode: the book's stories are played in order, each chapter is one battle with a fixed list of waves (no random picks), and the last wave's boss must be beaten with lives left. HP: wave base HP × the chapter's HP scale × each wave's HP. Rewards are paid by the server on the first clear; replays pay the replay gold (and Event card copies for stories that list them)."
       />
       <div className="panel">
+        <div style={{ marginBottom: 8 }}>
+          <b>{SAGA}</b>{" "}
+          {books.map((b, i) => (
+            <button key={i} className={i === bookIdx ? "primary" : ""} onClick={() => { setBi(i); setOpen(null); }}>
+              {b.title || `Book ${i + 1}`}
+            </button>
+          ))}
+        </div>
         <label>
           Book title <Text value={book.title} onChange={(v) => editBook((b) => void (b.title = v))} width={260} />
         </label>

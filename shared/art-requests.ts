@@ -545,6 +545,144 @@ const SIGNATURE_WEAPONS: [string, string, string][] = [
   ["lance_knight", "Lance Knight", "his lance crackling with lightning, pointing right"],
 ];
 
+/* ---------- Book 2 · Story 1: The Elven Wilds (v2.1) ---------- */
+const MAGENTA = "Centered, full body, plenty of margin, on a solid flat pure magenta (#FF00FF) background with no shadow on the ground.";
+const B2_GROUP = "v2.1 Arts Requirements";
+const B2_ANCHOR = "assets/_green/v12/corrupted_villager.png";
+const B2_MONSTER = "assets/_green/orc_brute.png";
+const B2_BOSS = "assets/_green/lich_king.png";
+const B2_VILLAGE = "assets/locations/arena_upside_down_village.png";
+const B2_FARMER = "assets/_green/v12/corrupted_farmer.png";
+const B2_FOLK = ["assets/_green/v12/corrupted_villager.png", B2_FARMER, "assets/_green/v12/corrupted_fisherman.png", "assets/_green/v12/corrupted_herbalist.png"];
+const B2_HEROES = ["pentagonal_knight", "hired_blade", "berserker_sellsword"].map((k) => `assets/_green/v12/${k}.png`);
+const PORTRAIT = "Head-and-shoulders bust portrait, three-quarter view, no frame.";
+const EDIT = "Edit the reference arena image: keep the exact path shape, path position, build tiles and top-down camera unchanged; only repaint the scenery as:";
+
+type B2Kind = "monster" | "boss" | "ally" | "portrait" | "status" | "arena" | "panel" | "cover";
+/** [#, id, file, title, kind, refs (strings, or # of another item in this batch), subject / scene] */
+const B2: [number, string, string, string, B2Kind, (string | number)[], string][] = [
+  [1, "corrupted_elf_scout", "monsters/corrupted_elf_scout.png", "Corrupted elf scout", "monster", [],
+    "Lean corrupted elf scout sprinting, dark purple skin, glowing violet eyes, small chaos tentacles curling from torn green leather armor, twin daggers, pointed ears, ragged hood."],
+  [2, "corrupted_elf_warrior", "monsters/corrupted_elf_warrior.png", "Corrupted elf warrior", "monster", [],
+    "Corrupted elf warrior, dark purple skin, violet eyes, cracked leaf-pattern armor oozing purple chaos, curved elven sword raised, marching pose."],
+  [3, "corrupted_elf_archer", "monsters/corrupted_elf_archer.png", "Corrupted elf archer", "monster", [],
+    "Corrupted elf archer drawing a thorny dark longbow, purple skin, violet eyes, chaos tendrils on the quiver, tattered green cloak."],
+  [4, "corrupted_elf_warden", "monsters/corrupted_elf_warden.png", "Corrupted elf warden", "monster", [],
+    "Heavy corrupted elf warden, dark purple skin, big leaf-shaped tower shield cracked with violet glow, bark-and-steel armor, slow sturdy stance."],
+  [5, "corrupted_sapling", "monsters/corrupted_sapling.png", "Corrupted sapling", "monster", [],
+    "Small walking corrupted treant sapling, twisted bark body, purple glowing knot-eyes, violet thorn vines for arms, a few dying leaves, stubby root legs."],
+  [6, "elf_captain_morvane", "bosses/elf_captain_morvane.png", "Captain Morvane", "boss", [],
+    "Corrupted elf captain, tall, fully dark-purple skin, glowing violet eyes, long silver hair streaked with black, ornate elven officer armor with a torn crimson sash, a commander's longsword, chaos tentacles from his back, intimidating boss pose."],
+  [7, "elf_captain_sylris", "bosses/elf_captain_sylris.png", "Captain Sylris", "boss", [],
+    "Corrupted elf captain archer, dark purple skin, one eye covered by a cracked leaf mask, huge recurve bow of black wood with violet bowstring glow, three arrows nocked, long braided hair, light ranger armor, boss pose."],
+  [8, "elf_captain_kaelen", "bosses/elf_captain_kaelen.png", "Captain Kaelen", "boss", [],
+    "Corrupted elf captain duelist with two curved elven swords crossed in a guard stance, dark purple skin, violet eyes, sleek dark armor with leaf-blade pauldrons, chaos energy along both blades, boss pose."],
+  [9, "thalmyr_half", "bosses/thalmyr_half.png", "Thalmyr, the Torn Guardian (stag)", "boss", [],
+    "Colossal ancient forest guardian stag, majestic, with huge branching antlers grown with moss, leaves and tiny glowing flowers. The LEFT half of the body is healthy (green moss, warm bark-brown fur, golden eyes). The RIGHT half is corrupted (dark purple, cracked, violet glowing veins, chaos tentacles, thorny blackened antler side). A struggling expression, side view facing right, boss scale."],
+  [10, "vaeltharion", "bosses/vaeltharion.png", "Vaeltharion, the Elven Commander", "boss", [],
+    "Vaeltharion the Elven Commander, corrupted. Tall regal elf general, dark purple skin, burning violet eyes, long white hair, a tall crown-like antler helm, flowing dark-green and black war cape, ornate elven plate armor with violet chaos cracks. A spear-glaive in one hand; the other hand raised with thorny blight roots coiling. Imposing final-boss pose."],
+  [11, "ally_elf_spearman", "story/allies/ally_elf_spearman.png", "Ally: elf spearman", "ally", [],
+    "Proud forest elf spearman charging, green and gold leaf armor, healthy fair skin, determined face, spear forward."],
+  [12, "ally_gnome", "story/allies/ally_gnome.png", "Ally: gnome", "ally", [],
+    "Small bearded forest gnome charging with a tiny axe, mushroom cap hat, brave shout."],
+  [13, "ally_fae", "story/allies/ally_fae.png", "Ally: fae", "ally", [],
+    "Glowing forest fae with dragonfly wings flying forward, trailing green sparkles."],
+  [14, "ally_earth_elemental", "story/allies/ally_earth_elemental.png", "Ally: earth elemental", "ally", [],
+    "Chunky moss-and-stone earth elemental rushing forward, glowing green crystal core."],
+  [15, "ally_forest_beast", "story/allies/ally_forest_beast.png", "Ally: forest beast", "ally", [],
+    "Great antlered forest wolf (or boar) running at full speed, leaves in its fur, friendly glowing green eyes."],
+  [16, "queen_aelyria", "story/portraits/queen_aelyria.png", "Portrait: Queen Aelyria", "portrait", [],
+    "Aelyria, Queen of the Elves. Breathtakingly beautiful elf queen, long flowing golden-blond hair, delicate silver leaf circlet, emerald eyes. A worn and travel-torn royal gown in green and ivory with a low V-neckline, frayed hems, small scratches, dignified but weary expression. Soft forest light. Tasteful and modest, non-explicit."],
+  [17, "portrait_thalmyr_half", "story/portraits/thalmyr_half.png", "Portrait: Thalmyr (torn)", "portrait", [9],
+    "Bust of the corrupted guardian stag Thalmyr from the reference, left half healthy and right half corrupted, pained noble expression."],
+  [18, "thalmyr_cleansed", "story/portraits/thalmyr_cleansed.png", "Portrait: Thalmyr (cleansed)", "portrait", [9],
+    "The same stag as the reference, fully healed: radiant green moss, golden glowing eyes, blossoming antlers, no purple corruption at all, calm noble expression."],
+  [19, "portrait_vaeltharion", "story/portraits/vaeltharion.png", "Portrait: Vaeltharion", "portrait", [10],
+    "Bust of Vaeltharion from the reference, fierce expression, burning violet eyes."],
+  [20, "forest_villager", "story/portraits/forest_villager.png", "Portrait: forest villager", "portrait", [B2_FARMER],
+    "Breathless young villager in a simple tunic, leaves in hair, worried face. Same character style as the reference but uncorrupted (healthy natural skin, no violet eyes, no tentacles)."],
+  [21, "arena_elven_deepwood", "locations/arena_elven_deepwood.png", "Arena: Elven Deepwood", "arena", ["assets/locations/arena_mushroom_forest.png"],
+    "a deep ancient elven forest: towering silver-barked trees, hanging lanterns, elven stone arches, ferns, soft god-rays. Healthy and green, no corruption."],
+  [22, "arena_guardian_grove", "locations/arena_guardian_grove.png", "Arena: Guardian Grove", "arena", ["assets/locations/arena_mushroom_forest.png"],
+    "a deeper, older forest heart: giant mossy roots, a ring of standing stones, a glowing sacred pool, a few faint purple cracks creeping in at the edges only."],
+  [23, "arena_rocky_summit", "locations/arena_rocky_summit.png", "Arena: Rocky Summit", "arena", ["assets/locations/arena_tundra.png"],
+    "a rocky mountain summit: grey cliffs, boulders, sparse twisted pines, an elven ruined watchtower at the top, wind-swept, a faint violet chaos haze in the sky."],
+  [24, "b2s1_p1_restored", "story/panels/b2s1_p1_restored.png", "Panel 1: the restored village", "panel", [B2_VILLAGE, ...B2_FOLK],
+    "The restored village, sunny; cheering villagers (uncorrupted, healthy and happy) thank the heroes."],
+  [25, "b2s1_p2_farewell", "story/panels/b2s1_p2_farewell.png", "Panel 2: farewell", "panel", B2_HEROES,
+    "Knights and mercenaries ride off down separate roads at sunset."],
+  [26, "b2s1_p3_runner", "story/panels/b2s1_p3_runner.png", "Panel 3: the runner", "panel", [20],
+    "A breathless villager runs in from a forested mountain, pointing back in alarm."],
+  [27, "b2s1_p4_fleeing", "story/panels/b2s1_p4_fleeing.png", "Panel 4: the fleeing folk", "panel", [11, 12, 13, 14, 15],
+    "Elves, gnomes, fae, elementals and forest beasts flee through a deep forest."],
+  [28, "b2s1_p5_queen_pleads", "story/panels/b2s1_p5_queen_pleads.png", "Panel 5: the Queen pleads", "panel", [16, 27],
+    "Queen Aelyria steps forward, hand outstretched, pleading for help; a purple glow far behind her."],
+  [29, "b2s1_p6_the_commander", "story/panels/b2s1_p6_the_commander.png", "Panel 6: the commander", "panel", [16, 10],
+    "The Queen, solemn; inset vision of Vaeltharion silhouetted on a rocky peak under a violet sky."],
+  [30, "b2s1_p7_guardian", "story/panels/b2s1_p7_guardian.png", "Panel 7: the guardian", "panel", [9],
+    "Thalmyr looms between giant trees, half radiant and half corrupted, roaring in pain."],
+  [31, "b2s1_p8_guardian_falls", "story/panels/b2s1_p8_guardian_falls.png", "Panel 8: the guardian falls", "panel", [9],
+    "Thalmyr kneels, wounded but alive, speaking softly; the Forest Orb is mentioned with a glowing orb motif."],
+  [32, "b2s1_p9_summit", "story/panels/b2s1_p9_summit.png", "Panel 9: the summit army", "panel", [2, 3, 6, 7, 8],
+    "At the summit, a vast army of corrupted elves, with the three captains in front."],
+  [33, "b2s1_p10_orb", "story/panels/b2s1_p10_orb.png", "Panel 10: the Forest Orb", "panel", [10],
+    "Vaeltharion holds up the Forest Orb, half green and half violet, smirking: \"Do not force it.\" (no lettering in the image)."],
+  [34, "b2s1_p11_charge", "story/panels/b2s1_p11_charge.png", "Panel 11: the charge (mid-battle)", "panel", [16, 11, 12, 13, 14, 15],
+    "Queen Aelyria raises a glowing staff: \"Nature's Attendants, Charge!\" (no lettering in the image). A wave of forest creatures surges behind her."],
+  [35, "b2s1_p12_mad", "story/panels/b2s1_p12_mad.png", "Panel 12: mad Vaeltharion (mid-battle)", "panel", [10],
+    "Close-up: Vaeltharion screaming in rage, violet energy flaring, cracks spreading."],
+  [36, "b2s1_p13_broken", "story/panels/b2s1_p13_broken.png", "Panel 13: broken", "panel", [10],
+    "Vaeltharion on his knees, armor shattered, head bowed, accepting defeat."],
+  [37, "b2s1_p14_cleansed", "story/panels/b2s1_p14_cleansed.png", "Panel 14: cleansed", "panel", [9, 18, 33],
+    "Thalmyr bends and swallows the Forest Orb; a burst of green light washes the corruption away."],
+  [38, "b2s1_p15_dust", "story/panels/b2s1_p15_dust.png", "Panel 15: dust", "panel", [10],
+    "Vaeltharion fades into drifting golden dust, a calm sad face: \"I only wanted the elves to be seen.\" (no lettering in the image)."],
+  [39, "b2s1_p16_beyond", "story/panels/b2s1_p16_beyond.png", "Panel 16: beyond", "panel", [16, "assets/locations/world_map.png"],
+    "The Queen and the player on the cliff look over a world map horizon with distant violet corruption spots."],
+  [40, "book2_story1_elven_wilds", "story/covers/book2_story1_elven_wilds.png", "Cover: The Elven Wilds", "cover", [9, 10, 16],
+    "Cover art: Vaeltharion on the rocky peak, Thalmyr's half-corrupted antlers framing him, Queen Aelyria in the foreground, violet sky, epic."],
+  [41, "book2_chaos_corrupted", "story/covers/book2_chaos_corrupted.png", "Cover: Book 2 Chaos Corrupted", "cover", [],
+    "Book-tab art: a cracked violet Chaos sigil over a forest and a mountain silhouette. No characters."],
+  [42, "morvane", "story/portraits/morvane.png", "Portrait: Captain Morvane", "portrait", [6],
+    "Bust of Captain Morvane from the reference (generate the boss sprite first), commanding sneer, glowing violet eyes."],
+  [43, "sylris", "story/portraits/sylris.png", "Portrait: Captain Sylris", "portrait", [7],
+    "Bust of Captain Sylris from the reference (generate the boss sprite first), cracked leaf mask over one eye, cold focused gaze."],
+  [44, "kaelen", "story/portraits/kaelen.png", "Portrait: Captain Kaelen", "portrait", [8],
+    "Bust of Captain Kaelen from the reference (generate the boss sprite first), confident duelist smirk, violet eyes."],
+  [45, "status_entangled", "ui/status_entangled.png", "Status icon: entangled", "status", ["assets/ui/status_shellshock.png", "assets/ui/status_irritation.png", "ui/icon_buttons_set.webp"],
+    "Status badge icon: thorny green-and-violet vines wrapped tight in a knot, inside a round dark badge, matching the reference status badges."],
+];
+
+const B2_FILE = new Map(B2.map(([n, , file]) => [n, `assets/${file}`]));
+
+export const BOOK2_S1_REQUESTS: ArtRequest[] = B2.map(([n, id, file, title, kind, refs, what]) => {
+  const own = refs.map((r) => (typeof r === "number" ? B2_FILE.get(r)! : r));
+  const pre = refs.filter((r): r is number => typeof r === "number");
+  const base =
+    kind === "monster" ? [STYLE_ANCHOR, B2_MONSTER, B2_ANCHOR]
+    : kind === "boss" ? [STYLE_ANCHOR, B2_BOSS, B2_ANCHOR]
+    : kind === "arena" ? []
+    : [STYLE_ANCHOR];
+  const notes = pre.length ? [`NOTE: generate #${pre.join(", #")} first and attach ${pre.map((r) => B2_FILE.get(r)).join(", ")}`] : [];
+  const prompt =
+    kind === "monster" || kind === "boss" || kind === "ally" ? `${STYLE} ${what} ${MAGENTA}`
+    : kind === "portrait" ? `${STYLE} ${PORTRAIT} ${what} ${MAGENTA}`
+    : kind === "status" ? `${STYLE} ${what} ${ICON.replace("green (#00FF00)", "magenta (#FF00FF)")}`
+    : kind === "panel" ? `${STYLE} ${CAST} ${what} Wide cinematic 16:9 story panel.`
+    : kind === "cover" ? `${STYLE} ${CAST} ${what} ${HOLD}`
+    : `${EDIT} ${what}`;
+  return {
+    id: `book2s1:${id}`,
+    group: B2_GROUP,
+    title: `#${n} ${title}`,
+    file,
+    model: kind === "cover" ? "Seedream 4.5" : "Nano Banana 2",
+    aspect: kind === "panel" ? "16:9" : kind === "arena" ? "9:16" : kind === "cover" ? "4:5" : "1:1",
+    refs: [...notes, ...(kind === "arena" || kind === "status" ? [...own, STYLE_ANCHOR] : [...base, ...own])],
+    prompt,
+  };
+});
+
 /** The awakened art the game already has: index.json from the asset base. */
 export interface HaveArt {
   units_awakened: string[];
@@ -553,6 +691,7 @@ export interface HaveArt {
 
 export function artRequests(have: HaveArt): ArtRequest[] {
   return [
+    ...BOOK2_S1_REQUESTS,
     ...awakened(have),
     ...TRAITS.map((t) => icon("Monster trait icons", "trait", "ui/traits", t, `Trait: ${t}`, `Monster trait badge icon: ${TRAIT_ART[t]}, inside a round dark badge.`, ["ui/icon_buttons_set.webp"])),
     ...PERK_IDS.filter((p) => p !== "none").map((p) =>

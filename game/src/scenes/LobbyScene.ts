@@ -3,7 +3,7 @@ import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
 import { profile, account, mail, setArena, signOut, loadMe, loadInbox, serverNow } from "../save";
 import { storyIsNew } from "../../../shared/profile.ts";
-import { BOOK, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
+import { BOOK, BOOKS, SAGA, bookLock, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
 import { loadStoryImages } from "./storyUi";
 import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
@@ -37,11 +37,16 @@ let opened = false;
 const CARD_Y = WIDE ? 680 : 790;
 /** The book (story) showing on the Stories page; -1 picks the one the player is on. */
 let bookIdx = -1;
+/** Which book of the saga (Book 1, Book 2) the Stories page shows. */
+let bookTab = 0;
+const curBook = () => BOOKS[bookTab] ?? BOOK;
+const hasStories = () => BOOKS.some((b) => b.stories.length > 0);
 
 /** The story to show first: the first one not finished yet (or the last one). */
 function currentStory() {
-  const i = BOOK.stories.findIndex((s) => !storyFinished(profile.story, s));
-  return i < 0 ? BOOK.stories.length - 1 : i;
+  const stories = curBook().stories;
+  const i = stories.findIndex((s) => !storyFinished(profile.story, s));
+  return i < 0 ? stories.length - 1 : i;
 }
 
 const storyStars = (s: StoryDef) => s.chapters.reduce((n, c) => n + (profile.story.chapters[c.id]?.stars ?? 0), 0);
@@ -114,8 +119,10 @@ export class LobbyScene extends Phaser.Scene {
       mode = data.mode;
       opened = true;
     }
-    const i = data.story ? BOOK.stories.findIndex((s) => s.id === data.story) : -1;
-    if (i >= 0) bookIdx = i;
+    for (const [b, book] of BOOKS.entries()) {
+      const i = data.story ? book.stories.findIndex((s) => s.id === data.story) : -1;
+      if (i >= 0) [bookTab, bookIdx] = [b, i];
+    }
   }
 
   create() {
@@ -124,10 +131,11 @@ export class LobbyScene extends Phaser.Scene {
     const chosen = profile.arena ? ARENA_BY_ID[profile.arena] : null;
     this.arena = chosen && chosen.trophies <= profile.trophies ? chosen : unlocked;
     this.card = undefined;
-    if (!BOOK.stories.length) mode = "arena";
+    if (!hasStories()) mode = "arena";
     // New players go straight to the first arena's BATTLE.
     if (tutorialDue("battle")) [mode, opened] = ["arena", true];
-    if (bookIdx < 0 || bookIdx >= BOOK.stories.length) bookIdx = currentStory();
+    if (bookTab >= BOOKS.length) bookTab = 0;
+    if (bookIdx < 0 || bookIdx >= curBook().stories.length) bookIdx = currentStory();
     this.saveTimer = undefined;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.flushArena());
 
@@ -232,7 +240,7 @@ export class LobbyScene extends Phaser.Scene {
   private setMode(i: number, dir: number) {
     const next = MODES[i];
     if (!next || next === mode) return;
-    if (next === "story" && !BOOK.stories.length) return;
+    if (next === "story" && !hasStories()) return;
     mode = next;
     this.drawCard({ slide: dir * 420 });
   }
@@ -292,9 +300,10 @@ export class LobbyScene extends Phaser.Scene {
       this.namePlate(group, "ARENA", "ui:icon_pvp");
     } else {
       this.storiesArt(group);
-      const total = BOOK.stories.reduce((n, s) => n + storyStars(s), 0);
-      const max = BOOK.stories.reduce((n, s) => n + s.chapters.length * 3, 0);
-      this.chips(group, [{ text: BOOK.title }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
+      const all = BOOKS.flatMap((b) => b.stories);
+      const total = all.reduce((n, s) => n + storyStars(s), 0);
+      const max = all.reduce((n, s) => n + s.chapters.length * 3, 0);
+      this.chips(group, [{ text: SAGA }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
       this.namePlate(group, "STORIES", "ui:icon_story");
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
@@ -302,7 +311,7 @@ export class LobbyScene extends Phaser.Scene {
     group.add(cta);
     this.tweens.add({ targets: cta, scale: 1.05, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     // Page dots under the card.
-    const modes = BOOK.stories.length ? MODES : (["arena"] as Mode[]);
+    const modes = hasStories() ? MODES : (["arena"] as Mode[]);
     if (modes.length > 1) {
       const dots = this.add.graphics();
       modes.forEach((_, j) => dots.fillStyle(0xfff4c2, j === i ? 1 : 0.4).fillCircle((j - (modes.length - 1) / 2) * 36, 368, j === i ? 12 : 8));
@@ -347,7 +356,7 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   private stepBook(d: number) {
-    if (!BOOK.stories[bookIdx + d]) return;
+    if (!curBook().stories[bookIdx + d]) return;
     bookIdx += d;
     this.drawCard({ slide: d * 120 });
   }
@@ -460,8 +469,11 @@ export class LobbyScene extends Phaser.Scene {
    * the other books. PLAY opens the book's chapters.
    */
   private storyCard(group: Phaser.GameObjects.Container) {
-    const n = BOOK.stories.length;
-    const s = BOOK.stories[bookIdx];
+    this.sagaHeader(group);
+    const book = curBook();
+    const n = book.stories.length;
+    const s = book.stories[bookIdx];
+    if (!s) return this.emptyBook(group);
     const lock = storyLock(profile.story, profile.trophies, s);
     const done = storyFinished(profile.story, s);
     // The cover sits in the frame's art window; greyed with a padlock while locked.
@@ -470,7 +482,7 @@ export class LobbyScene extends Phaser.Scene {
     const coverY = -58;
     const { frame, trim } = ornateFrame(this, 600, 660, !!lock, { x: -cw / 2, y: coverY - ch / 2, w: cw, h: ch });
     group.add([frame, trim]);
-    group.add(txt(this, 0, -290, `${BOOK.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
+    group.add(txt(this, 0, -290, `${book.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
     this.closeButton(group);
     const key = `story:covers/${s.cover}`;
     const show = () => {
@@ -501,6 +513,43 @@ export class LobbyScene extends Phaser.Scene {
 
     if (bookIdx > 0) group.add(iconButton(this, -250, coverY, "back", 76, () => this.stepBook(-1)));
     if (bookIdx < n - 1) group.add(iconButton(this, 250, coverY, "back", 76, () => this.stepBook(1)).setFlipX(true));
+  }
+
+  /** The saga title above the card, with a tab per book (a padlock on a book that isn't open yet). */
+  private sagaHeader(group: Phaser.GameObjects.Container) {
+    group.add(txt(this, 0, -440, SAGA.toUpperCase(), 40, "#ffd27a"));
+    const w = Math.min(290, 560 / BOOKS.length);
+    BOOKS.forEach((b, i) => {
+      const x = (i - (BOOKS.length - 1) / 2) * (w + 10);
+      const label = `Book ${i + 1}${b.title.includes(":") ? b.title.slice(b.title.indexOf(":")) : ""}`;
+      const on = i === bookTab;
+      const tab = button(this, x, -380, w, 60, label, on ? "yellow" : "blue", () => {
+        if (on) return;
+        bookTab = i;
+        bookIdx = currentStory();
+        this.drawCard({ slide: (i > 0 ? 1 : -1) * 120 });
+      }, 20);
+      group.add(tab);
+      if (bookLock(profile.story, i)) {
+        const pad = this.add.image(x - w / 2 + 6, -380, "ui:padlock");
+        pad.setScale(34 / Math.max(pad.width, pad.height));
+        group.add(pad);
+      }
+    });
+  }
+
+  /** A book with no stories yet: its padlock hint if locked, and "Coming soon". */
+  private emptyBook(group: Phaser.GameObjects.Container) {
+    const lock = bookLock(profile.story, bookTab);
+    this.cardFrame(group, !!lock);
+    group.add(txt(this, 0, -290, curBook().title.toUpperCase(), 26, "#ffd27a"));
+    this.closeButton(group);
+    const pad = this.add.image(0, -150, "ui:padlock");
+    pad.setScale(130 / Math.max(pad.width, pad.height));
+    pad.setVisible(!!lock);
+    group.add(pad);
+    if (lock) group.add(txt(this, 0, -60, lock, 30, "#ffb0b0").setWordWrapWidth(480));
+    group.add(txt(this, 0, lock ? 20 : -110, "Coming soon", 54, "#fff4c2"));
   }
 
   /** The middle of the arena (the board) inside the card window, greyed with a padlock while locked. */

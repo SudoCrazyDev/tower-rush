@@ -3,8 +3,8 @@
  * it, the admin panel edits it, and the game applies it at boot with applyConfig().
  */
 import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, PROJECTILES, STYLE_IDS, WEAPON_KEYS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
-import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
-import { BOOK, DEFAULT_BOOK, storyProblems, type BookDef } from "./stories.ts";
+import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, BOSS_SKILLS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
+import { DEFAULT_BOOK, DEFAULT_BOOK2, booksOf, booksProblems, setBooks, type BookDef } from "./stories.ts";
 import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts";
 import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type ChestDef } from "./economy.ts";
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
@@ -40,8 +40,10 @@ export interface GameConfig {
   perks?: PerkValues;
   /** PvP rules, sends and matchmaking (see PVP.md). */
   pvp: PvpConfig;
-  /** Story mode (v1.2): the book, its stories, chapters and wave scripts. */
-  book: BookDef;
+  /** Story mode: the books of the saga, their stories, chapters and wave scripts. */
+  books: BookDef[];
+  /** Legacy (before multi-book): a saved config with only `book` becomes [book, Book 2]. */
+  book?: BookDef;
   dropWeights: Record<Rarity, number>;
   /** Balance hotfixes already applied to this config (see HOTFIXES). */
   hotfixes?: string[];
@@ -96,7 +98,7 @@ export function defaultConfig(): GameConfig {
     effects: DEFAULT_EFFECTS,
     perks: DEFAULT_PERK_VALUES,
     pvp: DEFAULT_PVP,
-    book: DEFAULT_BOOK,
+    books: [DEFAULT_BOOK, DEFAULT_BOOK2],
     hotfixes: Object.keys(HOTFIXES),
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5, event: 0 },
   });
@@ -133,7 +135,7 @@ export function applyConfig(cfg: GameConfig) {
   PVP.rules = pvp.rules;
   PVP.sends = pvp.sends;
   PVP.tiers = pvp.tiers;
-  Object.assign(BOOK, structuredClone(cfg.book ?? DEFAULT_BOOK));
+  setBooks(booksOf(cfg));
   // Event cards never drop, whatever a config says.
   for (const r of RARITIES) RARITY_STATS[r].dropWeight = r === "event" ? 0 : (cfg.dropWeights[r] ?? 0);
   indexUnits();
@@ -201,6 +203,14 @@ export function validateConfig(cfg: GameConfig): string[] {
     if ([b.power, b.rage].some((p) => p && MINION_POWERS.includes(p)) && !monsterIds.has(b.minion ?? "")) errs.push(`${w}: ${b.power} power needs a valid minion`);
     if (b.targets !== undefined) num(b.targets, `${w} targets`, 1);
     for (const t of b.traits ?? []) oneOf(t, TRAITS, `${w} trait`);
+    for (const k of b.skills ?? []) {
+      oneOf(k.kind, BOSS_SKILLS, `${w} skill`);
+      num(k.every, `${w} ${k.kind} every`, 0.5);
+      const ns = Array.isArray(k.n) ? k.n : [k.n];
+      if (!(ns.length >= 1 && ns.length <= 2 && ns.every((v) => Number.isInteger(v) && v >= 1) && (ns.length < 2 || ns[0] <= ns[1]))) errs.push(`${w}: ${k.kind} n must be a whole number ≥ 1 or [min, max]`);
+      if (k.kind === "sapling_trail" && !monsterIds.has(b.minion ?? "")) errs.push(`${w}: sapling_trail needs a valid minion`);
+    }
+    for (const [k, v] of [["block", b.block], ["evade", b.evade]] as const) if (v !== undefined && !(v >= 0 && v < 1)) errs.push(`${w}: ${k} must be 0-1`);
   }
   ids(cfg.arenas, "arena");
   for (const a of cfg.arenas) {
@@ -238,7 +248,7 @@ export function validateConfig(cfg: GameConfig): string[] {
   if (!cfg.heroes.some((h) => h.enabled && h.price === 0)) errs.push("At least one enabled hero must be free (price 0)");
 
   const chestIds = new Set(cfg.chests.map((c) => c.id));
-  errs.push(...storyProblems(cfg.book ?? DEFAULT_BOOK, { units: unitIds, monsters: monsterIds, bosses: bossIds, arenas: new Set(cfg.arenas.map((a) => a.id)), chests: chestIds }));
+  errs.push(...booksProblems(booksOf(cfg), { units: unitIds, monsters: monsterIds, bosses: bossIds, arenas: new Set(cfg.arenas.map((a) => a.id)), chests: chestIds }));
   const reward = (r: Reward, where: string) => {
     num(r?.coins, `${where} gold`);
     num(r?.gems, `${where} gems`);

@@ -22,6 +22,11 @@ export interface StoryWave {
   hp: number;
   /** A speech bubble when the wave starts. */
   bark?: StoryLine;
+  /**
+   * v2.1: the cutscene of the boss's rally (BossRally): `before` panels, then the allies (story/allies/<id>)
+   * charge down the path, then the `after` panels; the battle resumes.
+   */
+  rally?: { before: StoryPanel[]; allies: string[]; after: StoryPanel[] };
 }
 
 /** A line of dialogue: `who` is a unit id (its card portrait) or a story portrait (candy_king). */
@@ -112,6 +117,10 @@ export interface StoryDef {
 export interface BookDef {
   title: string;
   stories: StoryDef[];
+  /** Cover art path (optional). */
+  cover?: string;
+  /** Badge a player needs before the first story of this book opens (Book 2: "the_chosen"). */
+  unlockBadge?: string;
 }
 
 // ---------------------------------------------------------------- helpers for the defaults
@@ -384,7 +393,7 @@ const THE_BEGINNING: StoryDef = {
       id: "s3c2",
       title: "The Hollow Woods",
       layout: "mushroom_forest",
-      art: "arena_hollow_woods",
+      art: "arena_guardian_grove",
       corruption: 0.35,
       hpScale: 2.05,
       rules: { ...THE_CHOSEN, levelFloor: 7 },
@@ -452,8 +461,146 @@ const THE_BEGINNING: StoryDef = {
 
 export const DEFAULT_BOOK: BookDef = { title: "Book 1: The Chosen", stories: [SAVING_THE_MUSE, CHAORRUPTION, THE_BEGINNING] };
 
-/** Live table: replaced in place when a config is applied (see config.ts). */
+// ---------------------------------------------------------------- Book 2: Chaos Corrupted
+
+const Q = "queen_aelyria";
+const SC = "corrupted_elf_scout";
+const WR = "corrupted_elf_warrior";
+const AR = "corrupted_elf_archer";
+const WD = "corrupted_elf_warden";
+
+const THE_ELVEN_WILDS: StoryDef = {
+  id: "b2s1",
+  title: "The Elven Wilds",
+  blurb: "The elven forest is falling to chaos. Guard the fleeing, free the guardian, face the Commander.",
+  cover: "book2_story1_elven_wilds",
+  trophies: 600,
+  replayCards: [],
+  chapters: [
+    chapter({
+      id: "b2s1c1",
+      title: "The Fleeing Grove",
+      layout: "mushroom_forest",
+      art: "arena_elven_deepwood",
+      corruption: 0,
+      hpScale: 3.65,
+      intro: [
+        panel("b2s1_p1_restored", "The village is whole again, bright and singing.", "Villagers cheer and thank the Keeper."),
+        panel("b2s1_p2_farewell", "Knights and mercenaries ride off down separate roads.", "The sun sets. The Keeper walks on."),
+        panel("b2s1_p3_runner", "A villager runs in, gasping for breath.", "The elven forest is being corrupted! A rogue elf rules it!"),
+        panel("b2s1_p4_fleeing", "Elves, gnomes, fae and beasts flee through the deep forest.", "Behind them, a corrupted army marches."),
+        panel("b2s1_p5_queen_pleads", "Queen Aelyria begs: Keeper, please, help us!", "Vaeltharion's army hunts my people through these woods."),
+      ],
+      waves: [
+        w(`${SC} 6, ${WR} 2`, { bark: say(Q, "They are on our heels, Keeper! Hold the path!") }),
+        w(`${SC} 8, ${WR} 3`, { bark: say(Q, "Their elves are fast. Watch the flanks!") }),
+        w(`${WR} 5, ${AR} 3`, { bark: say(Q, "Even the gentle fae are weeping. Protect them!") }),
+        w(`${SC} 6, ${AR} 4, ${WR} 3`, { bark: say(Q, "Corrupted archers in the branches! Stay sharp!") }),
+        w(`${WD} 2, ${WR} 5, ${SC} 6`, { bark: say(Q, "Keep fighting! The little ones are almost clear.") }),
+        w(`${AR} 5, ${WR} 5, ${SC} 8`, { bark: say(Q, "Their eyes burn violet. They no longer know us.") }),
+        w(`${WD} 3, ${AR} 4, ${WR} 6`, { bark: say(Q, "Hold on, my people! The Keeper stands with us.") }),
+        w(`${SC} 12, ${WR} 6, ${AR} 4`, { bark: say(Q, "More are coming. Do not let them near the fleeing!") }),
+        w(`${WD} 4, ${AR} 5, ${SC} 10, ${WR} 6`, { bark: say(Q, "Their captain draws close. I feel the dark gather.") }),
+        w(`${WR} 4, ${AR} 3, ${WD} 2`, { boss: "elf_captain_morvane", bark: say("morvane", "Give up the Queen. The Commander demands it.") }),
+      ],
+      reward: reward(2000, 40),
+      replay: replay(350),
+    }),
+    chapter({
+      id: "b2s1c2",
+      title: "Thalmyr, the Torn Guardian",
+      layout: "mushroom_forest",
+      art: "arena_guardian_grove",
+      corruption: 0.15,
+      hpScale: 9,
+      intro: [
+        panel("b2s1_p6_the_commander", "Vaeltharion, our Commander, fell to chaos without warning.", "He rules the rocky peak. Thalmyr is missing."),
+        panel("b2s1_p7_guardian", "Thalmyr looms, half radiant, half corrupted, roaring in pain.", "He fights the chaos inside him. Beware, Keeper!"),
+      ],
+      waves: [w("", { boss: "thalmyr", bark: say("thalmyr_half", "Run, little one... the chaos... it is inside me!") })],
+      reward: reward(2500, 50),
+      replay: replay(400),
+    }),
+    chapter({
+      id: "b2s1c3",
+      title: "Summit of Vaeltharion",
+      layout: "tundra",
+      art: "arena_rocky_summit",
+      corruption: 0.3,
+      hpScale: 1.46,
+      intro: [
+        panel("b2s1_p8_guardian_falls", "Thalmyr kneels, wounded but alive. His voice is soft.", "Find the Forest Orb, or the whole forest falls."),
+        panel("b2s1_p9_summit", "At the summit wait a hundred corrupted elves.", "Three captains stand before them, blades and bows ready."),
+        panel("b2s1_p10_orb", "Vaeltharion lifts the Forest Orb, half green, half violet.", "Do not force it, Keeper. You cannot win."),
+      ],
+      waves: [
+        w(`${SC} 8, ${WR} 4`, { bark: say("vaeltharion", "Turn back. These peaks belong to the Elven race.") }),
+        w(`${WR} 6, ${AR} 4, ${SC} 6`, { bark: say(Q, "So many of my own kin. Stay strong, Keeper.") }),
+        w(`${WD} 3, ${WR} 6, ${AR} 4`, { bark: say(Q, "The rocks give no cover. Guard every tower!") }),
+        w(`${SC} 14, ${AR} 6`, { bark: say("vaeltharion", "Fall back to your forest, little hero.") }),
+        w(`${WD} 4, ${WR} 8, ${AR} 5`, { bark: say(Q, "The air is thick with violet haze. Do not breathe deep.") }),
+        w(`${WR} 4, ${AR} 3`, { boss: "elf_captain_morvane", hp: 1.3, bark: say("morvane", "I return, stronger than before! Kneel!") }),
+        w(`${SC} 12, ${WR} 8, ${WD} 3`, { bark: say(Q, "Morvane is beaten once more. Keep the pressure on!") }),
+        w(`${AR} 8, ${WR} 8, ${WD} 4`, { bark: say(Q, "The ranks thin, but the summit is still far.") }),
+        w(`${SC} 16, ${WR} 8, ${AR} 6`, { bark: say("vaeltharion", "Every elf you strike is a brother lost.") }),
+        w(`${WD} 6, ${WR} 10, ${AR} 6`, { bark: say(Q, "Do not listen to him! That is the chaos talking.") }),
+        w(`${AR} 10, ${SC} 12, ${WD} 4`, { bark: say(Q, "I hear bowstrings. Sylris is near.") }),
+        w(`${AR} 5, ${WR} 4, ${WD} 2`, { boss: "elf_captain_sylris", bark: say("sylris", "You cannot hit what you cannot see.") }),
+        w(`${WR} 12, ${WD} 6, ${SC} 10`, { bark: say(Q, "Sylris falls silent. Two captains are done.") }),
+        w(`${AR} 10, ${WR} 10, ${WD} 6`, { bark: say("vaeltharion", "I was once a hero like you, Keeper.") }),
+        w(`${SC} 20, ${WD} 6, ${WR} 8`, { bark: say(Q, "Hold the line! The Commander watches from above.") }),
+        w(`${WD} 8, ${AR} 10, ${WR} 10`, { bark: say(Q, "Kaelen's blades are sharp. Prepare for a hard fight.") }),
+        w(`${SC} 16, ${WR} 12, ${AR} 8`, { bark: say("vaeltharion", "Look how the world forgets us. I will not.") }),
+        w(`${WR} 6, ${AR} 4, ${WD} 3`, { boss: "elf_captain_kaelen", hp: 0.45, bark: say("kaelen", "Steel against steel. Come, test my guard!") }),
+        w(`${WD} 8, ${WR} 12, ${AR} 10, ${SC} 10`, { bark: say(Q, "The last captain is down. Only Vaeltharion remains.") }),
+        w("", {
+          boss: "vaeltharion",
+          bark: say("vaeltharion", "I am the Commander. The Elven race will be seen!"),
+          rally: {
+            before: [panel("b2s1_p11_charge", "The Queen's staff blazes. The whole forest answers.", "Nature's Attendants, Charge!")],
+            allies: ["ally_elf_spearman", "ally_gnome", "ally_fae", "ally_earth_elemental", "ally_forest_beast"],
+            after: [panel("b2s1_p12_mad", "Vaeltharion screams, violet fire cracking through his armor.", "No! I will NOT be forgotten!")],
+          },
+        }),
+      ],
+      reward: reward(0, 120, "mythic", [], "wilds_warden"),
+      replay: replay(450),
+    }),
+  ],
+  ending: [
+    panel("b2s1_p13_broken", "Vaeltharion kneels, armor shattered. It is over; he accepts defeat.", "Queen Aelyria: Old friend, this was never truly you."),
+    panel("b2s1_p14_cleansed", "Thalmyr bends and swallows the Forest Orb whole.", "Green light washes the chaos away. The guardian is healed."),
+    panel("b2s1_p15_dust", "Vaeltharion fades into golden dust, calm and sad.", "I only wished the Elven race to be acknowledged."),
+    panel("b2s1_p16_beyond", "Thank you, Keeper. More lands are Chaos Corrupted.", "To be continued."),
+  ],
+};
+
+/** Book 2: its stories can be edited by the admin. */
+export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS], unlockBadge: "the_chosen" };
+
+/** The saga title shown above the books. */
+export const SAGA = "The Forsakens";
+
+/** Live tables: replaced in place when a config is applied (see config.ts). */
 export const BOOK: BookDef = structuredClone(DEFAULT_BOOK);
+/** Every book, in order. BOOKS[0] is BOOK (same object). */
+export const BOOKS: BookDef[] = [BOOK, structuredClone(DEFAULT_BOOK2)];
+
+/** Replace the live books in place (BOOK stays BOOKS[0]). */
+export function setBooks(books: BookDef[]) {
+  const list = books.length ? books : [DEFAULT_BOOK];
+  list.forEach((b, i) => {
+    const t = i === 0 ? BOOK : (BOOKS[i] ??= { title: "", stories: [] });
+    for (const k of Object.keys(t)) delete (t as unknown as Record<string, unknown>)[k];
+    Object.assign(t, structuredClone(b));
+  });
+  BOOKS.length = list.length;
+}
+
+/** The saved books of a config: `books`, or a legacy single `book` followed by the Book 2 placeholder. */
+export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
+  return c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2];
+}
 
 /** Replays of a chapter that may drop Event cards, per player per UTC day. */
 export const REPLAY_CARDS_PER_DAY = 3;
@@ -461,6 +608,7 @@ export const REPLAY_CARDS_PER_DAY = 3;
 /** Profile badges, by id. */
 export const BADGES: Record<string, { label: string; text: string }> = {
   the_chosen: { label: "The Chosen", text: "Finished Book 1" },
+  wilds_warden: { label: "Wilds Warden", text: "Finished Book 2 · Story 1" },
 };
 
 // ---------------------------------------------------------------- progress
@@ -480,28 +628,57 @@ export interface StoryProgress {
 export const newStoryProgress = (): StoryProgress => ({ chapters: {}, started: [], badges: [], replays: { day: "", n: 0 } });
 
 /** The story whose chapter rewards unlock this card (Princess Muse, the reward Knights), if any. */
-export function storyUnlocking(unitId: string, book: BookDef = BOOK): { story: StoryDef; number: number } | null {
-  const i = book.stories.findIndex((s) => s.chapters.some((c) => c.reward.cards.includes(unitId)));
-  return i >= 0 ? { story: book.stories[i], number: i + 1 } : null;
-}
-
-export function findChapter(id: string): { story: StoryDef; chapter: StoryChapter; index: number } | null {
-  for (const story of BOOK.stories) {
-    const index = story.chapters.findIndex((c) => c.id === id);
-    if (index >= 0) return { story, chapter: story.chapters[index], index };
+export function storyUnlocking(unitId: string, book?: BookDef): { story: StoryDef; number: number } | null {
+  for (const b of book ? [book] : BOOKS) {
+    const i = b.stories.findIndex((s) => s.chapters.some((c) => c.reward.cards.includes(unitId)));
+    if (i >= 0) return { story: b.stories[i], number: i + 1 };
   }
   return null;
 }
 
-export const storyById = (id: string) => BOOK.stories.find((s) => s.id === id);
+export function findChapter(id: string): { story: StoryDef; chapter: StoryChapter; index: number } | null {
+  for (const book of BOOKS) {
+    for (const story of book.stories) {
+      const index = story.chapters.findIndex((c) => c.id === id);
+      if (index >= 0) return { story, chapter: story.chapters[index], index };
+    }
+  }
+  return null;
+}
+
+export const storyById = (id: string) => {
+  for (const book of BOOKS) {
+    const s = book.stories.find((x) => x.id === id);
+    if (s) return s;
+  }
+  return undefined;
+};
+
+/** The book (and its index) that holds a story. */
+export function bookOfStory(s: StoryDef): { book: BookDef; index: number } | null {
+  const index = BOOKS.findIndex((b) => b.stories.includes(s));
+  return index >= 0 ? { book: BOOKS[index], index } : null;
+}
+
+/** Why a book can't be opened yet ("Finish Book 1 to unlock"), or null. */
+export function bookLock(p: StoryProgress, bookIndex: number): string | null {
+  const b = BOOKS[bookIndex];
+  if (b?.unlockBadge && !p.badges.includes(b.unlockBadge)) return `Finish Book ${bookIndex} to unlock`;
+  return null;
+}
 
 export const chapterWon = (p: StoryProgress, id: string) => !!p.chapters[id];
 export const storyFinished = (p: StoryProgress, s: StoryDef) => s.chapters.length > 0 && chapterWon(p, s.chapters[s.chapters.length - 1].id);
 
 /** Why a story can't be played yet, or null if it can. */
 export function storyLock(p: StoryProgress, trophies: number, s: StoryDef): string | null {
-  const i = BOOK.stories.indexOf(s);
-  const prev = BOOK.stories[i - 1];
+  const where = bookOfStory(s);
+  const i = where ? where.book.stories.indexOf(s) : 0;
+  const prev = where?.book.stories[i - 1];
+  if (where && i === 0) {
+    const lock = bookLock(p, where.index);
+    if (lock) return lock;
+  }
   if (prev && !storyFinished(p, prev)) return `Finish ${prev.title} first`;
   if (trophies < s.trophies) return `Unlocks at ${s.trophies} trophies`;
   return null;
@@ -574,10 +751,10 @@ export function chapterDeck(
 // ---------------------------------------------------------------- config
 
 /** Problems with the book (empty if fine). Ids are checked against the config's lists. */
-export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters: Set<string>; bosses: Set<string>; arenas: Set<string>; chests: Set<string> }): string[] {
+export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters: Set<string>; bosses: Set<string>; arenas: Set<string>; chests: Set<string> }, seenIds?: Set<string>): string[] {
   const errs: string[] = [];
   if (!book || !Array.isArray(book.stories)) return ["stories must have a list of stories"];
-  const seen = new Set<string>();
+  const seen = seenIds ?? new Set<string>();
   const num = (v: unknown, where: string, min = 0) => {
     if (typeof v !== "number" || !Number.isFinite(v) || v < min) errs.push(`${where} must be a number ≥ ${min}`);
   };
@@ -629,4 +806,10 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
     }
   }
   return errs;
+}
+
+/** Problems across every book; story and chapter ids must be unique across all of them. */
+export function booksProblems(books: BookDef[], ids: Parameters<typeof storyProblems>[1]): string[] {
+  const seen = new Set<string>();
+  return books.flatMap((b) => storyProblems(b, ids, seen));
 }

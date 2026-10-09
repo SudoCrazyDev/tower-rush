@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { animKey, hasAnim, sheetScale } from "../assets";
+import { animKey, hasAnim, sheetScale, sheetId } from "../assets";
 import { fmt, txt } from "../ui";
 import { StatusFx, monsterStatuses } from "./vfx";
 import type { SimMonster } from "../../../shared/sim.ts";
@@ -42,19 +42,24 @@ export class Monster {
     this.statusFx = new StatusFx(scene);
     this.folder = sim.boss ? "bosses" : "monsters";
     const p = sim.path.at(sim.dist);
-    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.id}_walk`));
+    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.art}_walk`));
     this.sprite.setScale(sheetScale(this.folder, sim.size)).setOrigin(0.5, 0.85);
-    this.sprite.play({ key: animKey(this.folder, `${this.id}_walk`), startFrame: Math.floor(Math.random() * 16) });
+    this.sprite.play({ key: animKey(this.folder, `${this.art}_walk`), startFrame: Math.floor(Math.random() * 16) });
     this.label = txt(scene, p.x, p.y, fmt(sim.hp), sim.boss ? 26 : 20);
-    if (sim.boss && sim.intro > 0 && hasAnim("bosses", `${this.id}_intro`)) {
+    if (sim.boss && sim.intro > 0 && hasAnim("bosses", `${this.art}_intro`)) {
       this.introPlaying = true;
-      this.sprite.play(animKey("bosses", `${this.id}_intro`));
+      this.sprite.play(animKey("bosses", `${this.art}_intro`));
     }
     this.update(0);
   }
 
   get id() {
     return this.sim.id;
+  }
+
+  /** Whose sheets it draws (a stand-in while its own art is missing). */
+  get art() {
+    return sheetId(this.sim.boss ? "bosses" : "monsters", this.sim.id);
   }
 
   get boss() {
@@ -71,7 +76,7 @@ export class Monster {
     this.introPlaying = false;
     if (this.sprite.anims.currentAnim?.key === key && this.sprite.anims.isPlaying) return;
     this.sprite.play(key);
-    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => !this.dead && this.sprite.play(animKey("bosses", `${this.id}_walk`)));
+    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => !this.dead && this.sprite.play(animKey("bosses", `${this.art}_walk`)));
   }
 
   flash() {
@@ -85,7 +90,7 @@ export class Monster {
     const now = this.scene.sim.now;
     if (this.introPlaying && m.intro <= 0) {
       this.introPlaying = false;
-      this.sprite.play(animKey("bosses", `${this.id}_walk`));
+      this.sprite.play(animKey("bosses", `${this.art}_walk`));
     }
     const moving = m.intro <= 0 && m.pinned === null && ahead > 0;
     const dist = moving ? Math.min(m.path.length, m.dist + m.speed(now) * ahead) : m.dist;
@@ -122,7 +127,7 @@ export class Monster {
     this.diedAt = this.scene.sim.now;
     this.label.destroy();
     this.statusFx.destroy();
-    const key = animKey(this.folder, `${this.id}_death`);
+    const key = animKey(this.folder, `${this.art}_death`);
     if (this.scene.anims.exists(key)) {
       this.sprite.clearTint();
       this.sprite.anims.timeScale = 1;

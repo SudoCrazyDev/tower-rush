@@ -25,6 +25,7 @@ const POWER_HELP: Record<string, string> = {
   shield: "immune to damage for 2.5s",
   freeze_units: "freezes 3 of the player's units",
   teleport: "jumps forward along the path",
+  none: "no power (uses its skills)",
 };
 
 export function MonstersPage() {

@@ -22,6 +22,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.3.0 | **Branding Revamp** | 2026-10-06 | tag `v1.3.0` | [v1.3](v1.3-branding-revamp/README.md) |
 | v1.3.2 | Element emblems hotfix | 2026-10-09 | (art only, on R2) | — |
 | v2.0.0 | **The Grand Revamp** | 2026-10-09 | tag `v2.0.0` | [v2.0](v2.0-the-grand-revamp/README.md) |
+| v2.1.0 | **Chaos Corrupted** | 2026-10-10 | tag `v2.1.0` | [v2.1](v2.1-chaos-corrupted/README.md) |
 | next | Balance pass, Books 2–4 | — | — | — |
 
 ---
@@ -126,6 +127,18 @@ melee strike effects. Shipped with a UI polish pass: labelled card details, race
 card corner, a framed boss intro card, livelier lobby mode cards and buttons without the gloss
 streak.
 [Design doc](v2.0-the-grand-revamp/README.md) · [Promo kit](v2.0-the-grand-revamp/PROMO.md)
+
+## v2.1.0: Chaos Corrupted (2026-10-10)
+
+**Book 2 of "The Forsakens" begins.** Story mode now holds several books under the saga title;
+Book 2 unlocks after finishing Book 1 ("The Chosen" badge). Story 1 "The Elven Wilds" has 3
+chapters: The Fleeing Grove (10 waves, Captain Morvane), Thalmyr, the Torn Guardian (a boss-only
+fight with the half-corrupted forest stag) and Summit of Vaeltharion (20 waves, three captains and
+the Elven Commander). New boss skills: entangle (units can't attack until the wave ends), impale,
+sapling trail, Sylris's arrow volley and Kaelen's block, plus a scripted mid-battle rally where Queen
+Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses, 5 ally sprites,
+8 portraits, 3 arenas, 16 story panels, 2 covers and the entangled status icon.
+[Design doc](v2.1-chaos-corrupted/README.md) · [Promo kit](v2.1-chaos-corrupted/PROMO.md)
 
 ## Next
 

@@ -185,6 +185,8 @@ STATIC = [
     ("story/covers", "story/covers", 768),
     ("story/panels", "story/panels", 1344),
     ("story/portraits", "story/portraits", 256),
+    # v2.1: allies that charge in a story rally cutscene.
+    ("story/allies", "story/allies", 256),
 ]
 jobs.append(lambda: fit(f"{SRC}/story/story_background.png", f"{OUT}/story/story_background.webp", 1344))
 for folder, out, size in STATIC:

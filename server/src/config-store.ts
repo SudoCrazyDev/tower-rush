@@ -3,6 +3,7 @@ import { withEffectDefaults } from "../../shared/effects.ts";
 import { withKits, withPerkDefaults } from "../../shared/kit.ts";
 import { withRaces } from "../../shared/races.ts";
 import { withAdded, withAddedUnits, withStyles } from "../../shared/units.ts";
+import { booksOf } from "../../shared/stories.ts";
 import { ADDED_BOSSES, ADDED_MONSTERS } from "../../shared/monsters.ts";
 import { all, audit, one, run } from "./db.ts";
 
@@ -37,6 +38,7 @@ function upgrade(cfg: GameConfig): GameConfig {
     pvp: withPvpDefaults(cfg.pvp),
     dropWeights: { ...d.dropWeights, ...cfg.dropWeights },
     perks: withPerkDefaults(cfg.perks),
+    books: booksOf(cfg),
     hotfixes: cfg.hotfixes ?? [],
   });
   // v2 kits come last, so they reflect any hotfixed legacy fields (kit.ts).

@@ -82,6 +82,12 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   M("corrupted_herbalist", "Corrupted Herbalist", "human", 1.5, 55, ["healer"], 15, 96),
   M("corrupted_merchant", "Corrupted Merchant", "human", 1.5, 65, ["rich"], 40, 92),
   M("chaos_eye", "Chaos Eye", "chaos", 0.7, 95, ["dodge"], 8, 76),
+  // v2.1 Book 2 "Chaos Corrupted", Story 1: the corrupted elven army and Thalmyr's saplings.
+  M("corrupted_elf_scout", "Corrupted Elf Scout", "elf", 0.6, 125, ["fast"], 8, 78),
+  M("corrupted_elf_warrior", "Corrupted Elf Warrior", "elf", 1.1, 65),
+  M("corrupted_elf_archer", "Corrupted Elf Archer", "elf", 0.9, 75, ["dodge"], 10, 82),
+  M("corrupted_elf_warden", "Corrupted Elf Warden", "elf", 2.2, 50, ["armored"], 16, 100),
+  M("corrupted_sapling", "Corrupted Sapling", "sylvan", 0.5, 70, [], 4, 70),
 ];
 
 /** Monsters added after configs were already saved: appended to an older saved list. */
@@ -89,6 +95,7 @@ export const ADDED_MONSTERS = [
   "gummy_bear", "candy_corn_runner", "jelly_bean_blob", "cotton_candy_puff", "chocolate_golem", "peppermint_turtle", "licorice_medic", "candy_pinata",
   "sprinkle_swarm", "sour_shard", "chaos_taffy",
   "corrupted_villager", "corrupted_courier", "corrupted_farmer", "corrupted_fisherman", "corrupted_lumberjack", "corrupted_herbalist", "corrupted_merchant", "chaos_eye",
+  "corrupted_elf_scout", "corrupted_elf_warrior", "corrupted_elf_archer", "corrupted_elf_warden", "corrupted_sapling",
 ];
 
 /** What a splitter breaks into: a smaller copy of itself unless listed here. */
@@ -110,9 +117,43 @@ export const MONSTER_BY_ID: Record<string, MonsterDef> = {};
  * - layers: 4 layers (HP bars); each one that breaks stuns units, sheds, speeds the boss up and
  *   releases minions; the last layer (the core) gives every unit Irritation in pulses
  * - portal: opens portals along the path that minions step out of, and blinks forward once a phase
+ * v2.1 adds "none" (a boss that only uses its `skills`).
  */
-export type BossPower = "summon" | "heal" | "haste" | "shield" | "freeze_units" | "teleport" | "charm" | "roar" | "split" | "layers" | "portal";
-export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "freeze_units", "teleport", "charm", "roar", "split", "layers", "portal"];
+export type BossPower = "summon" | "heal" | "haste" | "shield" | "freeze_units" | "teleport" | "charm" | "roar" | "split" | "layers" | "portal" | "none";
+export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "freeze_units", "teleport", "charm", "roar", "split", "layers", "portal", "none"];
+
+/**
+ * v2.1 Book 2 skills: extra timed abilities a boss uses on top of its power, each on its own timer.
+ * - entangle: roots `n` random units (no attacks) until the wave ends
+ * - impale: stuns `n` random units (Shellshock) for `dur` seconds
+ * - sapling_trail: drops `n` minions behind the boss while it walks
+ * - volley: shoots `n` arrows at random units; each misses with chance `miss`, a hit stuns for `dur`
+ */
+export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley";
+export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley"];
+export interface BossSkill {
+  kind: BossSkillKind;
+  /** Seconds between uses (the first use comes after `first`, default `every`). */
+  every: number;
+  first?: number;
+  /** At most this many uses (default unlimited). */
+  uses?: number;
+  /** Targets or minions per use: a fixed number, or [min, max] picked at random. */
+  n: number | [number, number];
+  dur?: number;
+  miss?: number;
+}
+
+/**
+ * v2.1 Rally: a scripted story moment. When the boss walks `at` of the path, allies charge it back
+ * to the start, it loses `damage` of its current HP, speeds up by `speed` and stops using its power
+ * and skills; entangled units are freed. Happens once. The story wave holds the panels.
+ */
+export interface BossRally {
+  at: number;
+  damage: number;
+  speed: number;
+}
 /** Powers that need a minion. */
 export const MINION_POWERS: BossPower[] = ["summon", "split", "layers", "portal"];
 
@@ -134,6 +175,14 @@ export interface BossDef {
   traits?: Trait[];
   /** A corrupted story boss: the Lance Knight's bane hits it harder, and it glows violet. */
   corrupted?: boolean;
+  /** v2.1: extra timed skills. */
+  skills?: BossSkill[];
+  /** v2.1: chance (0-1) that a hit deals no damage ("BLOCK"). */
+  block?: number;
+  /** v2.1: chance (0-1) that a hit misses ("MISS"), on top of the dodge trait. */
+  evade?: number;
+  /** v2.1: the story charge (see BossRally). */
+  rally?: BossRally;
 }
 
 export const DEFAULT_BOSSES: BossDef[] = [
@@ -158,10 +207,33 @@ export const DEFAULT_BOSSES: BossDef[] = [
   { id: "corrupted_fae", name: "Chaos Corrupted Fae", race: "fae", hp: 1.1, speed: 38, power: "charm", targets: 2, traits: ["dodge"], corrupted: true },
   { id: "corrupted_bear", name: "Chaos Corrupted Bear", race: "beast", hp: 1.5, speed: 30, power: "roar", targets: 3, corrupted: true },
   { id: "portal_wizard", name: "Chaos Corrupted Portal Wizard", race: "human", hp: 1.6, speed: 30, power: "portal", minion: "chaos_eye", corrupted: true },
+  // v2.1 Book 2 "Chaos Corrupted", Story 1 "The Elven Wilds".
+  { id: "elf_captain_morvane", name: "Captain Morvane", race: "elf", hp: 1.1, speed: 34, power: "summon", minion: "corrupted_elf_warrior", corrupted: true },
+  {
+    id: "elf_captain_sylris", name: "Captain Sylris", race: "elf", hp: 1.2, speed: 36, power: "summon", minion: "corrupted_elf_archer", corrupted: true,
+    skills: [{ kind: "volley", every: 5, first: 3, n: 3, miss: 0.7, dur: 2 }],
+  },
+  { id: "elf_captain_kaelen", name: "Captain Kaelen", race: "elf", hp: 1.3, speed: 34, power: "haste", block: 0.35, corrupted: true },
+  {
+    id: "thalmyr", name: "Thalmyr, the Torn Guardian", race: "beast", hp: 6.0, speed: 15, power: "none", minion: "corrupted_sapling", corrupted: true,
+    skills: [
+      { kind: "sapling_trail", every: 4, first: 2, n: [1, 2] },
+      { kind: "entangle", every: 14, first: 8, uses: 3, n: [1, 3] },
+    ],
+  },
+  {
+    id: "vaeltharion", name: "Vaeltharion, the Elven Commander", race: "elf", hp: 7.0, speed: 22, power: "none", corrupted: true,
+    skills: [
+      { kind: "impale", every: 7, first: 4, n: 1, dur: 5 },
+      { kind: "entangle", every: 15, first: 10, n: [2, 4] },
+    ],
+    rally: { at: 0.8, damage: 0.5, speed: 1.25 },
+  },
 ];
 
 /** Bosses added after configs were already saved: appended to an older saved list. */
-export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker", "corrupted_fae", "corrupted_bear", "portal_wizard"];
+export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker", "corrupted_fae", "corrupted_bear", "portal_wizard",
+  "elf_captain_morvane", "elf_captain_sylris", "elf_captain_kaelen", "thalmyr", "vaeltharion"];
 
 export const BOSSES: BossDef[] = structuredClone(DEFAULT_BOSSES);
 export const BOSS_BY_ID: Record<string, BossDef> = {};

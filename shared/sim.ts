@@ -35,7 +35,7 @@ import {
   stunChance,
 } from "./effects.ts";
 import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
-import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type MonsterDef } from "./monsters.ts";
+import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type BossSkill, type BossSkillKind, type MonsterDef } from "./monsters.ts";
 import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Arch, type Element, type UnitDef } from "./units.ts";
 import { raceLabel } from "./races.ts";
 import { starsFor, type StoryChapter, type StoryLine } from "./stories.ts";
@@ -135,6 +135,13 @@ export type SimEvent =
   /** An HP stage of a split, portal or layers boss (stage 1.., text e.g. SPLIT, BLINK, LAYER BROKEN, THE CORE). */
   | { type: "boss_stage"; t: number; uid: number; id: string; power: BossPower; stage: number; text: string; x: number; y: number }
   | { type: "boss_power"; t: number; uid: number; id: string; power: BossPower; text: string; x: number; y: number }
+  /** v2.1: a boss skill fired (see BossSkill). */
+  | { type: "boss_skill"; t: number; uid: number; id: string; skill: BossSkillKind; text: string; x: number; y: number }
+  /**
+   * v2.1: the story charge. Allies pushed the boss from `from` back to the path start (`to`) and it lost
+   * `damage` HP; it is faster now and uses no more powers. The solo scene plays the cutscene here.
+   */
+  | { type: "rally"; t: number; uid: number; id: string; from: Pt; to: Pt; damage: number }
   /** Minions released around a boss or a splitter breaking up (`kind`). */
   | { type: "split"; t: number; uid: number; kind: "splitter" | "boss"; children: number[]; x: number; y: number }
   /** A boss portal opens at (x, y); its minions step out `delay` seconds later. */
@@ -144,7 +151,7 @@ export type SimEvent =
   | { type: "wages"; t: number; uid: number; slot: number; cost: number; paid: boolean; x: number; y: number }
   | { type: "callout"; t: number; kind: CalloutKind; text: string; color: string; uid: number | null; x: number; y: number }
   /** A debuff landed on a unit (shellshock and boss powers only; the rest is in the status). */
-  | { type: "afflict"; t: number; uid: number; kind: "irritation" | "fatigue" | "shellshock"; x: number; y: number }
+  | { type: "afflict"; t: number; uid: number; kind: "irritation" | "fatigue" | "shellshock" | "entangle"; x: number; y: number }
   | { type: "hero"; t: number; power: HeroDef["power"]; ability: string; auto: boolean }
   | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana"; x: number; y: number; radius: number }
   | { type: "encore"; t: number; x: number; y: number; radius: number; strike: boolean }
@@ -403,6 +410,11 @@ export class SimMonster {
   burn: { dps: number; until: number; src: Source } = { dps: 0, until: 0, src: 0 };
   powerTimer = 0;
   intro = 0;
+  /** v2.1: when each boss skill fires next, and how often each was used. */
+  skillAt: number[] = [];
+  skillUsed: number[] = [];
+  /** v2.1: the story charge happened (no more powers or skills). */
+  rallied = false;
 
   constructor(uid: number, kind: { def?: MonsterDef; boss?: BossDef }, path: Path, hp: number, opts: { dist?: number; scale?: number; mana: number }) {
     this.uid = uid;
@@ -881,6 +893,8 @@ export class Sim {
       [list[i], list[j]] = [list[j], list[i]];
     }
     this.queue = [];
+    // Roots hold until the wave ends.
+    for (const u of this.units) if (u) u.status.entangledUntil = 0;
     const boss = w.boss ? BOSS_BY_ID[w.boss] : undefined;
     if (boss) this.queue.push({ boss });
     this.queue.push(...list);
@@ -910,6 +924,8 @@ export class Sim {
       const hp = this.baseHp(n) * ECONOMY.bossHpMult * q.boss.hp * this.waveHp;
       m = new SimMonster(++this.uid, { boss: q.boss }, path, hp, { mana: 150 + n * 15 });
       m.powerTimer = 5;
+      m.skillAt = (q.boss.skills ?? []).map((k) => k.first ?? k.every);
+      m.skillUsed = (q.boss.skills ?? []).map(() => 0);
       m.intro = this.o.bossIntro && !this.o.bossIntro(q.boss.id) ? 0 : BOSS_INTRO;
       this.boss = this.trackedBoss = m;
     } else {
@@ -982,10 +998,14 @@ export class Sim {
       if (m.gone) continue;
       if (m.boss && m.intro <= 0) {
         this.bossStages(m);
-        m.powerTimer -= dt;
-        if (m.powerTimer <= 0) {
-          m.powerTimer = 6;
-          this.bossPower(m);
+        if (m.boss.rally && !m.rallied && m.progress >= m.boss.rally.at) this.rally(m);
+        if (!m.rallied) {
+          m.powerTimer -= dt;
+          if (m.powerTimer <= 0) {
+            m.powerTimer = 6;
+            this.bossPower(m);
+          }
+          if (m.skillAt.length) this.bossSkills(m, dt);
         }
       }
       if (healPulse && m.has("healer")) {
@@ -1132,6 +1152,16 @@ export class Sim {
       if (!opts.quiet) this.callout("block", "BLOCK", "#9fb4ff", m.pos.x, m.pos.y - 20);
       return false;
     }
+    if (!opts.sure && m.boss?.block && this.rand() < m.boss.block) {
+      this.blocked += amount;
+      if (!opts.quiet) this.callout("block", "BLOCK", "#9fb4ff", m.pos.x, m.pos.y - 20);
+      return false;
+    }
+    if (!opts.sure && m.boss?.evade && this.rand() < m.boss.evade) {
+      this.dodged++;
+      if (!opts.quiet) this.callout("dodge", "MISS", "#dddddd", m.pos.x, m.pos.y - 20);
+      return false;
+    }
     const perks = opts.perks ?? [];
     if (!opts.sure && m.has("dodge") && dodgeChance(perks) > 0 && this.rand() < dodgeChance(perks)) {
       this.dodged++;
@@ -1230,7 +1260,7 @@ export class Sim {
   }
 
   /** Put a debuff on a unit; false when an Aegis Knight protects it. */
-  private afflict(u: SimUnit, kind: "irritation" | "fatigue" | "shellshock", time: number, miss = EFFECTS.irritate.miss, loud = false) {
+  private afflict(u: SimUnit, kind: "irritation" | "fatigue" | "shellshock" | "entangle", time: number, miss = EFFECTS.irritate.miss, loud = false) {
     if (this.shielded(u)) return false;
     const s = u.status;
     const until = this.now + time;
@@ -1240,6 +1270,7 @@ export class Sim {
       s.irritatedUntil = Math.max(s.irritatedUntil, until);
       s.miss = miss;
     } else if (kind === "fatigue") s.fatiguedUntil = Math.max(s.fatiguedUntil, until);
+    else if (kind === "entangle") s.entangledUntil = Math.max(s.entangledUntil, until);
     else s.shockedUntil = Math.max(s.shockedUntil, until);
     return true;
   }
@@ -1292,6 +1323,72 @@ export class Sim {
       this.emit({ type: "boss_stage", t: this.now, uid: m.uid, id: m.id, power: b.power, stage: m.stage, text, x: from.x, y: from.y });
       this.log(`${b.name}: stage ${m.stage}`, "boss");
     }
+  }
+
+  /** A `[min, max]` count picked with the run's random numbers. */
+  private count(n: BossSkill["n"]) {
+    return Array.isArray(n) ? n[0] + Math.floor(this.rand() * (n[1] - n[0] + 1)) : n;
+  }
+
+  /** v2.1 boss skills, each on its own timer (see BossSkill). */
+  private bossSkills(m: SimMonster, dt: number) {
+    const b = m.boss!;
+    const skills = b.skills ?? [];
+    for (let i = 0; i < skills.length; i++) {
+      const k = skills[i];
+      if (k.uses !== undefined && m.skillUsed[i] >= k.uses) continue;
+      m.skillAt[i] -= dt;
+      if (m.skillAt[i] > 0) continue;
+      m.skillAt[i] = k.every;
+      if (k.kind === "sapling_trail" && m.speed(this.now) <= 0) continue;
+      m.skillUsed[i]++;
+      const p = m.pos;
+      const n = this.count(k.n);
+      const say = (text: string) => this.emit({ type: "boss_skill", t: this.now, uid: m.uid, id: m.id, skill: k.kind, text, x: p.x, y: p.y });
+      switch (k.kind) {
+        case "sapling_trail":
+          this.minions(m, n, m.dist, 30);
+          break;
+        case "entangle": {
+          const free = this.someUnits(99).filter((u) => this.now >= u.status.entangledUntil).slice(0, n);
+          say(b.rally ? "BLIGHT ROOT" : "ENTANGLE");
+          // Until the wave ends (cleared when the next wave starts, or by the charge).
+          for (const u of free) this.afflict(u, "entangle", 1e6, 0, true);
+          this.log(`${b.name} entangles ${free.length} units`, "boss");
+          break;
+        }
+        case "impale":
+          say("IMPALE");
+          for (const u of this.someUnits(n)) this.afflict(u, "shellshock", k.dur ?? 5, 0, true);
+          this.log(`${b.name} impales ${n} unit(s) (${k.dur ?? 5}s)`, "boss");
+          break;
+        case "volley": {
+          say("VOLLEY");
+          let hits = 0;
+          for (const u of this.someUnits(n)) {
+            if (this.rand() < (k.miss ?? 0.5)) this.callout("miss", "MISS", "#dddddd", u.x, u.y - 40);
+            else if (this.afflict(u, "shellshock", k.dur ?? 2, 0, true)) hits++;
+          }
+          this.log(`${b.name} looses a volley (${hits}/${n} hit)`, "boss");
+          break;
+        }
+      }
+    }
+  }
+
+  /** v2.1 story charge (see BossRally): pushed back to the start, hurt, faster, no more powers. */
+  private rally(m: SimMonster) {
+    const r = m.boss!.rally!;
+    m.rallied = true;
+    const from = m.foot;
+    m.dist = 0;
+    m.hasteUntil = m.shieldUntil = 0;
+    const damage = Math.max(0, m.hp) * r.damage;
+    m.hp -= damage;
+    m.speedMult *= r.speed;
+    for (const u of this.units) if (u) u.status.entangledUntil = 0;
+    this.emit({ type: "rally", t: this.now, uid: m.uid, id: m.id, from, to: m.foot, damage });
+    this.log(`Allies charge ${m.boss!.name} back to the start (-${Math.round(r.damage * 100)}% health)`, "boss");
   }
 
   private bossPower(m: SimMonster) {
@@ -1678,7 +1775,7 @@ export class Sim {
     const now = this.now;
     // A dragged unit does nothing at all (no timers, no pulses, no attacks).
     if (u.dragging) return;
-    if (now < u.frozenUntil || now < u.status.shockedUntil) return;
+    if (now < u.frozenUntil || now < u.status.shockedUntil || now < u.status.entangledUntil) return;
     u.alive += dt;
     if (kitHas(u.def, "irritate")) {
       u.effectTimer += dt;

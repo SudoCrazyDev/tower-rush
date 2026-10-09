@@ -6,7 +6,7 @@
  */
 import Phaser from "phaser";
 import { ambientVideo } from "../backdrop";
-import { BASE, ensureAnim, hasAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale } from "../assets";
+import { BASE, ensureAnim, hasAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale, sheetId } from "../assets";
 import { ARENAS, ARENA_BY_ID, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO } from "../data/monsters";
 import { maxRank, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element } from "../data/units";
@@ -22,7 +22,7 @@ import { Sim, SIM_DT, type SimEvent, type SimSetup, type SimShot } from "../../.
 import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, finishStory, type BattleResult, type StoryResult, type StoryStart } from "../save";
-import { storyResult } from "./storyUi";
+import { storyPanels, storyResult } from "./storyUi";
 import { onPlayLost, releasePlay } from "../play";
 import { music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT } from "../ui";
@@ -199,8 +199,9 @@ export class BattleScene extends Phaser.Scene {
     const monsters = new Set(waves ? waves.flatMap((w) => w.spawns.map((s) => s.id)) : a.monsters);
     for (const b of bosses) if (BOSS_BY_ID[b]?.minion) monsters.add(BOSS_BY_ID[b].minion!);
     for (const id of [...monsters]) if (SPLITS_INTO[id]) monsters.add(SPLITS_INTO[id]);
-    for (const id of monsters) for (const anim of ["walk", "death"]) loadSheet(this, "monsters", `${id}_${anim}`);
-    for (const id of bosses) {
+    for (const id of monsters) for (const anim of ["walk", "death"]) loadSheet(this, "monsters", `${sheetId("monsters", id)}_${anim}`);
+    for (const boss of bosses) {
+      const id = sheetId("bosses", boss);
       for (const anim of ["walk", "attack", "death", "intro", "crack", "portal"]) if (hasAnim("bosses", `${id}_${anim}`)) loadSheet(this, "bosses", `${id}_${anim}`);
     }
     for (const name of assetIndex().anims.vfx) loadSheet(this, "vfx", name);
@@ -209,6 +210,8 @@ export class BattleScene extends Phaser.Scene {
     for (const w of waves ?? []) {
       const who = w.bark?.who;
       if (who && !UNIT_BY_ID[who] && !this.textures.exists(`story_portrait:${who}`)) this.load.image(`story_portrait:${who}`, `${BASE}story/portraits/${who}.webp`);
+      // v2.1: the allies of a rally cutscene.
+      for (const id of w.rally?.allies ?? []) if (!this.textures.exists(`story_ally:${id}`)) this.load.image(`story_ally:${id}`, `${BASE}story/allies/${id}.webp`);
     }
     if (this.hero) for (const anim of ["idle", "skill", "victory"]) loadSheet(this, "heroes", `${this.hero.id}_${anim}`);
   }
@@ -804,7 +807,7 @@ export class BattleScene extends Phaser.Scene {
     const sim = this.sim;
     this.acc += (Math.min(delta, 50) / 1000) * this.speedMult;
     let steps = 0;
-    while (this.acc >= SIM_DT && !sim.over && !this.over) {
+    while (this.acc >= SIM_DT && !sim.over && !this.over && !this.paused) {
       sim.step();
       this.acc -= SIM_DT;
       this.pump();
@@ -1034,13 +1037,13 @@ export class BattleScene extends Phaser.Scene {
           this.cameras.main.shake(300, 0.012);
           this.floater(e.x, e.y - 70, e.text, "#ffd93b", 34);
           this.vfx("hit_impact", e.x, e.y, 260);
-          if (e.stage >= 3) m?.playBoss(animKey("bosses", `${e.id}_crack`));
+          if (e.stage >= 3) m?.playBoss(animKey("bosses", `${sheetId("bosses", e.id)}_crack`));
         }
         break;
       }
       case "boss_power": {
-        const portal = animKey("bosses", `${e.id}_portal`);
-        this.monsters.get(e.uid)?.playBoss(e.power === "portal" && this.anims.exists(portal) ? portal : animKey("bosses", `${e.id}_attack`));
+        const portal = animKey("bosses", `${sheetId("bosses", e.id)}_portal`);
+        this.monsters.get(e.uid)?.playBoss(e.power === "portal" && this.anims.exists(portal) ? portal : animKey("bosses", `${sheetId("bosses", e.id)}_attack`));
         const { x, y } = e;
         switch (e.power) {
           case "charm":
@@ -1106,6 +1109,17 @@ export class BattleScene extends Phaser.Scene {
       case "bark":
         this.bark(e);
         break;
+      case "rally":
+        this.rally(e);
+        break;
+      case "boss_skill": {
+        this.monsters.get(e.uid)?.playBoss(animKey("bosses", `${sheetId("bosses", e.id)}_attack`));
+        const color = e.skill === "entangle" ? "#8dff7a" : e.skill === "volley" ? "#ffd27a" : "#c58bff";
+        this.floater(e.x, e.y - 70, e.text, color, 34);
+        if (e.skill === "entangle") this.vfx("aura_nature", e.x, e.y, 240);
+        else if (e.skill === "impale") this.vfx("ground_crater", e.x, e.y + 20, 200);
+        break;
+      }
       case "mana": {
         if (e.source === "harvest") for (const u of this.units.values()) if (kitPrimary(u.def) === "brewer") u.playOnce("skill");
         if (e.source === "pulse" && e.x !== null && e.y !== null) this.unitNear(e.x, e.y + 50)?.playOnce("skill");
@@ -1129,6 +1143,7 @@ export class BattleScene extends Phaser.Scene {
       case "afflict":
         if (e.kind === "shellshock") this.vfx("lightning_strike", e.x, e.y, 90);
         else if (e.kind === "irritation") this.vfx("arcane_vortex", e.x, e.y + 10, 110);
+        else if (e.kind === "entangle") this.vfx("status_rooted", e.x, e.y + 30, 130);
         break;
       case "hero":
         this.heroEffects(e.power);
@@ -1324,6 +1339,65 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** A story speech bubble over the arena: the speaker's portrait and a line. */
+  /**
+   * v2.1 story rally (BossRally): the battle holds while the wave's `before` panels play, the allies
+   * charge down the path and shove the boss back to the start, then the `after` panels; it resumes.
+   * The Sim already moved and hurt the boss, so this is only the show.
+   */
+  private rally(e: Extract<SimEvent, { type: "rally" }>) {
+    const cut = this.story?.chapter.waves[this.sim.wave - 1]?.rally;
+    const boss = this.monsters.get(e.uid);
+    const path = this.sim.boss?.path;
+    this.paused = true;
+    const resume = () => {
+      this.paused = false;
+      this.acc = 0;
+    };
+    const charge = () => {
+      if (!path || !boss) return storyPanels(this, cut?.after ?? [], resume);
+      const allies = cut?.allies.length ? cut.allies : ["ally"];
+      const end = path.length;
+      const fromDist = Math.min(end, Math.max(0, end * (this.sim.boss!.boss?.rally?.at ?? 0.8)));
+      this.cameras.main.shake(300, 0.006);
+      for (let i = 0; i < 40; i++) {
+        const id = allies[i % allies.length];
+        const key = `story_ally:${id}`;
+        const spr: Phaser.GameObjects.Image | Phaser.GameObjects.Arc = this.textures.exists(key)
+          ? this.add.image(0, 0, key).setDisplaySize(96, 96).setOrigin(0.5, 0.85).setFlipX(true)
+          : this.add.circle(0, 0, 22, 0x7dff7a, 0.9);
+        const lane = ((i % 5) - 2) * 14;
+        const t = { d: end };
+        const place = () => {
+          const p = path.at(t.d);
+          spr.setPosition(p.x + lane, p.y + lane * 0.5).setDepth(100 + p.y);
+        };
+        place();
+        spr.setAlpha(0);
+        this.tweens.add({ targets: spr, alpha: 1, duration: 150, delay: i * 55 });
+        this.tweens.add({
+          targets: t, d: 0, duration: 1900, delay: i * 55, ease: "Sine.In", onUpdate: place,
+          onComplete: () => this.tweens.add({ targets: spr, alpha: 0, duration: 250, onComplete: () => spr.destroy() }),
+        });
+      }
+      // The boss is caught by the front of the charge and shoved back with it.
+      const b = { d: fromDist };
+      this.tweens.add({
+        targets: b, d: 0, delay: 500, duration: 1700, ease: "Cubic.Out",
+        onUpdate: () => {
+          const p = path.at(b.d);
+          boss.sprite.setPosition(p.x, p.y).setDepth(100 + p.y);
+        },
+        onComplete: () => {
+          this.cameras.main.shake(400, 0.014);
+          this.floater(e.to.x, e.to.y - 120, `-${fmt(Math.round(e.damage))}`, "#ff6b6b", 46);
+          this.vfx("impact_nature", e.to.x, e.to.y - 40, 260);
+          this.time.delayedCall(900, () => storyPanels(this, cut?.after ?? [], resume));
+        },
+      });
+    };
+    storyPanels(this, cut?.before ?? [], charge);
+  }
+
   private bark(line: { who: string; text: string }) {
     const key = UNIT_BY_ID[line.who] ? `portrait:${line.who}` : `story_portrait:${line.who}`;
     const w = 620;

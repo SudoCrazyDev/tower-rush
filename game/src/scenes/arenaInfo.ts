@@ -24,6 +24,7 @@ const POWER: Record<BossPower, string> = {
   split: "Splits when hit hard",
   layers: "Sheds layers as it breaks",
   portal: "Opens portals and blinks ahead",
+  none: "Uses its own skills",
 };
 
 /** Top-player lists fetched this session, kept for a minute so flipping tabs doesn't refetch. */

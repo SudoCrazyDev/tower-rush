@@ -8,7 +8,7 @@ import { W, H, WIDE, txt, button, iconButton, modal, pressable, cardView, attemp
 import { cover, topBar } from "./LobbyScene";
 import { starRow, storyPanels } from "./storyUi";
 import { kitSummary } from "../../../shared/kit.ts";
-import { BOOK, chapterLock, chapterWon, deckChecks, eventPickProblem, storyById, storyFinished, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
+import { BOOKS, chapterLock, chapterWon, deckChecks, eventPickProblem, storyById, storyFinished, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
 
 const PICK_KEY = "tower-rush-story-pick";
 /** The last Event deck picked for each chapter on this device. */
@@ -53,7 +53,8 @@ export class StoryScene extends Phaser.Scene {
   }
 
   init(data: { story?: string }) {
-    this.story = (data.story && storyById(data.story)) || BOOK.stories.find((s) => !storyFinished(profile.story, s)) || BOOK.stories[BOOK.stories.length - 1];
+    const all = BOOKS.flatMap((b) => b.stories);
+    this.story = (data.story && storyById(data.story)) || all.find((s) => !storyFinished(profile.story, s)) || all[all.length - 1];
     this.starting = false;
     this.cards = [];
     // Open on the chapter to play next (the last one once they're all won).
@@ -97,8 +98,9 @@ export class StoryScene extends Phaser.Scene {
     onSwipe(this, new Phaser.Geom.Rectangle(0, cy - ch / 2, W, ch), () => this.strip, (d) => this.go(this.focus + d));
     this.go(this.focus, false);
 
-    const last = BOOK.stories[BOOK.stories.length - 1];
-    if (s === last && profile.story.badges.includes("the_chosen")) txt(this, W / 2, this.dotsY + (WIDE ? 70 : 110), "★ THE CHOSEN ★\nYou finished Book 1. To be continued…", 28, "#ffd93b");
+    const book1 = BOOKS[0].stories;
+    if (s.id === "b2s1" && profile.story.badges.includes("wilds_warden")) txt(this, W / 2, this.dotsY + (WIDE ? 70 : 110), "★ WILDS WARDEN ★\nThe Elven Wilds are saved. To be continued…", 28, "#ffd93b");
+    else if (s === book1[book1.length - 1] && profile.story.badges.includes("the_chosen")) txt(this, W / 2, this.dotsY + (WIDE ? 70 : 110), "★ THE CHOSEN ★\nYou finished Book 1. To be continued…", 28, "#ffd93b");
   }
 
   /** Bring chapter `i` to the middle; its neighbours shrink and dim to the sides. */

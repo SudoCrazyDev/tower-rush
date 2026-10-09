@@ -84,6 +84,17 @@ export function hasAnim(folder: string, name: string) {
   return (index.anims[src]?.includes(name) ?? false) && !index.hazy?.includes(`${src}/${name}`);
 }
 
+/**
+ * v2.1: sprites that stand in for monsters and bosses whose own art isn't in the pack yet, so a new
+ * story can be played before its art lands. Drop an entry once the real sheets are built.
+ */
+const STAND_IN: Record<string, string> = {};
+
+/** The id whose sheets draw monster or boss `id` (itself, or its stand-in while its art is missing). */
+export function sheetId(folder: "monsters" | "bosses", id: string) {
+  return !hasAnim(folder, `${id}_walk`) && STAND_IN[id] ? STAND_IN[id] : id;
+}
+
 /** Queue a 16-frame sprite sheet if it exists in the pack. */
 export function loadSheet(scene: Phaser.Scene, folder: string, name: string) {
   if (!hasAnim(folder, name)) return;

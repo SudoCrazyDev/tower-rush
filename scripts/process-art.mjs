@@ -17,7 +17,7 @@ const onlyIdx = args.indexOf("--only");
 const only = onlyIdx >= 0 ? (args[onlyIdx + 1] ?? "").toLowerCase() : "";
 const ROOT = join(import.meta.dirname, "..");
 const DB = "tower-rush";
-const SCOPE = /^(Monster trait icons|Perk icons|Archetype icons|Element emblems|Race crests|VFX: .*|Weapons \((generic|signature)\))$/;
+const SCOPE = /^(Monster trait icons|Perk icons|Archetype icons|Element emblems|Race crests|VFX: .*|Weapons \((generic|signature)\)|v2.1 Arts Requirements)$/;
 
 const wrangler = (cmd) =>
   JSON.parse(execFileSync("npx", ["wrangler", "d1", "execute", DB, "--remote", "--json", "--command", `"${cmd}"`], { cwd: ROOT, shell: true, encoding: "utf8", maxBuffer: 1 << 26 }))[0].results;
@@ -39,7 +39,8 @@ const failures = [], processed = [];
 const bump = (g, k) => ((stats[g] ??= { done: 0, skipped: 0, failed: 0 })[k]++);
 for (const r of todo) {
   const out = join(ROOT, "assets", r.file);
-  const color = /magenta \(#FF00FF\)/i.test(r.prompt) ? "magenta" : "green";
+  // Panels, covers and arenas have no flat key background: saved as-is (converted to PNG).
+  const color = !/#00FF00|#FF00FF/i.test(r.prompt) ? "none" : /magenta \(#FF00FF\)/i.test(r.prompt) ? "magenta" : "green";
   if (existsSync(out) && !force) { bump(r.group, "skipped"); processed.push(r.id); continue; }
   if (dry) { console.log(`[dry] ${r.id} -> assets/${r.file} (${color}) ${r.url}`); bump(r.group, "done"); continue; }
   try {
@@ -50,7 +51,8 @@ for (const r of todo) {
     mkdirSync(dirname(out), { recursive: true });
     const raw = out + ".raw";
     writeFileSync(raw, Buffer.from(await res.arrayBuffer()));
-    execFileSync("python", ["-I", join(ROOT, "assets/keyimg.py"), raw, out, "--color", color], { stdio: "pipe" });
+    if (color === "none") execFileSync("python", ["-I", "-c", "import sys; from PIL import Image; im = Image.open(sys.argv[1]); (im if im.mode in ('RGB', 'RGBA') else im.convert('RGBA')).save(sys.argv[2])", raw, out], { stdio: "pipe" });
+    else execFileSync("python", ["-I", join(ROOT, "assets/keyimg.py"), raw, out, "--color", color], { stdio: "pipe" });
     rmSync(raw, { force: true });
     console.log(`ok   ${r.id} (${color})`);
     bump(r.group, "done"); processed.push(r.id);

@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, ASSETS } from "../api";
-import { PageHead, Thumb, toast } from "../components";
+import { PageHead, toast } from "../components";
 import { artRequests, ART_STATUSES, STYLE_ANCHOR, type ArtRequest, type ArtRow, type ArtStatus, type HaveArt } from "../../../shared/art-requests.ts";
 
 const STATUS_LABEL: Record<ArtStatus, string> = { todo: "To do", ready: "Link pasted", redo: "Redo", done: "Live" };
 const STATUS_BADGE: Record<ArtStatus, string> = { todo: "", ready: "info", redo: "err", done: "ok" };
 
-/** Game art refs live at the asset base; raw-pack files (assets/...) are only on the dev machine, and notes aren't files. */
-const refUrl = (r: string) => (r.startsWith("assets/") || !/\.(webp|png)$/.test(r) ? null : `${ASSETS}${r}`);
+/**
+ * Game art refs (.webp) live at the asset base; raw-pack refs (.png, assets/... or a file of the same
+ * batch) are uploaded under refs/ by scripts/upload-refs.mjs. Notes aren't files.
+ */
+const refUrl = (r: string) => (r.endsWith(".webp") ? `${ASSETS}${r}` : r.endsWith(".png") ? `${ASSETS}refs/${r.replace(/^assets\//, "")}` : null);
+
+/** A reference as a thumbnail that opens the full image (save it, then attach it in Higgsfield); the path shows only if it isn't uploaded yet. */
+function RefThumb({ name, url }: { name: string; url: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <code className="small muted" title="Not uploaded yet (generate it first, or run scripts/upload-refs.mjs)">{name}</code>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" title={name}>
+      <img className="thumb" crossOrigin="anonymous" src={url} width={72} height={72} alt={name} loading="lazy" onError={() => setBroken(true)} />
+    </a>
+  );
+}
 
 export function ArtPage() {
   const [have, setHave] = useState<HaveArt | null>(null);
@@ -135,11 +149,9 @@ function ArtRowView({ req, row, onSave }: { req: ArtRequest; row?: ArtRow; onSav
           {req.refs.map((ref) => {
             const u = refUrl(ref);
             return u ? (
-              <a key={ref} href={u} target="_blank" rel="noreferrer" title={ref}>
-                <Thumb src={u} size={56} />
-              </a>
+              <RefThumb key={ref} name={ref} url={u} />
             ) : (
-              <code key={ref} className="small muted" title={ref.startsWith("assets/") ? "In the raw pack on your PC" : undefined}>
+              <code key={ref} className="small muted">
                 {ref}
               </code>
             );

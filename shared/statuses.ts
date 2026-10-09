@@ -8,6 +8,7 @@
  * - Irritation: each attack may miss
  * - Fatigue: attacks slower
  * - Shellshock: stunned (no attacks)
+ * - Entangled (v2.1): roots hold it, no attacks until the wave ends
  * An Aegis Knight next to a unit makes it immune to the three debuffs and clears them.
  */
 import type { UnitDef } from "./units.ts";
@@ -37,11 +38,13 @@ export interface UnitStatus {
   miss: number;
   fatiguedUntil: number;
   shockedUntil: number;
+  /** Entangled by roots (v2.1): no attacks until this time (Infinity = until the wave ends). */
+  entangledUntil: number;
 }
 
-export const newStatus = (): UnitStatus => ({ rallyUntil: 0, irritatedUntil: 0, miss: 0, fatiguedUntil: 0, shockedUntil: 0 });
+export const newStatus = (): UnitStatus => ({ rallyUntil: 0, irritatedUntil: 0, miss: 0, fatiguedUntil: 0, shockedUntil: 0, entangledUntil: 0 });
 
 /** Remove every debuff (an Aegis Knight's touch). */
 export function clearDebuffs(s: UnitStatus) {
-  s.irritatedUntil = s.fatiguedUntil = s.shockedUntil = 0;
+  s.irritatedUntil = s.fatiguedUntil = s.shockedUntil = s.entangledUntil = 0;
 }

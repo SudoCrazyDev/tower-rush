@@ -172,6 +172,7 @@ export class Unit {
       now < s.irritatedUntil && "irritation",
       (now < s.fatiguedUntil || this.sim.sulking) && "fatigue",
       now < s.shockedUntil && "shellshock",
+      now < s.entangledUntil && this.scene.textures.exists("ui:status_entangled") && "entangled",
     ].filter(Boolean) as string[];
     const key = on.join(",") + (this.dragging ? "d" : "");
     if (key === this.statusDrawn) return;
@@ -319,8 +320,8 @@ export class Unit {
     const frozen = now < s.frozenUntil;
     if (frozen && !this.wasFrozen) scene.vfx("ice_burst", this.sprite.x, this.sprite.y - 20, 140);
     this.wasFrozen = frozen;
-    if (frozen || now < s.status.shockedUntil) {
-      this.sprite.setTint(frozen ? 0x7fd8ff : 0xb0a890);
+    if (frozen || now < s.status.shockedUntil || now < s.status.entangledUntil) {
+      this.sprite.setTint(frozen ? 0x7fd8ff : now < s.status.entangledUntil ? 0x8fcf6a : 0xb0a890);
       this.sprite.anims.timeScale = 0;
       return;
     }
