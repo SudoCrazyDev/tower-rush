@@ -369,7 +369,7 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
 
 // ---------------------------------------------------------------- bosses
 
-const BOSS_POWER_TEXT: Record<BossDef["power"], string> = {
+export const BOSS_POWER_TEXT: Record<BossDef["power"], string> = {
   summon: "Every 6s: calls 3 minions behind it (80% health)",
   heal: "Every 6s: heals 8% of its max health",
   haste: "Every 6s: runs 1.8× faster for 3s",
