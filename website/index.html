@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://assets.depedtoolkit.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=1.3.5" />
+  <link rel="stylesheet" href="styles.css?v=2.1.0" />
 </head>
 <body>
   <!-- ============ NAV ============ -->
@@ -49,7 +49,7 @@
       </video>
       <div class="hero__shade"></div>
       <div class="hero__content">
-        <span class="pill pill--live"><i></i> v1.2 Stories is live</span>
+        <span class="pill pill--live"><i></i> v2.1 Chaos Corrupted is live</span>
         <img class="hero__logo" crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" />
         <h1 class="hero__tag">Merge. Defend. <span>Conquer.</span></h1>
         <p class="hero__sub">Summon a squad of heroes, merge them into legends and hold the gate against endless monster waves. Free in your browser on phone or PC.</p>
@@ -174,10 +174,28 @@
         <article class="mode mode--story">
           <img class="mode__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/story_background.webp" alt="" loading="lazy" />
           <div class="mode__body">
-            <span class="pill">New in v1.2</span>
+            <span class="pill">New in v2.1</span>
             <h3>Story mode</h3>
-            <p><b>Book 1: The Chosen.</b> Three stories, nine scripted chapters with intro panels, special decks and boss fights. Clear them to earn story-only cards like the Princess Muse.</p>
+            <p><b>The Forsakens, Book 1: The Chosen.</b> Three stories, nine scripted chapters with intro panels, special decks and boss fights. Clear them to earn story-only cards like the Princess Muse.</p>
             <div class="books" id="books"></div>
+            <div class="book2">
+              <div class="book2__head">
+                <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/book2_story1_elven_wilds.webp" alt="The Elven Wilds cover" loading="lazy" />
+                <div>
+                  <span class="pill pill--gold">New &middot; Book 2</span>
+                  <h4>Chaos Corrupted</h4>
+                  <p>The saga of <b>The Forsakens</b> continues. <b>Story 1: The Elven Wilds</b> unlocks once you finish Book 1. Fight alongside Queen Aelyria as the corruption spreads through the forest.</p>
+                </div>
+              </div>
+              <ul class="chapters">
+                <li><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/panels/b2s1_p4_fleeing.webp" alt="The Fleeing Grove" loading="lazy" /><b>The Fleeing Grove</b><span>10 waves. Cut down Captain Morvane.</span></li>
+                <li><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/panels/b2s1_p7_guardian.webp" alt="Thalmyr, the Torn Guardian" loading="lazy" /><b>Thalmyr, the Torn Guardian</b><span>A boss-only duel with a half-corrupted giant stag who entangles your units.</span></li>
+                <li><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/panels/b2s1_p9_summit.webp" alt="Summit of Vaeltharion" loading="lazy" /><b>Summit of Vaeltharion</b><span>20 waves, three elf captains, then Vaeltharion the Elven Commander. Mid-battle, Queen Aelyria's army charges.</span></li>
+              </ul>
+              <div class="book2__cast">
+                <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/portraits/queen_aelyria.webp" alt="Queen Aelyria" loading="lazy" /><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/bosses/vaeltharion.webp" alt="Vaeltharion" loading="lazy" /><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/arena_rocky_summit.webp" alt="Rocky Summit arena" loading="lazy" />
+              </div>
+            </div>
           </div>
         </article>
         <article class="mode mode--pvp">
@@ -259,12 +277,17 @@
       </div>
       <div class="news">
         <article class="post post--feature">
-          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/story1_saving_the_muse.webp" alt="" loading="lazy" />
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/book2_story1_elven_wilds.webp" alt="The Elven Wilds" loading="lazy" />
           <div>
-            <time>Oct 6, 2026 &middot; v1.2.0</time>
-            <h3>Stories: Book 1 "The Chosen"</h3>
-            <p>Story mode arrives with three stories of three chapters each. Every chapter is a scripted battle with intro panels and a boss. Meet the Knights and Mercenaries, a new kind of unit that plays for the team or for itself.</p>
+            <time>Oct 10, 2026 &middot; v2.1.0</time>
+            <h3>Chaos Corrupted: Book 2 begins</h3>
+            <p>The Forsakens saga continues with Book 2 "Chaos Corrupted". Story 1, <b>The Elven Wilds</b>, unlocks after you finish Book 1 and brings three new chapters: The Fleeing Grove, Thalmyr the Torn Guardian, and the Summit of Vaeltharion. Queen Aelyria fights at your side, and a new boss waits at the top.</p>
           </div>
+        </article>
+        <article class="post">
+          <time>Oct 6, 2026 &middot; v1.2.0</time>
+          <h3>Stories: Book 1 "The Chosen"</h3>
+          <p>Story mode arrives with three stories of three chapters each. Every chapter is a scripted battle with intro panels and a boss. Meet the Knights and Mercenaries, a new kind of unit that plays for the team or for itself.</p>
         </article>
         <article class="post">
           <time>Oct 6, 2026 &middot; v1.3.0</time>
@@ -329,7 +352,7 @@
     </div>
   </div>
 
-  <script src="data/game.js?v=1.3.5"></script>
-  <script src="app.js?v=1.3.5"></script>
+  <script src="data/game.js?v=2.1.0"></script>
+  <script src="app.js?v=2.1.0"></script>
 </body>
 </html>
