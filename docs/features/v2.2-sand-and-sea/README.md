@@ -18,7 +18,8 @@ equality. Each story brings new board mechanics, and Story 3 breaks the chapter 
 - **New board mechanics:** tide cycle, tide pools, rolling isle, masks and braziers, arena duel,
   crowd favor, purify (a boss with a chains bar instead of HP), the sphinx's cage.
 - **New boss skills:** anchor hook, siren song, lantern beam, mimic, burrow, equal ground.
-- **2 story cards:** Maren, the Tide-Born (Story 2) and Bako, Chainbreaker (Story 3).
+- **2 Event rarity story cards:** Maren, the Tide-Born (Story 2) and Bako, Chainbreaker (Story 3).
+  Not in chests. Replays drop copies (section 8).
 - **2 badges:** Tidewarden and Dunewarden.
 - **Art:** about 350 Higgsfield credits (section 6).
 
@@ -127,18 +128,20 @@ Art goes through the usual flow: prompts in `shared/art-requests.ts` (admin `#/a
 - `ART_PROMPTS.md`: the Higgsfield prompts and refs.
 - `PROMO.md`: filled in once the art exists (started with the plan).
 
-## 8. Open questions
+## 8. Decisions (2026-10-10)
 
-Decided (2026-10-10):
 - **No trophy gates.** Each story unlocks when the previous story is finished.
 - **Both stories ship together** in v2.2.0.
 - **Civilians:** a bonus for each civilian saved, and a reward cut for each civilian hit.
-
-Still open:
-
-4. **Arena duel fallback:** if the PvP bot does not fit, swap Chapter 2 for an arena gauntlet of
-   three short rounds with a crowd-picked rule each.
-5. **Siren song tap:** tapping a sleeping unit is the first tap-on-unit interaction in battle. Check
-   it does not clash with selecting a unit to sell or upgrade.
-6. **Sefa in Book 3:** she ends as a statue. Decide now whether Book 3 can wake her.
-7. **Replay cards:** Story 1 has none (`replayCards: []`). Should replays drop Maren or Bako copies?
+- **Arena duel uses the PvP bot.** `PvpScene` already runs bot matches locally (`PvpBot` plays its
+  own `PvpBoard` from a loadout), so Bako's deck is just a fixed loadout. Work left: a story entry
+  point that skips trophies and the ranked result screen, the best-of-3 wrapper, a per-round
+  `skill`, and the crowd meter. No fallback chapter planned.
+- **Siren song tap:** build task. Tap on a sleeping unit wakes it; it must not open the
+  sell/upgrade selection.
+- **Sefa in Book 3:** she can wake. Keep the statue ending, and leave room for Book 3 to bring her
+  back.
+- **Story cards are Event rarity.** Maren and Bako use `rarity: "event"` (drop weight 0, never in
+  chests, as `canDrop` already enforces), like Princess Muse. The first clear gives the card, and
+  chapter replays drop 1-3 copies through `replayCards` (`["maren"]`, `["bako"]`), up to
+  `replayCardsPerDay`. Grinding is the only way to level them.

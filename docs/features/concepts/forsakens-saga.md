@@ -303,3 +303,4 @@ showing the broken scales.
   its card and description need quiet hints from Book 2 onward.
 - Book 3 Stories 1-4: TBD. Natural setup: the lands of Books 1-2 fall again, and the Keeper gathers
   the healed heroes (Aelyria, Corvaline, Bako, Durgrim and Seraphel) as allies.
+- Sefa can wake from her statue in Book 3 (decided 2026-10-10).
