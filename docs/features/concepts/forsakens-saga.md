@@ -4,6 +4,12 @@
 > `SCRIPT.md` and data in `shared/stories.ts`.
 > Shipped so far: Book 1 "The Chosen" (3 stories), Book 2 Story 1 "The Elven Wilds" (v2.1.0).
 
+## Release plan
+| Release | Stories | Art budget (Higgsfield) | Promo |
+|---|---|---|---|
+| **v2.2.0 "Sand & Sea"** | B2 S2 "The Drowned Coast" + B2 S3 "The Throne of Dust" | ~350 credits (~450 with 30% retries): S2 ~172, S3 ~176. Includes stills and in-game animation clips (about 60% of the cost). Stills made on the website (unlimited Nano Banana Pro) cut the MCP spend to ~215. | Reuse game footage and panel zooms. No Seedance 2.5 trailer shots. |
+| later | B2 S4, B2 S5 (Book 2 finale) | not estimated | — |
+
 ## 1. The saga spine
 
 - **Book 1, "The Chosen":** the Keeper stops the first corruption. The Portal Wizard falls, laughing:
