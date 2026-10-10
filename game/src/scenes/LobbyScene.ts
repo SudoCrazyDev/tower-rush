@@ -3,7 +3,7 @@ import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
 import { profile, account, mail, setArena, signOut, loadMe, loadInbox, serverNow } from "../save";
 import { storyIsNew } from "../../../shared/profile.ts";
-import { BOOK, BOOKS, SAGA, bookLock, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
+import { BOOK, BOOKS, SAGA, bookLock, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
 import { loadStoryImages } from "./storyUi";
 import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
@@ -356,7 +356,8 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   private stepBook(d: number) {
-    if (!curBook().stories[bookIdx + d]) return;
+    const i = bookIdx + d;
+    if (i < 0 || i >= bookSlots(curBook())) return;
     bookIdx += d;
     this.drawCard({ slide: d * 120 });
   }
@@ -471,9 +472,10 @@ export class LobbyScene extends Phaser.Scene {
   private storyCard(group: Phaser.GameObjects.Container) {
     this.sagaHeader(group);
     const book = curBook();
-    const n = book.stories.length;
+    const n = bookSlots(book);
     const s = book.stories[bookIdx];
-    if (!s) return this.emptyBook(group);
+    if (!book.stories.length) return this.emptyBook(group);
+    if (!s) return this.comingStory(group, n);
     const lock = storyLock(profile.story, profile.trophies, s);
     const done = storyFinished(profile.story, s);
     // The cover sits in the frame's art window; greyed with a padlock while locked.
@@ -539,6 +541,31 @@ export class LobbyScene extends Phaser.Scene {
         group.add(pad);
       }
     });
+  }
+
+  /** A planned story that isn't out yet: a sealed page with "Coming soon" and the arrows. */
+  private comingStory(group: Phaser.GameObjects.Container, n: number) {
+    const book = curBook();
+    const coverY = -58;
+    const ch = 400;
+    const cw = ch * (880 / 1168);
+    const { frame, trim } = ornateFrame(this, 600, 660, true, { x: -cw / 2, y: coverY - ch / 2, w: cw, h: ch });
+    group.add([frame, trim]);
+    group.add(txt(this, 0, -290, `${book.title.toUpperCase()} · ${bookIdx + 1} / ${n}`, 26, "#ffd27a"));
+    this.closeButton(group);
+    const shade = this.add.graphics();
+    shade.fillStyle(0x0b0a18, 0.85).fillRect(-cw / 2, coverY - ch / 2, cw, ch);
+    const pad = this.add.image(0, coverY - 50, "ui:padlock");
+    pad.setScale(110 / Math.max(pad.width, pad.height));
+    group.add([shade, pad, txt(this, 0, coverY + 50, "Coming soon", 44, "#fff4c2")]);
+    group.add(txt(this, 0, 186, `Story ${bookIdx + 1}`, 44));
+    const left = n - book.stories.length;
+    group.add(txt(this, 0, 236, `${left} more ${left === 1 ? "story" : "stories"} on the way`, 26, "#c9d2ff"));
+    const soon = button(this, 0, 330, 380, 120, "SOON", "blue", () => void (sfx("error"), toast(this, "Coming soon")), 54);
+    soon.setEnabled(false);
+    group.add(soon);
+    if (bookIdx > 0) group.add(iconButton(this, -250, coverY, "back", 76, () => this.stepBook(-1)));
+    if (bookIdx < n - 1) group.add(iconButton(this, 250, coverY, "back", 76, () => this.stepBook(1)).setFlipX(true));
   }
 
   /** A book with no stories yet: its padlock hint if locked, and "Coming soon". */

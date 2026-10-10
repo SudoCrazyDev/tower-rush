@@ -123,6 +123,8 @@ export interface BookDef {
   cover?: string;
   /** Badge a player needs before the first story of this book opens (Book 2: "the_chosen"). */
   unlockBadge?: string;
+  /** How many stories the book will have; the lobby shows "Coming soon" pages for the ones not out yet. */
+  planned?: number;
 }
 
 // ---------------------------------------------------------------- helpers for the defaults
@@ -578,7 +580,7 @@ const THE_ELVEN_WILDS: StoryDef = {
 };
 
 /** Book 2: its stories can be edited by the admin. */
-export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS], unlockBadge: "the_chosen" };
+export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS], unlockBadge: "the_chosen", planned: 5 };
 
 /** The saga title shown above the books. */
 export const SAGA = "The Forsakens";
@@ -595,9 +597,14 @@ export function setBooks(books: BookDef[]) {
     const t = i === 0 ? BOOK : (BOOKS[i] ??= { title: "", stories: [] });
     for (const k of Object.keys(t)) delete (t as unknown as Record<string, unknown>)[k];
     Object.assign(t, structuredClone(b));
+    // Configs saved before `planned` existed keep the default's count.
+    t.planned ??= [DEFAULT_BOOK, DEFAULT_BOOK2][i]?.planned;
   });
   BOOKS.length = list.length;
 }
+
+/** How many story pages a book shows: its stories, plus "Coming soon" ones up to its planned count. */
+export const bookSlots = (b: BookDef) => Math.max(b.stories.length, b.planned ?? 0);
 
 /** The saved books of a config: `books`, or a legacy single `book` followed by the Book 2 placeholder. */
 export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
