@@ -76,6 +76,7 @@ All art is live on R2 at `https://assets.depedtoolkit.com/` and also under `game
 - **Balance:** the Summit chapter may be too hard. Simulation gave 0% clears with a mid deck and
   45% with a strong deck. Plan a balance pass after player QA.
 - **Boss banners:** banners for the 5 new bosses are not made yet.
-- **Animation:** monster and boss animations are still-based (bob and topple). Real animation
-  clips come later.
+- **Animation:** done (2026-10-10). The 5 new monsters have walk and death clips; the 5 new bosses
+  have walk, attack, death and intro clips (480p, plus 720p walk and attack), all on R2.
+  `thalmyr_cleansed` is still a still.
 - **Next:** more stories in Book 2 and later books (not designed yet).
