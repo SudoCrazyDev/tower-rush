@@ -39,6 +39,8 @@ export interface StoryLine {
 export interface StoryPanel {
   image: string;
   lines: string[];
+  /** Optional looping boss sheet (sheets/bosses/<anim>) shown over the panel's corner. */
+  anim?: string;
 }
 
 /** What a chapter needs from the player's own deck (Story 3). */
@@ -569,7 +571,7 @@ const THE_ELVEN_WILDS: StoryDef = {
   ],
   ending: [
     panel("b2s1_p13_broken", "Vaeltharion kneels, armor shattered. It is over; he accepts defeat.", "Queen Aelyria: Old friend, this was never truly you."),
-    panel("b2s1_p14_cleansed", "Thalmyr bends and swallows the Forest Orb whole.", "Green light washes the chaos away. The guardian is healed."),
+    { ...panel("b2s1_p14_cleansed", "Thalmyr bends and swallows the Forest Orb whole.", "Green light washes the chaos away. The guardian is healed."), anim: "thalmyr_cleansed_idle" },
     panel("b2s1_p15_dust", "Vaeltharion fades into golden dust, calm and sad.", "I only wished the Elven race to be acknowledged."),
     panel("b2s1_p16_beyond", "Thank you, Keeper. More lands are Chaos Corrupted.", "To be continued."),
   ],

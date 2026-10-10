@@ -3,7 +3,7 @@
  * chapter result (victory with stars and rewards, or defeat).
  */
 import Phaser from "phaser";
-import { BASE } from "../assets";
+import { BASE, ensureAnim, loadSheet, sheetKey, sheetScale } from "../assets";
 import { sfx } from "../audio";
 import { W, H, NAVY, txt, button, modal, fmt, cardView, lootCards } from "../ui";
 import { UNIT_BY_ID } from "../data/units";
@@ -14,7 +14,7 @@ import type { StoryResult } from "../save";
 /** Load story images (by path under story/, without .webp) that aren't loaded yet, then call `done`. */
 export function loadStoryImages(scene: Phaser.Scene, paths: string[], done: () => void) {
   const need = paths.filter((p) => !scene.textures.exists(`story:${p}`));
-  if (!need.length) return done();
+  if (!need.length && !scene.load.totalToLoad) return done();
   for (const p of need) scene.load.image(`story:${p}`, `${BASE}story/${p}.webp`);
   scene.load.once(Phaser.Loader.Events.COMPLETE, done);
   scene.load.start();
@@ -55,7 +55,13 @@ export function storyPanels(scene: Phaser.Scene, panels: StoryPanel[], onDone: (
     const parts: Phaser.GameObjects.GameObject[] = [img.setPosition(0, 0), frame];
     const text = txt(scene, 0, fh / 2 + 40, p.lines.join("\n"), 34, "#fff4c2", [0.5, 0]).setWordWrapWidth(W - 80).setLineSpacing(10);
     parts.push(text);
-    page = scene.add.container(W / 2, top + fh / 2, parts).setAlpha(0);
+    const animKeyName = p.anim ? ensureAnim(scene, "bosses", p.anim, 12, -1) : null;
+    if (p.anim && animKeyName) {
+      const spr = scene.add.sprite(fw / 2 - 90, fh / 2 - 90, sheetKey("bosses", p.anim)).setScale(sheetScale("bosses", 300));
+      spr.play(animKeyName);
+      parts.push(spr);
+    }
+    page =scene.add.container(W / 2, top + fh / 2, parts).setAlpha(0);
     page.list.forEach((o) => (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0));
     page.setScrollFactor(0);
     root.add(page);
@@ -68,6 +74,7 @@ export function storyPanels(scene: Phaser.Scene, panels: StoryPanel[], onDone: (
   root.add([hint, skip]);
   scene.tweens.add({ targets: hint, alpha: 0.4, yoyo: true, repeat: -1, duration: 700 });
   shade.on("pointerup", next);
+  for (const p of panels) if (p.anim) loadSheet(scene, "bosses", p.anim); // queued; loadStoryImages starts the loader
   loadStoryImages(
     scene,
     panels.map((p) => `panels/${p.image}`),
