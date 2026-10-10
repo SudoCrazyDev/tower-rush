@@ -10,6 +10,7 @@ export type { Profile, ChestLoot };
 export { CHESTS, type ChestDef } from "../../shared/economy.ts";
 export { giftReadyAt, ownsHero, heroBuyProblem } from "../../shared/profile.ts";
 import type { Reward } from "../../shared/daily.ts";
+import type { StoryObjectives } from "../../shared/stories.ts";
 import type { Promotion, StoryWin } from "../../shared/profile.ts";
 import { needsAttention, type MailMessage } from "../../shared/mail.ts";
 
@@ -248,7 +249,7 @@ export interface StoryResult {
   win: StoryWin | null;
 }
 
-export async function finishStory(battleId: number, stats: Omit<BattleStats, "copies" | "swaps" | "brewed"> & { won: boolean; lives: number }) {
+export async function finishStory(battleId: number, stats: Omit<BattleStats, "copies" | "swaps" | "brewed"> & { won: boolean; lives: number; roundsLost?: number; objectives?: StoryObjectives }) {
   const r = await post<StoryResult & { profile: Profile }>(`/story/${battleId}/finish`, stats);
   setProfile(r.profile);
   return r;

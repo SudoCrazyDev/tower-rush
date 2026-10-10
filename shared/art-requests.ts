@@ -683,6 +683,256 @@ export const BOOK2_S1_REQUESTS: ArtRequest[] = B2.map(([n, id, file, title, kind
   };
 });
 
+/* ---------- Book 2 · Stories 2 and 3: The Drowned Coast and The Throne of Dust (v2.2) ---------- */
+const B22_GROUP = "v2.2 Arts Requirements";
+const B22_PIRATE = "assets/locations/arena_pirate_beach.png";
+const B22_REEF = "assets/locations/arena_coral_reef.png";
+const B22_DESERT = "assets/locations/arena_desert.png";
+
+type B22Kind = B2Kind | "prop" | "card" | "cardportrait";
+/**
+ * [id, file, title, kind, refs, subject / scene]. A ref that is another row's id means that row's finished
+ * image (make it first); any other ref is a raw-pack or game path.
+ */
+type B22Row = [string, string, string, B22Kind, string[], string];
+
+const B22: B22Row[] = [
+  // ----- Story 2: The Drowned Coast -----
+  ["reef_crab", "monsters/reef_crab.png", "Reef crab", "monster", [],
+    "Hulking reef crab the size of a cartwheel, barnacle-crusted shell with cracks of violet glow, one oversized claw raised, sideways scuttling stance, seaweed hanging off its legs."],
+  ["drowned_sailor", "monsters/drowned_sailor.png", "Drowned sailor", "monster", [],
+    "Drowned sailor zombie in a tattered striped shirt and sailor cap, pale blue-grey skin, seaweed in the hair, glowing violet eyes, small violet barnacles on the shoulders, shambling pose, dripping."],
+  ["drowned_corsair", "monsters/drowned_corsair.png", "Drowned corsair", "monster", [],
+    "Drowned corsair, a stocky undead pirate with a tricorn hat full of holes, barnacle-crusted breastplate, a rusty cutlass, glowing violet eyes, coral growing from one shoulder, menacing march."],
+  ["eel_swimmer", "monsters/eel_swimmer.png", "Eel swimmer", "monster", [],
+    "Slim electric-green sea eel swimming upright through the air as if through water, sharp teeth, glowing violet eyes, a ribbon of violet chaos trailing from its tail, fast streamlined pose."],
+  ["barnacle_spawn", "monsters/barnacle_spawn.png", "Barnacle spawn", "monster", [],
+    "Small walking cluster of violet-crusted barnacles with two stubby legs and one big glowing violet eye, tiny snapping shell mouths, wet and spiky."],
+  ["grell", "bosses/grell.png", "Bosun Grell", "boss", [],
+    "Drowned bosun boss, broad and brutal, a ship's anchor on a heavy chain over his shoulder, barnacle-crusted bosun's coat and hat, bosun's whistle on his neck, pale blue-grey skin, glowing violet eyes, boss pose."],
+  ["lusca", "bosses/lusca.png", "Lusca the Siren", "boss", [],
+    "Lusca the Siren, a haunting sea-witch with long drifting teal hair, fish-fin ears, pearl jewelry, a tattered dark-blue gown that fades into tentacles, mouth open mid-song with violet sound rings around her, glowing violet eyes, boss pose."],
+  ["ondrath", "bosses/ondrath.png", "Ondrath, the Sleeping Isle (corrupted)", "boss", [],
+    "Colossal ancient sea turtle with a small green island on its back (a few palm trees, rocks, a tiny ruined hut), shell and flippers crusted with glowing violet barnacles and cracks, a pained expression, side view facing right, boss scale."],
+  ["corvaline", "bosses/corvaline.png", "Corvaline, Keeper of the Lantern", "boss", [],
+    "Corvaline, an old stern lighthouse keeper woman, weathered face, grey hair in a tight bun under a sou'wester, long oilskin coat, one hand holding a glowing violet-and-gold lantern lamp that casts a beam, glowing violet eyes, tide-wet boots, boss pose."],
+  ["ondrath_cleansed", "bosses/ondrath_cleansed.png", "Ondrath, the Sleeping Isle (cleansed)", "boss", ["ondrath"],
+    "The same sea turtle island as the reference, fully healed: clean teal shell, flowering island, calm golden eyes, no purple at all."],
+  ["ally_merfolk_warrior", "story/allies/ally_merfolk_warrior.png", "Ally: merfolk warrior", "ally", [],
+    "Proud merfolk warrior charging forward with a short coral sword, teal scales, fin crest, shell armor, determined face."],
+  ["ally_merfolk_spear", "story/allies/ally_merfolk_spear.png", "Ally: merfolk spear", "ally", [],
+    "Merfolk spear thrower charging with a long trident-tipped spear, blue scales, pearl necklace, battle cry."],
+  ["ally_tide_spirit", "story/allies/ally_tide_spirit.png", "Ally: tide spirit", "ally", [],
+    "A friendly tide spirit, a curling wave shaped like a smiling figure, foam crest, glowing aqua eyes, rushing forward."],
+  ["ally_ondrath", "story/allies/ally_ondrath.png", "Ally: Ondrath", "ally", ["ondrath_cleansed"],
+    "Ondrath the sea turtle isle charging forward, cleansed and radiant, waves crashing off his flippers (use the reference, smaller island on his back)."],
+  ["corvaline_portrait", "story/portraits/corvaline.png", "Portrait: Corvaline", "portrait", ["corvaline"],
+    "Bust of Corvaline from the reference, stern weathered face, violet-glinting eyes, wet grey strands of hair."],
+  ["pearl", "story/portraits/pearl.png", "Portrait: Pearl", "portrait", [],
+    "Pearl, a young merfolk scout girl with short teal hair under a hood of woven kelp, big wary brown eyes (the same eye color as an old lighthouse keeper), a small pearl earring, a shy half-smile. Same style as the other story portraits."],
+  ["maren_portrait", "story/portraits/maren.png", "Portrait: Maren (Pearl unhooded)", "portrait", ["pearl"],
+    "The same girl as the reference with her hood pulled back: teal-streaked dark hair, brown eyes, a hopeful tearful smile, tiny scale shimmer on her cheeks."],
+  ["ondrath_corrupted", "story/portraits/ondrath_corrupted.png", "Portrait: Ondrath (corrupted)", "portrait", ["ondrath"],
+    "Bust of the corrupted turtle Ondrath from the reference, pained, violet barnacles on his brow."],
+  ["ondrath_cleansed_portrait", "story/portraits/ondrath_cleansed.png", "Portrait: Ondrath (cleansed)", "portrait", ["ondrath_cleansed"],
+    "Bust of Ondrath, cleansed, from the reference, wise calm eyes, a little flowering moss on his brow."],
+  ["grell_portrait", "story/portraits/grell.png", "Portrait: Bosun Grell", "portrait", ["grell"],
+    "Bust of Bosun Grell from the reference, scowling, hat low, bosun's whistle between his teeth."],
+  ["lusca_portrait", "story/portraits/lusca.png", "Portrait: Lusca", "portrait", ["lusca"],
+    "Bust of Lusca the Siren from the reference, eyes half closed, singing."],
+  ["saltmere_villager", "story/portraits/saltmere_villager.png", "Portrait: Saltmere villager", "portrait", [B2_FARMER],
+    "A worried fishing-village woman in a knitted cap and shawl, windblown hair, uncorrupted, wide anxious eyes. Same style as the reference but a different, healthy character."],
+  ["status_submerged", "ui/status_submerged.png", "Status icon: submerged", "status", ["assets/ui/status_shellshock.png", "assets/ui/status_irritation.png", "ui/icon_buttons_set.webp"],
+    "Status badge icon: a small unit shape under rippling blue water with rising bubbles, inside a round dark badge, matching the reference status badges."],
+  ["status_asleep", "ui/status_asleep.png", "Status icon: asleep", "status", ["assets/ui/status_shellshock.png", "assets/ui/status_irritation.png", "ui/icon_buttons_set.webp"],
+    "Status badge icon: a blue crescent moon with three small Zs and a tiny musical note, inside a round dark badge, matching the reference status badges."],
+  ["status_glimmered", "ui/status_glimmered.png", "Status icon: glimmered", "status", ["assets/ui/status_shellshock.png", "assets/ui/status_irritation.png", "ui/icon_buttons_set.webp"],
+    "Status badge icon: a dazzling violet-and-gold lantern light burst with a downward arrow, inside a round dark badge, matching the reference status badges."],
+  ["tide_pool", "props/tide_pool.png", "Prop: tide pool", "prop", [],
+    "A small round tidal pool seen from above at a slight angle: a ring of wet rocks, shimmering teal water, a tiny starfish and a few small fish, plus a faded violet crust at one edge."],
+  ["tide_meter", "ui/tide_meter.png", "UI: tide meter", "prop", ["ui/hud_elements.webp"],
+    "A horizontal tide meter bar: a rounded dark frame with a wave-shaped blue fill, a small moon marker at the high end and a small sun marker at the low end, matching the reference HUD elements."],
+  ["arena_stranded_harbor", "locations/arena_stranded_harbor.png", "Arena: The Stranded Harbor (low tide)", "arena", [B22_PIRATE],
+    "a drained harbor at low tide: wide wet mudflats, beached sailing ships tilted on their sides, stranded fishing boats, gasping merfolk in small shining pools, a faint violet shimmer on the horizon, dusky sky. Keep the sand strip where the path runs."],
+  ["arena_ondrath_isle", "locations/arena_ondrath_isle.png", "Arena: Ondrath's back", "arena", [B22_REEF],
+    "the mossy shell-ridged back of a giant sea turtle seen from above: grassy shell plates, rock pools, driftwood, glowing violet barnacle patches, the sea all around. Keep the ring path shape."],
+  ["arena_lantern_causeway", "locations/arena_lantern_causeway.png", "Arena: The Lantern Causeway (low tide)", "arena", [B22_PIRATE],
+    "a long stone causeway across a still, glassy sea toward a tall lighthouse at the world's edge, wet black rocks, still water like a mirror, violet beam light on the clouds, stormy dusk."],
+  ["arena_stranded_harbor_high", "locations/arena_stranded_harbor_high.png", "Arena: The Stranded Harbor (high tide)", "arena", ["arena_stranded_harbor"],
+    "the same harbor with the tide in: the mudflats flooded with shallow blue water, beached ships floating level, the low tiles under rippling water."],
+  ["arena_ondrath_isle_high", "locations/arena_ondrath_isle_high.png", "Arena: Ondrath's back (thrashing)", "arena", ["arena_ondrath_isle"],
+    "the same turtle back mid-roll: heaving tilted shell plates, spray and foam crashing over the edges, cracks glowing violet."],
+  ["arena_lantern_causeway_high", "locations/arena_lantern_causeway_high.png", "Arena: The Lantern Causeway (high tide)", "arena", ["arena_lantern_causeway"],
+    "the same causeway with the tide surging in: big waves washing over the low stones, white foam, the lighthouse beam blazing."],
+  ["b2s2_p1_shard", "story/panels/b2s2_p1_shard.png", "Panel S2-1: the escaping shard", "panel", ["assets/story/panels/b2s1_p14_cleansed.png"],
+    "Green Orb light washes outward, and one violet shard slips out and streaks west toward the sea across a dusky sky."],
+  ["b2s2_p2_queen_sends", "story/panels/b2s2_p2_queen_sends.png", "Panel S2-2: the Queen sends the Keeper", "panel", ["assets/story/portraits/queen_aelyria.png"],
+    "Queen Aelyria points west toward a faint violet streak in the sky, concerned, a cliff-top overlook, sea in the distance."],
+  ["b2s2_p3_drained_bay", "story/panels/b2s2_p3_drained_bay.png", "Panel S2-3: the drained bay", "panel", ["arena_stranded_harbor", "reef_crab", "drowned_sailor"],
+    "A wide drained bay of mud, beached ships, merfolk gasping in small shrinking pools; far off in the mud a few crabs crawl toward a village."],
+  ["b2s2_p4_pearl", "story/panels/b2s2_p4_pearl.png", "Panel S2-4: Pearl", "panel", ["pearl"],
+    "Pearl, hooded, hauls herself onto the rocks and points at a far lighthouse; she looks frightened of it."],
+  ["b2s2_p5_ondrath_found", "story/panels/b2s2_p5_ondrath_found.png", "Panel S2-5: Ondrath found", "panel", ["ondrath", "arena_stranded_harbor"],
+    "Ondrath, the island-turtle, lies in the drained bay, crusted with violet barnacles; tiny figures at his feet."],
+  ["b2s2_p6_isle_rolls", "story/panels/b2s2_p6_isle_rolls.png", "Panel S2-6: the isle rolls", "panel", ["ondrath"],
+    "Ondrath rolls in pain, the whole island heaving and tilting, rocks and trees sliding."],
+  ["b2s2_p7_ondrath_cleansed", "story/panels/b2s2_p7_ondrath_cleansed.png", "Panel S2-7: Ondrath cleansed", "panel", ["ondrath_cleansed", "pearl"],
+    "The barnacles crack and fall away; Ondrath breathes again, eyes gold, a small figure (Pearl) at his flipper listening to him."],
+  ["b2s2_p8_causeway", "story/panels/b2s2_p8_causeway.png", "Panel S2-8: the causeway", "panel", ["arena_lantern_causeway"],
+    "A long causeway to a tall lighthouse; its violet-and-gold beam sweeps the sea, turning what it touches violet."],
+  ["b2s2_p9_corvaline", "story/panels/b2s2_p9_corvaline.png", "Panel S2-9: Corvaline", "panel", ["corvaline"],
+    "Corvaline in the lamp room, one hand on the great lamp, a small framed portrait of a little girl on the shelf behind her; a glowing Orb in the lamp."],
+  ["b2s2_p10_tide_returns", "story/panels/b2s2_p10_tide_returns.png", "Panel S2-10: the tide returns (mid-battle)", "panel", ["ondrath_cleansed", "ally_merfolk_warrior", "ally_merfolk_spear", "pearl"],
+    "Ondrath rises from the bay shaking off barnacles; a wave of merfolk rides in on the returning tide, Pearl in front."],
+  ["b2s2_p11_lantern_flares", "story/panels/b2s2_p11_lantern_flares.png", "Panel S2-11: the lantern flares (mid-battle)", "panel", ["corvaline"],
+    "The lantern flares violet-white; Corvaline screams, wind whipping her coat, waves crashing against the lighthouse."],
+  ["b2s2_p12_mother", "story/panels/b2s2_p12_mother.png", "Panel S2-12: Mother! (mid-battle)", "panel", ["maren_portrait", "corvaline"],
+    "Pearl pulls back her hood and cries out; she and the lighthouse keeper have the same brown eyes."],
+  ["b2s2_p13_falter", "story/panels/b2s2_p13_falter.png", "Panel S2-13: the beam falters (mid-battle)", "panel", ["corvaline", "maren_portrait"],
+    "The beam stutters; Corvaline's hands tremble on the lamp, tears in her eyes, staring at the girl below."],
+  ["b2s2_p14_cracks", "story/panels/b2s2_p14_cracks.png", "Panel S2-14: the lantern cracks", "panel", ["corvaline"],
+    "The great lamp cracks; Corvaline kneels on the wet stone, the violet light dying."],
+  ["b2s2_p15_reunion", "story/panels/b2s2_p15_reunion.png", "Panel S2-15: reunion", "panel", ["maren_portrait", "corvaline"],
+    "Maren takes her mother's hand; both crying and smiling, dawn light on the sea."],
+  ["b2s2_p16_orb_returns", "story/panels/b2s2_p16_orb_returns.png", "Panel S2-16: the Orb returns", "panel", ["ondrath_cleansed", "corvaline"],
+    "The glowing Tide Orb sinks back into Ondrath's shell; waves breathe in and out again; Corvaline relights the lamp with a plain orange flame."],
+  ["b2s2_p17_shards", "story/panels/b2s2_p17_shards.png", "Panel S2-17: two shards meet", "panel", [],
+    "In pure darkness, two glowing violet shards drift together, and a gloved hand (no face visible, no body) closes over them."],
+  ["book2_story2_drowned_coast", "story/covers/book2_story2_drowned_coast.png", "Cover: The Drowned Coast", "cover", ["corvaline", "pearl", "ondrath"],
+    "Cover art: the lighthouse at the world's edge under a violet-and-gold beam, Ondrath's shell rising from the sea, Pearl in the foreground reaching toward the light."],
+  ["maren", "units/maren.png", "Story card: Maren, the Tide-Born (still)", "card", ["maren_portrait", "units/tide_mermaid.webp"],
+    "Maren, the Tide-Born: a young woman grown from Pearl, teal-streaked dark hair, a flowing blue-and-white tide-silk dress with a wave-crest cape, bare feet with a faint scale shimmer, a pearl-tipped staff, a gentle healing wave swirling around her. Confident supportive pose, facing slightly right."],
+  ["maren_card", "cards/portraits/maren.png", "Story card: Maren (card portrait)", "cardportrait", ["maren"],
+    "Trading-card portrait of Maren from the first reference, bust from the chest up, three-quarter view, filling the square, with a soft pearly aqua tide background. Square 1:1, full-bleed, no card frame, no border, no text."],
+
+  // ----- Story 3: The Throne of Dust -----
+  ["faceless_soldier", "monsters/faceless_soldier.png", "Faceless soldier (masked)", "monster", [],
+    "Faceless soldier, a desert city guard with a smooth blank sandstone-colored mask over the whole face (no eyes, no mouth), identical plain sand-colored armor and short spear, marching in step, a faint violet glow along the cracks of the mask."],
+  ["faceless_archer", "monsters/faceless_archer.png", "Faceless archer (masked)", "monster", ["faceless_soldier"],
+    "The same faceless mask and plain sand-colored uniform as the reference, but holding a short recurve bow, a quiver on the back, drawing an arrow."],
+  ["faceless_civilian", "monsters/faceless_civilian.png", "Faceless civilian (masked)", "monster", ["faceless_soldier"],
+    "The same smooth blank sandstone mask as the reference, on a plain unarmed townsperson in a long sand-colored robe, hands clasped, shuffling in step, a faint violet glow in the cracks of the mask."],
+  ["faceless_soldier_unmasked", "monsters/faceless_soldier_unmasked.png", "Faceless soldier (unmasked)", "monster", ["faceless_soldier"],
+    "The same soldier as the reference but the mask has cracked and fallen away: a real, angry human face (dark skin, scarred brow, glowing violet eyes), same armor."],
+  ["faceless_civilian_unmasked", "monsters/faceless_civilian_unmasked.png", "Faceless civilian (unmasked)", "monster", ["faceless_civilian"],
+    "The same townsperson as the reference but the mask has fallen away: a frightened, kind human face, no violet glow, same robe, stumbling toward freedom."],
+  ["scarab", "monsters/scarab.png", "Scarab", "monster", [],
+    "Big armored desert scarab beetle, glossy gold-and-blue shell with hieroglyph markings, violet glow in the shell cracks, six strong legs, scuttling pose."],
+  ["jackal", "monsters/jackal.png", "Jackal", "monster", [],
+    "Lean desert jackal sprinting, sand-colored fur, a gold collar, glowing violet eyes, a ragged ribbon of violet chaos trailing from the ears."],
+  ["faceless_herald", "bosses/faceless_herald.png", "The Faceless Herald", "boss", ["faceless_soldier"],
+    "The Faceless Herald, tall and thin, the same blank sandstone mask as the reference but gilded, a long white-and-gold herald's robe, a tall staff with a mirror disc on top, a ghostly mirrored copy of a warrior shimmering at his side, boss pose."],
+  ["dune_warden", "bosses/dune_warden.png", "The Dune Warden (with wyrm)", "boss", [],
+    "The Dune Warden, a veiled desert rider in a wind-torn indigo cloak with a curved spear, riding a huge sand wyrm bursting out of a dune, sand streaming off its armored segments, violet eyes glowing through the veil, boss pose."],
+  ["sefa", "bosses/sefa.png", "Sefa the Chainbreaker", "boss", [],
+    "Sefa the Chainbreaker, a tall powerful gladiator queen seated half-risen from a sand-and-bone throne, a sun-gold circlet, battle scars, broken old manacles on both wrists, glowing violet chains of light wrapped around her body and anchored to the throne (six chains), a mournful proud expression, boss pose."],
+  ["sefa_statue", "bosses/sefa_statue.png", "Sefa (sandstone statue)", "boss", ["sefa"],
+    "The same queen as the reference turned into a calm sandstone statue standing at an arena gate, one hand raised as if holding up the wall, no chains, soft gold light."],
+  ["nefrael_caged", "props/nefrael_caged.png", "Nefrael in her cage", "prop", [],
+    "A proud riddle sphinx (lioness body, feathered wings, a calm wise woman's face with a gold headdress) crouched in a hanging golden cage with a heavy glowing padlock, the cage seen at a slight angle."],
+  ["nefrael_free", "bosses/nefrael_free.png", "Nefrael (freed)", "boss", ["nefrael_caged"],
+    "The same sphinx as the reference, freed and roaring, the cage open and broken behind her, wings spread wide."],
+  ["ally_gladiator", "story/allies/ally_gladiator.png", "Ally: freed gladiator", "ally", [],
+    "A freed gladiator charging, bare face unmasked and proud, a broken chain on one wrist, a round shield and short sword."],
+  ["ally_spearwoman", "story/allies/ally_spearwoman.png", "Ally: freed spearwoman", "ally", [],
+    "A freed townswoman spearwoman charging, her mask thrown aside, a headscarf, a long spear, fierce face."],
+  ["ally_slinger", "story/allies/ally_slinger.png", "Ally: freed slinger", "ally", [],
+    "A freed young slinger swinging a sling overhead, mask thrown aside, scrappy and brave."],
+  ["ally_nefrael", "story/allies/ally_nefrael.png", "Ally: Nefrael", "ally", ["nefrael_free"],
+    "Nefrael the sphinx charging forward with a mighty roar, wings spread, shock rings spreading from her mouth."],
+  ["sefa_portrait", "story/portraits/sefa.png", "Portrait: Sefa", "portrait", ["sefa"],
+    "Bust of Sefa from the reference, proud, tired eyes, violet chain-light around her shoulders."],
+  ["bako", "story/portraits/bako.png", "Portrait: Bako", "portrait", [],
+    "Bako, a broad cheerful gladiator with a short beard, a shaved head, a leather arena harness, a broken iron manacle on one wrist, a rueful half-smile. Same style as the other story portraits."],
+  ["nefrael", "story/portraits/nefrael.png", "Portrait: Nefrael", "portrait", ["nefrael_caged"],
+    "Bust of Nefrael from the reference, serene and amused, a riddle in her eyes."],
+  ["faceless_herald_portrait", "story/portraits/faceless_herald.png", "Portrait: the Faceless Herald", "portrait", ["faceless_herald"],
+    "Bust of the Faceless Herald from the reference, blank gilded mask, mirror-staff at the shoulder."],
+  ["dune_warden_portrait", "story/portraits/dune_warden.png", "Portrait: the Dune Warden", "portrait", ["dune_warden"],
+    "Bust of the Dune Warden from the reference, indigo veil, only the glowing violet eyes visible."],
+  ["status_masked", "ui/status_masked.png", "Status icon: masked", "status", ["assets/ui/status_shellshock.png", "assets/ui/status_irritation.png", "ui/icon_buttons_set.webp"],
+    "Status badge icon: a smooth blank sandstone mask with a faint violet glow in a crack, inside a round dark badge, matching the reference status badges."],
+  ["icon_civilian", "ui/icon_civilian.png", "Icon: civilian saved", "status", ["assets/ui/status_shellshock.png", "assets/ui/status_irritation.png", "ui/icon_buttons_set.webp"],
+    "Icon: a small unmasked smiling person with a small green check mark, inside a round dark badge, matching the reference status badges."],
+  ["prop_brazier", "props/brazier.png", "Prop: brazier (unlit and lit)", "prop", [],
+    "A tall bronze desert brazier on a stone base, shown twice side by side on one image: left unlit (cold dark coals), right lit (a bright orange-gold flame and sparks)."],
+  ["crowd_meter", "ui/crowd_meter.png", "UI: crowd favor meter", "prop", ["ui/hud_elements.webp"],
+    "A horizontal crowd-favor meter bar: a rounded dark frame with a gold-and-orange fill, a small cheering crowd silhouette icon at the left end and a gold star at the right end, matching the reference HUD elements."],
+  ["arena_glass_road", "locations/arena_glass_road.png", "Arena: The Glass Road", "arena", [B22_DESERT],
+    "a desert road of fused green-black glass running between towering dunes under a violet-tinged noon sky, a sandstorm wall far away, lone oasis palms, columns of identical standing silhouettes on the horizon. Keep the ring path shape."],
+  ["arena_sunspire", "locations/arena_sunspire.png", "Arena: Sunspire arena", "arena", [B22_DESERT],
+    "a grand sandstone gladiator arena seen from above: tiered stands full of cheering identical silhouettes, banners, a sun-spire tower, a sand floor, torches. Keep the ring path shape."],
+  ["arena_throne_end", "locations/arena_throne_end.png", "Arena: The Throne of Dust", "arena", [B22_DESERT],
+    "the arena's far end: a vast throne of piled sand and bones at the top, rows of kneeling identical figures, a hanging golden cage above the arena wall, cracked ground glowing violet. Keep the ring path shape."],
+  ["b2s3_p1_shard_south", "story/panels/b2s3_p1_shard_south.png", "Panel S3-1: the shard flies south", "panel", [],
+    "A violet shard streaks south over a dark sea toward a desert coast; at the horizon, a noon sky turning violet."],
+  ["b2s3_p2_caravan", "story/panels/b2s3_p2_caravan.png", "Panel S3-2: the caravan", "panel", ["faceless_soldier", "faceless_civilian", "arena_glass_road"],
+    "A long caravan of identical masked figures walking out of the dunes in perfect step, all the same height."],
+  ["b2s3_p3_bako", "story/panels/b2s3_p3_bako.png", "Panel S3-3: Bako", "panel", ["bako", "arena_glass_road"],
+    "Bako holds up his broken manacle and points at the masked column; a haunted pleading look."],
+  ["b2s3_p4_captured", "story/panels/b2s3_p4_captured.png", "Panel S3-4: Bako captured", "panel", ["bako", "sefa"],
+    "Masked guards drag Bako in chains before Sefa's sand throne; Sefa sits above, chains of violet light across her."],
+  ["b2s3_p5_arena", "story/panels/b2s3_p5_arena.png", "Panel S3-5: the arena roars", "panel", ["bako", "arena_sunspire"],
+    "Bako steps onto the arena sand, the stands roaring behind him, a rueful smile."],
+  ["b2s3_p6_throw", "story/panels/b2s3_p6_throw.png", "Panel S3-6: Bako throws the match", "panel", ["bako", "sefa"],
+    "Bako lowers his guard and takes the blow, kneeling on the sand; above, Sefa on her throne points down."],
+  ["b2s3_p7_cage", "story/panels/b2s3_p7_cage.png", "Panel S3-7: the cage", "panel", ["nefrael_caged", "arena_sunspire"],
+    "From her hanging cage above the arena wall, Nefrael calls down, one paw through the bars."],
+  ["b2s3_p8_throne", "story/panels/b2s3_p8_throne.png", "Panel S3-8: the throne", "panel", ["sefa", "faceless_soldier", "arena_throne_end"],
+    "The Faceless flood the arena in a sea of identical masks; Sefa waits on her throne, violet chains binding her."],
+  ["b2s3_p9_cage_breaks", "story/panels/b2s3_p9_cage_breaks.png", "Panel S3-9: the cage breaks (mid-battle)", "panel", ["nefrael_free", "ally_gladiator", "ally_spearwoman", "ally_slinger"],
+    "Nefrael bursts from her cage with a roar; freed people tear off their masks and charge."],
+  ["b2s3_p10_chains_tighten", "story/panels/b2s3_p10_chains_tighten.png", "Panel S3-10: the chains tighten (mid-battle)", "panel", ["sefa"],
+    "Close-up: Sefa clutching at her glowing violet chains as they tighten, anguished."],
+  ["b2s3_p11_last_chain", "story/panels/b2s3_p11_last_chain.png", "Panel S3-11: the last chain", "panel", ["sefa", "bako", "faceless_soldier"],
+    "The last chain breaks into light; Sefa looks down at the masked crowd kneeling all around her throne, Bako, dusty, climbing out of the sand."],
+  ["b2s3_p12_a_name", "story/panels/b2s3_p12_a_name.png", "Panel S3-12: a name", "panel", ["nefrael_free", "bako", "faceless_civilian_unmasked"],
+    "Masks fade from the crowd, revealing many different faces; Nefrael holds the glowing Sun Orb; Bako smiles through tears."],
+  ["b2s3_p13_statue", "story/panels/b2s3_p13_statue.png", "Panel S3-13: the statue", "panel", ["sefa_statue", "arena_sunspire"],
+    "Sefa, now a sandstone statue at the arena gate, hand raised, holding the cracked walls together; citizens look up at her."],
+  ["b2s3_p14_third_shard", "story/panels/b2s3_p14_third_shard.png", "Panel S3-14: the third shard", "panel", ["arena_glass_road"],
+    "A third violet shard streaks north over the dunes toward distant dark mountains; the ground begins to crack and shake."],
+  ["book2_story3_throne_of_dust", "story/covers/book2_story3_throne_of_dust.png", "Cover: The Throne of Dust", "cover", ["sefa", "bako", "nefrael_free"],
+    "Cover art: Sefa on her sand throne bound in violet chains, a sea of identical masks below, Bako in the foreground, Nefrael's cage above."],
+  ["bako_card", "units/bako.png", "Story card: Bako, Chainbreaker (still)", "card", ["bako", "units/minotaur_gladiator.webp"],
+    "Bako, Chainbreaker: the gladiator from the reference in full gear, a leather-and-bronze arena harness, a spiked iron flail on a long chain in one hand, a broken manacle on the other wrist, a rallying grin, facing slightly right."],
+  ["bako_card_portrait", "cards/portraits/bako.png", "Story card: Bako (card portrait)", "cardportrait", ["bako_card"],
+    "Trading-card portrait of Bako from the first reference, bust from the chest up, three-quarter view, filling the square, with a warm sunset-gold arena background. Square 1:1, full-bleed, no card frame, no border, no text."],
+];
+
+const B22_FILE = new Map(B22.map(([id, file]) => [id, `assets/${file}`]));
+
+export const BOOK2_S23_REQUESTS: ArtRequest[] = B22.map(([id, file, title, kind, refs, what], i) => {
+  const own = refs.map((r) => B22_FILE.get(r) ?? r);
+  const pre = refs.filter((r) => B22_FILE.has(r));
+  const base =
+    kind === "monster" ? [STYLE_ANCHOR, B2_MONSTER, B2_ANCHOR]
+    : kind === "boss" ? [STYLE_ANCHOR, B2_BOSS, B2_ANCHOR]
+    : kind === "arena" ? []
+    : [STYLE_ANCHOR];
+  const notes = pre.length ? [`NOTE: generate ${pre.map((r) => `#${B22.findIndex((x) => x[0] === r) + 1}`).join(", ")} first and attach ${pre.map((r) => B22_FILE.get(r)).join(", ")}`] : [];
+  const prompt =
+    kind === "monster" || kind === "boss" || kind === "ally" ? `${STYLE} ${what} ${MAGENTA}`
+    : kind === "portrait" ? `${STYLE} ${PORTRAIT} ${what} ${MAGENTA}`
+    : kind === "status" ? `${STYLE} ${what} ${ICON.replace("green (#00FF00)", "magenta (#FF00FF)")}`
+    : kind === "prop" ? `${STYLE} ${what} Single object (or the one pair described), centered with margin, on a solid flat pure magenta (#FF00FF) background.`
+    : kind === "card" ? `${STYLE} ${what} ${GREEN}`
+    : kind === "cardportrait" ? `${STYLE.replace(", no text, no watermark.", ".")} ${what}`
+    : kind === "panel" ? `${STYLE} ${CAST} ${what} Wide cinematic 16:9 story panel.`
+    : kind === "cover" ? `${STYLE} ${CAST} ${what} ${HOLD}`
+    : `${EDIT} ${what}`;
+  return {
+    id: `book2s23:${id}`,
+    group: B22_GROUP,
+    title: `#${i + 1} ${title}`,
+    file,
+    model: kind === "cover" ? "Seedream 4.5" : kind === "card" || kind === "cardportrait" ? "Nano Banana Pro" : "Nano Banana 2",
+    aspect: kind === "panel" ? "16:9" : kind === "arena" ? "9:16" : kind === "cover" ? "4:5" : "1:1",
+    refs: [...notes, ...(kind === "arena" || kind === "status" ? [...own, STYLE_ANCHOR] : [...base, ...own])],
+    prompt,
+  };
+});
+
 /** The awakened art the game already has: index.json from the asset base. */
 export interface HaveArt {
   units_awakened: string[];
@@ -692,6 +942,7 @@ export interface HaveArt {
 export function artRequests(have: HaveArt): ArtRequest[] {
   return [
     ...BOOK2_S1_REQUESTS,
+    ...BOOK2_S23_REQUESTS,
     ...awakened(have),
     ...TRAITS.map((t) => icon("Monster trait icons", "trait", "ui/traits", t, `Trait: ${t}`, `Monster trait badge icon: ${TRAIT_ART[t]}, inside a round dark badge.`, ["ui/icon_buttons_set.webp"])),
     ...PERK_IDS.filter((p) => p !== "none").map((p) =>

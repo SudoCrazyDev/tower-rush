@@ -30,6 +30,8 @@ import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial
 import { Monster } from "../battle/Monster";
 import { Unit, canAwaken } from "../battle/Unit";
 import { ShotView, fxEvent, fxHit } from "../battle/vfx";
+import { TideView } from "../battle/tideView";
+import { FacelessView } from "../battle/facelessView";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
 
@@ -104,6 +106,11 @@ export class BattleScene extends Phaser.Scene {
 
   /** Story mode (v1.2): the chapter being played, and the deck and levels the server handed out. */
   story: { def: StoryDef; chapter: StoryChapter; start: StoryStart } | null = null;
+  /** v2.2 Sand & Sea visuals (story chapters only; they draw nothing without their mechanics). */
+  private tideView: TideView | null = null;
+  private faceless: FacelessView | null = null;
+  /** Equal ground: units wear the balance tint until this sim time. */
+  equalUntil = 0;
   /** Chaos Taffy tethers, redrawn every frame. */
   private tethers: Phaser.GameObjects.Graphics | null = null;
 
@@ -139,6 +146,8 @@ export class BattleScene extends Phaser.Scene {
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
     this.deck = this.story ? [...this.story.start.deck] : [...profile.deck];
     this.tethers = null;
+    this.tideView = this.faceless = null;
+    this.equalUntil = 0;
     this.acc = 0;
     this.speedMult = 1;
     this.paused = this.over = false;
@@ -242,6 +251,10 @@ export class BattleScene extends Phaser.Scene {
 
     this.buildHud();
     this.setupDrag();
+    if (this.story) {
+      this.tideView = new TideView(this, this.story.chapter.mechanics);
+      this.faceless = new FacelessView(this, this.story.chapter.mechanics);
+    }
     this.input.keyboard?.on("keydown-D", () => this.toggleDebug());
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
     this.input.keyboard?.on("keydown-H", () => this.castHero());
@@ -317,6 +330,19 @@ export class BattleScene extends Phaser.Scene {
     const s = this.add.sprite(x, y, key).setDepth(depth).setScale(sheetScale("vfx", px));
     s.play(key);
     s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => s.destroy());
+  }
+
+  /** The sprite wrapper of a unit / monster by Sim uid (null when gone). */
+  getUnit(uid: number) {
+    return this.units.get(uid) ?? null;
+  }
+
+  getMonster(uid: number) {
+    return this.monsters.get(uid) ?? null;
+  }
+
+  allMonsters() {
+    return [...this.monsters.values()].filter((m) => !m.dead);
   }
 
   private unitInSlot(slot: number) {
@@ -523,9 +549,24 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.bossBar.setVisible(true);
+    const g = this.bossBarFill.clear();
+    if (b.chainTotal > 0) {
+      // v2.2 Purify: a row of chain links (whole or broken) and the bar of the chain showing now.
+      (this.bossBar.getData("name") as Phaser.GameObjects.Text).setText(`${b.boss!.name}  CHAIN ${Math.min(b.chainTotal, b.chainIndex + 1)}/${b.chainTotal}`);
+      g.fillStyle(0xb48cff, 1).fillRoundedRect(-224, -12, Math.max(12, 448 * Math.max(0, b.chainHp / b.chainMax)), 24, 12);
+      for (let i = 0; i < b.chainTotal; i++) {
+        const x = (i - (b.chainTotal - 1) / 2) * 34;
+        if (i < b.chainIndex) {
+          g.fillStyle(0x3b4270, 0.7).fillCircle(x, 38, 11).lineStyle(3, 0xff6b6b, 1).lineBetween(x - 8, 30, x + 8, 46);
+        } else {
+          g.fillStyle(NAVY, 1).fillCircle(x, 38, 13).fillStyle(i === b.chainIndex ? 0xffd93b : 0xb48cff, 1).fillCircle(x, 38, 10).fillStyle(NAVY, 1).fillCircle(x, 38, 4);
+        }
+      }
+      return;
+    }
     (this.bossBar.getData("name") as Phaser.GameObjects.Text).setText(b.boss!.name);
     const p = Math.max(0, b.hp / b.maxHp);
-    this.bossBarFill.clear().fillStyle(0xe53935, 1).fillRoundedRect(-224, -12, Math.max(12, 448 * p), 24, 12);
+    g.fillStyle(0xe53935, 1).fillRoundedRect(-224, -12, Math.max(12, 448 * p), 24, 12);
   }
 
   // ---------------------------------------------------------------- player actions
@@ -664,9 +705,15 @@ export class BattleScene extends Phaser.Scene {
 
   private setupDrag() {
     let origin: Unit | null = null;
+    // v2.2 siren song: a tap on a sleeping unit only wakes it (never a drag, merge or swap).
+    let sleeper: Unit | null = null;
     this.input.on("dragstart", (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Sprite & { unit?: Unit }) => {
       const u = obj.unit;
       if (!u || this.over || this.paused || !u.sprite.active) return;
+      if (this.now < u.sim.status.asleepUntil) {
+        sleeper = u;
+        return;
+      }
       origin = u;
       u.dragging = true;
       this.sim.setDragging(u.slot, true);
@@ -702,6 +749,11 @@ export class BattleScene extends Phaser.Scene {
       const u = obj.unit;
       this.highlights.forEach((h) => h.destroy());
       this.highlights = [];
+      if (u && u === sleeper) {
+        sleeper = null;
+        if (!this.over && !this.paused && this.sim.units[u.slot] === u.sim && this.sim.wake(u.slot)) this.pump();
+        return;
+      }
       if (!u || u !== origin) return;
       origin = null;
       u.dragging = false;
@@ -828,6 +880,7 @@ export class BattleScene extends Phaser.Scene {
     this.refreshHeroButton();
     this.updateBossBar();
     this.refreshHud();
+    this.tideView?.update(delta / 1000);
   }
 
   /** Sim shots become projectile sprites: one per shot, gliding on between steps. */
@@ -1111,6 +1164,27 @@ export class BattleScene extends Phaser.Scene {
         break;
       case "rally":
         this.rally(e);
+        break;
+      case "reveal":
+        this.reveal(e);
+        break;
+      case "tide":
+      case "pool":
+      case "isle":
+      case "hooked":
+      case "sleep":
+      case "beam":
+        this.tideView?.handle(e);
+        break;
+      case "brazier":
+      case "unmask":
+      case "civilian":
+      case "chain":
+      case "cage":
+      case "roar":
+      case "burrow":
+      case "equal":
+        this.faceless?.handle(e);
         break;
       case "boss_skill": {
         this.monsters.get(e.uid)?.playBoss(animKey("bosses", `${sheetId("bosses", e.id)}_attack`));
@@ -1398,6 +1472,18 @@ export class BattleScene extends Phaser.Scene {
     storyPanels(this, cut?.before ?? [], charge);
   }
 
+  /** v2.2 scripted reveal (StoryWave.reveal): the battle holds for the wave's reveal panels, then resumes (the boss is already stunned). */
+  private reveal(e: Extract<SimEvent, { type: "reveal" }>) {
+    const panels = this.story?.chapter.waves[this.sim.wave - 1]?.reveal?.panels ?? [];
+    const boss = this.monsters.get(e.uid);
+    if (boss) this.vfx("arcane_vortex", boss.pos.x, boss.pos.y, 220);
+    this.paused = true;
+    storyPanels(this, panels, () => {
+      this.paused = false;
+      this.acc = 0;
+    });
+  }
+
   private bark(line: { who: string; text: string }) {
     const key = UNIT_BY_ID[line.who] ? `portrait:${line.who}` : `story_portrait:${line.who}`;
     const w = 620;
@@ -1513,8 +1599,9 @@ export class BattleScene extends Phaser.Scene {
     if (this.story) {
       const story = this.story;
       const lives = sim.lives;
+      const objectives = sim.result().objectives ?? undefined;
       const result: Promise<StoryResult | null> = this.battleId
-        .then((id) => (id === null ? null : finishStory(id, { ...stats, won, lives })))
+        .then((id) => (id === null ? null : finishStory(id, { ...stats, won, lives, ...(won && objectives ? { objectives } : {}) })))
         .catch(() => null);
       if (won) {
         sfx("win");
@@ -1523,7 +1610,7 @@ export class BattleScene extends Phaser.Scene {
         this.floater(ARENA_W / 2, 600, "VICTORY!", "#ffd93b", 72);
       }
       this.time.delayedCall(won ? 1200 : 500, () =>
-        storyResult(this, { story: story.def, chapter: story.chapter, won, why, stars: won ? sim.stars ?? 0 : 0, wave: stats.wave, result }),
+        storyResult(this, { story: story.def, chapter: story.chapter, won, why, stars: won ? sim.stars ?? 0 : 0, wave: stats.wave, result, objectives }),
       );
       return;
     }

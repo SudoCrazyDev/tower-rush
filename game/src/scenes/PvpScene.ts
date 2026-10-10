@@ -9,7 +9,10 @@ import { BASE, animKey, assetIndex, ensureAnim, loadImages, loadSheet, sheetScal
 import { RES } from "../display";
 import { music, sfx } from "../audio";
 import { W, H, WIDE, ARENA_W, ARENA_H, NAVY, PORTRAIT_FIT, button, cardView, floatText, fmt, iconButton, modal, pressable, resourcePill, toast, txt } from "../ui";
-import { loadMe } from "../save";
+import { finishStory, loadMe } from "../save";
+import { CrowdFavor, barkBubble, barkPortraitKey, duelSetup, duelStars, rivalBark, roundSkill, type DuelRun } from "./duel";
+import { findChapter, type StoryChapter, type StoryDef } from "../../../shared/stories.ts";
+import { storyResult } from "./storyUi";
 import { canAwaken } from "../battle/Unit";
 import { rewardPopup } from "./daily";
 import { MatchConn, finishBotMatch } from "../pvpnet";
@@ -137,14 +140,30 @@ export class PvpScene extends Phaser.Scene {
   private logSent = false;
   /** Surrendered because another device started playing. */
   private lostElsewhere = false;
+  /** v2.2 story duel: the run, its chapter and story, and the crowd favor meter (null in normal PvP). */
+  private duel: DuelRun | null = null;
+  private chapter: StoryChapter | null = null;
+  private storyDef: StoryDef | null = null;
+  private favor: CrowdFavor | null = null;
+  /** Going on to the next round: keep the play slot. */
+  private keepPlay = false;
 
   constructor() {
     super("Pvp");
   }
 
-  init(data: { setup: MatchSetup; you: 0 | 1; conn?: MatchConn; early?: ServerMsg[]; offset?: number }) {
-    this.setup = data.setup;
-    this.you = data.you;
+  init(data: { setup?: MatchSetup; you?: 0 | 1; conn?: MatchConn; early?: ServerMsg[]; offset?: number; duel?: DuelRun }) {
+    this.duel = data.duel ?? null;
+    this.chapter = this.storyDef = this.favor = null;
+    this.keepPlay = false;
+    if (this.duel) {
+      const f = findChapter(this.duel.chapter)!;
+      this.chapter = f.chapter;
+      this.storyDef = f.story;
+      data = { ...data, setup: duelSetup(f.chapter, this.duel), you: 0 };
+    }
+    this.setup = data.setup!;
+    this.you = data.you ?? 0;
     this.conn = data.conn ?? null;
     this.early = data.early ?? [];
     this.offset = data.offset ?? 0;
@@ -184,6 +203,9 @@ export class PvpScene extends Phaser.Scene {
     const a = this.arena;
     this.load.image(`loc:arena_${a.id}`, `${BASE}locations/arena_${a.id}.webp`);
     if (!this.textures.exists("loc:pvp_versus_background")) this.load.image("loc:pvp_versus_background", `${BASE}locations/pvp_versus_background.webp`);
+    for (const b of this.chapter?.duel?.barks ?? []) {
+      if (!UNIT_BY_ID[b.who] && !this.textures.exists(barkPortraitKey(b.who))) this.load.image(barkPortraitKey(b.who), `${BASE}story/portraits/${b.who}.webp`);
+    }
     for (const p of this.setup.players) {
       for (const id of p.deck) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${id}_${anim}`);
       if (p.hero) for (const anim of ["idle", "skill"]) loadSheet(this, "heroes", `${p.hero}_${anim}`);
@@ -222,7 +244,7 @@ export class PvpScene extends Phaser.Scene {
     if (!this.conn) {
       // Bot match: the bot plays its own board right here.
       this.opp = new PvpBoard({ seed, side: (1 - this.you) as 0 | 1, arena: a.id, loadout: this.them });
-      this.bot = new PvpBot(this.opp, botSkill(this.me.trophies), seed + 7, (id) => this.receive(id));
+      this.bot = new PvpBot(this.opp, this.chapter && this.duel ? roundSkill(this.chapter, this.duel.round) : botSkill(this.me.trophies), seed + 7, (id) => this.receive(id));
     }
     this.seen.hp = this.board.hp;
 
@@ -230,6 +252,7 @@ export class PvpScene extends Phaser.Scene {
     this.theirs(this.add.image(OX, 0, `loc:arena_${a.id}`).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H));
     this.cameras.main.setScroll(WIDE ? -(W - ARENA_W) / 2 : 0, 0);
     this.buildHud();
+    if (this.duel) this.favor = new CrowdFavor(this, this.board, ARENA_W / 2, ARENA_H - 24, (o) => this.hud(o), (t) => this.crowdText(t));
     this.miniFrame();
     this.setupDrag();
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
@@ -251,8 +274,14 @@ export class PvpScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.conn?.close();
       onPlayLost(null);
-      releasePlay();
+      this.favor?.destroy();
+      if (!this.keepPlay) releasePlay();
     });
+  }
+
+  private crowdText(text: string) {
+    floatText(this, ARENA_W / 2, ARENA_H - 90, text, "#ffd93b", 34).setDepth(2900);
+    sfx("wave");
   }
 
   private makeAnims() {
@@ -536,11 +565,15 @@ export class PvpScene extends Phaser.Scene {
     const bg = this.add.image(W / 2, H / 2, "loc:pvp_versus_background");
     bg.setScale(Math.max(W / bg.width, H / bg.height));
     c.add([bg, this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.35)]);
-    c.add(txt(this, W / 2, WIDE ? 90 : 120, matchModeName(this.setup).toUpperCase(), 48, "#ffd27a"));
+    const title = this.chapter ? `${this.chapter.title.toUpperCase()}  ·  ROUND ${this.duel!.round}` : matchModeName(this.setup).toUpperCase();
+    c.add(txt(this, W / 2, WIDE ? 90 : 120, title, 48, "#ffd27a"));
     const side = (p: (typeof this.setup.players)[number], y: number, x: number, label: string) => {
       c.add(txt(this, x, y - 140, label, 26, "#c9d2ff"));
       c.add(txt(this, x, y - 96, p.name, 52, "#fff4c2"));
-      if (this.rated()) {
+      if (this.chapter) {
+        if (p === this.me) c.add(txt(this, x, y - 40, `Rounds won ${this.duel!.wins} / ${this.chapter.duel!.rounds}`, 30, "#ffd93b"));
+        else c.add(txt(this, x, y - 40, `Rounds won ${this.duel!.losses} / ${this.chapter.duel!.rounds}`, 30, "#ffd93b"));
+      } else if (this.rated()) {
         // Ranked: the ranked rating and tier, not trophies.
         const rating = p.rating ?? PVP.rules.ratingStart;
         const tier = tierFor(rating);
@@ -559,11 +592,13 @@ export class PvpScene extends Phaser.Scene {
     };
     if (WIDE) {
       side(this.me, H / 2, W * 0.27, "YOU");
-      side(this.them, H / 2, W * 0.73, "OPPONENT");
+      side(this.them, H / 2, W * 0.73, this.chapter ? "RIVAL" : "OPPONENT");
     } else {
       side(this.me, H * 0.74, W / 2, "YOU");
-      side(this.them, H * 0.3, W / 2, "OPPONENT");
+      side(this.them, H * 0.3, W / 2, this.chapter ? "RIVAL" : "OPPONENT");
     }
+    const line = this.chapter && rivalBark(this.chapter, this.duel!.round);
+    if (line) c.add(barkBubble(this, line).setPosition(W / 2, WIDE ? H - 230 : H / 2 - 150));
     const vs = txt(this, W / 2, H / 2, "VS", 140, "#ff6b6b");
     const count = txt(this, W / 2, WIDE ? H - 120 : H / 2 + 110, "", 44, "#ffffff");
     c.add([vs, count]);
@@ -598,6 +633,7 @@ export class PvpScene extends Phaser.Scene {
         this.bot?.think();
         b.tick();
         opp?.tick();
+        this.favor?.update(b);
       }
       if (opp) this.oppSnap = opp.snap();
       if (this.conn && Date.now() - this.lastSnap >= SNAP_MS) {
@@ -1219,13 +1255,63 @@ export class PvpScene extends Phaser.Scene {
   private endBot(outcome: Outcome | "left") {
     if (this.done) return;
     this.done = true;
-    releasePlay();
     this.board.end("done");
+    if (this.duel) return this.endRound(outcome);
+    releasePlay();
     const shown: Outcome = outcome === "left" ? "loss" : outcome;
     const res = finishBotMatch(this.setup.id, { result: outcome, seconds: this.board.now, stats: this.stats(), log: this.log() })
       .then((r) => ({ trophies: r.result.trophies[0], coins: r.result.coins[0], rating: r.result.ratings?.[0] ?? 0, promotions: r.promotions }))
       .catch(() => null);
     this.results(shown, res);
+  }
+
+  /**
+   * Story duel: one round is over. A draw is played again; otherwise count the win, then either
+   * go on to the next round or report the chapter (surrendering forfeits it).
+   */
+  private endRound(outcome: Outcome | "left") {
+    const d = this.duel!;
+    const c = this.chapter!;
+    const need = c.duel!.rounds;
+    const next: DuelRun = { ...d, wins: d.wins + (outcome === "win" ? 1 : 0), losses: d.losses + (outcome === "loss" ? 1 : 0), round: outcome === "draw" ? d.round : d.round + 1 };
+    const won = next.wins >= need;
+    const over = won || next.losses >= need || outcome === "left";
+    sfx(outcome === "win" ? "win" : "lose");
+    if (over) return void this.time.delayedCall(outcome === "left" ? 0 : 900, () => this.finishDuel(next, won));
+    this.time.delayedCall(900, () => {
+      this.mini.setVisible(false);
+      const m = modal(this, 600, 560, "");
+      const title = outcome === "win" ? "ROUND WON!" : outcome === "draw" ? "DRAW - REPLAY" : "ROUND LOST";
+      m.add(txt(this, m.cx, m.cy - 170, title, 52, outcome === "win" ? "#7dff7a" : outcome === "draw" ? "#fff4c2" : "#ff8080"));
+      m.add(txt(this, m.cx, m.cy - 80, `You ${next.wins}  -  ${next.losses} ${c.duel!.rivalName}`, 38, "#fff4c2"));
+      m.add(txt(this, m.cx, m.cy - 20, `First to ${need} wins`, 26, "#c9d2ff"));
+      m.add(button(this, m.cx, m.cy + 150, 360, 100, "NEXT ROUND", "green", () => {
+        this.keepPlay = true;
+        this.scene.start("Pvp", { duel: next });
+      }));
+    });
+  }
+
+  /** Story duel over: report it through the same endpoint as a scripted chapter and show the story result. */
+  private finishDuel(run: DuelRun, won: boolean) {
+    const c = this.chapter!;
+    const story = this.storyDef!;
+    const s = this.stats();
+    const rounds = c.duel!.rounds;
+    const result = finishStory(run.start.battleId, {
+      wave: c.waves.length,
+      kills: s.kills,
+      bosses: s.bosses,
+      summons: s.summons,
+      merges: s.merges,
+      awakens: s.awakens,
+      heroCasts: s.heroCasts,
+      won,
+      lives: ECONOMY.lives,
+      roundsLost: run.losses,
+    }).catch(() => null);
+    this.mini.setVisible(false);
+    storyResult(this, { story, chapter: c, won, why: `Rounds ${run.wins} - ${run.losses}`, stars: won ? duelStars(run.losses) : 0, wave: Math.min(run.wins, rounds), result });
   }
 
   private endOnline(r: MatchResult, promotions: Promotion[]) {

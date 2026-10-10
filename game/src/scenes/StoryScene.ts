@@ -190,7 +190,9 @@ export class StoryScene extends Phaser.Scene {
       });
       this.starting = false;
       if (!done || !start) return releasePlay();
-      this.scene.start("Battle", { story: { chapter: c.id, start } });
+      // v2.2: an arena duel is a best-of PvP match against the bot, not a scripted battle.
+      if (c.duel) this.scene.start("Pvp", { duel: { chapter: c.id, story: _s.id, start, round: 1, wins: 0, losses: 0 } });
+      else this.scene.start("Battle", { story: { chapter: c.id, start } });
     });
   }
 

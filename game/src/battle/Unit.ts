@@ -50,6 +50,8 @@ export class Unit {
   private buffSeen = "";
   private slotSeen: number;
   private wasFrozen = false;
+  /** A v2.2 board-rule look (tide water, sleep, glimmer, equal ground) is on the sprite. */
+  private envShown = false;
   private wasReady = false;
   /** Idle show-off timer of buff and support units that have no real action to animate. */
   private showOff = 0;
@@ -320,12 +322,29 @@ export class Unit {
     const frozen = now < s.frozenUntil;
     if (frozen && !this.wasFrozen) scene.vfx("ice_burst", this.sprite.x, this.sprite.y - 20, 140);
     this.wasFrozen = frozen;
-    if (frozen || now < s.status.shockedUntil || now < s.status.entangledUntil) {
-      this.sprite.setTint(frozen ? 0x7fd8ff : now < s.status.entangledUntil ? 0x8fcf6a : 0xb0a890);
+    // v2.2 board rules: submerged (high tide), asleep (siren song), glimmered (lantern beam), equal ground.
+    const under = now < s.status.submergedUntil;
+    const asleep = now < s.status.asleepUntil;
+    if (frozen || now < s.status.shockedUntil || now < s.status.entangledUntil || asleep) {
+      this.sprite.setTint(frozen ? 0x7fd8ff : now < s.status.entangledUntil ? 0x8fcf6a : asleep ? 0x8f98c8 : 0xb0a890);
+      this.sprite.setAlpha(under ? 0.55 : 1);
       this.sprite.anims.timeScale = 0;
+      this.envShown = true;
       return;
     }
-    if (this.sprite.isTinted) {
+    const env = under ? 0x6fa8ff : now < s.status.glimmeredUntil ? 0xfff3b0 : now < scene.equalUntil ? 0xa8ffe8 : null;
+    if (env !== null) {
+      this.sprite.setTint(env);
+      this.sprite.setAlpha(under ? 0.55 + Math.sin(now * 4 + this.slot) * 0.08 : 1);
+      this.sprite.setAngle(under ? Math.sin(now * 3 + this.slot) * 4 : 0);
+      this.sprite.anims.timeScale = 1;
+      this.envShown = true;
+    } else if (this.envShown) {
+      this.envShown = false;
+      this.sprite.setAlpha(1).setAngle(0);
+      this.sprite.clearTint();
+      this.sprite.anims.timeScale = 1;
+    } else if (this.sprite.isTinted) {
       this.sprite.clearTint();
       this.sprite.anims.timeScale = 1;
     }

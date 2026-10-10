@@ -45,8 +45,11 @@ export interface ChapterMechanics {
    * x `highSpeed`.
    */
   tide?: { cycle: number; lowSlots: number[]; lowSpeed: number; highSpeed: number };
-  /** Pools beside the path, at these shares (0-1) of the path. A monster walking past drains one. Each pool still full at the win adds `bonus` to the first-clear reward. */
-  tidePools?: { at: number[]; bonus: number };
+  /**
+   * Pools beside the path, at these shares (0-1) of the path. Each pool runs dry after `sips` monsters
+   * walk past it (a boss drains it at once). Each pool left at the win adds `bonus` to the first-clear reward.
+   */
+  tidePools?: { at: number[]; bonus: number; sips: number };
   /** Story 3: Faceless rules. Units on `braziers` light them; Faceless passing a lit brazier lose their mask. */
   faceless?: {
     braziers: number[];
@@ -650,8 +653,262 @@ const THE_ELVEN_WILDS: StoryDef = {
   ],
 };
 
+// ---------------------------------------------------------------- Book 2 · Story 2: The Drowned Coast (v2.2)
+
+const CR = "reef_crab";
+const DS = "drowned_sailor";
+const CO = "drowned_corsair";
+const EE = "eel_swimmer";
+const BS = "barnacle_spawn";
+/** Chapter 1's tide pools sit at these shares of the path; chapter 3 has none. */
+const POOLS = { at: [0.4, 0.6, 0.75, 0.9], bonus: 0.1, sips: 8 };
+
+const THE_DROWNED_COAST: StoryDef = {
+  id: "b2s2",
+  title: "The Drowned Coast",
+  blurb: "The sea has stopped moving. Ride the tide, wake the sleeping isle, and reach the lantern at the world's edge.",
+  // Final art: book2_story2_drowned_coast (see art-requests). Until it exists the Book 2 tab cover stands in.
+  cover: "book2_chaos_corrupted",
+  trophies: 0,
+  replayCards: ["maren"],
+  chapters: [
+    chapter({
+      id: "b2s2c1",
+      title: "The Stranded Harbor",
+      layout: "pirate_beach",
+      art: "arena_pirate_beach", // final: arena_stranded_harbor
+      corruption: 0.2,
+      hpScale: 3.7,
+      mechanics: { tide: { cycle: 40, lowSlots: [4, 9], lowSpeed: 0.8, highSpeed: 1.2 }, tidePools: POOLS },
+      intro: [
+        panel("b2s2_p1_shard", "Green light washes the Orb clean. One violet shard escapes.", "It streaks west, toward the sea."),
+        panel("b2s2_p2_queen_sends", "Queen Aelyria: Follow it, Keeper. The western sea has gone still.", "No wave has broken there in a year."),
+        panel("b2s2_p3_drained_bay", "The bay is bare mud. Ships lie beached on the flats.", "Merfolk gasp in shrinking pools."),
+        panel("b2s2_p4_pearl", "A young merfolk scout hauls herself onto the rocks.", "Pearl: Help us. The lantern holds the tide still."),
+      ],
+      waves: [
+        w(`${DS} 8, ${CR} 2`, { bark: say("pearl", "The tide swings. Low slots flood when it comes in!") }),
+        w(`${DS} 8, ${EE} 4`, { bark: say("pearl", "Eels in the shallows. Fast and slippery.") }),
+        w(`${CR} 4, ${DS} 6`, { bark: say("saltmere_villager", "The crabs are the size of cartwheels!") }),
+        w(`${EE} 8, ${CO} 2`, { bark: say("pearl", "Don't let them drain the pools. We need them.") }),
+        w(`${CO} 3, ${DS} 8, ${BS} 4`, { bark: say("pearl", "Barnacles on their backs. The violet is spreading.") }),
+        w(`${CR} 5, ${EE} 6`, { bark: say("saltmere_villager", "Hold the line! Saltmere is right behind you!") }),
+        w(`${CO} 4, ${CR} 3, ${DS} 8`, { bark: say("pearl", "The tide is rising. Mind your low slots.") }),
+        w(`${EE} 10, ${BS} 6, ${DS} 6`, { bark: say("pearl", "So many. Where is the sea in all of this?") }),
+        w(`${CR} 6, ${CO} 5, ${DS} 8`, { bark: say("saltmere_villager", "A bosun's whistle! Someone is giving orders.") }),
+        w(`${DS} 4, ${CO} 3`, { boss: "grell", bark: say("grell", "No one leaves Saltmere, Keeper. The tide says so.") }),
+      ],
+      reward: reward(2200, 45),
+      replay: replay(400),
+    }),
+    chapter({
+      id: "b2s2c2",
+      title: "Ondrath, the Sleeping Isle",
+      layout: "coral_reef",
+      art: "arena_coral_reef", // final: arena_ondrath_isle
+      corruption: 0.3,
+      hpScale: 10,
+      intro: [
+        panel("b2s2_p5_ondrath_found", "Ondrath, an island on a turtle's back, lies in the drained bay.", "The Tide Orb was torn from his shell. Violet barnacles cover him."),
+        panel("b2s2_p6_isle_rolls", "He rolls in pain, and the whole island shifts.", "Hold your ground, Keeper!"),
+      ],
+      waves: [w("", { boss: "ondrath", bark: say("ondrath_corrupted", "The tide... stopped. I cannot... breathe.") })],
+      reward: reward(2700, 55),
+      replay: replay(450),
+    }),
+    chapter({
+      id: "b2s2c3",
+      title: "The Lantern at World's Edge",
+      layout: "pirate_beach",
+      art: "arena_pirate_beach", // final: arena_lantern_causeway
+      corruption: 0.4,
+      hpScale: 1.3,
+      mechanics: { tide: { cycle: 30, lowSlots: [4, 9, 14, 0], lowSpeed: 0.8, highSpeed: 1.2 } },
+      intro: [
+        panel("b2s2_p7_ondrath_cleansed", "The barnacles crack. Ondrath breathes, but the Orb is gone.", "Ondrath: She did not steal it from greed. She stole it from grief."),
+        panel("b2s2_p8_causeway", "A causeway runs to the lighthouse at the world's edge.", "Its beam sweeps the sea, and what it touches turns violet."),
+        panel("b2s2_p9_corvaline", "Corvaline has kept this light for forty years.", "Hold the tide, and the sea takes no one ever again."),
+      ],
+      waves: [
+        w(`${DS} 10, ${CR} 3`, { bark: say("corvaline", "Go home, Keeper. The sea is better still.") }),
+        w(`${EE} 10, ${CO} 3, ${DS} 6`, { bark: say("pearl", "The tide is quicker here. Watch the water.") }),
+        w(`${CR} 5, ${CO} 4, ${BS} 6`),
+        w(`${DS} 12, ${EE} 8`, { bark: say("corvaline", "Forty years I have kept watch. Forty years!") }),
+        w(`${CO} 5, ${CR} 4, ${DS} 8`, { bark: say("pearl", "Every wave she holds back is one I miss.") }),
+        w(`${DS} 4, ${CO} 3`, { boss: "grell", hp: 0.8, bark: say("grell", "Back again, Keeper? The anchor remembers you.") }),
+        w(`${EE} 12, ${CR} 5, ${BS} 6`),
+        w(`${CO} 6, ${DS} 12, ${CR} 4`, { bark: say("saltmere_villager", "Is that singing? It sounds so sweet...") }),
+        w(`${EE} 14, ${CO} 5, ${BS} 8`),
+        w(`${CR} 7, ${CO} 6, ${DS} 10`, { bark: say("pearl", "Cover your ears? The song gets in anyway.") }),
+        w(`${DS} 14, ${EE} 10, ${BS} 8`),
+        w(`${EE} 6, ${DS} 4`, { boss: "lusca", hp: 0.8, bark: say("lusca", "Sleep, little Keeper. The tide will rock you.") }),
+        w(`${CR} 8, ${CO} 7, ${DS} 10`, { bark: say("pearl", "Tap your sleepers awake! Quickly!") }),
+        w(`${EE} 16, ${CO} 6, ${BS} 8`),
+        w(`${DS} 16, ${CR} 6, ${CO} 6`, { bark: say("corvaline", "The sea will never take another soul.") }),
+        w(`${CO} 7, ${CR} 5, ${BS} 10`),
+        w(`${EE} 18, ${DS} 12, ${CO} 6`, { bark: say("pearl", "The lantern is close. I can feel it in my bones.") }),
+        w(`${CR} 6, ${CO} 7, ${DS} 14`),
+        w(`${DS} 14, ${EE} 12, ${BS} 10, ${CO} 6`, { bark: say("corvaline", "You cannot know what the sea took from me.") }),
+        w("", {
+          boss: "corvaline",
+          bark: say("corvaline", "Hold, tide. Hold, and let no one drown."),
+          rally: {
+            before: [panel("b2s2_p10_tide_returns", "Ondrath rises from the bay, shaking off the last barnacles.", "Pearl: The sea is coming home. Merfolk, with me!")],
+            allies: ["ally_merfolk_warrior", "ally_merfolk_spear", "ally_tide_spirit", "ally_ondrath"],
+            after: [panel("b2s2_p11_lantern_flares", "The lantern flares. Corvaline screams over the roar of the sea.", "The tide will not hold!")],
+          },
+          reveal: {
+            at: 0.5,
+            panels: [
+              panel("b2s2_p12_mother", "Pearl pulls back her hood. She has the keeper's eyes.", "Pearl: Mother! It's me. It's Maren!"),
+              panel("b2s2_p13_falter", "The beam stutters. Corvaline's hands shake on the lamp.", "Corvaline: Maren? The sea took you..."),
+            ],
+            stun: 5,
+          },
+        }),
+      ],
+      reward: reward(0, 130, "mythic", ["maren"], "tidewarden"),
+      replay: replay(500),
+    }),
+  ],
+  ending: [
+    panel("b2s2_p14_cracks", "The lantern cracks. Corvaline kneels on the wet stone.", "The violet light goes out."),
+    panel("b2s2_p15_reunion", "Maren takes her mother's hand.", "\"The sea didn't take me, Mother. It kept me.\""),
+    panel("b2s2_p16_orb_returns", "\"I held the whole ocean still... and you were in it all along.\"", "The Orb sinks back into Ondrath. Corvaline relights the lamp with plain fire."),
+    panel("b2s2_p17_shards", "Far off, two violet shards meet in the dark. A gloved hand closes over them.", "Two hearts taken. Three remain. To be continued."),
+  ],
+};
+
+// ---------------------------------------------------------------- Book 2 · Story 3: The Throne of Dust (v2.2)
+
+const FS = "faceless_soldier";
+const FA = "faceless_archer";
+const FC = "faceless_civilian";
+const SB = "scarab";
+const JK = "jackal";
+/** The three brazier slots (and the faceless rules) of the Glass Road and the Throne. */
+const FACELESS = { braziers: [4, 10, 14], savedBonus: 0.03, savedCap: 0.3, hitCut: 0.015, floor: 0.6 };
+
+const THE_THRONE_OF_DUST: StoryDef = {
+  id: "b2s3",
+  title: "The Throne of Dust",
+  blurb: "A city of identical Faceless. Light the braziers, win the arena, and unchain a queen instead of killing her.",
+  // Final art: book2_story3_throne_of_dust (see art-requests). Until it exists the Book 2 tab cover stands in.
+  cover: "book2_chaos_corrupted",
+  trophies: 0,
+  replayCards: ["bako"],
+  chapters: [
+    chapter({
+      id: "b2s3c1",
+      title: "The Glass Road",
+      layout: "desert",
+      art: "arena_desert", // final: arena_glass_road
+      corruption: 0.3,
+      hpScale: 4.4,
+      mechanics: { faceless: FACELESS },
+      intro: [
+        panel("b2s3_p1_shard_south", "The second shard flies south over the sea.", "At noon, the desert sky turns violet."),
+        panel("b2s3_p2_caravan", "Caravans walk out of the dunes in step.", "Their faces are as smooth as sandstone."),
+        panel("b2s3_p3_bako", "Bako, a gladiator with a broken chain on his wrist, begs for help.", "\"Somewhere in that line is my sister.\""),
+      ],
+      waves: [
+        w(`${FS} 5, ${FC} 2`, { bark: say("bako", "They wear masks. Stand on a brazier to light it!") }),
+        w(`${FS} 4, ${FA} 2, ${FC} 3`, { bark: say("bako", "Unmasked civilians walk free. Don't hit them!") }),
+        w(`${JK} 6, ${FS} 4, ${FC} 3`, { bark: say("bako", "Splash hurts them too. Careful where you aim.") }),
+        w(`${FA} 5, ${FS} 4, ${FC} 3`),
+        w(`${SB} 4, ${FS} 5, ${FC} 3`, { bark: say("bako", "Scarabs. The desert fights for her too.") }),
+        w(`${FS} 6, ${FA} 3, ${FC} 4`, { bark: say("bako", "Same height. Same face. How do they stand it?") }),
+        w(`${JK} 8, ${FA} 4, ${FC} 4`),
+        w(`${SB} 5, ${FS} 6, ${FA} 3, ${FC} 5`, { bark: say("bako", "Every one of them is somebody's brother.") }),
+        w(`${FS} 7, ${FA} 4, ${FC} 5`, { bark: say("bako", "A herald walks ahead. He copies what he sees.") }),
+        w(`${FS} 4, ${FA} 3, ${FC} 3`, { boss: "faceless_herald", bark: say("faceless_herald", "Kneel, as all kneel. Be equal.") }),
+      ],
+      reward: reward(2400, 50),
+      replay: replay(450),
+    }),
+    chapter({
+      id: "b2s3c2",
+      title: "The Games of Sunspire",
+      layout: "desert",
+      art: "arena_desert", // final: arena_sunspire
+      corruption: 0.2,
+      hpScale: 1,
+      intro: [
+        panel("b2s3_p4_captured", "Sefa's guards drag Bako before the throne of Sunspire.", "Sefa: Fight the Keeper, old friend. Let the crowd see."),
+        panel("b2s3_p5_arena", "The arena roars. Bako steps onto the sand.", "Bako: Nothing personal, Keeper. Make it a good show."),
+      ],
+      // The duel replaces the waves; one boss wave stays so the chapter validates.
+      waves: [w("", { boss: "faceless_herald" })],
+      duel: {
+        arena: "desert",
+        rival: "bako",
+        rivalName: "Bako",
+        deck: ["minotaur_gladiator", "shield_knight", "sand_monk", "fox_samurai", "lion_paladin"],
+        level: 8,
+        rounds: 2,
+        skill: [0.45, 0.6, 0.75],
+        barks: [
+          say("bako", "Round one. Don't hold back, Keeper."),
+          say("bako", "Not bad. The crowd loves you already."),
+          say("bako", "Round three... forgive me. This one is for her."),
+        ],
+      },
+      reward: reward(2900, 60),
+      replay: replay(500),
+    }),
+    chapter({
+      id: "b2s3c3",
+      title: "The Throne of Dust",
+      layout: "desert",
+      art: "arena_desert", // final: arena_throne_end
+      corruption: 0.5,
+      hpScale: 3.4,
+      mechanics: { faceless: FACELESS, cage: { slot: 0, lockHp: 2500, roarStun: 3 } },
+      intro: [
+        panel("b2s3_p6_throw", "In the last round, Bako lowers his guard and takes the blow.", "Sefa: Bury him in the sand."),
+        panel("b2s3_p7_cage", "From her cage above the arena, Nefrael calls out.", "\"Free me, and I will free him.\""),
+        panel("b2s3_p8_throne", "The Faceless flood the arena. Sefa waits on her throne.", "Violet chains of light bind her to it."),
+      ],
+      waves: [
+        w(`${FS} 8, ${FC} 3`, { bark: say("nefrael", "Riddle me this: who has no face, yet fills the city?") }),
+        w(`${JK} 8, ${FA} 4, ${FC} 4`, { bark: say("nefrael", "Strike my lock between waves, Keeper. I am patient.") }),
+        w(`${SB} 5, ${FS} 6, ${FC} 4`),
+        w(`${FA} 6, ${FS} 6, ${FC} 5`, { bark: say("nefrael", "Look closer. Some of them are still weeping.") }),
+        w(`${FS} 5, ${FC} 3`, { boss: "faceless_herald", hp: 0.8, bark: say("faceless_herald", "I am you. I am everyone. Kneel.") }),
+        w(`${JK} 10, ${FS} 6, ${FC} 5`),
+        w(`${SB} 6, ${FA} 6, ${FS} 6, ${FC} 6`, { bark: say("bako", "Free the sphinx! She can stop them all.") }),
+        w(`${FS} 9, ${FA} 5, ${FC} 6`),
+        w(`${JK} 12, ${SB} 6, ${FC} 6`, { bark: say("nefrael", "Something is waking under the sand.") }),
+        w(`${SB} 4, ${FS} 5, ${FC} 3`, { boss: "dune_warden", hp: 0.8, bark: say("dune_warden", "The sand takes all. The sand keeps all.") }),
+        w(`${FS} 10, ${FA} 6, ${FC} 7`, { bark: say("nefrael", "Two captains gone. Only the throne remains.") }),
+        w(`${JK} 12, ${SB} 8, ${FC} 7`),
+        w(`${FA} 8, ${FS} 10, ${FC} 8`, { bark: say("bako", "Sefa was never cruel. She wanted us free.") }),
+        w(`${SB} 8, ${FS} 10, ${FA} 6, ${FC} 8`),
+        w(`${JK} 14, ${FS} 10, ${FC} 8`, { bark: say("nefrael", "Do not kill her, Keeper. Break her chains.") }),
+        w("", {
+          boss: "sefa",
+          bark: say("sefa", "All are equal before justice. All. Kneel."),
+          rally: {
+            before: [panel("b2s3_p9_cage_breaks", "Nefrael bursts from her cage and roars across the sands.", "The freed slaves tear off their masks. Charge!")],
+            allies: ["ally_gladiator", "ally_spearwoman", "ally_slinger", "ally_nefrael"],
+            after: [panel("b2s3_p10_chains_tighten", "Sefa clutches at her chains. They glow brighter.", "Sefa: I made them equal! I set them free!")],
+          },
+        }),
+      ],
+      reward: reward(0, 140, "mythic", ["bako"], "dunewarden"),
+      replay: replay(550),
+    }),
+  ],
+  ending: [
+    panel("b2s3_p11_last_chain", "The last chain breaks. Sefa sees the Faceless kneeling all around.", "Bako, dug from the sand: \"Look who is kneeling.\""),
+    panel("b2s3_p12_a_name", "Nefrael asks her true riddle: \"What makes all equal, yet no two the same?\"", "Bako: \"A name.\" Faces return, each one different."),
+    panel("b2s3_p13_statue", "The cracked city needs holding. Sefa becomes a sandstone statue at the gate.", "\"The voice said all are equal before justice. It never said whose.\""),
+    panel("b2s3_p14_third_shard", "The third shard streaks north toward the mountains. The ground begins to shake.", "Three hearts taken. Two remain. To be continued."),
+  ],
+};
+
 /** Book 2: its stories can be edited by the admin. */
-export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS], unlockBadge: "the_chosen", planned: 5 };
+export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST], unlockBadge: "the_chosen", planned: 5 };
 
 /** The saga title shown above the books. */
 export const SAGA = "The Forsakens";
@@ -679,7 +936,24 @@ export const bookSlots = (b: BookDef) => Math.max(b.stories.length, b.planned ??
 
 /** The saved books of a config: `books`, or a legacy single `book` followed by the Book 2 placeholder. */
 export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
-  return c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2];
+  return withAddedStories(c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2]);
+}
+
+/**
+ * Stories added to the defaults after configs were saved (like ADDED_MONSTERS): appended by id to the
+ * saved book that holds the story's neighbours (its default book's index), unless a saved book already has it.
+ */
+export const ADDED_STORIES = ["b2s2", "b2s3"];
+function withAddedStories(books: BookDef[]): BookDef[] {
+  const have = new Set(books.flatMap((b) => b.stories.map((s) => s.id)));
+  let out = books;
+  [DEFAULT_BOOK, DEFAULT_BOOK2].forEach((d, i) => {
+    const missing = d.stories.filter((s) => ADDED_STORIES.includes(s.id) && !have.has(s.id));
+    if (!missing.length || !out[i]) return;
+    if (out === books) out = [...books];
+    out[i] = { ...out[i], stories: [...out[i].stories, ...structuredClone(missing)] };
+  });
+  return out;
 }
 
 /** Replays of a chapter that may drop Event cards, per player per UTC day. */
@@ -689,6 +963,8 @@ export const REPLAY_CARDS_PER_DAY = 3;
 export const BADGES: Record<string, { label: string; text: string }> = {
   the_chosen: { label: "The Chosen", text: "Finished Book 1" },
   wilds_warden: { label: "Wilds Warden", text: "Finished Book 2 · Story 1" },
+  tidewarden: { label: "Tidewarden", text: "Finished Book 2 · Story 2" },
+  dunewarden: { label: "Dunewarden", text: "Finished Book 2 · Story 3" },
 };
 
 // ---------------------------------------------------------------- progress
@@ -883,6 +1159,54 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
         if (Object.values(c.eventDeck.minRoles ?? {}).reduce((a, b) => a + b, 0) > c.eventDeck.pick) errs.push(`${wc}: Event deck requires more units than it picks`);
       }
       if (c.rules) for (const id of c.rules.requiredUnits) if (!ids.units.has(id)) errs.push(`${wc}: unknown required unit "${id}"`);
+      c.waves?.forEach((wv, i) => {
+        const r = wv.reveal;
+        if (!r) return;
+        const rw = `${wc} wave ${i + 1} reveal`;
+        if (!wv.boss) errs.push(`${rw}: needs a boss on the wave`);
+        if (typeof r.at !== "number" || !(r.at > 0 && r.at < 1)) errs.push(`${rw}: "at" must be between 0 and 1`);
+        num(r.stun, `${rw} stun`);
+      });
+      const mech = c.mechanics;
+      if (mech) {
+        const slots = (list: unknown, where: string) => {
+          if (!Array.isArray(list) || !list.every((v) => Number.isInteger(v) && v >= 0 && v <= 14)) errs.push(`${wc}: ${where} must be slots 0-14`);
+        };
+        if (mech.tide) {
+          num(mech.tide.cycle, `${wc} tide cycle`, 1);
+          num(mech.tide.lowSpeed, `${wc} tide low-tide speed`, 0.01);
+          num(mech.tide.highSpeed, `${wc} tide high-tide speed`, 0.01);
+          slots(mech.tide.lowSlots, "tide low slots");
+        }
+        if (mech.tidePools) {
+          if (!Array.isArray(mech.tidePools.at) || !mech.tidePools.at.every((v) => typeof v === "number" && v >= 0 && v <= 1)) errs.push(`${wc}: tide pools must sit at shares 0-1 of the path`);
+          num(mech.tidePools.bonus, `${wc} tide pool bonus`);
+          num(mech.tidePools.sips, `${wc} tide pool sips`, 1);
+        }
+        if (mech.faceless) {
+          slots(mech.faceless.braziers, "brazier slots");
+          num(mech.faceless.savedBonus, `${wc} civilian saved bonus`);
+          num(mech.faceless.savedCap, `${wc} civilian saved cap`);
+          num(mech.faceless.hitCut, `${wc} civilian hit cut`);
+          num(mech.faceless.floor, `${wc} reward floor`);
+        }
+        if (mech.cage) {
+          slots([mech.cage.slot], "cage slot");
+          num(mech.cage.lockHp, `${wc} cage lock HP`, 1);
+          num(mech.cage.roarStun, `${wc} cage roar stun`);
+        }
+      }
+      const duel = c.duel;
+      if (duel) {
+        const dw = `${wc} duel`;
+        if (!ids.arenas.has(duel.arena)) errs.push(`${dw}: unknown arena "${duel.arena}"`);
+        if (!Array.isArray(duel.deck) || duel.deck.length !== 5 || new Set(duel.deck).size !== 5) errs.push(`${dw}: the deck needs 5 different units`);
+        for (const id of duel.deck ?? []) if (!ids.units.has(id)) errs.push(`${dw}: unknown deck unit "${id}"`);
+        num(duel.level, `${dw} level`, 1);
+        num(duel.rounds, `${dw} rounds`, 1);
+        if (!Array.isArray(duel.skill) || duel.skill.length < 2 * duel.rounds - 1 || !duel.skill.every((v) => typeof v === "number" && v >= 0 && v <= 1)) errs.push(`${dw}: needs a bot skill (0-1) for each of up to ${2 * duel.rounds - 1} rounds`);
+        if (!duel.rival || !duel.rivalName) errs.push(`${dw}: needs a rival and a rival name`);
+      }
     }
   }
   return errs;

@@ -33,6 +33,9 @@ export class Monster {
   private bob = Math.random() * 10;
   private flashUntil = 0;
   private labelShown = "";
+  /** v2.2: drawn as a masked Faceless (veiled); and the green ring under an unmasked civilian. */
+  private veiled = false;
+  private ring: Phaser.GameObjects.Graphics | null = null;
   private readonly statusFx: StatusFx;
 
   constructor(scene: BattleScene, sim: SimMonster, corruption: number) {
@@ -99,16 +102,31 @@ export class Monster {
     this.sprite.setPosition(p.x, p.y + Math.sin(this.bob) * 1.5);
     this.sprite.setDepth(100 + p.y);
     this.label.setPosition(p.x, p.y - m.size * 0.82).setDepth(1500 + p.y);
-    const text = fmt(Math.max(0, m.hp));
+    // v2.2 Faceless: a masked one is a veiled "?", an unmasked civilian is marked friendly.
+    const friendly = m.civilian && !m.masked;
+    const text = m.masked ? "?" : friendly ? "♥ CIVILIAN" : fmt(Math.max(0, m.hp));
     if (text !== this.labelShown) {
       this.labelShown = text;
       this.label.setText(text);
+      this.label.setColor(m.masked ? "#c9c4e8" : friendly ? "#7dff7a" : "#ffffff");
     }
+    if (m.masked !== this.veiled) {
+      this.veiled = m.masked;
+      this.sprite.setAlpha(m.masked ? 0.6 : 1);
+    }
+    if (friendly && !this.ring) {
+      this.ring = this.scene.add.graphics();
+      this.ring.lineStyle(5, 0x7dff7a, 0.95).strokeEllipse(0, 0, 76, 30);
+      this.ring.fillStyle(0x7dff7a, 0.18).fillEllipse(0, 0, 76, 30);
+    }
+    this.ring?.setPosition(p.x, p.y + 6).setDepth(99 + p.y);
     this.statusFx.sync(p, m.size, 1200 + p.y, monsterStatuses(m, now));
     this.sprite.anims.timeScale = now < m.frozenUntil || now < m.stunUntil ? 0 : 1;
 
     let tint: number | null = null;
-    if (now < m.frozenUntil) tint = 0x7fd8ff;
+    if (m.masked) tint = 0x5f5f86;
+    else if (friendly) tint = 0xb8ffc8;
+    else if (now < m.frozenUntil) tint = 0x7fd8ff;
     else if (now < m.shieldUntil) tint = 0x9fb4ff;
     else if (m.poison.length) tint = 0xc89bff;
     else if (now < m.slowUntil) tint = 0xb8e8ff;
@@ -126,6 +144,7 @@ export class Monster {
     this.dead = true;
     this.diedAt = this.scene.sim.now;
     this.label.destroy();
+    this.ring?.destroy();
     this.statusFx.destroy();
     const key = animKey(this.folder, `${this.art}_death`);
     if (this.scene.anims.exists(key)) {
@@ -144,6 +163,7 @@ export class Monster {
     this.dead = true;
     this.diedAt = this.scene.sim.now;
     this.label.destroy();
+    this.ring?.destroy();
     this.statusFx.destroy();
     this.scene.tweens.add({ targets: this.sprite, alpha: 0, duration: 200, onComplete: () => this.finish() });
   }

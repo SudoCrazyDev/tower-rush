@@ -444,10 +444,13 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   { ...U("berserker_sellsword", "Berserker Sellsword", "epic", "fire", "shot", "spark", "Hits like a landslide. Wears out everyone near him.", "human", "heavy", "none"), damage: 75, role: "Mercenary", storyOnly: true, effect: "fatigue", weapon: "sig_berserker_sellsword" },
   { ...U("powder_grenadier", "Powder Grenadier", "epic", "fire", "splash", "cannonball", "Big blasts. Mind your ears.", "human", "balanced", "none"), damage: 52, role: "Mercenary", storyOnly: true, effect: "shellshock" },
   { ...U("hired_blade", "Hired Blade", "epic", "poison", "crit", "spark", "The best blade money can buy. Pay him.", "human", "balanced", "none"), damage: 60, speed: 1.25, role: "Mercenary", storyOnly: true, effect: "wages", weapon: "sword" },
+  // v2.2 Book 2 Stories 2-3: Event cards, earned from the story's last chapter and from replays (like Princess Muse).
+  { ...U("maren", "Maren, the Tide-Born", "event", "ice", "aegis", "water", "The tide washes the curse off everyone beside her.", "fae", "balanced", "none"), role: "Tidecaller" },
+  { ...U("bako", "Bako, Chainbreaker", "event", "nature", "pierce", "spark", "Breaks the line, and rallies everyone beside him.", "human", "heavy", "none"), role: "Gladiator", effect: "rally", weapon: "flail" },
 ], DEFAULT_EFFECTS);
 
-/** The v1.2 Story units: Muse, the Knights and the Mercenaries. */
-export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade"];
+/** The Story units: Muse, the Knights and the Mercenaries (v1.2), Maren and Bako (v2.2). */
+export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade", "maren", "bako"];
 
 /**
  * Units added to the defaults after configs were already saved (the v1.1 support units):

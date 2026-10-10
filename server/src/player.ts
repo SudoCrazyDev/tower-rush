@@ -5,7 +5,7 @@ import { currentConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
-import { chapterDeck, chapterLock, findChapter, starsFor } from "../../shared/stories.ts";
+import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
 import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
@@ -434,6 +434,19 @@ player.post("/battles/:id/finish", P, async (c) => {
 
 // ---------------------------------------------------------------- stories (v1.2)
 
+/** The objectives a client sent with a story win: shape checked, numbers clamped to what the chapter allows. */
+function cleanObjectives(chapter: StoryChapter, v: unknown): StoryObjectives | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const n = (x: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(x) || 0)));
+  return {
+    poolsLeft: n(o.poolsLeft, chapter.mechanics?.tidePools?.at.length ?? 0),
+    civiliansSaved: n(o.civiliansSaved, 100),
+    civiliansHit: n(o.civiliansHit, 1000),
+    cageOpen: o.cageOpen === true,
+  };
+}
+
 /**
  * Start a story chapter. The server checks it's unlocked and builds the deck and card levels
  * itself: the Event deck pick (Story 2) or the equipped deck checked against the chapter's
@@ -495,10 +508,12 @@ player.post("/story/:id/finish", P, async (c) => {
   const elapsed = (Math.min(now, b.cutoff ?? now) - b.started_at) / 1000;
   const waves = f.chapter.waves.length;
   const int = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
-  const wave = int(req.wave, Math.min(waves, Math.floor(elapsed / 3) + 1));
+  const duel = f.chapter.duel;
+  const wave = duel ? waves : int(req.wave, Math.min(waves, Math.floor(elapsed / 3) + 1));
   const lives = int(req.lives, ECONOMY.lives);
   // Taken over by another device: it can't count as a win.
-  const won = req.won === true && wave >= waves && lives > 0 && !b.cutoff;
+  // An arena duel is a best-of PvP match against the bot: it can't be over in under 20 seconds.
+  const won = req.won === true && !b.cutoff && (duel ? elapsed >= 20 : wave >= waves && lives > 0);
   const bossWaves = f.chapter.waves.slice(0, wave).filter((w) => w.boss).length;
   const bosses = int(req.bosses, bossWaves);
   const kills = int(req.kills, wave * 80);
@@ -506,12 +521,26 @@ player.post("/story/:id/finish", P, async (c) => {
   const merges = int(req.merges, summons);
   const awakens = int(req.awakens, Math.floor(merges / (2 ** (ECONOMY.maxRank - 1) - 1)));
   const heroCasts = int(req.heroCasts, Math.floor(elapsed / 10) + 1);
-  const stars = won ? starsFor(lives, ECONOMY.lives) : 0;
+  // Duel stars: 3 with no round lost, 2 with one, 1 with more.
+  const roundsLost = int(req.roundsLost, Math.max(0, (duel?.rounds ?? 1) - 1));
+  const stars = won ? (duel ? (roundsLost <= 0 ? 3 : roundsLost === 1 ? 2 : 1) : starsFor(lives, ECONOMY.lives)) : 0;
+  const objectives = f.chapter.mechanics && !duel ? cleanObjectives(f.chapter, req.objectives) : null;
   let r;
   try {
     r = await update(c, (p) => {
       addQuestProgress(p.daily, { wave, kills, bosses, summons, merges, awakens, heroCasts, stories: won ? 1 : 0 });
-      return { win: won ? grantStoryWin(p, f.chapter.id, stars, utcDay(now)) : null };
+      const win = won ? grantStoryWin(p, f.chapter.id, stars, utcDay(now)) : null;
+      // v2.2: objectives scale the first-clear gold and gems (replays pay their fixed reward).
+      if (win?.firstClear && objectives) {
+        const m = objectiveMult(f.chapter, objectives);
+        const coins = Math.round(win.coins * m);
+        const gems = Math.round(win.gems * m);
+        p.coins += coins - win.coins;
+        p.gems += gems - win.gems;
+        win.coins = coins;
+        win.gems = gems;
+      }
+      return { win };
     });
   } catch (e) {
     await run(db, "UPDATE battles SET finished_at = NULL WHERE id = ?", b.id);

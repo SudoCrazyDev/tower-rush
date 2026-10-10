@@ -10,7 +10,7 @@ document and a promo kit for social media. The release timeline is in [ROADMAP.m
 | v1.3.0 | **Branding Revamp** | Live (2026-10-06) | [README.md](v1.3-branding-revamp/README.md) | [PROMO.md](v1.3-branding-revamp/PROMO.md) |
 | v2.0.0 | **The Grand Revamp** | Testing | [README.md](v2.0-the-grand-revamp/README.md) | [PROMO.md](v2.0-the-grand-revamp/PROMO.md) |
 | v2.1.0 | **Chaos Corrupted** | Live (2026-10-10) | [README.md](v2.1-chaos-corrupted/README.md) | [PROMO.md](v2.1-chaos-corrupted/PROMO.md) |
-| v2.2.0 | **Sand & Sea** | Design | [README.md](v2.2-sand-and-sea/README.md) | [PROMO.md](v2.2-sand-and-sea/PROMO.md) |
+| v2.2.0 | **Sand & Sea** | Building | [README.md](v2.2-sand-and-sea/README.md) | [PROMO.md](v2.2-sand-and-sea/PROMO.md) |
 
 ## Conventions
 

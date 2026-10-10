@@ -39,7 +39,9 @@ import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type
 import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Arch, type Element, type UnitDef } from "./units.ts";
 import { raceLabel } from "./races.ts";
 import { starsFor, type StoryChapter, type StoryLine, type StoryObjectives } from "./stories.ts";
+import { BoardRules, TIDE_RULES } from "./tide.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
+import { BURROW_MAX, BURROW_RANGE, CAGE_PULSE, CIVILIAN_FLEE, MIMIC_HP, brazierRadius, mimicDef } from "./faceless.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
@@ -448,6 +450,26 @@ export class SimMonster {
   skillUsed: number[] = [];
   /** v2.1: the story charge happened (no more powers or skills). */
   rallied = false;
+  /**
+   * v2.2 Story 3 (renderer: draw these). `masked`: a Faceless walking in masked, untargetable and
+   * immune until a lit brazier unmasks it (event `unmask`). `civilian`: a civilian Faceless (masked
+   * or not): units never target it, it takes no damage, costs no lives. `civilianHit`: it was hurt
+   * once already (can't be saved). `mimicOf`: the unit id a Faceless Herald mimic copies.
+   */
+  masked = false;
+  civilian = false;
+  civilianHit = false;
+  mimicOf: string | null = null;
+  /**
+   * v2.2 Purify (BossDef.chains): `chainTotal` chains, 0-based `chainIndex` is the one showing now
+   * with `chainHp` of `chainMax` left. While chainTotal > 0, `hp` is the remaining TOTAL chain HP
+   * (maxHp = all chains), so hp / maxHp is a fine overall bar; the renderer should show the chain
+   * row (index, total) and the current chain's bar chainHp / chainMax instead of a boss HP bar.
+   */
+  chainTotal = 0;
+  chainIndex = 0;
+  chainHp = 0;
+  chainMax = 0;
 
   constructor(uid: number, kind: { def?: MonsterDef; boss?: BossDef }, path: Path, hp: number, opts: { dist?: number; scale?: number; mana: number }) {
     this.uid = uid;
@@ -480,6 +502,8 @@ export class SimMonster {
   stage = 0;
   roared = false;
   speedMult = 1;
+  /** v2.2: board speed rules (tide, rolling isle), set by BoardRules; 1 = none. */
+  envMult = 1;
 
   has(trait: string) {
     return (this.def?.traits ?? this.boss?.traits ?? []).includes(trait as never);
@@ -488,6 +512,7 @@ export class SimMonster {
   speed(now: number) {
     if (now < this.frozenUntil || now < this.stunUntil) return 0;
     let s = this.baseSpeed * this.speedMult;
+    if (this.envMult !== 1) s *= this.envMult;
     if (now < this.slowUntil) s *= 1 - this.slowPct;
     if (now < this.hasteUntil) s *= 1.8;
     return s;
@@ -544,6 +569,8 @@ export class Sim {
   readonly o: SimOptions;
   readonly mode: SimMode;
   readonly story: StoryChapter | null;
+  /** v2.2 Story 2 board rules (tide, pools, hook, siren, beam, isle, reveal); see tide.ts. */
+  protected readonly rules: BoardRules;
   readonly deck: string[];
   /** In-battle power-up level per deck unit id. */
   readonly powerUps: Record<string, number>;
@@ -607,6 +634,17 @@ export class Sim {
   shoutUntil = 0;
   /** Echo Spirit encores waiting to go off. */
   private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number }[] = [];
+  /** v2.2 Story 3 state (see shared/faceless.ts). Read by the renderer: brazierLit (per ChapterMechanics.faceless.braziers entry), cageHp (null without a cage), cageOpen. */
+  brazierLit: boolean[] = [];
+  private brazierReach: number[] = [];
+  cageHp: number | null = null;
+  cageOpen = false;
+  private cageSent = -1;
+  private cageNext = 0;
+  private roarUntil = 0;
+  private roared = false;
+  /** Equal ground: damage each unit fights with until `until`. */
+  private equal: { until: number; dmg: Map<SimUnit, number> } | null = null;
 
   // Results.
   kills = 0;
@@ -628,6 +666,26 @@ export class Sim {
   events: SimLogEntry[] = [];
   timeline: SimSample[] = [];
 
+  /** v2.2 HUD: the tide is high now (false without a tide). */
+  get tideHigh() {
+    return this.rules.high;
+  }
+
+  /** v2.2 HUD: sim time of the next tide flip (Infinity without a tide). */
+  get tideNext() {
+    return this.rules.next;
+  }
+
+  /** v2.2: the rolling isle is thrashing now. */
+  get isleOn() {
+    return this.rules.isleOn;
+  }
+
+  /** v2.2: the player tapped the sleeping unit on `slot` (siren song); false if it was not asleep. */
+  wake(slot: number) {
+    return !this.over && this.rules.wake(slot);
+  }
+
   get heroCasts() {
     return this.counts.heroCasts;
   }
@@ -642,6 +700,24 @@ export class Sim {
     this.o = opts;
     this.mode = opts.mode ?? "solo";
     this.story = opts.story ?? null;
+    this.rules = new BoardRules(this.story, {
+      now: () => this.now,
+      units: () => this.units,
+      monsters: () => this.monsters,
+      boss: () => this.boss,
+      wave: () => this.wave,
+      rand: () => this.rand(),
+      emit: (e) => this.emit(e),
+      slotPos: (s) => slotPos(this.arena, s),
+      someUnits: (n) => this.someUnits(n),
+      shielded: (u) => this.shielded(u),
+      relocate: (u, to) => {
+        this.units[u.slot] = null;
+        u.moveTo(to, slotPos(this.arena, to));
+        this.units[to] = u;
+        this.recomputeBuffs();
+      },
+    });
     this.arena = (this.story && ARENA_BY_ID[this.story.layout]) || ARENA_BY_ID[setup.arena] || ARENAS[0];
     this.rand = rng(setup.seed);
     const geo = arenaGeometry(this.arena);
@@ -888,6 +964,7 @@ export class Sim {
       this.harvest(n - 1);
     }
     this.payWages();
+    if (this.story?.mechanics?.cage) this.cageRoar(n);
     if (scripted) return this.startScriptedWave(scripted, n);
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
     const pick = () => {
@@ -967,8 +1044,10 @@ export class Sim {
       m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     }
     this.monsters.push(m);
+    if (this.story?.mechanics) this.facelessSpawn(m);
     const f = m.foot;
     this.emit({ type: "spawn", t: this.now, uid: m.uid, id: m.id, boss: !!q.boss, x: f.x, y: f.y, hp: m.maxHp, path: Math.max(0, this.paths.indexOf(path)) });
+    if (m.boss?.chains) this.startChains(m, m.boss.chains);
     return m;
   }
 
@@ -1019,6 +1098,7 @@ export class Sim {
     const now = this.now;
     this.flow(dt);
     if (this.over) return;
+    this.rules.tick();
     if (this.barks.length) this.updateBarks();
     if (this.portals.length) this.updatePortals();
 
@@ -1055,6 +1135,7 @@ export class Sim {
     if (this.boss?.gone) this.boss = null;
 
     this.updateTethers();
+    if (this.story?.mechanics?.faceless || this.story?.mechanics?.cage) this.updateFaceless(dt);
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
@@ -1130,7 +1211,7 @@ export class Sim {
       timeline: this.timeline,
       counts: { ...this.counts },
       stars: this.stars,
-      objectives: null,
+      objectives: this.rules.obj,
     };
   }
 
@@ -1181,6 +1262,8 @@ export class Sim {
   /** Apply damage; returns true if it killed. */
   private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly ActivePerk[]; crit?: boolean; color?: string } = {}) {
     if (m.dead) return false;
+    // Story 3: masked monsters are immune; an unmasked civilian is only counted as hit, never hurt.
+    if ((m.masked || m.civilian) && this.facelessHurt(m)) return false;
     if (this.now < m.shieldUntil) {
       this.blocked += amount;
       if (!opts.quiet) this.callout("block", "BLOCK", "#9fb4ff", m.pos.x, m.pos.y - 20);
@@ -1205,6 +1288,7 @@ export class Sim {
     let dmg = amount * (1 + m.curse) * perkMult(perks, m);
     if (m.has("armored")) dmg *= armorMult(perks);
     if (opts.crit && !opts.quiet) this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b" });
+    if (m.chainTotal > 0) return this.hitChain(m, dmg, src, perks);
     const dealt = Math.min(Math.max(0, m.hp), dmg);
     if (src === "hero") this.heroDamage += dealt;
     else this.damageBySlot[src] += dealt;
@@ -1257,6 +1341,7 @@ export class Sim {
   }
 
   protected leak(m: SimMonster) {
+    if (m.civilian) return this.civilianExit(m);
     m.dead = m.gone = m.leaked = true;
     this.leaks++;
     const lost = Math.min(this.lives, m.boss ? ECONOMY.lives : 1);
@@ -1396,6 +1481,24 @@ export class Sim {
           for (const u of this.someUnits(n)) this.afflict(u, "shellshock", k.dur ?? 5, 0, true);
           this.log(`${b.name} impales ${n} unit(s) (${k.dur ?? 5}s)`, "boss");
           break;
+        case "anchor_hook":
+          say("ANCHOR HOOK");
+          this.rules.hook(n);
+          this.log(`${b.name} hooks ${n} unit(s)`, "boss");
+          break;
+        case "siren_song":
+          say("SIREN SONG");
+          this.rules.siren(n, k.dur ?? TIDE_RULES.sleepDur);
+          this.log(`${b.name} sings ${n} unit(s) asleep`, "boss");
+          break;
+        case "lantern_beam":
+          say("LANTERN BEAM");
+          this.rules.beam(m, k);
+          break;
+        case "thrash":
+          say("THRASH");
+          this.rules.thrash(k.dur ?? TIDE_RULES.isleDur, k.amount ?? 1);
+          break;
         case "volley": {
           say("VOLLEY");
           let hits = 0;
@@ -1406,6 +1509,15 @@ export class Sim {
           this.log(`${b.name} looses a volley (${hits}/${n} hit)`, "boss");
           break;
         }
+        case "mimic":
+          this.mimic(m, n, say);
+          break;
+        case "burrow":
+          this.burrow(m, n, k.amount ?? 0.25, say);
+          break;
+        case "equal_ground":
+          this.equalGround(k.dur ?? 5, say);
+          break;
       }
     }
   }
@@ -1777,6 +1889,188 @@ export class Sim {
 
   // ---------------------------------------------------------------- scripted pieces
 
+  // ---------------------------------------------------------------- v2.2 Story 3 (shared/faceless.ts)
+
+  /** A unit's attack damage: its own, or the equal-ground one while that lasts. */
+  private statDamage(u: SimUnit) {
+    return this.equal && this.now < this.equal.until ? (this.equal.dmg.get(u) ?? u.stats.damage) : u.stats.damage;
+  }
+
+  /** A Faceless spawns masked (a civilian is flagged); a roar in progress stuns whatever spawns. */
+  private facelessSpawn(m: SimMonster) {
+    const kind = m.def?.faceless;
+    if (kind && this.story?.mechanics?.faceless) {
+      m.masked = true;
+      m.civilian = kind === "civilian";
+    }
+    if (this.now < this.roarUntil) m.stunUntil = Math.max(m.stunUntil, this.roarUntil);
+  }
+
+  /** Masked: immune (true). Unmasked civilian: the first hit is counted, never any damage (true). */
+  private facelessHurt(m: SimMonster) {
+    if (m.masked) return true;
+    if (!m.civilianHit) {
+      m.civilianHit = true;
+      this.rules.obj!.civiliansHit++;
+      const p = m.foot;
+      this.emit({ type: "civilian", t: this.now, uid: m.uid, saved: false, x: p.x, y: p.y });
+    }
+    return true;
+  }
+
+  /** A civilian reaches the exit: no lives lost, no leak; saved only if unmasked and never hit. */
+  private civilianExit(m: SimMonster) {
+    m.dead = m.gone = true;
+    if (!m.masked && !m.civilianHit) {
+      this.rules.obj!.civiliansSaved++;
+      const p = m.foot;
+      this.emit({ type: "civilian", t: this.now, uid: m.uid, saved: true, x: p.x, y: p.y });
+    }
+  }
+
+  /** Purify: a boss with chains shows chain 0 first. */
+  private startChains(m: SimMonster, total: number) {
+    m.chainTotal = total;
+    m.chainIndex = 0;
+    m.chainMax = m.chainHp = m.maxHp / total;
+    this.emit({ type: "chain", t: this.now, uid: m.uid, index: 0, total, broken: false, hp: m.chainHp });
+  }
+
+  /** Damage on a chained boss goes to the current chain (no overflow); the last chain breaking kills it. */
+  private hitChain(m: SimMonster, dmg: number, src: Source, perks: readonly ActivePerk[]) {
+    const dealt = Math.min(m.chainHp, dmg);
+    if (src === "hero") this.heroDamage += dealt;
+    else this.damageBySlot[src] += dealt;
+    m.chainHp -= dmg;
+    const left = () => m.chainMax * (m.chainTotal - m.chainIndex - 1) + Math.max(0, m.chainHp);
+    if (m.chainHp > 0) {
+      m.hp = left();
+      return false;
+    }
+    this.emit({ type: "chain", t: this.now, uid: m.uid, index: m.chainIndex, total: m.chainTotal, broken: true, hp: 0 });
+    m.chainIndex++;
+    if (m.chainIndex >= m.chainTotal) {
+      m.hp = 0;
+      this.kill(m, src);
+      if (plunderMana(perks) > 0) this.gainMana(plunderMana(perks), m.pos.x, m.pos.y - 40, "plunder");
+      return true;
+    }
+    m.chainHp = m.chainMax;
+    m.hp = left();
+    this.emit({ type: "chain", t: this.now, uid: m.uid, index: m.chainIndex, total: m.chainTotal, broken: false, hp: m.chainHp });
+    return false;
+  }
+
+  /** Brazier lighting, unmasking and the cage lock, once per step. */
+  private updateFaceless(dt: number) {
+    const mech = this.story!.mechanics!;
+    const now = this.now;
+    const f = mech.faceless;
+    if (f) {
+      if (!this.brazierLit.length) {
+        this.brazierLit = f.braziers.map(() => false);
+        this.brazierReach = f.braziers.map((s) => brazierRadius(this.paths, slotPos(this.arena, s)));
+      }
+      f.braziers.forEach((s, i) => {
+        const u = this.units[s];
+        const lit = !!u && !u.dragging;
+        if (lit === this.brazierLit[i]) return;
+        this.brazierLit[i] = lit;
+        this.emit({ type: "brazier", t: now, slot: s, lit });
+      });
+      for (const m of this.monsters) {
+        if (m.gone || !m.masked || m.intro > 0) continue;
+        const p = m.foot;
+        const near = f.braziers.some((s, i) => {
+          if (!this.brazierLit[i]) return false;
+          const b = slotPos(this.arena, s);
+          return Math.hypot(p.x - b.x, p.y - b.y) <= this.brazierReach[i];
+        });
+        if (!near) continue;
+        m.masked = false;
+        if (m.civilian) m.speedMult *= CIVILIAN_FLEE;
+        this.emit({ type: "unmask", t: now, uid: m.uid, civilian: m.civilian, x: p.x, y: p.y });
+      }
+    }
+    const cage = mech.cage;
+    if (cage && !this.cageOpen) {
+      if (this.cageHp === null) this.cageHp = cage.lockHp;
+      // Units next to the cage hit the lock whenever they have nothing to shoot (and during wave intros).
+      if (this.waveState === "intro" || !this.pickTarget("first")) {
+        let dps = 0;
+        for (const j of square3(cage.slot)) {
+          const u = this.units[j];
+          if (!u || u.dragging || noAttack(u.primary) || u.sulking) continue;
+          const s = u.status;
+          if (now < u.frozenUntil || now < s.shockedUntil || now < s.entangledUntil || now < s.submergedUntil || now < s.asleepUntil) continue;
+          dps += this.statDamage(u) * u.stats.speed * (1 + this.hasteOf(u)) * (1 + u.auraDamage);
+        }
+        if (dps > 0) this.cageHp = Math.max(0, this.cageHp - dps * dt);
+      }
+      if (this.cageHp <= 0) {
+        this.cageOpen = true;
+        this.rules.obj!.cageOpen = true;
+        this.emit({ type: "cage", t: now, hp: 0, max: cage.lockHp, open: true });
+      } else if (now >= this.cageNext && this.cageHp !== this.cageSent) {
+        this.cageNext = now + CAGE_PULSE;
+        this.cageSent = this.cageHp;
+        this.emit({ type: "cage", t: now, hp: this.cageHp, max: cage.lockHp, open: false });
+      }
+    }
+  }
+
+  /** Start of the boss wave with the cage open: the sphinx roars and stuns every monster. */
+  private cageRoar(n: number) {
+    const cage = this.story!.mechanics!.cage!;
+    if (!this.cageOpen || this.roared || n !== this.story!.waves.length) return;
+    this.roared = true;
+    this.roarUntil = this.now + cage.roarStun;
+    for (const m of this.monsters) if (!m.gone) m.stunUntil = Math.max(m.stunUntil, this.roarUntil);
+    this.emit({ type: "roar", t: this.now, stun: cage.roarStun });
+  }
+
+  /** Faceless Herald: a Faceless soldier (unmasked, so it can always be answered) copying the strongest unit; at most `max` alive. */
+  private mimic(boss: SimMonster, max: number, say: (t: string) => void) {
+    const def = mimicDef();
+    if (!def || this.monsters.filter((x) => !x.gone && x.mimicOf).length >= max) return;
+    let best: SimUnit | null = null;
+    for (const u of this.units) if (u && !noAttack(u.primary) && (!best || this.statDamage(u) > this.statDamage(best))) best = u;
+    if (!best) return;
+    say("MIMIC");
+    const c = this.spawn({ def }, { path: boss.path, dist: Math.max(0, boss.dist - 40) }, 1, MIMIC_HP);
+    c.masked = false;
+    c.mimicOf = best.def.id;
+    this.log(`${boss.boss!.name} mimics ${best.def.name}`, "boss");
+  }
+
+  /** Dune Warden: up to `n` monsters near the boss vanish and come up `share` of the path further on. */
+  private burrow(boss: SimMonster, n: number, share: number, say: (t: string) => void) {
+    const p = boss.pos;
+    const prey = this.monsters
+      .filter((x) => !x.gone && x !== boss && !x.boss && x.pinned === null && Math.hypot(x.pos.x - p.x, x.pos.y - p.y) <= BURROW_RANGE)
+      .sort((a, b) => Math.hypot(a.pos.x - p.x, a.pos.y - p.y) - Math.hypot(b.pos.x - p.x, b.pos.y - p.y))
+      .slice(0, n);
+    if (!prey.length) return;
+    say("BURROW");
+    for (const x of prey) {
+      const from = x.dist;
+      x.dist = Math.min(x.path.length * BURROW_MAX, from + x.path.length * share);
+      this.emit({ type: "burrow", t: this.now, uid: x.uid, from, to: x.dist });
+    }
+  }
+
+  /** Sefa: every unit fights with the damage of the board's average rank for `dur` seconds. */
+  private equalGround(dur: number, say: (t: string) => void) {
+    const att = this.units.filter((u): u is SimUnit => !!u && !noAttack(u.primary));
+    if (!att.length) return;
+    say("EQUAL GROUND");
+    const rank = Math.max(1, Math.min(maxRank(), Math.round(att.reduce((s, u) => s + u.rank, 0) / att.length)));
+    const dmg = new Map<SimUnit, number>();
+    for (const u of att) dmg.set(u, boardUnitStats({ id: u.def.id, rank, awakened: u.awakened }, this.levelOf(u.def.id), this.powerOf(u.def.id)).damage);
+    this.equal = { until: this.now + dur, dmg };
+    this.emit({ type: "equal", t: this.now, rank, until: this.now + dur });
+  }
+
   /** Story barks (a speech line some seconds after a wave starts). */
   private updateBarks() {
     const due = this.barks.filter((b) => b.at <= this.now);
@@ -1798,7 +2092,7 @@ export class Sim {
   pickTarget(mode: "first" | "strongest"): SimMonster | null {
     let best: SimMonster | null = null;
     for (const m of this.monsters) {
-      if (m.gone || m.intro > 0 || m.dist < this.targetFrom) continue;
+      if (m.gone || m.intro > 0 || m.dist < this.targetFrom || m.masked || m.civilian) continue;
       if (!best) best = m;
       else if (mode === "first" ? m.progress > best.progress : m.hp > best.hp) best = m;
     }
@@ -1810,6 +2104,8 @@ export class Sim {
     // A dragged unit does nothing at all (no timers, no pulses, no attacks).
     if (u.dragging) return;
     if (now < u.frozenUntil || now < u.status.shockedUntil || now < u.status.entangledUntil) return;
+    // v2.2: under water at high tide, or sung asleep: no attacks.
+    if (now < u.status.submergedUntil || now < u.status.asleepUntil) return;
     u.alive += dt;
     if (kitHas(u.def, "irritate")) {
       u.effectTimer += dt;
@@ -1986,7 +2282,7 @@ export class Sim {
     }
     const center = target.pos;
     this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "strike", x: center.x, y: center.y, radius: ECONOMY.ultimateRadius });
-    const damage = u.stats.damage * this.heroDamageMult * this.heraldMult * ECONOMY.ultimateDamageMult;
+    const damage = this.statDamage(u) * this.heroDamageMult * this.heraldMult * ECONOMY.ultimateDamageMult;
     this.queueEcho(u, center.x, center.y, damage, 0);
     this.mark("ring", center.x, center.y, "#ffd93b", { x2: ECONOMY.ultimateRadius });
     this.mark("text", center.x, center.y - 70, "#ffd93b", { text: "ULTIMATE" });
@@ -2011,10 +2307,11 @@ export class Sim {
         }
       }
     }
-    let damage = u.stats.damage * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
+    let damage = this.statDamage(u) * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
     if (kitHas(u.def, "oath")) damage *= 1 + u.fx.oath.perKnight * this.adjacentKnights(u);
     if (kitHas(u.def, "fatigue")) damage *= 1 + u.fx.fatigue.perMercenary * this.units.filter((v) => v && isMercenary(v.def)).length;
     if (kitHas(u.def, "growth")) damage *= growthMult(u.alive, u.fx);
+    if (now < u.status.glimmeredUntil) damage *= u.status.glimmer;
     const from = { x: u.x, y: u.y - 30 };
     if (u.primary === "chain") return this.chainLightning(u, target, damage, from);
     this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.primary === "sniper" ? u.fx.sniper.shotSpeed : 1100 });
@@ -2029,7 +2326,7 @@ export class Sim {
       let next: SimMonster | null = null;
       let bestD = e.chain.range;
       for (const m of this.monsters) {
-        if (m.gone || hit.includes(m)) continue;
+        if (m.gone || m.masked || hit.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
         if (d < bestD) {
           bestD = d;
@@ -2059,7 +2356,7 @@ export class Sim {
       let next: SimMonster | null = null;
       let bestD = range;
       for (const m of this.monsters) {
-        if (m.gone || skip.includes(m) || out.includes(m)) continue;
+        if (m.gone || m.masked || skip.includes(m) || out.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
         if (d < bestD) {
           bestD = d;
@@ -2093,7 +2390,7 @@ export class Sim {
   }
 
   private nearby(center: Pt, radius: number, except?: SimMonster) {
-    return this.monsters.filter((m) => !m.gone && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
+    return this.monsters.filter((m) => !m.gone && !m.masked && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
   /**

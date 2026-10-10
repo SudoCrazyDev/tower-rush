@@ -1,6 +1,6 @@
 # v2.2.0 "Sand & Sea"
 
-**Status:** Design · **Version:** `2.2.0` · **Promo kit:** [PROMO.md](PROMO.md) ·
+**Status:** Building · **Version:** `2.2.0` · **Promo kit:** [PROMO.md](PROMO.md) ·
 **Story pitches:** [saga plan](../concepts/forsakens-saga.md) (sections 2-3)
 
 Book 2 "Chaos Corrupted" continues with two stories in one release. **Story 2, "The Drowned
@@ -19,7 +19,7 @@ equality. Each story brings new board mechanics, and Story 3 breaks the chapter 
   crowd favor, purify (a boss with a chains bar instead of HP), the sphinx's cage.
 - **New boss skills:** anchor hook, siren song, lantern beam, mimic, burrow, equal ground.
 - **2 Event rarity story cards:** Maren, the Tide-Born (Story 2) and Bako, Chainbreaker (Story 3).
-  Not in chests. Replays drop copies (section 8).
+  Not in chests. Replays drop copies (section 9).
 - **2 badges:** Tidewarden and Dunewarden.
 - **Art:** about 350 Higgsfield credits (section 6).
 
@@ -63,7 +63,7 @@ hearts taken. Two remain."
 | Mechanic | Rule | First numbers |
 |---|---|---|
 | **Tide cycle** | A tide meter swings low → high → low. At **low tide**, mudflat slots open and monsters are slowed. At **high tide**, low slots flood: units on them are *submerged* (no attacks, cannot be hit), and monsters move faster. | Cycle 40 s (Ch 1), 30 s (Ch 3). Low tide: monster speed ×0.8. High tide: ×1.2. Ch 1: 2 low slots, Ch 3: 4. |
-| **Tide pools** | Pools sit beside the path. A monster that reaches a pool drains it and keeps walking. | 4 pools. Each pool saved: +10% first-clear gold. |
+| **Tide pools** | Pools sit beside the path. Each runs dry after 8 monsters walk past it (a boss drains it at once). | 4 pools at 40/60/75/90% of the path. Each pool left: +10% first-clear reward. |
 | **Rolling isle** | When Ondrath thrashes, the path flips or shifts for a short time. | Every 25 s, lasts 6 s. |
 | **Anchor hook** (Grell) | Moves one unit to a random free slot. | Every 10 s. |
 | **Siren song** (Lusca) | 1-2 units fall *asleep* (no attacks) until the player taps them. | Every 12 s. Auto-wakes after 8 s if not tapped. |
@@ -73,7 +73,7 @@ hearts taken. Two remain."
 ### Story 3
 | Mechanic | Rule | First numbers |
 |---|---|---|
-| **Masks and braziers** | Faceless are *masked*: units cannot target them. A unit standing on a **brazier slot** lights it, and every Faceless that passes a lit brazier is unmasked. Unmasked soldiers can be hit. Unmasked civilians walk to the exit and cost no lives. Each civilian who reaches the exit unhurt is *saved* and earns a bonus. Any hit on a civilian, splash included, cuts the reward. | 3 brazier slots per board. ~30% of Faceless are civilians. Each civilian saved: +2% first-clear reward (cap +20%). Each civilian hit: -5% (floor 50%). |
+| **Masks and braziers** | Faceless are *masked*: units cannot target them. A unit standing on a **brazier slot** lights it, and every Faceless that passes a lit brazier is unmasked. Unmasked soldiers can be hit. Unmasked civilians walk to the exit and cost no lives. Each civilian who reaches the exit unhurt is *saved* and earns a bonus. Any hit on a civilian, splash included, cuts the reward. | 3 brazier slots per board. ~30% of Faceless are civilians. Unmasked civilians run 1.6× faster. Each civilian saved: +3% first-clear reward (cap +30%). Each civilian hit: -1.5% (floor 60%). |
 | **Arena duel** | A PvP match against the bot with a fixed deck (Bako's). Best of 3 rounds. | Reuses PvP timed waves and sends. Bot difficulty rises per round. |
 | **Crowd favor** | Multi-kills and rounds with no leaks fill a meter. A full meter drops gold or a free unit. | Multi-kill = 3+ kills in 1 s. Rewards TBD. |
 | **Purify** (Sefa) | Sefa has no HP bar, only a **Chains** bar. Her body takes no damage. Chains appear on her one at a time as targets. Breaking all chains wins. | 6 chains. Each chain has HP like a captain. |
@@ -122,13 +122,18 @@ Not included: Seedance 2.5 trailer shots. The promo reuses game footage and pane
 Art goes through the usual flow: prompts in `shared/art-requests.ts` (admin `#/art`), then
 `ART_PROMPTS.md` in this folder, then key, build and upload to R2.
 
-## 7. Docs still to write
+## 7. Build notes
 
-- `SCRIPT.md`: panels, wave barks and boss lines for both stories (after this design is approved).
+- Balance check: `node scripts/story-sim.ts [chapter ids]` runs Book 2 chapters headless (fixed board, card levels 6/8/10, 5 seeds) for comparison with Story 1. Its fixed board can't beat the final bosses of Story 1 or Story 2, so final-boss tuning needs playtesting.
+- New art isn't made yet: monsters, bosses and the two cards use stand-in sprites (`STAND_IN` in `game/src/assets.ts`), arenas and covers reuse existing images, and missing panels show the story background.
+
+## 8. Docs still to write
+
+- `SCRIPT.md`: written (panels, wave barks and boss lines for both stories).
 - `ART_PROMPTS.md`: the Higgsfield prompts and refs.
 - `PROMO.md`: filled in once the art exists (started with the plan).
 
-## 8. Decisions (2026-10-10)
+## 9. Decisions (2026-10-10)
 
 - **No trophy gates.** Each story unlocks when the previous story is finished.
 - **Both stories ship together** in v2.2.0.

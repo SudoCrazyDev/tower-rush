@@ -94,6 +94,18 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   M("corrupted_elf_archer", "Corrupted Elf Archer", "elf", 0.9, 75, ["dodge"], 10, 82),
   M("corrupted_elf_warden", "Corrupted Elf Warden", "elf", 2.2, 50, ["armored"], 16, 100),
   M("corrupted_sapling", "Corrupted Sapling", "sylvan", 0.5, 70, [], 4, 70),
+  // v2.2 Book 2, Story 2 "The Drowned Coast": the drained bay's crawlers and Corvaline's drowned crew.
+  M("reef_crab", "Reef Crab", "beast", 2.2, 48, ["tank", "armored"], 15, 100),
+  M("drowned_sailor", "Drowned Sailor", "undead", 1.0, 62),
+  M("drowned_corsair", "Drowned Corsair", "undead", 1.6, 70, ["armored"], 12, 92),
+  M("eel_swimmer", "Eel Swimmer", "beast", 0.6, 125, ["fast", "dodge"], 8, 78),
+  M("barnacle_spawn", "Barnacle Spawn", "chaos", 0.5, 70, [], 4, 70),
+  // Story 3 "The Throne of Dust": the Faceless (masked until a lit brazier unmasks them) and the desert's own.
+  { ...M("faceless_soldier", "Faceless Soldier", "human", 1.1, 65, [], 10, 84), faceless: "soldier" },
+  { ...M("faceless_archer", "Faceless Archer", "human", 0.9, 75, ["dodge"], 10, 82), faceless: "soldier" },
+  { ...M("faceless_civilian", "Faceless Civilian", "human", 0.9, 58, [], 6, 80), faceless: "civilian" },
+  M("scarab", "Scarab", "beast", 0.8, 90, ["armored"], 10, 80),
+  M("jackal", "Jackal", "beast", 0.6, 125, ["fast"], 8, 78),
 ];
 
 /** Monsters added after configs were already saved: appended to an older saved list. */
@@ -102,6 +114,8 @@ export const ADDED_MONSTERS = [
   "sprinkle_swarm", "sour_shard", "chaos_taffy",
   "corrupted_villager", "corrupted_courier", "corrupted_farmer", "corrupted_fisherman", "corrupted_lumberjack", "corrupted_herbalist", "corrupted_merchant", "chaos_eye",
   "corrupted_elf_scout", "corrupted_elf_warrior", "corrupted_elf_archer", "corrupted_elf_warden", "corrupted_sapling",
+  "reef_crab", "drowned_sailor", "drowned_corsair", "eel_swimmer", "barnacle_spawn",
+  "faceless_soldier", "faceless_archer", "faceless_civilian", "scarab", "jackal",
 ];
 
 /** What a splitter breaks into: a smaller copy of itself unless listed here. */
@@ -254,11 +268,48 @@ export const DEFAULT_BOSSES: BossDef[] = [
     ],
     rally: { at: 0.8, damage: 0.5, speed: 1.25 },
   },
+  // v2.2 Book 2, Story 2 "The Drowned Coast".
+  {
+    id: "grell", name: "Bosun Grell", race: "undead", hp: 1.05, speed: 36, power: "summon", minion: "drowned_sailor", corrupted: true,
+    skills: [{ kind: "anchor_hook", every: 10, first: 6, n: 1 }],
+  },
+  {
+    id: "lusca", name: "Lusca the Siren", race: "fae", hp: 1.3, speed: 34, power: "summon", minion: "eel_swimmer", corrupted: true,
+    skills: [{ kind: "siren_song", every: 12, first: 7, n: [1, 2], dur: 8 }],
+  },
+  {
+    id: "ondrath", name: "Ondrath, the Sleeping Isle", race: "beast", hp: 6.5, speed: 15, power: "none", minion: "barnacle_spawn", corrupted: true,
+    skills: [
+      { kind: "sapling_trail", every: 5, first: 3, n: [1, 2] },
+      { kind: "thrash", every: 25, first: 12, n: 1, dur: 6, amount: 1.25 },
+    ],
+  },
+  {
+    id: "corvaline", name: "Corvaline, Keeper of the Lantern", race: "human", hp: 7.0, speed: 22, power: "none", corrupted: true,
+    skills: [{ kind: "lantern_beam", every: 14, first: 8, n: 1, dur: 6, amount: 0.6, hold: 4 }],
+    rally: { at: 0.7, damage: 0.4, speed: 1.2 },
+  },
+  // Story 3 "The Throne of Dust".
+  {
+    id: "faceless_herald", name: "The Faceless Herald", race: "human", hp: 1.4, speed: 34, power: "none", corrupted: true,
+    skills: [{ kind: "mimic", every: 14, first: 8, n: 2 }],
+  },
+  {
+    id: "dune_warden", name: "The Dune Warden", race: "beast", hp: 1.6, speed: 30, power: "summon", minion: "scarab", corrupted: true,
+    skills: [{ kind: "burrow", every: 12, first: 8, n: 3, amount: 0.25 }],
+  },
+  {
+    // Purify: no HP bar, only 6 chains (each a target with 3.0 / 6 of the boss HP). The rally (Nefrael and the freed) leaves her HP alone.
+    id: "sefa", name: "Sefa the Chainbreaker", race: "human", hp: 1.5, speed: 20, power: "none", corrupted: true, chains: 6,
+    skills: [{ kind: "equal_ground", every: 15, first: 10, n: 1, dur: 5 }],
+    rally: { at: 0.45, damage: 0, speed: 1.15 },
+  },
 ];
 
 /** Bosses added after configs were already saved: appended to an older saved list. */
 export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker", "corrupted_fae", "corrupted_bear", "portal_wizard",
-  "elf_captain_morvane", "elf_captain_sylris", "elf_captain_kaelen", "thalmyr", "vaeltharion"];
+  "elf_captain_morvane", "elf_captain_sylris", "elf_captain_kaelen", "thalmyr", "vaeltharion",
+  "grell", "lusca", "ondrath", "corvaline", "faceless_herald", "dune_warden", "sefa"];
 
 export const BOSSES: BossDef[] = structuredClone(DEFAULT_BOSSES);
 export const BOSS_BY_ID: Record<string, BossDef> = {};

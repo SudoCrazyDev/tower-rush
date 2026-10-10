@@ -7,7 +7,7 @@ import { BASE, ensureAnim, loadSheet, sheetKey, sheetScale } from "../assets";
 import { sfx } from "../audio";
 import { W, H, NAVY, txt, button, modal, fmt, cardView, lootCards } from "../ui";
 import { UNIT_BY_ID } from "../data/units";
-import { BADGES, type StoryChapter, type StoryDef, type StoryPanel } from "../../../shared/stories.ts";
+import { BADGES, type StoryChapter, type StoryDef, type StoryObjectives, type StoryPanel } from "../../../shared/stories.ts";
 import { chestById } from "../../../shared/profile.ts";
 import type { StoryResult } from "../save";
 
@@ -44,7 +44,9 @@ export function storyPanels(scene: Phaser.Scene, panels: StoryPanel[], onDone: (
     const p = panels[i];
     const old = page;
     if (old) scene.tweens.add({ targets: old, alpha: 0, duration: 200, onComplete: () => old.destroy() });
-    const img = scene.add.image(0, 0, `story:panels/${p.image}`);
+    // Art not made yet (a new story ships before its panels): the story background stands in.
+    const key = scene.textures.exists(`story:panels/${p.image}`) ? `story:panels/${p.image}` : "story:story_background";
+    const img = scene.add.image(0, 0, key);
     const scale = Math.min((W - 40) / img.width, (H * 0.55) / img.height);
     img.setScale(scale);
     const frame = scene.add.graphics();
@@ -77,7 +79,7 @@ export function storyPanels(scene: Phaser.Scene, panels: StoryPanel[], onDone: (
   for (const p of panels) if (p.anim) loadSheet(scene, "bosses", p.anim); // queued; loadStoryImages starts the loader
   loadStoryImages(
     scene,
-    panels.map((p) => `panels/${p.image}`),
+    [...panels.map((p) => `panels/${p.image}`), "story_background"],
     () => {
       loading.destroy();
       next();
@@ -103,6 +105,8 @@ export interface StoryResultOpts {
   stars: number;
   wave: number;
   result: Promise<StoryResult | null>;
+  /** v2.2: what the Sim counted (pools left, civilians saved / hit) when the chapter has such mechanics. */
+  objectives?: StoryObjectives;
 }
 
 /**
@@ -120,6 +124,7 @@ export function storyResult(scene: Phaser.Scene, o: StoryResultOpts) {
   if (o.why) m.add(txt(scene, cx, cy - 176, o.why, 24, "#ffd27a"));
   const total = o.chapter.waves.length;
   if (o.won) m.add(starRow(scene, cx, cy - 140, o.stars, 64));
+  else if (o.chapter.duel) m.add(txt(scene, cx, cy - 130, `Rounds won ${o.wave} / ${o.chapter.duel.rounds}`, 50, "#fff4c2"));
   else m.add(txt(scene, cx, cy - 130, `Wave ${o.wave} / ${total}`, 56, "#fff4c2"));
   const saving = txt(scene, cx, cy + 40, "Saving...", 34, "#c9d2ff");
   m.add(saving);
@@ -139,7 +144,7 @@ export function storyResult(scene: Phaser.Scene, o: StoryResultOpts) {
     saving.destroy();
     if (!r.won || !r.win) {
       sfx("lose");
-      m.add(txt(scene, cx, cy - 40, "The corruption holds… for now.\nRearrange your units and try again!", 28, "#c9d2ff").setLineSpacing(8));
+      m.add(txt(scene, cx, cy - 40, o.chapter.duel ? "The crowd boos...\nSharpen your deck and try again!" : "The corruption holds… for now.\nRearrange your units and try again!", 28, "#c9d2ff").setLineSpacing(8));
       return;
     }
     const w = r.win;
@@ -151,6 +156,12 @@ export function storyResult(scene: Phaser.Scene, o: StoryResultOpts) {
     if (w.gems) items.push(["item:gems", `+${w.gems}`, "#7fffd4"]);
     const chest = w.chest ? chestById(w.chest) : undefined;
     if (chest) items.push([`item:${chest.image}`, chest.name, "#ffffff"]);
+    const mech = o.chapter.mechanics;
+    const goals = [
+      mech?.tidePools && o.objectives ? `Pools left ${o.objectives.poolsLeft}/${mech.tidePools.at.length}` : "",
+      mech?.faceless && o.objectives ? `Saved ${o.objectives.civiliansSaved} · Hit ${o.objectives.civiliansHit}` : "",
+    ].filter(Boolean);
+    if (goals.length) m.add(txt(scene, cx, cy + 74, goals.join("   "), 24, "#9ff0ff"));
     items.forEach(([icon, label, color], i) => {
       const x = cx + (i - (items.length - 1) / 2) * 190;
       m.add(scene.add.image(x, cy - 10, icon).setDisplaySize(72, 72));
