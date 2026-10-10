@@ -38,7 +38,7 @@ import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type BossSkill, type BossSkillKind, type MonsterDef } from "./monsters.ts";
 import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Arch, type Element, type UnitDef } from "./units.ts";
 import { raceLabel } from "./races.ts";
-import { starsFor, type StoryChapter, type StoryLine } from "./stories.ts";
+import { starsFor, type StoryChapter, type StoryLine, type StoryObjectives } from "./stories.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
@@ -161,6 +161,37 @@ export type SimEvent =
   | { type: "brew"; t: number; bubble: number; uid: number; slot: number; amount: number; x: number; y: number }
   | { type: "brew_collect"; t: number; bubble: number; uid: number; tapped: boolean; amount: number; x: number; y: number }
   | { type: "end"; t: number; outcome: SimResult["outcome"]; why: string | null; stars: number | null }
+  // v2.2 Book 2 Stories 2-3 (docs/features/v2.2-sand-and-sea). Rules events: the scene draws them.
+  /** The tide turned. `slots` are the low slots (submerged while `high`). */
+  | { type: "tide"; t: number; high: boolean; slots: number[]; next: number }
+  /** Tide pool `index` was drained by monster `uid`. */
+  | { type: "pool"; t: number; index: number; uid: number; x: number; y: number }
+  /** The rolling isle: the path shifts (`on`) or settles. */
+  | { type: "isle"; t: number; on: boolean; dur: number }
+  /** A unit moved by a boss (anchor hook): keeps its uid, like a swap. */
+  | { type: "hooked"; t: number; uid: number; from: number; to: number; x: number; y: number }
+  /** A unit fell asleep (siren song) or woke (`tapped` by the player, or the timer ran out). */
+  | { type: "sleep"; t: number; uid: number; slot: number; asleep: boolean; tapped: boolean }
+  /** A lantern beam sweeps from angle `a0` to `a1` (radians, around x, y) over `dur` seconds, `width` wide. */
+  | { type: "beam"; t: number; uid: number; x: number; y: number; a0: number; a1: number; dur: number; width: number }
+  /** A scripted reveal (StoryWave.reveal): the scene pauses for its panels; the boss is stunned for `stun`. */
+  | { type: "reveal"; t: number; uid: number; stun: number }
+  /** Story 3: a brazier slot lit or went out. */
+  | { type: "brazier"; t: number; slot: number; lit: boolean }
+  /** A Faceless lost its mask. */
+  | { type: "unmask"; t: number; uid: number; civilian: boolean; x: number; y: number }
+  /** A civilian was hit (`saved` false) or reached the exit unhurt (`saved` true). */
+  | { type: "civilian"; t: number; uid: number; saved: boolean; x: number; y: number }
+  /** Purify: chain `index` (0-based) of `total` appeared or broke on boss `uid`. */
+  | { type: "chain"; t: number; uid: number; index: number; total: number; broken: boolean; hp: number }
+  /** The sphinx's cage lock took damage, or opened. */
+  | { type: "cage"; t: number; hp: number; max: number; open: boolean }
+  /** The freed sphinx roars: every monster is stunned for `stun` seconds. */
+  | { type: "roar"; t: number; stun: number }
+  /** A monster burrowed from `from` to `to` (path distances). */
+  | { type: "burrow"; t: number; uid: number; from: number; to: number }
+  /** Equal ground: every unit fights at `rank` until `until`. */
+  | { type: "equal"; t: number; rank: number; until: number }
   // View-only events, emitted only with the `view` option (the solo scene): they never change a rule.
   /** A hit landed on `target`: main hit of a shot or ultimate, a pierce or chain extra, or a Lance Knight's bane chain. */
   | { type: "hit"; t: number; uid: number; target: number; kind: "main" | "pierce" | "chain" | "bane"; element: Element; x: number; y: number; size: number }
@@ -259,6 +290,8 @@ export interface SimResult {
   counts: SimCounts;
   /** Story chapters: 1-3 stars from the lives left on a win, else 0; null outside stories. */
   stars: number | null;
+  /** v2.2: optional objectives of a chapter with mechanics (see objectiveMult); null otherwise. */
+  objectives: StoryObjectives | null;
 }
 
 // ---------------------------------------------------------------- helpers
@@ -1097,6 +1130,7 @@ export class Sim {
       timeline: this.timeline,
       counts: { ...this.counts },
       stars: this.stars,
+      objectives: null,
     };
   }
 

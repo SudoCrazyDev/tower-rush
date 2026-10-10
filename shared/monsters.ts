@@ -16,6 +16,12 @@ export interface MonsterDef {
   mana: number;
   /** Display size in px. */
   size: number;
+  /**
+   * v2.2 Story 3: a Faceless. It walks in *masked* (units cannot target it) until it passes a lit
+   * brazier. An unmasked "soldier" fights as normal; an unmasked "civilian" walks to the exit,
+   * costs no lives, and must not be hit (see ChapterMechanics.faceless).
+   */
+  faceless?: "soldier" | "civilian";
 }
 
 const M = (id: string, name: string, race: Race, hp: number, speed: number, traits: Trait[] = [], mana = 10, size = 84): MonsterDef => ({
@@ -128,9 +134,18 @@ export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "f
  * - impale: stuns `n` random units (Shellshock) for `dur` seconds
  * - sapling_trail: drops `n` minions behind the boss while it walks
  * - volley: shoots `n` arrows at random units; each misses with chance `miss`, a hit stuns for `dur`
+ * v2.2 Book 2 Stories 2-3 add:
+ * - anchor_hook: drags `n` random units to random free slots
+ * - siren_song: sings `n` units asleep (no attacks) until tapped awake, or for `dur` seconds
+ * - lantern_beam: sweeps a beam across the board for `dur` seconds; units it touches are glimmered
+ *   (attack damage x `amount`) for `hold` seconds
+ * - thrash: the rolling isle; the path shifts for `dur` seconds (monsters on it move at x `amount`)
+ * - mimic: spawns a faceless copy of the strongest unit as a monster (at most `n` alive)
+ * - burrow: swallows up to `n` monsters near the boss and brings them up `amount` (0-1) of the path ahead
+ * - equal_ground: every unit fights at the board's average rank for `dur` seconds
  */
-export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley";
-export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley"];
+export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley" | "anchor_hook" | "siren_song" | "lantern_beam" | "thrash" | "mimic" | "burrow" | "equal_ground";
+export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley", "anchor_hook", "siren_song", "lantern_beam", "thrash", "mimic", "burrow", "equal_ground"];
 export interface BossSkill {
   kind: BossSkillKind;
   /** Seconds between uses (the first use comes after `first`, default `every`). */
@@ -142,6 +157,10 @@ export interface BossSkill {
   n: number | [number, number];
   dur?: number;
   miss?: number;
+  /** v2.2: a skill's strength (lantern_beam damage multiplier, thrash speed, burrow path share). */
+  amount?: number;
+  /** v2.2: how long an effect lingers after the skill (lantern_beam glimmer). */
+  hold?: number;
 }
 
 /**
@@ -183,6 +202,12 @@ export interface BossDef {
   evade?: number;
   /** v2.1: the story charge (see BossRally). */
   rally?: BossRally;
+  /**
+   * v2.2 Purify (Sefa): the boss itself takes no damage and has no HP bar. It carries this many
+   * chains, shown one at a time; each chain is a target with its own HP (the boss's HP / chains).
+   * Breaking the last chain beats the boss.
+   */
+  chains?: number;
 }
 
 export const DEFAULT_BOSSES: BossDef[] = [

@@ -27,6 +27,63 @@ export interface StoryWave {
    * charge down the path, then the `after` panels; the battle resumes.
    */
   rally?: { before: StoryPanel[]; allies: string[]; after: StoryPanel[] };
+  /**
+   * v2.2: a scripted reveal during the boss fight. When the boss drops to `at` of its HP, the
+   * battle pauses for `panels`, then the boss is stunned for `stun` seconds (Pearl's cry in Story 2).
+   */
+  reveal?: { at: number; panels: StoryPanel[]; stun: number };
+}
+
+/**
+ * v2.2 board mechanics a chapter turns on (docs/features/v2.2-sand-and-sea). All optional:
+ * a chapter without them plays exactly as before. Slots are board tiles 0-14 (5 per row).
+ */
+export interface ChapterMechanics {
+  /**
+   * The tide swings low, then high, every `cycle` seconds (half each). At low tide monsters move at
+   * x `lowSpeed`. At high tide units on `lowSlots` are submerged (no attacks) and monsters move at
+   * x `highSpeed`.
+   */
+  tide?: { cycle: number; lowSlots: number[]; lowSpeed: number; highSpeed: number };
+  /** Pools beside the path, at these shares (0-1) of the path. A monster walking past drains one. Each pool still full at the win adds `bonus` to the first-clear reward. */
+  tidePools?: { at: number[]; bonus: number };
+  /** Story 3: Faceless rules. Units on `braziers` light them; Faceless passing a lit brazier lose their mask. */
+  faceless?: {
+    braziers: number[];
+    /** Each civilian saved (reached the exit unhurt) adds this to the first-clear reward, up to `savedCap`. */
+    savedBonus: number;
+    savedCap: number;
+    /** Each civilian hit (any damage, splash included) takes this off the first-clear reward, down to `floor`. */
+    hitCut: number;
+    floor: number;
+  };
+  /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
+  cage?: { slot: number; lockHp: number; roarStun: number };
+}
+
+/** v2.2: an arena duel chapter (Story 3): a best-of PvP match against the bot with a fixed deck. */
+export interface StoryDuel {
+  /** PvP arena id the match is played on. */
+  arena: string;
+  /** Portrait (story portrait or unit id) and name of the rival. */
+  rival: string;
+  rivalName: string;
+  /** The rival's deck (5 unit ids) and card level. */
+  deck: string[];
+  level: number;
+  /** Round wins needed (2 = best of 3); bot skill (0-1) per round. */
+  rounds: number;
+  skill: number[];
+  /** Lines the rival says before each round. */
+  barks: StoryLine[];
+}
+
+/** v2.2: a won chapter's optional objectives, which scale its first-clear reward. */
+export interface StoryObjectives {
+  poolsLeft: number;
+  civiliansSaved: number;
+  civiliansHit: number;
+  cageOpen: boolean;
 }
 
 /** A line of dialogue: `who` is a unit id (its card portrait) or a story portrait (candy_king). */
@@ -98,6 +155,20 @@ export interface StoryChapter {
   replay: Reward;
   eventDeck: EventDeck | null;
   rules: DeckRules | null;
+  /** v2.2: board mechanics (tide, pools, Faceless, cage). */
+  mechanics?: ChapterMechanics;
+  /** v2.2: an arena duel instead of a scripted battle; `waves` is then ignored (keep one boss wave for the validator). */
+  duel?: StoryDuel;
+}
+
+/** v2.2: the first-clear reward multiplier for a chapter's objectives (1 = unchanged). */
+export function objectiveMult(c: StoryChapter, o: StoryObjectives): number {
+  let m = 1;
+  const mech = c.mechanics;
+  if (mech?.tidePools) m += o.poolsLeft * mech.tidePools.bonus;
+  const f = mech?.faceless;
+  if (f) m = Math.max(f.floor, m + Math.min(f.savedCap, o.civiliansSaved * f.savedBonus) - o.civiliansHit * f.hitCut);
+  return m;
 }
 
 export interface StoryDef {
