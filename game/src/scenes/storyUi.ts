@@ -5,7 +5,7 @@
 import Phaser from "phaser";
 import { BASE, ensureAnim, loadSheet, sheetKey, sheetScale } from "../assets";
 import { sfx } from "../audio";
-import { W, H, NAVY, txt, button, modal, fmt, cardView, lootCards } from "../ui";
+import { W, H, NAVY, txt, button, modal, fmt, cardView, lootCards, rewardRays, rewardPop } from "../ui";
 import { UNIT_BY_ID } from "../data/units";
 import { BADGES, type StoryChapter, type StoryDef, type StoryObjectives, type StoryPanel } from "../../../shared/stories.ts";
 import { chestById } from "../../../shared/profile.ts";
@@ -123,7 +123,13 @@ export function storyResult(scene: Phaser.Scene, o: StoryResultOpts) {
   m.add(txt(scene, cx, cy - 212, o.chapter.title, 30, "#ffd27a"));
   if (o.why) m.add(txt(scene, cx, cy - 176, o.why, 24, "#ffd27a"));
   const total = o.chapter.waves.length;
-  if (o.won) m.add(starRow(scene, cx, cy - 140, o.stars, 64));
+  if (o.won) {
+    const stars = starRow(scene, cx, cy - 140, o.stars, 64);
+    m.add(stars);
+    // Turning rays behind the stars, and a burst as they land.
+    rewardRays(scene, m, cx, cy - 140, 560, stars, 0.5);
+    if (o.stars > 0) rewardPop(scene, m, "star_burst", cx, cy - 140, 380, { life: 900, from: 0.4, add: true, delay: 200 });
+  }
   else if (o.chapter.duel) m.add(txt(scene, cx, cy - 130, `Rounds won ${o.wave} / ${o.chapter.duel.rounds}`, 50, "#fff4c2"));
   else m.add(txt(scene, cx, cy - 130, `Wave ${o.wave} / ${total}`, 56, "#fff4c2"));
   const saving = txt(scene, cx, cy + 40, "Saving...", 34, "#c9d2ff");

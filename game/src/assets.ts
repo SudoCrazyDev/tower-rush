@@ -23,6 +23,8 @@ export interface AssetIndex {
   "ui/races"?: string[];
   "ui/archs"?: string[];
   "ui/perks"?: string[];
+  /** Player avatars (ui/avatars/<id>.webp), loaded as `avatar:<id>`; the choosable list. */
+  "ui/avatars"?: string[];
   /** Melee weapon sprites (vfx/weapons/<key>.webp), loaded as `weapon:<key>`. */
   "vfx/weapons"?: string[];
   anims: Record<string, string[]>;

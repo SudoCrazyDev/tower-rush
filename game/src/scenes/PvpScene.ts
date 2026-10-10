@@ -6,6 +6,7 @@
  */
 import Phaser from "phaser";
 import { BASE, animKey, assetIndex, ensureAnim, loadImages, loadSheet, sheetScale } from "../assets";
+import { avatarView, botAvatar } from "../avatars";
 import { RES } from "../display";
 import { music, sfx } from "../audio";
 import { W, H, WIDE, ARENA_W, ARENA_H, NAVY, PORTRAIT_FIT, button, cardView, floatText, fmt, iconButton, modal, pressable, resourcePill, toast, txt } from "../ui";
@@ -585,6 +586,10 @@ export class PvpScene extends Phaser.Scene {
       }
       const gap = WIDE ? 120 : 132;
       p.deck.forEach((id, i) => c.add(cardView(this, x + (i - 2) * gap, y + 60, WIDE ? 104 : 116, id, { level: p.levels[id] })));
+      const avatar = p.avatar ?? (p.bot ? botAvatar(p.name) : null);
+      if (avatar && this.textures.exists(`avatar:${avatar}`)) {
+        c.add(avatarView(this, x, y - 225, 110, avatar));
+      }
       if (p.hero && this.textures.exists(`hero_portrait:${p.hero}`)) {
         const hx = WIDE ? x : x + (y < H / 2 ? 280 : -280);
         c.add(this.add.image(hx, y + (WIDE ? 200 : -96), `hero_portrait:${p.hero}`).setDisplaySize(96, 96));

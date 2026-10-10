@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { getLeaderboard, type Leaderboard } from "../save";
-import { HERO_BY_ID } from "../data/heroes";
+import { avatarView } from "../avatars";
 import { leagueFor } from "../../../shared/leagues.ts";
 import { leagueBadge } from "./leagues";
 import { tierBadge } from "./ranked";
@@ -123,9 +123,7 @@ export class LeaderboardScene extends Phaser.Scene {
 
     // Avatar: the player's hero inside the gold ring.
     const ax = left + 140;
-    const hero = r.hero && HERO_BY_ID[r.hero] ? `hero_portrait:${r.hero}` : null;
-    if (hero && this.textures.exists(hero)) parts.push(this.add.image(ax, y, hero).setDisplaySize(46, 46));
-    parts.push(this.add.image(ax, y, "ui:avatar_frame").setDisplaySize(74, 74));
+    parts.push(avatarView(this, ax, y, 74, r.avatar, r.hero));
     // League badge on the avatar's corner (the ranked tier on the ranked board).
     const rating = r.rating ?? PVP.rules.ratingStart;
     parts.push(this.by === "rating" ? tierBadge(this, ax + 28, y + 22, 36, tierFor(rating)) : leagueBadge(this, ax + 28, y + 22, 36, leagueFor(r.trophies)));

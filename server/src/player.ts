@@ -6,7 +6,7 @@ import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
 import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
-import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, AVATAR_RE, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, deckable, upgradeCost } from "../../shared/units.ts";
@@ -145,6 +145,17 @@ player.put("/me/hero", P, async (c) => {
         if (!HERO_BY_ID[id].enabled) fail(400, "That hero isn't available");
       }
       p.hero = id;
+    }),
+  );
+});
+
+/** Pick the player avatar (an id from ui/avatars, or null for the default look). */
+player.put("/me/avatar", P, async (c) => {
+  const id = (await body(c)).avatar ?? null;
+  if (id !== null && (typeof id !== "string" || !AVATAR_RE.test(id))) fail(400, "Unknown avatar");
+  return c.json(
+    await update(c, (p) => {
+      p.avatar = id;
     }),
   );
 });
@@ -574,7 +585,7 @@ player.get("/leaderboard", P, async (c) => {
     all(
       db,
       `SELECT id, display_name AS name, json_extract(profile, '$.trophies') AS trophies,
-              json_extract(profile, '$.bestWave') AS bestWave, json_extract(profile, '$.hero') AS hero,
+              json_extract(profile, '$.bestWave') AS bestWave, json_extract(profile, '$.hero') AS hero, json_extract(profile, '$.avatar') AS avatar,
               json_extract(profile, '$.ranked.rating') AS rating,
               RANK() OVER (ORDER BY ${v} DESC) AS rank
        FROM users WHERE banned = 0 AND ${on}
@@ -601,7 +612,7 @@ player.get("/arenas/:id/top", P, async (c) => {
   const rows = await all(
     db,
     `SELECT id, display_name AS name, ${v} AS wave, json_extract(profile, '$.trophies') AS trophies,
-            json_extract(profile, '$.hero') AS hero, RANK() OVER (ORDER BY ${v} DESC) AS rank
+            json_extract(profile, '$.hero') AS hero, json_extract(profile, '$.avatar') AS avatar, RANK() OVER (ORDER BY ${v} DESC) AS rank
      FROM users WHERE banned = 0 AND ${v} > 0
      ORDER BY rank, id LIMIT ?2`,
     a.id,

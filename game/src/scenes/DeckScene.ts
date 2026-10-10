@@ -10,7 +10,7 @@ import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
-import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
 import { topBar } from "./LobbyScene";
 import { storyUnlocking } from "../../../shared/stories.ts";
 import { coach, setTutorialDone, tutorialDue } from "../tutorial";
@@ -877,6 +877,8 @@ export class DeckScene extends Phaser.Scene {
     sparks.explode(36);
     this.time.delayedCall(1000, () => sparks.destroy());
 
+    rewardPop(this, m, "star_burst", x, y, 420, { life: 800, from: 0.4, add: true });
+    rewardPop(this, m, "level_up_arrow", x, y + 30, 170, { life: 1100, rise: 140, from: 0.7 });
     card.setScale(1.3);
     this.tweens.add({ targets: card, scale: 1, duration: 420, ease: "Back.Out" });
 

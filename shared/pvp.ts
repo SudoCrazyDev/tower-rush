@@ -204,6 +204,8 @@ export interface Loadout {
   /** Card level per deck unit. */
   levels: Record<string, number>;
   hero: string | null;
+  /** Player avatar id (ui/avatars); missing or null for the default look. */
+  avatar?: string | null;
   bot?: boolean;
 }
 
@@ -315,14 +317,14 @@ export function mirrorLoadout(seed: number) {
 /** The loadout a player brings to a mode (the server builds it from the stored profile). */
 export function loadoutFor(
   mode: PvpMode,
-  p: { deck: string[]; cards: Record<string, { level: number }>; hero: string | null; trophies: number; ranked?: { rating: number } },
+  p: { deck: string[]; cards: Record<string, { level: number }>; hero: string | null; avatar?: string | null; trophies: number; ranked?: { rating: number } },
   name: string,
   seed: number,
 ): Loadout {
   const rating = p.ranked?.rating ?? PVP.rules.ratingStart;
-  if (mode === "mirror") return { name, trophies: p.trophies, rating, ...mirrorLoadout(seed) };
+  if (mode === "mirror") return { name, trophies: p.trophies, rating, avatar: p.avatar ?? null, ...mirrorLoadout(seed) };
   const levels = Object.fromEntries(p.deck.map((id) => [id, mode === "ranked" ? (p.cards[id]?.level ?? 1) : 1]));
-  return { name, trophies: p.trophies, rating, deck: [...p.deck], levels, hero: p.hero };
+  return { name, trophies: p.trophies, rating, deck: [...p.deck], levels, hero: p.hero, avatar: p.avatar ?? null };
 }
 
 const BOT_NAMES = ["Grizzle", "Moxie", "Tarn", "Pip", "Bramble", "Kestrel", "Odo", "Vex", "Juniper", "Rook", "Sable", "Wren", "Hob", "Marlo", "Quill", "Fennick"];

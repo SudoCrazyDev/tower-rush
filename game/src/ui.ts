@@ -215,6 +215,54 @@ export function heroCardView(scene: Phaser.Scene, x: number, y: number, size: nu
   return c;
 }
 
+// ---------------------------------------------------------------- reward VFX (static vfx:<key> images)
+
+const hasVfx = (scene: Phaser.Scene, key: string) => scene.textures.exists(`vfx:${key}`);
+
+/** The rarity glow ring for a card rarity (mythic uses legendary, event uses epic); null for common. */
+export function rarityGlowKey(rarity: string): string | null {
+  return rarity === "legendary" || rarity === "mythic" ? "rarity_glow_legendary" : rarity === "epic" || rarity === "event" ? "rarity_glow_epic" : rarity === "rare" ? "rarity_glow_rare" : null;
+}
+
+/**
+ * Slowly turning golden rays (vfx:light_rays), `size` px wide, at (x, y) in `parent`. With `below` it sits
+ * just under that child, otherwise on top of what is already in the container (add it before the reward). Null when the art is missing.
+ */
+export function rewardRays(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: number, y: number, size: number, below?: Phaser.GameObjects.GameObject, alpha = 0.6) {
+  if (!hasVfx(scene, "light_rays")) return null;
+  const img = scene.add.image(x, y, "vfx:light_rays").setDisplaySize(size, size).setBlendMode(Phaser.BlendModes.ADD).setAlpha(alpha);
+  if (below) {
+    parent.add(img);
+    parent.moveBelow<Phaser.GameObjects.GameObject>(img, below);
+  } else parent.add(img);
+  const tw = scene.tweens.add({ targets: img, angle: 360, duration: 16000, repeat: -1 });
+  img.once("destroy", () => tw.stop());
+  return img;
+}
+
+/** A soft pulsing rarity ring behind a card (rare and up); null for common or missing art. */
+export function rarityGlow(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: number, y: number, size: number, rarity: string) {
+  const key = rarityGlowKey(rarity);
+  if (!key || !hasVfx(scene, key)) return null;
+  const img = scene.add.image(x, y, `vfx:${key}`).setDisplaySize(size, size);
+  parent.addAt(img, 0);
+  const tw = scene.tweens.add({ targets: img, alpha: { from: 1, to: 0.6 }, scale: img.scale * 1.08, yoyo: true, repeat: -1, duration: 800, ease: "Sine.InOut" });
+  img.once("destroy", () => tw.stop());
+  return img;
+}
+
+/** A one-shot pop (star_burst, chest_glow, level_up_arrow...): grows from `from`, drifts up `rise` px, fades out. */
+export function rewardPop(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, key: string, x: number, y: number, size: number, o: { life?: number; rise?: number; from?: number; delay?: number; add?: boolean } = {}) {
+  if (!hasVfx(scene, key)) return null;
+  const img = scene.add.image(x, y, `vfx:${key}`);
+  const end = size / Math.max(1, img.width);
+  img.setScale(end * (o.from ?? 0.5)).setAlpha(0);
+  if (o.add) img.setBlendMode(Phaser.BlendModes.ADD);
+  parent.add(img);
+  scene.tweens.add({ targets: img, scale: end, y: y - (o.rise ?? 0), alpha: { from: 1, to: 0 }, delay: o.delay ?? 0, duration: o.life ?? 800, ease: "Cubic.Out", onComplete: () => img.destroy() });
+  return img;
+}
+
 /** Cards from a chest, popping in one by one (4 per row). Returns the card containers. */
 export function lootCards(
   scene: Phaser.Scene,
@@ -230,6 +278,13 @@ export function lootCards(
     const v = cardView(scene, x, y + Math.floor(i / cols) * (size + 70), size, card.id);
     v.add(txt(scene, 0, size * 0.69, `x${card.copies}`, 26));
     if (card.isNew) v.add(txt(scene, 0, -size * 0.55, "NEW!", 24, "#7dff7a"));
+    // Reward VFX behind the card: turning rays (few cards only) and a rarity ring for rare and up.
+    const rarity = UNIT_BY_ID[card.id]?.rarity ?? "common";
+    if (cards.length <= 8) {
+      const rays = rewardRays(scene, v, 0, 0, size * 2.2, undefined, 0.45);
+      if (rays) v.sendToBack(rays);
+    }
+    if (rarityGlowKey(rarity)) rarityGlow(scene, v, 0, 0, size * 1.7, rarity);
     v.setScale(0);
     scene.tweens.add({ targets: v, scale: 1, delay: i * Math.min(150, 1800 / cards.length), duration: 250, ease: "Back.Out" });
     return v;

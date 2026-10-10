@@ -96,6 +96,10 @@ export async function setHero(hero: string | null) {
   setProfile((await put<{ profile: Profile }>("/me/hero", { hero })).profile);
 }
 
+export async function setAvatar(avatar: string | null) {
+  setProfile((await put<{ profile: Profile }>("/me/avatar", { avatar })).profile);
+}
+
 /** Mark tutorial parts done. Applied locally first, so a lost connection never shows them twice in this session. */
 export async function finishTutorial(parts: string[]) {
   profile.tutorial = [...new Set([...(profile.tutorial ?? []), ...parts])];
@@ -175,7 +179,7 @@ export async function deleteMail(id: number) {
 export interface Leaderboard {
   by: "trophies" | "wave" | "rating";
   /** `rating` is the ranked PvP rating (null for an account that predates it). */
-  rows: { rank: number; id: number; name: string; trophies: number; bestWave: number; rating: number | null; hero: string | null }[];
+  rows: { rank: number; id: number; name: string; trophies: number; bestWave: number; rating: number | null; hero: string | null; avatar?: string | null }[];
   /** Ranked players on this board. */
   total: number;
   /** The signed-in player's place (null when they have 0 on this board). */
@@ -187,7 +191,7 @@ export const getLeaderboard = (by: Leaderboard["by"]) => get<Leaderboard>(`/lead
 /** Longest waves survived in one arena. */
 export interface ArenaTop {
   arena: string;
-  rows: { rank: number; id: number; name: string; wave: number; trophies: number; hero: string | null }[];
+  rows: { rank: number; id: number; name: string; wave: number; trophies: number; hero: string | null; avatar?: string | null }[];
   /** The signed-in player's best wave there and place (null when they haven't played it). */
   me: { id: number; wave: number; rank: number | null };
 }

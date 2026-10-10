@@ -25,7 +25,7 @@ import { cardLevel, profile, startBattle, finishBattle, finishStory, type Battle
 import { storyPanels, storyResult } from "./storyUi";
 import { onPlayLost, releasePlay } from "../play";
 import { music, sfx } from "../audio";
-import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT } from "../ui";
+import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT, rewardRays, rewardPop } from "../ui";
 import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
 import { Monster } from "../battle/Monster";
 import { Unit, canAwaken } from "../battle/Unit";
@@ -1658,6 +1658,8 @@ export class BattleScene extends Phaser.Scene {
           if (victory && this.heroSprite && this.anims.exists(victory)) this.heroSprite.play({ key: victory, repeat: -1 });
           banner.setTexture("ui:banner_victory");
           headline.setText("NEW BEST!");
+          rewardRays(this, m, m.cx, m.cy - 300, 620, banner, 0.5);
+          rewardPop(this, m, "star_burst", m.cx, m.cy - 300, 360, { life: 900, from: 0.4, add: true });
         }
         const best = profile.arenaBest?.[this.arena.id] ?? stats.wave;
         m.add(txt(this, m.cx, m.cy - 62, r.newBest ? `New record in ${this.arena.name}!` : `Best in ${this.arena.name}: wave ${best}`, 22, r.newBest ? "#7dff7a" : "#ffd27a"));

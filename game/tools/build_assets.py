@@ -191,10 +191,13 @@ STATIC = [
     ("story/allies", "story/allies", 256),
 ]
 jobs.append(lambda: fit(f"{SRC}/story/story_background.png", f"{OUT}/story/story_background.webp", 1344))
+# Reward VFX are drawn large (rays 500-900 px, bursts 300-450 px), so they build bigger than the other vfx.
+BIG_VFX = {"level_up_arrow", "light_rays", "star_burst", "chest_glow", "merge_flash", "rarity_glow_legendary", "rarity_glow_epic", "rarity_glow_rare"}
 for folder, out, size in STATIC:
     index[out] = ids(folder)
     for i in index[out]:
-        jobs.append(lambda f=folder, o=out, i=i, s=size: fit(f"{SRC}/{f}/{i}.png", f"{OUT}/{o}/{i}.webp", s))
+        sz = 256 if out == "vfx" and i in BIG_VFX else size
+        jobs.append(lambda f=folder, o=out, i=i, s=sz: fit(f"{SRC}/{f}/{i}.png", f"{OUT}/{o}/{i}.webp", s))
 
 UI_SIZES = {"logo": 640, "panel_dialog": 640, "banner_victory": 640, "banner_defeat": 640, "boss_warning": 320}
 index["ui"] = [i for i in ids("ui") if i not in ("merge_rank_pips", "element_icons", "buttons_set", "league_ranks")]

@@ -41,6 +41,8 @@ export interface Profile {
   heroes: string[];
   /** Hero taken into battle; null for none. */
   hero: string | null;
+  /** Chosen player avatar (an id from ui/avatars, "avatar_1"); null for the default look. */
+  avatar: string | null;
   /** Today's quests (refreshed by the server when the UTC day changes). */
   daily: DailyState;
   login: LoginState;
@@ -75,6 +77,9 @@ export function grantReleaseGifts(p: Profile) {
   return given;
 }
 
+/** Shape of a player avatar id (files in ui/avatars; the list of real ones is the asset index). */
+export const AVATAR_RE = /^avatar_\d{1,3}$/;
+
 export const TUTORIAL_PARTS = ["battle", "deck"] as const;
 export type TutorialPart = (typeof TUTORIAL_PARTS)[number];
 
@@ -94,6 +99,7 @@ export function newProfile(): Profile {
     lastGift: 0,
     heroes: [],
     hero: HEROES.find((h) => h.enabled && h.price === 0)?.id ?? null,
+    avatar: null,
     daily: { day: "", quests: [], bonusClaimed: false },
     login: { claims: 0, lastDay: "" },
     leagues: [],

@@ -1,5 +1,5 @@
 import { one, run } from "./db.ts";
-import { newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
+import { AVATAR_RE, newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
 import { UNIT_BY_ID, deckable } from "../../shared/units.ts";
 import { newStoryProgress } from "../../shared/stories.ts";
 import { HEROES, HERO_BY_ID } from "../../shared/heroes.ts";
@@ -42,6 +42,7 @@ export function readProfile(row: UserRow): Profile {
   p.daily.quests = p.daily.quests.filter((s) => questById(s.id));
   for (const s of p.daily.quests) s.progress = Math.min(s.progress, questById(s.id)!.target);
   p.story = { ...newStoryProgress(), ...p.story };
+  if (typeof p.avatar !== "string" || !AVATAR_RE.test(p.avatar)) p.avatar = null;
   return p;
 }
 

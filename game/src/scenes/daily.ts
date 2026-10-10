@@ -4,7 +4,7 @@ import { LOGIN_REWARDS, QUEST_GOALS, loginReady, msToNextDay, questById, questDo
 import { chestById } from "../../../shared/profile.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { profile, claimLogin, claimQuest, claimQuestBonus, type ChestLoot, type Claimed } from "../save";
-import { txt, button, modal, NAVY, attempt, lootCards, fmt } from "../ui";
+import { txt, button, modal, NAVY, attempt, lootCards, rewardRays, fmt } from "../ui";
 import { sfx } from "../audio";
 
 const chestName = (id: string) => chestById(id)?.name ?? id;
@@ -49,6 +49,9 @@ export function rewardPopup(scene: Phaser.Scene, title: string, got: Claimed, on
   if (reward.gems) lines.push(["item:gems", `+${reward.gems} gems`, "#7fffd4"]);
   // Without a chest, centre the gold/gems lines in the space above the button.
   let y = loot ? top + 150 : cy - 50 - ((lines.length - 1) * 80) / 2;
+  // Turning rays behind the reward (the chest icon, else the gold/gems lines).
+  const raysY = loot && reward.chest ? top + 190 : lines.length ? y + ((lines.length - 1) * 80) / 2 : cy;
+  rewardRays(scene, m, cx, raysY, 520, undefined, 0.45);
   if (loot && reward.chest) {
     m.add(scene.add.image(cx, y + 40, rewardIcon(reward)).setDisplaySize(170, 170));
     m.add(txt(scene, cx, y + 150, `${chests > 1 ? `${chests}x ` : ""}${chestName(reward.chest)}`, 32, "#fff4c2"));

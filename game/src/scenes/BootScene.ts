@@ -94,6 +94,7 @@ export class BootScene extends Phaser.Scene {
     loadImages(this, "vfx", "vfx", index.vfx);
     loadImages(this, "race", "ui/races", index["ui/races"] ?? []);
     loadImages(this, "arch", "ui/archs", index["ui/archs"] ?? []);
+    loadImages(this, "avatar", "ui/avatars", index["ui/avatars"] ?? []);
     loadImages(this, "perk", "ui/perks", index["ui/perks"] ?? []);
     loadImages(this, "weapon", "vfx/weapons", index["vfx/weapons"] ?? []);
     loadImages(this, "loc", "locations", ["lobby_portrait", "lobby_landscape", "shop_background", "deck_room_background", "chest_vault_background", "world_map"]);

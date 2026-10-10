@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
-import { profile, account, mail, setArena, signOut, loadMe, loadInbox, serverNow } from "../save";
+import { profile, account, mail, setArena, setAvatar, signOut, loadMe, loadInbox, serverNow } from "../save";
 import { storyIsNew } from "../../../shared/profile.ts";
 import { BOOK, BOOKS, SAGA, bookLock, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
 import { loadStoryImages } from "./storyUi";
@@ -18,6 +18,7 @@ import { bakeAll } from "../bake";
 import { pointAt, tutorialDue } from "../tutorial";
 import { ambientVideo, coverFit } from "../backdrop";
 import { arenaInfo } from "./arenaInfo";
+import { avatarIds, avatarView } from "../avatars";
 import { whatsNew } from "./whatsNew";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, pressable, badge, onSwipe, toast, ornateFrame } from "../ui";
 import { sfx } from "../audio";
@@ -154,7 +155,9 @@ export class LobbyScene extends Phaser.Scene {
     const logoPos = WIDE ? [side, 330] : [W / 2, 250];
     const logo = this.add.image(logoPos[0], logoPos[1], "ui:logo").setScale(WIDE ? 1 : 0.78);
     this.tweens.add({ targets: logo, y: logoPos[1] + 12, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
-    if (WIDE) txt(this, side, 620, `Welcome, ${account.name}!`, 40, "#fff4c2");
+    if (WIDE) txt(this, side, 575, `Welcome, ${account.name}!`, 40, "#fff4c2");
+    // Phones: a small ring in the right tile column, under RANKS (the logo fills the middle; no room for the name).
+    this.avatarButton(WIDE ? [side, 665] : [W - 66, 408], WIDE ? 100 : 76);
 
     this.drawCard();
     // Swipe the card: the other mode card, or (once one is open) the next arena or book.
@@ -193,6 +196,39 @@ export class LobbyScene extends Phaser.Scene {
     else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: W / 2 - 240, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
     // After an update: the release popup, once (not for brand-new players mid-tutorial).
     else this.time.delayedCall(700, () => this.sys.isActive() && whatsNew(this));
+  }
+
+  /** The player's avatar in its ring; tap to pick another. */
+  private avatarButton([x, y]: [number, number], size: number) {
+    const a = avatarView(this, x, y, size, profile.avatar, profile.hero);
+    pressable(a, () => this.avatarPicker());
+  }
+
+  /** Grid of the avatars in the asset index, the current one highlighted; choosing saves it. */
+  private avatarPicker() {
+    const ids = avatarIds();
+    const cols = Math.min(4, Math.max(1, ids.length));
+    const rows = Math.max(1, Math.ceil(ids.length / cols));
+    const cell = 150;
+    const m = modal(this, Math.max(560, cols * cell + 80), Math.min(H - 80, 260 + rows * cell), "CHOOSE AVATAR", () => {});
+    const { cx, cy } = m;
+    let busy = false;
+    const pick = async (id: string | null) => {
+      if (busy) return;
+      busy = true;
+      if (id !== profile.avatar) await setAvatar(id).catch((e) => toast(this, e instanceof Error ? e.message : "Couldn't save"));
+      m.close();
+      if (this.sys.isActive()) this.scene.restart();
+    };
+    const top = cy - ((rows - 1) * cell) / 2 - 40;
+    ids.forEach((id, i) => {
+      const x = cx + ((i % cols) - (cols - 1) / 2) * cell;
+      const y = top + Math.floor(i / cols) * cell;
+      if (id === profile.avatar) m.add(this.add.circle(x, y, cell * 0.46, 0xffd93b, 0.45));
+      m.add(pressable(avatarView(this, x, y, cell - 20, id), () => void pick(id)));
+    });
+    if (!ids.length) m.add(txt(this, cx, cy - 40, "No avatars yet", 28, "#c9d2ff"));
+    if (profile.avatar) m.add(button(this, cx, cy + (rows * cell) / 2 + 40, 360, 84, "DEFAULT LOOK", "blue", () => void pick(null), 30));
   }
 
   /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */

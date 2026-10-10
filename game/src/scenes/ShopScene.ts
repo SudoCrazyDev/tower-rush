@@ -6,7 +6,7 @@ import { activeEvents, discounted, msLeft, nextChange, offerLeft, offerWindow, s
 import { chestById } from "../../../shared/profile.ts";
 import { rewardPopup } from "./daily";
 import { RARITY_STATS } from "../data/units";
-import { W, H, WIDE, txt, button, iconButton, pressable, lootCards, modal, fmt, attempt, type Button } from "../ui";
+import { W, H, WIDE, txt, button, iconButton, pressable, lootCards, rewardPop, modal, fmt, attempt, type Button } from "../ui";
 import { cover, topBar } from "./LobbyScene";
 import { music, sfx } from "../audio";
 import { bakeAll, bakedImage } from "../bake";
@@ -901,6 +901,8 @@ export class ShopScene extends Phaser.Scene {
           fx.play(key);
         }
       }
+      // Golden beam shooting up out of each opened chest.
+      for (const chest of chests) rewardPop(this, m, "chest_glow", chest.x, chest.y - size * 0.35, size * 1.7, { life: 1100, rise: 50, from: 0.6, add: true });
       chests.forEach((chest) => chest.setVisible(false));
       this.showLoot(m, got, n > 1);
     });
