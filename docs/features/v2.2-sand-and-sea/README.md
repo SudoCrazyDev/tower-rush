@@ -27,7 +27,7 @@ they ship.
 
 ## 2. Story 2: "The Drowned Coast" (`b2s2`)
 
-Unlocks after Book 2 Story 1 (`wilds_warden`). Trophies: TBD (Story 1 is 600).
+Unlocks after finishing Book 2 Story 1 (`wilds_warden`). No trophy gate.
 
 | # | Id | Chapter | Layout | Waves | Bosses | Notes |
 |---|---|---|---|---|---|---|
@@ -43,7 +43,7 @@ Unlocks after Book 2 Story 1 (`wilds_warden`). Trophies: TBD (Story 1 is 600).
 
 ## 3. Story 3: "The Throne of Dust" (`b2s3`)
 
-Unlocks after Story 2 (`tidewarden`).
+Unlocks after finishing Story 2 (`tidewarden`). No trophy gate.
 
 | # | Id | Chapter | Layout | Format | Bosses | Notes |
 |---|---|---|---|---|---|---|
@@ -72,7 +72,7 @@ hearts taken. Two remain."
 ### Story 3
 | Mechanic | Rule | First numbers |
 |---|---|---|
-| **Masks and braziers** | Faceless are *masked*: units cannot target them. A unit standing on a **brazier slot** lights it, and every Faceless that passes a lit brazier is unmasked. Unmasked soldiers can be hit. Unmasked civilians walk to the exit and cost no lives. Splash damage on a civilian counts as a civilian hurt. | 3 brazier slots per board. ~30% of Faceless are civilians. Each civilian hurt: -5% first-clear reward (floor 50%). |
+| **Masks and braziers** | Faceless are *masked*: units cannot target them. A unit standing on a **brazier slot** lights it, and every Faceless that passes a lit brazier is unmasked. Unmasked soldiers can be hit. Unmasked civilians walk to the exit and cost no lives. Each civilian who reaches the exit unhurt is *saved* and earns a bonus. Any hit on a civilian, splash included, cuts the reward. | 3 brazier slots per board. ~30% of Faceless are civilians. Each civilian saved: +2% first-clear reward (cap +20%). Each civilian hit: -5% (floor 50%). |
 | **Arena duel** | A PvP match against the bot with a fixed deck (Bako's). Best of 3 rounds. | Reuses PvP timed waves and sends. Bot difficulty rises per round. |
 | **Crowd favor** | Multi-kills and rounds with no leaks fill a meter. A full meter drops gold or a free unit. | Multi-kill = 3+ kills in 1 s. Rewards TBD. |
 | **Purify** (Sefa) | Sefa has no HP bar, only a **Chains** bar. Her body takes no damage. Chains appear on her one at a time as targets. Breaking all chains wins. | 6 chains. Each chain has HP like a captain. |
@@ -129,11 +129,13 @@ Art goes through the usual flow: prompts in `shared/art-requests.ts` (admin `#/a
 
 ## 8. Open questions
 
-1. **Trophy gates** for Story 2 and Story 3 (Story 1 needs 600).
-2. **Ship together or staggered?** One release with both stories, or Story 2 first as v2.2.0 and
-   Story 3 as a follow-up if the arena duel takes longer.
-3. **Civilian penalty:** a reward cut for hurt civilians, or a bonus for each civilian saved
-   (friendlier)?
+Decided (2026-10-10):
+- **No trophy gates.** Each story unlocks when the previous story is finished.
+- **Both stories ship together** in v2.2.0.
+- **Civilians:** a bonus for each civilian saved, and a reward cut for each civilian hit.
+
+Still open:
+
 4. **Arena duel fallback:** if the PvP bot does not fit, swap Chapter 2 for an arena gauntlet of
    three short rounds with a crowd-picked rule each.
 5. **Siren song tap:** tapping a sleeping unit is the first tap-on-unit interaction in battle. Check
