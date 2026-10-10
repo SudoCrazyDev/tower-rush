@@ -23,7 +23,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.3.2 | Element emblems hotfix | 2026-10-09 | (art only, on R2) | — |
 | v2.0.0 | **The Grand Revamp** | 2026-10-09 | tag `v2.0.0` | [v2.0](v2.0-the-grand-revamp/README.md) |
 | v2.1.0 | **Chaos Corrupted** | 2026-10-10 | tag `v2.1.0` | [v2.1](v2.1-chaos-corrupted/README.md) |
-| v2.2.0 | **Sand & Sea** (planned) | — | — | [saga plan](concepts/forsakens-saga.md) (sections 2-3) |
+| v2.2.0 | **Sand & Sea** (planned) | — | — | [v2.2](v2.2-sand-and-sea/README.md) |
 | next | Balance pass, Book 2 Stories 4-5, Book 3 | — | — | — |
 
 ---
