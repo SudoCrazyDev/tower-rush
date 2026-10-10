@@ -5,6 +5,9 @@ import { Releases, R_TOTAL } from "./Releases";
 import { CAST } from "./promo/cast";
 import { KeyArt, Square, Story, Teaser, TEASER_LEN, TeaserStory, UnitPost } from "./promo/SupportingCast";
 import { StBanner, StInfoBestiary, StInfoDeck, StInfoKnights, StInfoMuse, StInfoPath, StKeyArt, StSquare, StStory, StTeaserStory } from "./promo/Stories";
+import { CommandMode, CM_LEN } from "./promo/CommandMode";
+import { CrownChess, CC_LEN } from "./promo/CrownChess";
+import { Nemesis, NM_LEN } from "./promo/Nemesis";
 import { RbBanner, RbIcon, RbKeyArt, RbReveal, RbSquare, RbStory, REVEAL_LEN } from "./promo/Rebrand";
 
 export const RemotionRoot = () => (
@@ -40,5 +43,11 @@ export const RemotionRoot = () => (
     <Still id="rb-banner" component={RbBanner} width={1500} height={500} />
     <Still id="rb-icon" component={RbIcon} width={1024} height={1024} />
     <Composition id="rb-reveal" component={RbReveal} durationInFrames={REVEAL_LEN} fps={30} width={1080} height={1920} />
+    {/* Fantasy concept: Command Mode (docs/features/concepts/command-mode.md) */}
+    <Composition id="cm-pitch" component={CommandMode} durationInFrames={CM_LEN} fps={30} width={1080} height={1920} />
+    {/* Fantasy concept: Crown Chess (docs/features/concepts/crown-chess.md) */}
+    <Composition id="cc-pitch" component={CrownChess} durationInFrames={CC_LEN} fps={30} width={1080} height={1920} />
+    {/* Retention pitch: The Nemesis War (docs/features/concepts/nemesis-war.md) */}
+    <Composition id="nm-pitch" component={Nemesis} durationInFrames={NM_LEN} fps={30} width={1080} height={1920} />
   </>
 );
