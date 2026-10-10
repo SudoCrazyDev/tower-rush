@@ -69,21 +69,8 @@ export type ButtonColor = keyof typeof BUTTON;
 export const sheetKey = (folder: string, name: string) => `sheet:${folder}/${name}`;
 export const animKey = sheetKey;
 
-/**
- * v2.2: unit cards whose own portrait and still aren't in the pack yet borrow an existing card's, so
- * the Event cards can be earned and played before their art lands. Drop an entry once the art is built.
- */
-const UNIT_STAND_IN: Record<string, string> = { maren: "tide_mermaid", bako: "minotaur_gladiator" };
-
 /** Queue a set of static images under `<prefix>:<id>` keys. */
 export function loadImages(scene: Phaser.Scene, prefix: string, folder: string, ids: string[]) {
-  // A unit without its own portrait (folder "portraits") or still (folder "units") loads its stand-in's file under its own key.
-  if (folder === "portraits" || folder === "units") {
-    for (const [id, from] of Object.entries(UNIT_STAND_IN)) {
-      const key = `${prefix}:${id}`;
-      if (!ids.includes(id) && ids.includes(from) && !scene.textures.exists(key)) scene.load.image(key, `${BASE}${folder}/${from}.webp`);
-    }
-  }
   for (const id of ids) {
     const key = `${prefix}:${id}`;
     if (!scene.textures.exists(key)) scene.load.image(key, `${BASE}${folder}/${id}.webp`);
@@ -105,27 +92,8 @@ export function hasAnim(folder: string, name: string) {
  * v2.1: sprites that stand in for monsters and bosses whose own art isn't in the pack yet, so a new
  * story can be played before its art lands. Drop an entry once the real sheets are built.
  */
-const STAND_IN: Record<string, string> = {
-  // v2.2 Story 2 "The Drowned Coast".
-  reef_crab: "boulder_crab",
-  drowned_sailor: "pirate_skeleton",
-  drowned_corsair: "skeleton_soldier",
-  eel_swimmer: "ghost_wisp",
-  barnacle_spawn: "slime_blob",
-  grell: "ghost_pirate_captain",
-  lusca: "corrupted_fae",
-  ondrath: "kraken",
-  corvaline: "portal_wizard",
-  // Story 3 "The Throne of Dust".
-  faceless_soldier: "corrupted_elf_warrior",
-  faceless_archer: "corrupted_elf_archer",
-  faceless_civilian: "corrupted_villager",
-  scarab: "armored_beetle",
-  jackal: "wolf_raider",
-  faceless_herald: "elf_captain_kaelen",
-  dune_warden: "stone_colossus",
-  sefa: "sand_pharaoh",
-};
+// v2.2: every Story 2-3 monster and boss now has its own sheets, so the table is empty.
+const STAND_IN: Record<string, string> = {};
 
 /** The id whose sheets draw monster or boss `id` (itself, or its stand-in while its art is missing). */
 export function sheetId(folder: "monsters" | "bosses", id: string) {

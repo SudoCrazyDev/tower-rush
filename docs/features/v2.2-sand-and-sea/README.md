@@ -125,7 +125,7 @@ Art goes through the usual flow: prompts in `shared/art-requests.ts` (admin `#/a
 ## 7. Build notes
 
 - Balance check: `node scripts/story-sim.ts [chapter ids]` runs Book 2 chapters headless (fixed board, card levels 6/8/10, 5 seeds) for comparison with Story 1. Its fixed board can't beat the final bosses of Story 1 or Story 2, so final-boss tuning needs playtesting.
-- New art isn't made yet: monsters, bosses and the two cards use stand-in sprites (`STAND_IN` in `game/src/assets.ts`), arenas and covers reuse existing images, and missing panels show the story background.
+- Art made with the Higgsfield MCP (2026-10-11): 99 stills (186 credits) and 99 Seedance clips (162 credits) for monsters, bosses, Maren, Bako and the 6 arena loops. No boss banners (as in v2.1). The high-tide arena variants are uploaded but not used yet.
 
 ## 8. Docs still to write
 
