@@ -667,8 +667,7 @@ const THE_DROWNED_COAST: StoryDef = {
   id: "b2s2",
   title: "The Drowned Coast",
   blurb: "The sea has stopped moving. Ride the tide, wake the sleeping isle, and reach the lantern at the world's edge.",
-  // Final art: book2_story2_drowned_coast (see art-requests). Until it exists the Book 2 tab cover stands in.
-  cover: "book2_chaos_corrupted",
+  cover: "book2_story2_drowned_coast",
   trophies: 0,
   replayCards: ["maren"],
   chapters: [
@@ -676,7 +675,7 @@ const THE_DROWNED_COAST: StoryDef = {
       id: "b2s2c1",
       title: "The Stranded Harbor",
       layout: "pirate_beach",
-      art: "arena_pirate_beach", // final: arena_stranded_harbor
+      art: "arena_stranded_harbor",
       corruption: 0.2,
       hpScale: 3.7,
       mechanics: { tide: { cycle: 40, lowSlots: [4, 9], lowSpeed: 0.8, highSpeed: 1.2 }, tidePools: POOLS },
@@ -705,7 +704,7 @@ const THE_DROWNED_COAST: StoryDef = {
       id: "b2s2c2",
       title: "Ondrath, the Sleeping Isle",
       layout: "coral_reef",
-      art: "arena_coral_reef", // final: arena_ondrath_isle
+      art: "arena_ondrath_isle",
       corruption: 0.3,
       hpScale: 10,
       intro: [
@@ -720,7 +719,7 @@ const THE_DROWNED_COAST: StoryDef = {
       id: "b2s2c3",
       title: "The Lantern at World's Edge",
       layout: "pirate_beach",
-      art: "arena_pirate_beach", // final: arena_lantern_causeway
+      art: "arena_lantern_causeway",
       corruption: 0.4,
       hpScale: 1.3,
       mechanics: { tide: { cycle: 30, lowSlots: [4, 9, 14, 0], lowSpeed: 0.8, highSpeed: 1.2 } },
@@ -793,8 +792,7 @@ const THE_THRONE_OF_DUST: StoryDef = {
   id: "b2s3",
   title: "The Throne of Dust",
   blurb: "A city of identical Faceless. Light the braziers, win the arena, and unchain a queen instead of killing her.",
-  // Final art: book2_story3_throne_of_dust (see art-requests). Until it exists the Book 2 tab cover stands in.
-  cover: "book2_chaos_corrupted",
+  cover: "book2_story3_throne_of_dust",
   trophies: 0,
   replayCards: ["bako"],
   chapters: [
@@ -802,7 +800,7 @@ const THE_THRONE_OF_DUST: StoryDef = {
       id: "b2s3c1",
       title: "The Glass Road",
       layout: "desert",
-      art: "arena_desert", // final: arena_glass_road
+      art: "arena_glass_road",
       corruption: 0.3,
       hpScale: 4.4,
       mechanics: { faceless: FACELESS },
@@ -830,7 +828,7 @@ const THE_THRONE_OF_DUST: StoryDef = {
       id: "b2s3c2",
       title: "The Games of Sunspire",
       layout: "desert",
-      art: "arena_desert", // final: arena_sunspire
+      art: "arena_sunspire",
       corruption: 0.2,
       hpScale: 1,
       intro: [
@@ -860,7 +858,7 @@ const THE_THRONE_OF_DUST: StoryDef = {
       id: "b2s3c3",
       title: "The Throne of Dust",
       layout: "desert",
-      art: "arena_desert", // final: arena_throne_end
+      art: "arena_throne_end",
       corruption: 0.5,
       hpScale: 3.4,
       mechanics: { faceless: FACELESS, cage: { slot: 0, lockHp: 2500, roarStun: 3 } },

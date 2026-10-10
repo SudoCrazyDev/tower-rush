@@ -183,6 +183,8 @@ STATIC = [
     ("ui/archs", "ui/archs", 128),
     ("ui/races", "ui/races", 160),
     ("ui/avatars", "ui/avatars", 256),
+    # v2.2: standalone props (tide pool, caged sphinx, brazier).
+    ("props", "props", 256),
     # v1.2 Story mode: book covers, illustrated panels and dialogue portraits.
     ("story/covers", "story/covers", 768),
     ("story/panels", "story/panels", 1344),
