@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -372,6 +373,12 @@ if __name__ == "__main__":
     index["hazy"] += sorted(BOXED - set(index["hazy"]))
     # An HD sheet is only as clean as its source.
     index["hazy"] += [k for k, src in sorted(hd_source.items()) if ("_hd/" not in src or k.replace("_hd/", "/") in BOXED) and k.replace("_hd/", "/") in index["hazy"]]
+    # Content hash per sheet: the game adds it to the sheet URL so re-rolled art skips the
+    # browser/CDN cache (index.json itself is always fetched fresh).
+    index["ver"] = {
+        os.path.relpath(p, f"{OUT}/sheets").replace(os.sep, "/")[: -len(".webp")]: format(zlib.crc32(open(p, "rb").read()), "08x")
+        for p in sorted(glob.glob(f"{OUT}/sheets/*/*.webp"))
+    }
     with open(f"{OUT}/index.json", "w") as fh:
         json.dump(index, fh, indent=1)
     total = sum(os.path.getsize(p) for p in glob.glob(f"{OUT}/**/*.webp", recursive=True))

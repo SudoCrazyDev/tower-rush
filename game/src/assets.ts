@@ -34,6 +34,8 @@ export interface AssetIndex {
   videos: string[];
   /** "<folder>/<name>" sheets whose background didn't key out cleanly; treated as missing. */
   hazy: string[];
+  /** Content hash per "<folder>/<name>" sheet, used to bust the cache (missing in older builds). */
+  ver?: Record<string, string>;
 }
 
 /** Where the art lives: public/assets in dev, the R2 bucket in production (see vite.config.ts). */
@@ -102,7 +104,8 @@ export function loadSheet(scene: Phaser.Scene, folder: string, name: string) {
   if (scene.textures.exists(key)) return;
   const src = source(folder);
   const size = index.frameSize[src];
-  scene.load.spritesheet(key, `${BASE}sheets/${src}/${name}.webp`, { frameWidth: size, frameHeight: size });
+  const v = index.ver?.[`${src}/${name}`];
+  scene.load.spritesheet(key, `${BASE}sheets/${src}/${name}.webp${v ? `?v=${v}` : ""}`, { frameWidth: size, frameHeight: size });
 }
 
 /** Create the Phaser animation for a loaded sheet (idempotent). */
