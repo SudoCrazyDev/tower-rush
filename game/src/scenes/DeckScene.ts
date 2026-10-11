@@ -174,6 +174,8 @@ export class DeckScene extends Phaser.Scene {
   private deckCards: Phaser.GameObjects.Container[] = [];
   /** Set after an upgrade; closing the card dialog then rebuilds the scene to show the new levels. */
   private upgraded = false;
+  /** Rebuilt in place (a deck swap): skip the pop-in so the screen doesn't flash empty. */
+  private quiet = false;
   private bar!: ReturnType<typeof topBar>;
   private statusChips: { id: Status; paint: (on: boolean) => void }[] = [];
   private elementChips: { id: Element; paint: (on: boolean, dim: boolean) => void }[] = [];
@@ -183,8 +185,9 @@ export class DeckScene extends Phaser.Scene {
   }
 
   /** `show` opens that card's details on arrival (from the lobby's deck row); `scroll` restores the list after a rebuild. */
-  create(data?: { show?: string; scroll?: number }) {
+  create(data?: { show?: string; scroll?: number; quiet?: boolean }) {
     music("lobby");
+    this.quiet = !!data?.quiet;
     this.swapping = null;
     this.slots = [];
     this.deckCards = [];
@@ -494,6 +497,7 @@ export class DeckScene extends Phaser.Scene {
   }
 
   private popIn(obj: Phaser.GameObjects.Container | Phaser.GameObjects.Text, i: number) {
+    if (this.quiet) return;
     const y = obj.y;
     obj.setAlpha(0).setY(y + 30);
     this.tweens.add({ targets: obj, alpha: 1, y, delay: Math.min(i * 28, 500), duration: 320, ease: "Back.Out" });
@@ -510,16 +514,22 @@ export class DeckScene extends Phaser.Scene {
       const deck = [...profile.deck];
       deck[i] = this.swapping;
       this.swapping = null;
-      await attempt(this, () => setDeck(deck));
-      this.rebuild();
+      // Show the new deck at once; the server confirms it in the background (undone if it refuses).
+      const prev = profile.deck;
+      profile.deck = deck;
+      this.rebuild(true);
+      if (!(await attempt(this, () => setDeck(deck)))) {
+        profile.deck = prev;
+        this.rebuild(true);
+      }
       return;
     }
     this.rebuild();
   }
 
   /** Restart the scene to show fresh state, keeping the collection where it was scrolled. */
-  private rebuild() {
-    this.scene.restart({ scroll: this.view.position });
+  private rebuild(quiet = false) {
+    this.scene.restart({ scroll: this.view.position, quiet });
   }
 
   /** `celebrate` reopens the dialog in place after an upgrade, with a level-up burst. */

@@ -3,7 +3,7 @@ import { sfx } from "../audio";
 import { button, modal, txt } from "../ui";
 
 /** The release the "What's new" popup describes (see docs/features). */
-export const RELEASE = { version: "2.1.0", title: "Chaos Corrupted", tagline: "Book 2 begins in the Elven Wilds." };
+export const RELEASE = { version: "2.2.0", title: "Sand & Sea", tagline: "Book 2 sails to the coast and the desert." };
 const SEEN_KEY = "tower-rush-whats-new";
 
 function seen() {
@@ -35,8 +35,8 @@ function show(scene: Phaser.Scene) {
   m.add(logo);
   scene.tweens.add({ targets: logo, y: logo.y + 10, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
-  m.add(txt(scene, m.cx, m.cy + 150, "Story mode Book 2: The Elven Wilds, 3 new chapters.", 26, "#ffffff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 210, "Face Thalmyr, three elf captains and Vaeltharion.", 26, "#c9d2ff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 280, "New boss skills: entangle, impale, volley and block.", 26, "#ff9df0").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 150, "Book 2 Stories 2 and 3: The Drowned Coast and The Throne of Dust.", 26, "#ffffff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 210, "Ride the tide, save the civilians, win the arena duel.", 26, "#c9d2ff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 280, "New Event cards Maren and Bako, player avatars, reward effects.", 26, "#ff9df0").setWordWrapWidth(600));
   m.add(button(scene, m.cx, m.cy + 420, 320, 96, "LET'S GO!", "green", () => m.close()));
 }

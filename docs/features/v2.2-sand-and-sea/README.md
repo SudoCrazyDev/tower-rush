@@ -1,6 +1,6 @@
 # v2.2.0 "Sand & Sea"
 
-**Status:** Building · **Version:** `2.2.0` · **Promo kit:** [PROMO.md](PROMO.md) ·
+**Status:** Live (2026-10-11) · **Version:** `2.2.0` · **Promo kit:** [PROMO.md](PROMO.md) ·
 **Story pitches:** [saga plan](../concepts/forsakens-saga.md) (sections 2-3)
 
 Book 2 "Chaos Corrupted" continues with two stories in one release. **Story 2, "The Drowned
@@ -62,7 +62,7 @@ hearts taken. Two remain."
 ### Story 2
 | Mechanic | Rule | First numbers |
 |---|---|---|
-| **Tide cycle** | A tide meter swings low → high → low. At **low tide**, mudflat slots open and monsters are slowed. At **high tide**, low slots flood: units on them are *submerged* (no attacks, cannot be hit), and monsters move faster. | Cycle 40 s (Ch 1), 30 s (Ch 3). Low tide: monster speed ×0.8. High tide: ×1.2. Ch 1: 2 low slots, Ch 3: 4. |
+| **Tide cycle** | A tide meter swings low → high → low. At **low tide**, mudflat slots open and monsters are slowed. Each low tide marks random slots; at **high tide** those flood: units on them are *submerged* (no attacks, cannot be hit), and monsters move faster. | Cycle 40 s (Ch 1), 30 s (Ch 3). Low tide: monster speed ×0.8. High tide: ×1.2. Ch 1: 2 random slots flood, Ch 3: 4 (new picks each low tide). |
 | **Tide pools** | Pools sit beside the path. Each runs dry after 8 monsters walk past it (a boss drains it at once). | 4 pools at 40/60/75/90% of the path. Each pool left: +10% first-clear reward. |
 | **Rolling isle** | When Ondrath thrashes, the path flips or shifts for a short time. | Every 25 s, lasts 6 s. |
 | **Anchor hook** (Grell) | Moves one unit to a random free slot. | Every 10 s. |

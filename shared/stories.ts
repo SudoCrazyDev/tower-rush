@@ -41,10 +41,10 @@ export interface StoryWave {
 export interface ChapterMechanics {
   /**
    * The tide swings low, then high, every `cycle` seconds (half each). At low tide monsters move at
-   * x `lowSpeed`. At high tide units on `lowSlots` are submerged (no attacks) and monsters move at
-   * x `highSpeed`.
+   * x `lowSpeed`. Each low tide marks `flood` random slots; at high tide units on them are submerged
+   * (no attacks) and monsters move at x `highSpeed`.
    */
-  tide?: { cycle: number; lowSlots: number[]; lowSpeed: number; highSpeed: number };
+  tide?: { cycle: number; flood: number; lowSpeed: number; highSpeed: number };
   /**
    * Pools beside the path, at these shares (0-1) of the path. Each pool runs dry after `sips` monsters
    * walk past it (a boss drains it at once). Each pool left at the win adds `bonus` to the first-clear reward.
@@ -678,7 +678,7 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_stranded_harbor",
       corruption: 0.2,
       hpScale: 3.7,
-      mechanics: { tide: { cycle: 40, lowSlots: [4, 9], lowSpeed: 0.8, highSpeed: 1.2 }, tidePools: POOLS },
+      mechanics: { tide: { cycle: 40, flood: 2, lowSpeed: 0.8, highSpeed: 1.2 }, tidePools: POOLS },
       intro: [
         panel("b2s2_p1_shard", "Green light washes the Orb clean. One violet shard escapes.", "It streaks west, toward the sea."),
         panel("b2s2_p2_queen_sends", "Queen Aelyria: Follow it, Keeper. The western sea has gone still.", "No wave has broken there in a year."),
@@ -686,13 +686,13 @@ const THE_DROWNED_COAST: StoryDef = {
         panel("b2s2_p4_pearl", "A young merfolk scout hauls herself onto the rocks.", "Pearl: Help us. The lantern holds the tide still."),
       ],
       waves: [
-        w(`${DS} 8, ${CR} 2`, { bark: say("pearl", "The tide swings. Low slots flood when it comes in!") }),
+        w(`${DS} 8, ${CR} 2`, { bark: say("pearl", "The tide swings. The glowing slots flood when it comes in!") }),
         w(`${DS} 8, ${EE} 4`, { bark: say("pearl", "Eels in the shallows. Fast and slippery.") }),
         w(`${CR} 4, ${DS} 6`, { bark: say("saltmere_villager", "The crabs are the size of cartwheels!") }),
         w(`${EE} 8, ${CO} 2`, { bark: say("pearl", "Don't let them drain the pools. We need them.") }),
         w(`${CO} 3, ${DS} 8, ${BS} 4`, { bark: say("pearl", "Barnacles on their backs. The violet is spreading.") }),
         w(`${CR} 5, ${EE} 6`, { bark: say("saltmere_villager", "Hold the line! Saltmere is right behind you!") }),
-        w(`${CO} 4, ${CR} 3, ${DS} 8`, { bark: say("pearl", "The tide is rising. Mind your low slots.") }),
+        w(`${CO} 4, ${CR} 3, ${DS} 8`, { bark: say("pearl", "The tide is rising. Mind the marked slots.") }),
         w(`${EE} 10, ${BS} 6, ${DS} 6`, { bark: say("pearl", "So many. Where is the sea in all of this?") }),
         w(`${CR} 6, ${CO} 5, ${DS} 8`, { bark: say("saltmere_villager", "A bosun's whistle! Someone is giving orders.") }),
         w(`${DS} 4, ${CO} 3`, { boss: "grell", bark: say("grell", "No one leaves Saltmere, Keeper. The tide says so.") }),
@@ -722,7 +722,7 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_lantern_causeway",
       corruption: 0.4,
       hpScale: 1.3,
-      mechanics: { tide: { cycle: 30, lowSlots: [4, 9, 14, 0], lowSpeed: 0.8, highSpeed: 1.2 } },
+      mechanics: { tide: { cycle: 30, flood: 4, lowSpeed: 0.8, highSpeed: 1.2 } },
       intro: [
         panel("b2s2_p7_ondrath_cleansed", "The barnacles crack. Ondrath breathes, but the Orb is gone.", "Ondrath: She did not steal it from greed. She stole it from grief."),
         panel("b2s2_p8_causeway", "A causeway runs to the lighthouse at the world's edge.", "Its beam sweeps the sea, and what it touches turns violet."),
@@ -1174,7 +1174,8 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           num(mech.tide.cycle, `${wc} tide cycle`, 1);
           num(mech.tide.lowSpeed, `${wc} tide low-tide speed`, 0.01);
           num(mech.tide.highSpeed, `${wc} tide high-tide speed`, 0.01);
-          slots(mech.tide.lowSlots, "tide low slots");
+          num(mech.tide.flood, `${wc} tide flooded slots`, 1);
+          if (mech.tide.flood > 14) errs.push(`${wc}: tide can flood at most 14 slots`);
         }
         if (mech.tidePools) {
           if (!Array.isArray(mech.tidePools.at) || !mech.tidePools.at.every((v) => typeof v === "number" && v >= 0 && v <= 1)) errs.push(`${wc}: tide pools must sit at shares 0-1 of the path`);

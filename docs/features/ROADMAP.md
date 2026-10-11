@@ -23,7 +23,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v1.3.2 | Element emblems hotfix | 2026-10-09 | (art only, on R2) | — |
 | v2.0.0 | **The Grand Revamp** | 2026-10-09 | tag `v2.0.0` | [v2.0](v2.0-the-grand-revamp/README.md) |
 | v2.1.0 | **Chaos Corrupted** | 2026-10-10 | tag `v2.1.0` | [v2.1](v2.1-chaos-corrupted/README.md) |
-| v2.2.0 | **Sand & Sea** (planned) | — | — | [v2.2](v2.2-sand-and-sea/README.md) |
+| v2.2.0 | **Sand & Sea** | 2026-10-11 | tag `v2.2.0` | [v2.2](v2.2-sand-and-sea/README.md) |
 | next | Balance pass, Book 2 Stories 4-5, Book 3 | — | — | — |
 
 ---
@@ -146,7 +146,7 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 - **v1.2.x balance pass:** run the simulator over the story chapters (wave HP is first-guess),
   add the "win a story chapter" quest to the live config, and teach the PvP bot where to place
   Muse and the Rogue Knight.
-- **v2.2.0 "Sand & Sea" (planned):** Book 2 Story 2 "The Drowned Coast" and Story 3 "The Throne of
+- **v2.2.0 "Sand & Sea" (live 2026-10-11):** Book 2 Story 2 "The Drowned Coast" and Story 3 "The Throne of
   Dust", pitched in the [saga plan](concepts/forsakens-saga.md). Art budget: about 350 Higgsfield
   credits (about 450 with retries), stills and in-game animation clips included. Promo reuses game
   footage and panel zooms, with no generated trailer video.

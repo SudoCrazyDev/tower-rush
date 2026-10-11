@@ -164,7 +164,7 @@ export type SimEvent =
   | { type: "brew_collect"; t: number; bubble: number; uid: number; tapped: boolean; amount: number; x: number; y: number }
   | { type: "end"; t: number; outcome: SimResult["outcome"]; why: string | null; stars: number | null }
   // v2.2 Book 2 Stories 2-3 (docs/features/v2.2-sand-and-sea). Rules events: the scene draws them.
-  /** The tide turned. `slots` are the low slots (submerged while `high`). */
+  /** The tide turned. `slots` are the flooded slots (picked anew each low tide; submerged while `high`). */
   | { type: "tide"; t: number; high: boolean; slots: number[]; next: number }
   /** Tide pool `index` was drained by monster `uid`. */
   | { type: "pool"; t: number; index: number; uid: number; x: number; y: number }

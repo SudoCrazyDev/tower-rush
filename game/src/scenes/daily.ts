@@ -78,7 +78,7 @@ export function loginModal(scene: Phaser.Scene, onDone: () => void) {
   const claims = profile.login.claims;
   // Today's tile: the next one if it's still to claim, else the one claimed today.
   const today = ready ? claims % n : (claims - 1 + n) % n;
-  m.add(txt(scene, cx, cy - 390, "A reward every day you play.\nMissed days don't reset your progress.", 24, "#c9d2ff"));
+  m.add(txt(scene, cx, cy - 350, "A reward every day you play.\nMissed days don't reset your progress.", 24, "#c9d2ff"));
 
   const perRow = 4;
   const rows = Math.ceil(n / perRow);

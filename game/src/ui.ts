@@ -43,12 +43,20 @@ export function txt(
 /** Make any game object behave like a button (press squash + click). */
 export function pressable<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform>(obj: T, onClick: () => void): T {
   const scene = obj.scene;
-  const base = { x: obj.scaleX, y: obj.scaleY };
+  // The scale to return to, read on press: callers often setScale() after making it pressable.
+  let base: { x: number; y: number } | null = null;
+  const release = () => {
+    if (base) scene.tweens.add({ targets: obj, scaleX: base.x, scaleY: base.y, duration: 80 });
+    base = null;
+  };
   obj.setInteractive({ useHandCursor: true });
-  obj.on("pointerdown", () => scene.tweens.add({ targets: obj, scaleX: base.x * 0.92, scaleY: base.y * 0.92, duration: 60 }));
-  obj.on("pointerout", () => scene.tweens.add({ targets: obj, scaleX: base.x, scaleY: base.y, duration: 80 }));
+  obj.on("pointerdown", () => {
+    base ??= { x: obj.scaleX, y: obj.scaleY };
+    scene.tweens.add({ targets: obj, scaleX: base.x * 0.92, scaleY: base.y * 0.92, duration: 60 });
+  });
+  obj.on("pointerout", release);
   obj.on("pointerup", (p: Phaser.Input.Pointer) => {
-    scene.tweens.add({ targets: obj, scaleX: base.x, scaleY: base.y, duration: 80 });
+    release();
     // A swipe that starts and ends on it isn't a tap.
     if (p.getDistance() > 40) return;
     sfx("click");
@@ -125,7 +133,9 @@ export function button(
   onClick: () => void,
   fontSize = Math.round(h * 0.42),
 ): Button {
-  const bg = scene.add.nineslice(0, 0, `button:${BUTTON[color]}`, undefined, w, h, 48, 48, 40, 44);
+  // The 9-slice caps need 96 x 84 px; a smaller button is built that big and scaled down so they don't crush.
+  const k = Math.max(1, 96 / w, 84 / h);
+  const bg = scene.add.nineslice(0, 0, `button:${BUTTON[color]}`, undefined, w * k, h * k, 48, 48, 40, 44).setScale(1 / k);
   const t = txt(scene, 0, -2, label, fontSize);
   const c = scene.add.container(x, y, [bg, t]) as Button;
   c.label = t;
@@ -241,12 +251,12 @@ export function rewardRays(scene: Phaser.Scene, parent: Phaser.GameObjects.Conta
 }
 
 /** A soft pulsing rarity ring behind a card (rare and up); null for common or missing art. */
-export function rarityGlow(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: number, y: number, size: number, rarity: string) {
+export function rarityGlow(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: number, y: number, size: number, rarity: string, alpha = 1) {
   const key = rarityGlowKey(rarity);
   if (!key || !hasVfx(scene, key)) return null;
   const img = scene.add.image(x, y, `vfx:${key}`).setDisplaySize(size, size);
   parent.addAt(img, 0);
-  const tw = scene.tweens.add({ targets: img, alpha: { from: 1, to: 0.6 }, scale: img.scale * 1.08, yoyo: true, repeat: -1, duration: 800, ease: "Sine.InOut" });
+  const tw = scene.tweens.add({ targets: img, alpha: { from: alpha, to: alpha * 0.6 }, scale: img.scale * 1.08, yoyo: true, repeat: -1, duration: 800, ease: "Sine.InOut" });
   img.once("destroy", () => tw.stop());
   return img;
 }
@@ -284,7 +294,8 @@ export function lootCards(
       const rays = rewardRays(scene, v, 0, 0, size * 2.2, undefined, 0.45);
       if (rays) v.sendToBack(rays);
     }
-    if (rarityGlowKey(rarity)) rarityGlow(scene, v, 0, 0, size * 1.7, rarity);
+    // Kept small and faint: a full grid of glowing cards drowns the cards themselves.
+    if (rarityGlowKey(rarity)) rarityGlow(scene, v, 0, 0, size * 1.35, rarity, cards.length <= 4 ? 0.8 : 0.45);
     v.setScale(0);
     scene.tweens.add({ targets: v, scale: 1, delay: i * Math.min(150, 1800 / cards.length), duration: 250, ease: "Back.Out" });
     return v;
@@ -321,7 +332,8 @@ export function modal(scene: Phaser.Scene, w: number, h: number, title: string, 
   }) as typeof root.add;
   const shade = scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.65).setInteractive();
   const panel = scene.add.nineslice(W / 2, H / 2, "ui:panel_dialog", undefined, w, h, 80, 80, 110, 60);
-  const t = txt(scene, W / 2, H / 2 - h / 2 + 34, title, 38, "#fff4c2");
+  // Centred on the panel art's ribbon (its band sits ~56 px below the top edge).
+  const t = txt(scene, W / 2, H / 2 - h / 2 + 56, title, 38, "#fff4c2");
   root.add([shade, panel, t]);
   const close = () => {
     root.destroy();

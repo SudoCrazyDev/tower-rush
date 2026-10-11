@@ -26,13 +26,13 @@ Mechanics: `{"tide":{"cycle":40,"lowSlots":[4,9],"lowSpeed":0.8,"highSpeed":1.2}
 
 | Wave | Speaker | Bark |
 |------|---------|------|
-| 1 | pearl | The tide swings. Low slots flood when it comes in! |
+| 1 | pearl | The tide swings. The glowing slots flood when it comes in! |
 | 2 | pearl | Eels in the shallows. Fast and slippery. |
 | 3 | saltmere_villager | The crabs are the size of cartwheels! |
 | 4 | pearl | Don't let them drain the pools. We need them. |
 | 5 | pearl | Barnacles on their backs. The violet is spreading. |
 | 6 | saltmere_villager | Hold the line! Saltmere is right behind you! |
-| 7 | pearl | The tide is rising. Mind your low slots. |
+| 7 | pearl | The tide is rising. Mind the marked slots. |
 | 8 | pearl | So many. Where is the sea in all of this? |
 | 9 | saltmere_villager | A bosun's whistle! Someone is giving orders. |
 | 10 (BOSS grell) | grell | No one leaves Saltmere, Keeper. The tide says so. |

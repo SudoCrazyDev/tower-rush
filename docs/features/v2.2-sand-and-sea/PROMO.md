@@ -7,7 +7,7 @@
 
 - **No generated trailer video.** Every promo uses game footage and slow zooms on story panels,
   like the v2.1 kit.
-- **Footage to capture:** the tide flooding the low slots, Lusca's siren song, Corvaline's lantern
+- **Footage to capture:** the tide flooding the marked slots, Lusca's siren song, Corvaline's lantern
   beam, braziers unmasking a Faceless column, the arena duel crowd meter, Sefa's chains breaking.
 - **Graphics:** Remotion compositions in `roadmap-video/src/promo/SandAndSea.tsx`.
 

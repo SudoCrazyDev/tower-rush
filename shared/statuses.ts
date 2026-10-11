@@ -9,7 +9,7 @@
  * - Fatigue: attacks slower
  * - Shellshock: stunned (no attacks)
  * - Entangled (v2.1): roots hold it, no attacks until the wave ends
- * - Submerged (v2.2): on a low slot at high tide, no attacks (a board rule, not a debuff)
+ * - Submerged (v2.2): on a flooded slot at high tide, no attacks (a board rule, not a debuff)
  * - Asleep (v2.2): a siren's song, no attacks until tapped awake or the timer runs out
  * - Glimmered (v2.2): caught in a lantern beam, attacks deal less damage
  * An Aegis Knight next to a unit makes it immune to the three debuffs and clears them.
@@ -43,7 +43,7 @@ export interface UnitStatus {
   shockedUntil: number;
   /** Entangled by roots (v2.1): no attacks until this time (Infinity = until the wave ends). */
   entangledUntil: number;
-  /** v2.2: under water at high tide (low slots only): no attacks. Not a debuff: the Aegis Knight can't clear it. */
+  /** v2.2: under water at high tide (flooded slots only): no attacks. Not a debuff: the Aegis Knight can't clear it. */
   submergedUntil: number;
   /** v2.2: sung asleep by a siren: no attacks until tapped awake (Sim.wake) or this time. */
   asleepUntil: number;

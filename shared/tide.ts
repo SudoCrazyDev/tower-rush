@@ -63,6 +63,8 @@ export class BoardRules {
 
   private tideStarted = false;
   high = false;
+  /** Slots the current tide floods: picked at random each low tide, so the warning ring shows where the water comes next. */
+  flooded: number[] = [];
   /** Time of the next tide flip (Infinity without a tide). */
   next = Infinity;
   private drained: boolean[] = [];
@@ -113,19 +115,37 @@ export class BoardRules {
       this.tideStarted = true;
       this.high = false;
       this.next = now + half;
-      this.h.emit({ type: "tide", t: now, high: false, slots: tide.lowSlots, next: this.next });
+      this.flooded = this.pickFlood(tide.flood);
+      this.h.emit({ type: "tide", t: now, high: false, slots: this.flooded, next: this.next });
     } else if (now >= this.next) {
       this.high = !this.high;
       this.next += half;
-      this.h.emit({ type: "tide", t: now, high: this.high, slots: tide.lowSlots, next: this.next });
+      if (!this.high) this.flooded = this.pickFlood(tide.flood);
+      this.h.emit({ type: "tide", t: now, high: this.high, slots: this.flooded, next: this.next });
     }
-    // Submerged = a board rule: set while high on a low slot, cleared when low or the unit moved off.
+    // Submerged = a board rule: set while high on a flooded slot, cleared when low or the unit moved off.
     for (const u of this.h.units()) {
       if (!u) continue;
-      const under = this.high && tide.lowSlots.includes(u.slot);
+      const under = this.high && this.flooded.includes(u.slot);
       if (under) u.status.submergedUntil = 1e9;
       else if (u.status.submergedUntil) u.status.submergedUntil = 0;
     }
+  }
+
+  /** `n` distinct random slots, never the same set as the last tide when another is possible. */
+  private pickFlood(n: number) {
+    const prev = this.flooded;
+    let pick: number[] = [];
+    for (let tries = 0; tries < 4; tries++) {
+      const all = Array.from({ length: 15 }, (_, i) => i);
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(this.h.rand() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
+      pick = all.slice(0, Math.min(n, 14)).sort((a, b) => a - b);
+      if (pick.length !== prev.length || pick.some((s, i) => s !== prev[i])) break;
+    }
+    return pick;
   }
 
   private tickSpeed(now: number, tide: ChapterMechanics["tide"]) {

@@ -1,5 +1,5 @@
 /**
- * v2.2 Story 2 ("The Drowned Coast") battle visuals: the tide meter and water over the low slots,
+ * v2.2 Story 2 ("The Drowned Coast") battle visuals: the tide meter and water over the flooded slots,
  * tide pools beside the path, the rolling isle, anchor hook, siren sleep (tap to wake) and the
  * lantern beam. A view only: every rule is in shared/tide.ts, this draws the Sim's events.
  */
@@ -65,7 +65,6 @@ export class TideView {
     this.tide = mech?.tide;
     if (mech?.tide) {
       this.buildMeter();
-      for (const s of mech.tide.lowSlots) this.waterOf(s);
     }
     if (mech?.tidePools) this.buildPools(mech.tidePools.at);
   }
@@ -83,13 +82,13 @@ export class TideView {
     this.meter = { root, bar, label, time: t };
   }
 
-  /** The low slot's water layer, with the faint ring that marks it even at low tide. */
+  /** A flooded slot's water layer, with the ring that warns of it at low tide. */
   private waterOf(slot: number) {
     let g = this.water.get(slot);
     if (!g) {
       g = this.scene.add.graphics();
       const p = this.scene.slotPos(slot);
-      g.setPosition(p.x, p.y + 6).setDepth(100 + p.y + 2);
+      g.setPosition(p.x, p.y).setDepth(100 + p.y + 2);
       this.water.set(slot, g);
     }
     return g;
@@ -143,6 +142,11 @@ export class TideView {
   handle(e: SimEvent) {
     switch (e.type) {
       case "tide": {
+        // A new set of slots each low tide: drop water from the old ones, mark the new.
+        for (const [s, g] of this.water) if (!e.slots.includes(s)) {
+          g.destroy();
+          this.water.delete(s);
+        }
         for (const s of e.slots) this.waterOf(s);
         if (this.high) this.scene.tweens.add({ targets: this.high, alpha: e.high ? 1 : 0, duration: 1500, ease: "Sine.InOut" });
         banner(this.scene, e.high ? "HIGH TIDE!" : "LOW TIDE", e.high ? "#7fc8ff" : "#ffd27a", 54, 480);
@@ -265,7 +269,7 @@ export class TideView {
     const half = tide.cycle / 2;
     const p = Number.isFinite(sim.tideNext) ? Phaser.Math.Clamp(1 - left / half, 0, 1) : 0;
     m.label.setText(high ? "HIGH TIDE" : "LOW TIDE").setColor(high ? "#7fc8ff" : "#ffd27a");
-    m.time.setText(Number.isFinite(sim.tideNext) ? `${high ? "ebbs" : "rises"} in ${Math.ceil(left)}s` : "");
+    m.time.setText(Number.isFinite(sim.tideNext) ? `${high ? "tide falls" : "tide rises"} in ${Math.ceil(left)}s` : "");
     m.bar.clear().fillStyle(0x10133a, 1).fillRoundedRect(-194, 12, 388, 12, 6);
     m.bar.fillStyle(high ? 0x7fc8ff : 0xffd27a, 1).fillRoundedRect(-194, 12, Math.max(10, 388 * p), 12, 6);
   }
@@ -275,15 +279,18 @@ export class TideView {
     this.level += Math.sign(target - this.level) * Math.min(Math.abs(target - this.level), dt * 2);
     for (const g of this.water.values()) {
       g.clear();
-      g.lineStyle(3, 0x7fc8ff, 0.28 * (1 - this.level)).strokeRoundedRect(-50, -50, 100, 100, 14);
+      // Sized to the arena's plank tiles (~80 px), so it marks one tile and doesn't spill onto its neighbours.
+      // At low tide: a pulsing ring warning where the water comes in next.
+      const warn = 1 - this.level;
+      g.lineStyle(4, 0x7fc8ff, warn * (0.45 + 0.3 * Math.sin(this.clock * 4))).strokeRoundedRect(-40, -40, 80, 80, 12);
       if (this.level <= 0) continue;
-      g.fillStyle(0x2f7fff, 0.4 * this.level).fillRoundedRect(-50, -50, 100, 100, 14);
-      g.lineStyle(3, 0xd8f0ff, 0.55 * this.level);
+      g.fillStyle(0x2f7fff, 0.45 * this.level).fillRoundedRect(-40, -40, 80, 80, 12);
+      g.lineStyle(3, 0xd8f0ff, 0.6 * this.level);
       for (let row = 0; row < 3; row++) {
         g.beginPath();
-        for (let x = -46; x <= 46; x += 4) {
-          const y = -26 + row * 26 + Math.sin(x * 0.12 + this.clock * 3 + row * 1.7) * 4;
-          if (x === -46) g.moveTo(x, y);
+        for (let x = -36; x <= 36; x += 4) {
+          const y = -22 + row * 22 + Math.sin(x * 0.14 + this.clock * 3 + row * 1.7) * 3;
+          if (x === -36) g.moveTo(x, y);
           else g.lineTo(x, y);
         }
         g.strokePath();
