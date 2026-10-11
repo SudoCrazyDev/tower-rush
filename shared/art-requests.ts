@@ -900,9 +900,10 @@ const B22: B22Row[] = [
     "Trading-card portrait of Bako from the first reference, bust from the chest up, three-quarter view, filling the square, with a warm sunset-gold arena background. Square 1:1, full-bleed, no card frame, no border, no text."],
 ];
 
-const B22_FILE = new Map(B22.map(([id, file]) => [id, `assets/${file}`]));
-
-export const BOOK2_S23_REQUESTS: ArtRequest[] = B22.map(([id, file, title, kind, refs, what], i) => {
+/** Turns rows into Art requests (shared by the v2.2 and v2.3 lists). */
+function mapB2Rows(rows: B22Row[], group: string, idPrefix: string): ArtRequest[] {
+  const B22_FILE = new Map(rows.map(([id, file]) => [id, `assets/${file}`]));
+  return rows.map(([id, file, title, kind, refs, what], i) => {
   const own = refs.map((r) => B22_FILE.get(r) ?? r);
   const pre = refs.filter((r) => B22_FILE.has(r));
   const base =
@@ -910,7 +911,7 @@ export const BOOK2_S23_REQUESTS: ArtRequest[] = B22.map(([id, file, title, kind,
     : kind === "boss" ? [STYLE_ANCHOR, B2_BOSS, B2_ANCHOR]
     : kind === "arena" ? []
     : [STYLE_ANCHOR];
-  const notes = pre.length ? [`NOTE: generate ${pre.map((r) => `#${B22.findIndex((x) => x[0] === r) + 1}`).join(", ")} first and attach ${pre.map((r) => B22_FILE.get(r)).join(", ")}`] : [];
+  const notes = pre.length ? [`NOTE: generate ${pre.map((r) => `#${rows.findIndex((x) => x[0] === r) + 1}`).join(", ")} first and attach ${pre.map((r) => B22_FILE.get(r)).join(", ")}`] : [];
   const prompt =
     kind === "monster" || kind === "boss" || kind === "ally" ? `${STYLE} ${what} ${MAGENTA}`
     : kind === "portrait" ? `${STYLE} ${PORTRAIT} ${what} ${MAGENTA}`
@@ -922,8 +923,8 @@ export const BOOK2_S23_REQUESTS: ArtRequest[] = B22.map(([id, file, title, kind,
     : kind === "cover" ? `${STYLE} ${CAST} ${what} ${HOLD}`
     : `${EDIT} ${what}`;
   return {
-    id: `book2s23:${id}`,
-    group: B22_GROUP,
+    id: `${idPrefix}:${id}`,
+    group,
     title: `#${i + 1} ${title}`,
     file,
     model: kind === "cover" ? "Seedream 4.5" : kind === "card" || kind === "cardportrait" ? "Nano Banana Pro" : "Nano Banana 2",
@@ -932,6 +933,122 @@ export const BOOK2_S23_REQUESTS: ArtRequest[] = B22.map(([id, file, title, kind,
     prompt,
   };
 });
+}
+
+export const BOOK2_S23_REQUESTS: ArtRequest[] = mapB2Rows(B22, B22_GROUP, "book2s23");
+
+// ----- v2.3 Book 2 Story 4: The Iron Oath (made with the Higgsfield MCP, see docs/features/v2.3-the-iron-oath/ART_PROMPTS.md) -----
+const B24_GROUP = "v2.3 Arts Requirements";
+const B24_WINTER = "assets/locations/arena_winter_village.png";
+const B24: B22Row[] = [
+  ["brakka", "units/brakka.png", "Story card: Brakka Emberhold (still)", "card", [],
+    "Brakka Emberhold, a young dwarf master smith woman, Durgrim's daughter: short sturdy build, braided copper-red hair with iron beads, soot-smudged freckled face, leather smith apron over a rune-stitched tunic, heavy gauntlets, a big glowing ember-gold forge hammer over her shoulder, confident determined grin, facing slightly right."],
+  ["durgrim", "units/durgrim.png", "Hero: Thane Durgrim Emberhold (still)", "card", [],
+    "Thane Durgrim Emberhold, an armored dwarf king: very broad and stocky, long braided grey-black beard with iron rings, heavy black-iron plate armor with a horned crown-helm, a huge forge-hammer in both hands, glowing violet chaos veins and violet glowing eyes, grim and proud, hero pose facing slightly right."],
+  ["emberhold_gunner", "units/emberhold_gunner.png", "Emberhold gunner", "card", [],
+    "Emberhold dwarf fire gunner: stocky dwarf with a red-orange beard tucked in a belt, smoke-stained goggles on a leather cap, a short brass-and-iron blunderbuss cannon-rifle aimed forward spitting a puff of flame, ammo bandolier and powder horn, ember-red tabard. Facing right."],
+  ["runecaller", "units/runecaller.png", "Emberhold runecaller", "card", [],
+    "Emberhold dwarf runecaller: a wise stocky dwarf rune-caster with a long white braided beard, hooded grey-blue robe stitched with glowing orange runes, one hand raised conjuring floating glowing rune stones, a short iron-capped staff in the other, calm focused face. Facing right."],
+  ["iron_soldier", "monsters/iron_soldier.png", "Iron soldier", "monster", [],
+    "Iron soldier: a hollow animated suit of dark riveted iron armor in the shape of a dwarf soldier, no body inside, glowing violet chaos light leaking from the helmet slit and joints, a short iron sword and round iron shield, stiff marching pose."],
+  ["iron_crossbow", "monsters/iron_crossbow.png", "Iron crossbow", "monster", [],
+    "Iron crossbow: a small walking iron-plated crossbow construct on two stubby iron legs, a big riveted crossbow with a violet-glowing bolt loaded, a single violet eye-lens, gears on its back, kneeling-ready stance."],
+  ["iron_brute", "monsters/iron_brute.png", "Iron brute", "monster", [],
+    "Iron brute: a hulking iron golem built from anvils and plates, huge anvil-block fists, a furnace grate on its chest glowing orange with violet chaos cracks, rivets, tiny glowing violet eyes, heavy slow stomping stance."],
+  ["drake_whelp", "monsters/drake_whelp.png", "Drake whelp", "monster", [],
+    "Drake whelp: a small angry young dragon hatchling with ember-red scales, stubby wings flapping, a charcoal-grey belly, tiny curved horns, smoke curling from its nostrils, a spark of fire in its mouth, flying low."],
+  ["dwarf_family", "monsters/dwarf_family.png", "Dwarf family (friendly evacuees)", "monster", [],
+    "Friendly dwarf family evacuees walking right together: a stocky dwarf father with a bushy brown beard, a mother in a shawl carrying a bundle, two small dwarf children, and a little wooden hand cart piled with pots, blankets and a hammer, worried but brave faces, soot on their clothes."],
+  ["ashmaw", "bosses/ashmaw.png", "Ashmaw the Dragon Mother", "boss", [],
+    "Ashmaw the Dragon Mother, a colossal matriarch dragon boss: charcoal-black and ember-red scales with glowing lava cracks, huge spread leathery wings, curved ivory horns, scarred jaw with a mouth full of fire, glowing gold slit eyes, a broken old dwarf-forged chain on one claw, boss pose, side-front view facing right."],
+  ["walking_forge", "bosses/walking_forge.png", "The Walking Forge", "boss", [],
+    "The Walking Forge, a huge iron fortress on two massive articulated iron legs: riveted black-iron hull with a tall smoking furnace chimney spewing sparks, two large cannons on the shoulders, a glowing orange furnace-mouth in the belly and a chained golden forge-spirit core visible behind iron bars, a violet chaos orb crackling on top, ember-lit windows, boss scale, side view facing right."],
+  ["walking_forge_legs", "bosses/walking_forge_legs.png", "Walking Forge: legs damaged", "boss", ["walking_forge"],
+    "The same Walking Forge as the reference, but its legs badly damaged: one iron leg buckled and cracked with sparks and bent plates, leaning to one side, smoke."],
+  ["walking_forge_cannons", "bosses/walking_forge_cannons.png", "Walking Forge: cannons destroyed", "boss", ["walking_forge"],
+    "The same Walking Forge as the reference, but both shoulder cannons blown off and hanging as twisted wrecks with smoke, scorched mounts, everything else the same."],
+  ["walking_forge_furnace", "bosses/walking_forge_furnace.png", "Walking Forge: furnace burst", "boss", ["walking_forge"],
+    "The same Walking Forge as the reference, but its furnace belly burst open: the furnace door blown off, flames and molten sparks pouring out, the chimney cracked and leaking, everything else the same."],
+  ["walking_forge_core", "bosses/walking_forge_core.png", "Walking Forge: core exposed", "boss", ["walking_forge"],
+    "The same Walking Forge as the reference, but its hull plating torn open to expose the glowing chained Anvil-Heart golden core, the violet orb on top cracked, heavily damaged and ready to fall, everything else the same."],
+  ["chaos_colossus", "bosses/chaos_colossus.png", "The Chaos-Iron Colossus", "boss", [],
+    "The Chaos-Iron Colossus, a towering giant fused from scrap: cannons, anvils, shields, armor plates, gears and chains welded into a hulking humanoid, held together by crackling violet chaos energy seams, a burning violet core in its chest, a huge anvil-fist raised, glowing violet eye slits, boss scale, front-three-quarter view."],
+  ["arena_burning_emberhold", "locations/arena_burning_emberhold.png", "Arena: Burning Emberhold (Ch 1, sepia-tinted in code)", "arena", [B24_WINTER],
+    "the burning dwarven mountain city of Emberhold seen from above, carved stone halls and bridges and forge-chimneys all aflame, dragon-fire glowing orange, falling embers, black smoke, cracked stone streets, dwarf-built stone arches, dark red-orange sky. Keep the ring path shape."],
+  ["arena_mountain_pass", "locations/arena_mountain_pass.png", "Arena: The Mountain Pass (Ch 2)", "arena", [B24_WINTER],
+    "a rocky mountain pass in the dwarven highlands at dusk, grey cliffs, old dwarf-built stone road markers and rune-carved pillars, patches of snow, pine trees, a huge deep iron footprint crater and drifting smoke from far up the valley, cold blue sky with ember-orange sunset on the peaks. Keep the ring path shape."],
+  ["arena_oath_field", "locations/arena_oath_field.png", "Arena: The Oath Field (Ch 3)", "arena", [B24_WINTER],
+    "an open field before the colossal carved stone gate of the dwarven mountain Emberhold, the gate's huge anvil-and-crown relief at the top, rows of old oath-stones with iron rings, scattered abandoned cannons and shields, scorched grass, violet-tinged storm clouds, a faint gold ember glow from the gate. Keep the ring path shape."],
+  ["book2_story4_the_iron_oath", "story/covers/book2_story4_the_iron_oath.png", "Cover: The Iron Oath", "cover", ["brakka", "durgrim", "walking_forge"],
+    "Cover art: Brakka with her glowing forge hammer in the foreground, Thane Durgrim behind her with violet chaos glowing in his armor, the huge Walking Forge iron fortress on legs stomping down a mountain pass behind them with smoke and cannons, ember-gold and violet light."],
+  ["durgrim_portrait", "story/portraits/durgrim.png", "Portrait: Durgrim", "portrait", ["durgrim"],
+    "Thane Durgrim as in the reference, grim and weary stare, violet chaos glow in his eyes and beard braids."],
+  ["durgrim_young_portrait", "story/portraits/durgrim_young.png", "Portrait: young Durgrim (flashback)", "portrait", ["durgrim"],
+    "Young Durgrim 300 years ago: the same dwarf as the reference but young, a short dark-brown beard with a single braid, a bright proud face, a plain bronze helm with a gold rim, no violet glow at all."],
+  ["brakka_portrait", "story/portraits/brakka.png", "Portrait: Brakka", "portrait", ["brakka"],
+    "Brakka Emberhold as in the reference, determined and a little worried, soot on her cheek."],
+  ["anvil_heart_portrait", "story/portraits/anvil_heart.png", "Portrait: Anvil-Heart", "portrait", ["walking_forge"],
+    "Anvil-Heart, an ancient forge-spirit: a noble face-like helm shaped from a black anvil, glowing ember-gold flame eyes, molten gold seams across the iron, broken chain links hanging from its shoulders, a wise sorrowful expression."],
+  ["candy_knight_captain_portrait", "story/portraits/candy_knight_captain.png", "Portrait: Candy Crown knight captain", "portrait", ["assets/_green/v12/pentagonal_knight.png", "assets/_green/shield_knight.png"],
+    "The Candy Crown knight captain, same armor design and candy-crown crest as the reference knights but with a captain's plumed helm and a red cape, scarred, steady and stern."],
+  ["brakka_card", "cards/portraits/brakka.png", "Story card: Brakka (card portrait)", "cardportrait", ["brakka"],
+    "Trading-card portrait of Brakka from the reference, bust from the chest up, three-quarter view, filling the square, with a warm forge-glow background of sparks. Square 1:1, full-bleed, no card frame, no border."],
+  ["durgrim_card", "cards/portraits/durgrim.png", "Hero card: Durgrim (card portrait)", "cardportrait", ["durgrim"],
+    "Trading-card portrait of Thane Durgrim from the reference, bust from the chest up, three-quarter view, filling the square, with a stormy violet-and-ember mountain background. Square 1:1, full-bleed, no card frame, no border."],
+  ["gunner_card", "cards/portraits/emberhold_gunner.png", "Emberhold gunner (card portrait)", "cardportrait", ["emberhold_gunner"],
+    "Trading-card portrait of the dwarf fire gunner from the reference, bust from the chest up, three-quarter view, filling the square, with a smoky ember-orange background. Square 1:1, full-bleed, no card frame, no border."],
+  ["runecaller_card", "cards/portraits/runecaller.png", "Emberhold runecaller (card portrait)", "cardportrait", ["runecaller"],
+    "Trading-card portrait of the dwarf runecaller from the reference, bust from the chest up, three-quarter view, filling the square, with glowing floating runes on a deep blue stone-hall background. Square 1:1, full-bleed, no card frame, no border."],
+  ["rune_shield_fire", "ui/rune_shield_fire.png", "Rune shield icon: fire", "status", [],
+    "A small game icon: a round dwarven iron shield with rivets and carved runes, a glowing red-orange flame rune symbol in the center, ember glow around it."],
+  ["rune_shield_ice", "ui/rune_shield_ice.png", "Rune shield icon: ice", "status", [],
+    "A small game icon: a round dwarven iron shield with rivets and carved runes, a glowing icy-blue snowflake rune symbol in the center, frost glow around it."],
+  ["rune_shield_lightning", "ui/rune_shield_lightning.png", "Rune shield icon: lightning", "status", [],
+    "A small game icon: a round dwarven iron shield with rivets and carved runes, a glowing yellow lightning-bolt rune symbol in the center, crackling sparks around it."],
+  ["rune_shield_nature", "ui/rune_shield_nature.png", "Rune shield icon: nature", "status", [],
+    "A small game icon: a round dwarven iron shield with rivets and carved runes, a glowing green leaf-and-branch rune symbol in the center, green glow around it."],
+  ["rune_shield_poison", "ui/rune_shield_poison.png", "Rune shield icon: poison", "status", [],
+    "A small game icon: a round dwarven iron shield with rivets and carved runes, a glowing toxic-lime droplet-and-skull rune symbol in the center, poison glow around it."],
+  ["rune_shield_arcane", "ui/rune_shield_arcane.png", "Rune shield icon: arcane (use a green screen: arcane pink keys out on magenta)", "status", [],
+    "A small game icon: a round dwarven iron shield with rivets and carved runes, a glowing deep-blue and gold star-swirl arcane rune symbol in the center, blue arcane glow around it (no pink, no green)."],
+  // Panels: p3-p6 are the sepia flashback.
+  ["b2s4_p1_shard_north", "story/panels/b2s4_p1_shard_north.png", "Panel S4-1: the shard flies north", "panel", [],
+    "A glowing violet crystal shard streaks north through a dusk sky over green hills toward a range of snow-capped jagged mountains, a thin trail of violet sparks behind it, a tiny forge-smoke plume rising from a distant mountain peak."],
+  ["b2s4_p2_footprints", "story/panels/b2s4_p2_footprints.png", "Panel S4-2: giant iron footprints", "panel", ["assets/_green/v12/corrupted_villager.png"],
+    "A few frightened villagers in simple farm clothes with a lantern gather around a single enormous iron footprint, as big as a house, pressed deep into a muddy road at dawn, more giant footprints trailing off toward misty mountains, a crushed barn in the distance."],
+  ["b2s4_p3_young_durgrim", "story/panels/b2s4_p3_young_durgrim.png", "Panel S4-3: young Durgrim on the walls (sepia flashback)", "panel", ["durgrim_young_portrait"],
+    "FLASHBACK in warm sepia-brown monochrome tones. Young Durgrim standing proud on the carved stone walls of the mountain city Emberhold 300 years ago, hand on a battlement, looking out over a vast stone-and-forge city of chimneys and bridges at golden hour, a dwarf banner with an anvil emblem fluttering."],
+  ["b2s4_p4_iron_oath", "story/panels/b2s4_p4_iron_oath.png", "Panel S4-4: the Iron Oath sworn (sepia flashback)", "panel", ["assets/story/portraits/candy_king.png", "durgrim_young_portrait"],
+    "FLASHBACK in warm sepia-brown monochrome tones. A human crowned king in knight's armor kneels before the young dwarf lord Durgrim and presses his hand to a giant glowing anvil in the great hall of Emberhold, swearing the Iron Oath, runes glowing in the anvil, dwarf elders and a few knights looking on, firelit."],
+  ["b2s4_p5_emberhold_burns", "story/panels/b2s4_p5_emberhold_burns.png", "Panel S4-5: Emberhold burns (sepia flashback)", "panel", ["ashmaw", "dwarf_family"],
+    "FLASHBACK in warm sepia-brown monochrome tones with orange fire accents. The mountain city Emberhold burning at night, huge dragons circling above spitting fire onto stone halls and bridges, the great dragon mother among them, dwarf families with carts and bundles streaming down a mountain road to escape, ash falling."],
+  ["b2s4_p6_unanswered_horn", "story/panels/b2s4_p6_unanswered_horn.png", "Panel S4-6: the horn no one answers (sepia flashback)", "panel", ["durgrim_young_portrait"],
+    "FLASHBACK in warm sepia-brown monochrome tones. On a smoky mountain parapet, the young dwarf lord Durgrim blows a great curved horn into an empty ash-filled sky, no one answering, a far horizon with no riders; at his feet a torn and half-burned parchment scroll with a broken wax seal lies in the cinders, the burning city below."],
+  ["b2s4_p7_walking_forge", "story/panels/b2s4_p7_walking_forge.png", "Panel S4-7: the Walking Forge (present)", "panel", ["walking_forge", "iron_soldier"],
+    "The huge Walking Forge crawling down a snowy mountain pass at dusk, smoke pouring from its chimney, cannons swinging, a violet orb crackling on top, rows of small iron soldiers marching behind its legs, the pass trees flattened beneath its footprints."],
+  ["b2s4_p8_knights_kneel", "story/panels/b2s4_p8_knights_kneel.png", "Panel S4-8: the knights kneel", "panel", ["durgrim", "candy_knight_captain_portrait", "assets/_green/v12/pentagonal_knight.png", "assets/_green/shield_knight.png"],
+    "The Candy Crown knights and their captain kneel on one knee on a stone road before the armored dwarf king Thane Durgrim, who stands stiff with his forge-hammer, a faint violet glow in his eyes, the oath-stones around them, the mountain gate behind, a tense solemn mood."],
+  ["b2s4_p9_durgrim_falters", "story/panels/b2s4_p9_durgrim_falters.png", "Panel S4-9: Durgrim falters (mid-battle)", "panel", ["durgrim", "brakka", "assets/_green/v12/pentagonal_knight.png"],
+    "Thane Durgrim, exhausted, staggers to one knee gripping his hammer, the violet glow flickering in his eyes and cracks of violet light running over his armor, his daughter Brakka rushing toward him with her hand out, the knights stepping back in alarm."],
+  ["b2s4_p10_colossus_rises", "story/panels/b2s4_p10_colossus_rises.png", "Panel S4-10: the Colossus rises (mid-battle)", "panel", ["durgrim", "chaos_colossus"],
+    "A column of violet chaos energy tears out of the armored dwarf king Durgrim's chest and streams into a huge heap of scrap iron, cannons, anvils and shields on the battlefield, which is rising and fusing into the towering Chaos-Iron Colossus, lightning cracking, knights and dwarves shielding their eyes."],
+  ["b2s4_p11_colossus_falls", "story/panels/b2s4_p11_colossus_falls.png", "Panel S4-11: the Colossus falls", "panel", ["chaos_colossus", "assets/_green/v12/pentagonal_knight.png"],
+    "The Chaos-Iron Colossus collapses into a huge avalanche of scrap iron, cannons, anvils and plates, the violet glow dying, a cloud of dust and sparks, Candy Crown knights and dwarf warriors raising weapons in the foreground in relief."],
+  ["b2s4_p12_brakka_confronts", "story/panels/b2s4_p12_brakka_confronts.png", "Panel S4-12: Brakka confronts her father", "panel", ["brakka", "durgrim"],
+    "In the heap of scrap, Brakka kneels beside her father Thane Durgrim who sits dazed and unarmored with his horned helm in his hands, his violet glow gone, she confronts him with tears and anger, her forge hammer lowered, dust and drifting embers."],
+  ["b2s4_p13_anvil_heart", "story/panels/b2s4_p13_anvil_heart.png", "Panel S4-13: Anvil-Heart reclaims the Orb", "panel", ["anvil_heart_portrait", "walking_forge"],
+    "Anvil-Heart, the ancient forge-spirit made of a black anvil and ember-gold flame, steps up out of the broken Walking Forge and gently takes the violet-cracked Forge Orb into its hands, the orb cooling from violet to warm ember-gold, golden light washing over the dwarves and knights, chains falling away from the spirit."],
+  ["b2s4_p14_new_oath", "story/panels/b2s4_p14_new_oath.png", "Panel S4-14: the new oath", "panel", ["brakka", "emberhold_gunner", "runecaller", "candy_knight_captain_portrait"],
+    "On the oath field at golden dusk, dwarves (Brakka with her glowing hammer, a dwarf gunner, a runecaller) and Candy Crown knights with their captain strike a glowing anvil together, forging a new Iron Oath, the human captain and Brakka clasping hands over the anvil, sparks flying, Thane Durgrim standing apart watching."],
+  ["b2s4_p15_durgrim_troubled", "story/panels/b2s4_p15_durgrim_troubled.png", "Panel S4-15: Durgrim troubled", "panel", ["durgrim"],
+    "Thane Durgrim alone and troubled at the edge of the celebration, helm under his arm, the violet glow gone but a single faint violet vein still under his skin, looking down at his own hand, the new-forged oath anvil glowing far behind him, evening sky."],
+  ["b2s4_p16_broken_scales", "story/panels/b2s4_p16_broken_scales.png", "Panel S4-16: four shards over broken scales", "panel", [],
+    "Four glowing violet crystal shards hover in a dark night sky above a pair of broken golden balance scales lying on a stone floor, the scales' two pans tilted, one pan pure white and one pan pure black, a crack between them, violet light on the stone, ominous mood."],
+  ["b2s4_p17_to_be_continued", "story/panels/b2s4_p17_to_be_continued.png", "Panel S4-17: to be continued", "panel", ["brakka", "emberhold_gunner", "assets/_green/v12/pentagonal_knight.png"],
+    "A quiet closing shot: Brakka, a Candy Crown knight and a dwarf gunner walk side by side along a road leading away from the mountain gate toward a dark horizon where a faint violet storm glows, the forged oath anvil glowing small and gold behind them, one violet shard glimmering in the far sky."],
+];
+
+export const BOOK2_S4_REQUESTS: ArtRequest[] = mapB2Rows(B24, B24_GROUP, "book2s4");
 
 /** The awakened art the game already has: index.json from the asset base. */
 export interface HaveArt {
@@ -943,6 +1060,7 @@ export function artRequests(have: HaveArt): ArtRequest[] {
   return [
     ...BOOK2_S1_REQUESTS,
     ...BOOK2_S23_REQUESTS,
+    ...BOOK2_S4_REQUESTS,
     ...awakened(have),
     ...TRAITS.map((t) => icon("Monster trait icons", "trait", "ui/traits", t, `Trait: ${t}`, `Monster trait badge icon: ${TRAIT_ART[t]}, inside a round dark badge.`, ["ui/icon_buttons_set.webp"])),
     ...PERK_IDS.filter((p) => p !== "none").map((p) =>
