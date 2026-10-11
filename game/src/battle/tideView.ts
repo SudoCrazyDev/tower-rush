@@ -6,7 +6,7 @@
 import Phaser from "phaser";
 import type { SimEvent } from "../../../shared/sim.ts";
 import type { ChapterMechanics } from "../../../shared/stories.ts";
-import { ARENA_W, W, WIDE, NAVY, txt, toast } from "../ui";
+import { ARENA_W, ARENA_H, W, WIDE, NAVY, txt, toast } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
 
 /** Where the `row`-th rules HUD block goes (left panel on wide screens; on phones below the boss bar and the bark bubble). */
@@ -52,6 +52,14 @@ export class TideView {
   private pools: PoolView[] = [];
   private zzz = new Map<number, Phaser.GameObjects.Text>();
   private beams: BeamView[] = [];
+  /** The flooded arena picture, shown over the normal one at high tide. */
+  private high: Phaser.GameObjects.Image | null = null;
+
+  /** Lay the flooded arena (`key`) over the arena and its ambient loop, hidden until high tide. */
+  highArt(key: string, tint: number | null) {
+    this.high = this.scene.add.image(0, 0, key).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H).setDepth(1).setAlpha(0);
+    if (tint !== null) this.high.setTint(tint);
+  }
 
   constructor(private scene: BattleScene, mech: ChapterMechanics | undefined) {
     this.tide = mech?.tide;
@@ -136,6 +144,7 @@ export class TideView {
     switch (e.type) {
       case "tide": {
         for (const s of e.slots) this.waterOf(s);
+        if (this.high) this.scene.tweens.add({ targets: this.high, alpha: e.high ? 1 : 0, duration: 1500, ease: "Sine.InOut" });
         banner(this.scene, e.high ? "HIGH TIDE!" : "LOW TIDE", e.high ? "#7fc8ff" : "#ffd27a", 54, 480);
         break;
       }

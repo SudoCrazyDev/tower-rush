@@ -202,6 +202,8 @@ export class BattleScene extends Phaser.Scene {
     this.load.once("complete", () => this.load.off("progress", progress));
 
     this.load.image(this.artKey, `${BASE}locations/${this.art}.webp`);
+    // v2.2: a tide chapter's arena has a flooded twin (<art>_high) that fades in at high tide.
+    if (this.story?.chapter.mechanics?.tide && assetIndex().locations.includes(`${this.art}_high`)) this.load.image(`${this.artKey}_high`, `${BASE}locations/${this.art}_high.webp`);
     for (const id of this.deck) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${id}_${anim}`);
     const waves = this.story?.chapter.waves;
     const bosses = waves ? [...new Set(waves.flatMap((w) => (w.boss ? [w.boss] : [])))] : a.bosses;
@@ -253,6 +255,7 @@ export class BattleScene extends Phaser.Scene {
     this.setupDrag();
     if (this.story) {
       this.tideView = new TideView(this, this.story.chapter.mechanics);
+      if (this.textures.exists(`${this.artKey}_high`)) this.tideView.highArt(`${this.artKey}_high`, tint);
       this.faceless = new FacelessView(this, this.story.chapter.mechanics);
     }
     this.input.keyboard?.on("keydown-D", () => this.toggleDebug());
