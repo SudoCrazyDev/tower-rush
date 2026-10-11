@@ -54,35 +54,44 @@ Local dev: `npm run dev` starts the API (`wrangler dev` on 8787 with a local D1 
 `server/.wrangler/`), the game (5173) and the admin (5174). In dev the admin's Production
 side is the local API; its Staging side is the real staging API.
 
-## One-time setup
+## Infrastructure inventory
 
-Done by the maintainer's tooling:
-1. D1 databases `tower-rush` (prod) and `tower-rush-staging` (ids are in
-   `server/wrangler.jsonc`). Apply new migrations with the deploy scripts or by hand
-   (`npm run db:remote`, `npm run db:remote:staging`).
-2. R2 bucket `tower-rush-assets` with a custom domain `assets.crownnkeep.com`, CORS allowing
-   `GET`/`HEAD` from any origin (WebGL needs it) and a Response Header Transform Rule that
-   always sends `Access-Control-Allow-Origin: *`. Check:
-   `npx wrangler r2 bucket cors list tower-rush-assets`.
+All set up on 2026-10-11/12 (Cloudflare account `6f48a95301b0c84f452b64d990b8fa60`, Free plans).
 
-**You (dashboard and secrets):**
-1. **Disconnect the old Workers Build.** Workers & Pages, `tower-rush`, Settings, Build:
-   disconnect the GitHub connection. It would run the old root deploy on every push to
-   master and fail or overwrite the new layout. (Optionally reconnect each Worker later with
-   its own root directory and watch paths.)
-2. **Admin password for staging.** In `server/`:
+| Resource | Id / value | Notes |
+|---|---|---|
+| Zone `crownnkeep.com` | `c78f208e0e0f2a4bf41cb1deebeb528c` | Registered at Cloudflare. DNS records for the app hosts are created by the Workers' custom domains; don't edit them by hand. |
+| Zone `depedtoolkit.com` | `933bc3273fd6d7e59fe156fbd2f5d62b` | Only for the legacy art host `assets.depedtoolkit.com`. |
+| D1 `tower-rush` (prod) | `8633ac1c-c935-448e-9473-05d5554e6df3` | Bound as `DB` in `server/wrangler.jsonc`. |
+| D1 `tower-rush-staging` | `7a9cd407-6eb7-415e-8367-d00309e64e97` | Bound as `DB` under `env.staging`. |
+| R2 `tower-rush-assets` | custom domains `assets.crownnkeep.com`, `assets.depedtoolkit.com` | Shared by prod and staging (art is append-only). `npx wrangler r2 bucket domain list tower-rush-assets` |
+| Transform Rule (crownnkeep.com) | ruleset `e00c7ae06dd746b2b518d03d3207c9de` | `http_response_headers_transform`: host `assets.crownnkeep.com` always gets `Access-Control-Allow-Origin: *`, so a non-CORS cached copy can't break WebGL loads. |
+| Transform Rule (depedtoolkit.com) | ruleset `885317fede324cc99c5a30745f9bb349` | Same rule for the legacy art host. |
+| Durable Objects | `Matchmaker`, `MatchRoom` (migration tag `v1`) | Owned by the `tower-rush` / `tower-rush-staging` Workers. |
+| Rate limits | prod `1001` (auth), `1002` (admin); staging `1003`, `1004` | `ratelimits` in `server/wrangler.jsonc`. |
+| workers.dev | `tower-rush.philiplouis0717.workers.dev` | Kept on (`workers_dev: true`) only to 301 old bookmarks to the game. |
+| Cloudflare Access | team `crimson-bread-3137.cloudflareaccess.com` | Self-hosted app on `manage.crownnkeep.com`, policy `Owner` (Allow, emails), one-time PIN login. Add admins in Zero Trust, Access, Applications. |
+| Workers Builds | not connected | Deploys are run by hand with the scripts above. |
 
-       npx wrangler secret put ADMIN_PASSWORD --env staging
+Secrets (never in the repo):
+- `ADMIN_PASSWORD` on `tower-rush` and on `tower-rush-staging`. Set or change from the repo root:
 
-   Sign in to Staging in the admin panel as `admin`; the first sign-in creates the account.
-   Production keeps its existing admin accounts (`ADMIN_PASSWORD` is only read while no admin
-   exists). Each environment has its own accounts, so the admin panel keeps a separate
-   sign-in per environment.
-3. **Cloudflare Access (Zero Trust, Free).** Add a self-hosted application in front of
-   `manage.crownnkeep.com` allowing your email. Optionally also in front of
-   `staging-game.`, `staging.` and `staging-api.` (note: Access on `staging-api.` blocks
-   browser calls from the staging game unless the game sends Access credentials, so protect
-   the staging game and website hosts instead if you want staging private).
+      npx wrangler secret put ADMIN_PASSWORD -c server/wrangler.jsonc
+      npx wrangler secret put ADMIN_PASSWORD -c server/wrangler.jsonc --env staging
+
+  It is only read while an environment has no admin account; the first sign-in as `admin`
+  creates the account. Each environment has its own accounts, so the admin panel keeps a
+  separate sign-in per environment.
+
+Access only guards the admin's pages. Its API calls (`api.crownnkeep.com/api/admin`) are
+protected by the admin sign-in. Putting Access on `staging-api.` would break the staging game,
+so to make staging private, protect `staging-game.` and `staging.` instead.
+
+To recreate from scratch: create both D1 databases (`npx wrangler d1 create ...`, update the
+ids in `server/wrangler.jsonc`), attach the R2 custom domain
+(`npx wrangler r2 bucket domain add tower-rush-assets --domain assets.crownnkeep.com --zone-id <zone>`),
+add the Transform Rule, set the secrets, run every deploy script (custom domains are created on
+first deploy), then add the Access application.
 
 ## Changing the database
 
