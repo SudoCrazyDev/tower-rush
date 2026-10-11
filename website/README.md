@@ -5,6 +5,7 @@ The game's marketing site: a static one-page site (HTML, CSS and vanilla JS, no 
 | File | What |
 |---|---|
 | `index.html` | Page structure: hero, how to play, unit codex, heroes, arenas, bosses, modes, PvP demo, trophy leagues, news |
+| `release-notes.html` | Release notes page: the last 5 releases with their hotfixes, written by hand |
 | `styles.css` | All styling; rarity and element colours match `shared/units.ts` |
 | `app.js` | Renders the codex, heroes, arenas, bosses, PvP demo and leagues from the data file; modals, filters, nav. Story-only monsters and bosses (not in any arena list) are left out |
 | `data/game.js` | Generated. Units, monsters, bosses, arenas, heroes, leagues, trophy rules, chests and PvP rules/sends/tiers from `shared/`. Each unit carries its card dialog (effect lines, merge-rank and power-up tables) worked out with the game's own formulas, like `DeckScene.showCard` |
@@ -38,4 +39,5 @@ game's `wrangler.jsonc` at the repo root:
     cd website && npx --prefix .. wrangler deploy
 
 The news section in `index.html` is written by hand; add a post there with each release
-(see `docs/features/ROADMAP.md`).
+(see `docs/features/ROADMAP.md`). Add the release (and any hotfix) to `release-notes.html` too, keeping
+only the latest 5 releases.

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Release Notes | Crown &amp; Keep: Tower Defense</title>
+  <meta name="description" content="Everything new in Crown &amp; Keep: Tower Defense, release by release, with every hotfix." />
+  <meta name="theme-color" content="#0a0f2c" />
+  <meta property="og:title" content="Release Notes | Crown &amp; Keep: Tower Defense" />
+  <meta property="og:description" content="Everything new in Crown &amp; Keep, release by release." />
+  <meta property="og:image" content="https://assets.depedtoolkit.com/brand/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="brand/favicon-64.png" />
+  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://assets.depedtoolkit.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=2.2.0" />
+</head>
+<body>
+  <!-- ============ NAV ============ -->
+  <header class="nav is-solid" id="nav">
+    <a class="nav__brand" href="index.html" aria-label="Crown &amp; Keep home">
+      <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" />
+    </a>
+    <nav class="nav__links" id="navLinks">
+      <a href="index.html#how">How to play</a>
+      <a href="index.html#codex">Units</a>
+      <a href="index.html#arenas">Arenas</a>
+      <a href="index.html#modes">Modes</a>
+      <a href="index.html#pvp">PvP</a>
+      <a href="index.html#news">News</a>
+      <a href="release-notes.html" class="is-active" aria-current="page">Release notes</a>
+    </nav>
+    <a class="btn btn--play btn--sm" data-play href="#">Play free</a>
+    <button class="nav__burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+
+  <main id="top" class="notes">
+    <section class="section notes__intro">
+      <div class="section__head">
+        <span class="eyebrow">Release notes</span>
+        <h2>What's new in Crown &amp; Keep</h2>
+        <p>The last five releases, newest first, with every hotfix that followed.</p>
+      </div>
+      <nav class="notes__jump" aria-label="Jump to a release">
+        <a href="#v2-2-0"><b>v2.2</b> Sand &amp; Sea</a>
+        <a href="#v2-1-0"><b>v2.1</b> Chaos Corrupted</a>
+        <a href="#v2-0-0"><b>v2.0</b> The Grand Revamp</a>
+        <a href="#v1-3-0"><b>v1.3</b> Branding Revamp</a>
+        <a href="#v1-2-0"><b>v1.2</b> Stories</a>
+      </nav>
+    </section>
+
+    <section class="section notes__list">
+      <!-- v2.2.0 -->
+      <article class="release release--latest" id="v2-2-0">
+        <div class="release__bg release__bg--split" aria-hidden="true">
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/book2_story2_drowned_coast.webp" alt="" />
+          <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/book2_story3_throne_of_dust.webp" alt="" />
+        </div>
+        <div class="release__body">
+          <div class="release__meta">
+            <span class="release__ver">v2.2.0</span>
+            <time datetime="2026-10-11">Oct 11, 2026</time>
+            <span class="pill pill--live"><i></i> Latest</span>
+          </div>
+          <h3>Sand &amp; Sea</h3>
+          <p class="release__tag">Book 2 continues with two new stories: a drowned coast held by a stolen tide, and a desert city ground down into the Faceless.</p>
+          <h4>Highlights</h4>
+          <ul class="release__list">
+            <li><b>Story 2: The Drowned Coast.</b> Three chapters with a tide cycle that floods board slots at high tide, tide pools as a side objective, a "cleanse the shell" fight against Ondrath, and Corvaline shielded by lanterns until your units break them.</li>
+            <li><b>Story 3: The Throne of Dust.</b> Masked Faceless that braziers unmask, civilians to save, a best-of-3 arena duel against Bako's deck with a crowd favor meter, Sefa's 6-chain bar instead of HP, and Nefrael to free from a cage.</li>
+            <li><b>8 new bosses:</b> Grell, Lusca, Ondrath, Corvaline, Faceless Herald, Dune Warden, Sefa and Nefrael, plus about 12 new monsters.</li>
+            <li><b>New boss skills:</b> anchor hook, siren song (tap your units to wake them), lantern beam, mimic, burrow and equal ground.</li>
+            <li><b>2 new Event cards:</b> Maren, the Tide-Born and Bako, Chainbreaker. They don't drop from chests; level them by replaying chapters.</li>
+            <li><b>6 new arenas:</b> 3 coast arenas whose flooded high-tide art fades in, and 3 desert arenas.</li>
+            <li><b>2 new badges:</b> Tidewarden and Dunewarden.</li>
+          </ul>
+          <div class="hotfixes">
+            <h4>Hotfixes</h4>
+            <div class="hotfix">
+              <span class="hotfix__ver">v2.2.1</span>
+              <div>
+                <b>Balance</b> <time datetime="2026-10-11">Oct 11</time>
+                <ul>
+                  <li>Rogue Knight crit chance cut from 95% to 20%. It was dealing about 2.5&times; the damage of other Epics.</li>
+                  <li>Ondrath's barnacles are much tougher (50k, 70k and 110k HP) and spawn a minion when hit.</li>
+                  <li>Corvaline's ally charge is gone. Her lanterns now ward her until your units break them, each lantern is tougher than the last, and she hurries while unwarded.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- v2.1.0 -->
+      <article class="release" id="v2-1-0">
+        <div class="release__bg" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/book2_story1_elven_wilds.webp" alt="" loading="lazy" /></div>
+        <div class="release__body">
+          <div class="release__meta">
+            <span class="release__ver">v2.1.0</span>
+            <time datetime="2026-10-10">Oct 10, 2026</time>
+          </div>
+          <h3>Chaos Corrupted</h3>
+          <p class="release__tag">Book 2 of "The Forsakens" saga begins as the corruption reaches the elven forests.</p>
+          <h4>Highlights</h4>
+          <ul class="release__list">
+            <li><b>Story mode becomes a saga.</b> Books now sit under "The Forsakens". Book 2 unlocks once you finish Book 1.</li>
+            <li><b>Story 1: The Elven Wilds.</b> The Fleeing Grove (10 waves, boss Captain Morvane), Thalmyr, the Torn Guardian (a boss-only fight) and the Summit of Vaeltharion (20 waves, three captains, then the Elven Commander).</li>
+            <li><b>5 new bosses:</b> Morvane, Sylris, Kaelen, Thalmyr and Vaeltharion, plus 5 corrupted elf monsters.</li>
+            <li><b>New boss skills:</b> entangle (units can't attack until the wave ends), impale, sapling trail, arrow volley and block.</li>
+            <li><b>Queen Aelyria's charge.</b> Mid-battle, her army storms Vaeltharion, pushes him back and takes 50% of his HP.</li>
+            <li><b>New art:</b> 3 arenas, 16 story panels, 8 portraits and 5 ally sprites, plus the Wilds Warden badge.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- v2.0.0 -->
+      <article class="release" id="v2-0-0">
+        <div class="release__bg" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/loading_keyart.webp" alt="" loading="lazy" /></div>
+        <div class="release__body">
+          <div class="release__meta">
+            <span class="release__ver">v2.0.0</span>
+            <time datetime="2026-10-09">Oct 9, 2026</time>
+          </div>
+          <h3>The Grand Revamp</h3>
+          <p class="release__tag">One combat engine for every mode, units with several archetypes and perks, and a full visual refresh.</p>
+          <h4>Highlights</h4>
+          <ul class="release__list">
+            <li><b>One combat engine.</b> Solo battles now run on the same engine as PvP, so the rules are the same everywhere.</li>
+            <li><b>Deeper units.</b> A unit can combine several archetypes (say, a sniper that also executes) and any number of perks, each with its own values.</li>
+            <li><b>New icons:</b> 26 archetype icons, 7 perk icons, 6 element emblems and 18 race crests.</li>
+            <li><b>New effects</b> for projectiles, impacts and statuses, plus generic and signature weapons with melee strike effects.</li>
+            <li><b>UI polish:</b> labelled card details, a race crest on each card corner, a framed boss intro card, livelier lobby mode cards and cleaner buttons.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- v1.3.0 -->
+      <article class="release" id="v1-3-0">
+        <div class="release__bg release__bg--logo" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp?v=1.3.0" alt="" loading="lazy" /></div>
+        <div class="release__body">
+          <div class="release__meta">
+            <span class="release__ver">v1.3.0</span>
+            <time datetime="2026-10-06">Oct 6, 2026</time>
+          </div>
+          <h3>Branding Revamp</h3>
+          <p class="release__tag">Tower Rush is now Crown &amp; Keep: Tower Defense. Same game, new name.</p>
+          <h4>Highlights</h4>
+          <ul class="release__list">
+            <li><b>A new name,</b> because "Tower Rush" was already taken.</li>
+            <li><b>A new logo</b> in the same style: CROWN &amp; KEEP with a shield "&amp;" and a TOWER DEFENSE ribbon.</li>
+            <li><b>A new app icon</b> (a crowned gold shield with a keep), favicon and share images.</li>
+            <li><b>A What's New popup</b> announces the rename in game.</li>
+            <li><b>Nothing lost.</b> Logins, settings and progress all carry over. Colours and art style stay the same.</li>
+          </ul>
+          <div class="hotfixes">
+            <h4>Hotfixes</h4>
+            <div class="hotfix">
+              <span class="hotfix__ver">v1.3.1</span>
+              <div>
+                <b>Lucky Cat</b> <time datetime="2026-10-06">Oct 6</time>
+                <ul><li>Merges next to Lucky Cat now always keep their unit (100% keep chance).</li></ul>
+              </div>
+            </div>
+            <div class="hotfix">
+              <span class="hotfix__ver">v1.3.2</span>
+              <div>
+                <b>Element emblems</b> <time datetime="2026-10-09">Oct 9</time>
+                <ul><li>Element emblems no longer look squashed, and the fire emblem's background is gone.</li></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- v1.2.0 -->
+      <article class="release" id="v1-2-0">
+        <div class="release__bg" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.depedtoolkit.com/story/covers/story1_saving_the_muse.webp" alt="" loading="lazy" /></div>
+        <div class="release__body">
+          <div class="release__meta">
+            <span class="release__ver">v1.2.0</span>
+            <time datetime="2026-10-06">Oct 6, 2026</time>
+          </div>
+          <h3>Stories</h3>
+          <p class="release__tag">The Candy Kingdom is falling to chaos. Save its princess, then find out who corrupted it.</p>
+          <h4>Highlights</h4>
+          <ul class="release__list">
+            <li><b>Story mode, Book 1 "The Chosen".</b> 3 stories of 3 chapters each (10, 15 and 20 waves), with illustrated story panels, boss fights and 1&ndash;3 stars per chapter.</li>
+            <li><b>Saving the Muse</b> rewards Princess Muse, the first Event card. Her Last Call aura boosts attack speed and damage for units in a 3&times;3 square.</li>
+            <li><b>Chaorruption:</b> pick 5 of 9 Knights and Mercenaries and face the Chaos Jawbreaker. Rewards: Pentagonal Knight and Rogue Knight (Epic).</li>
+            <li><b>The Beginning:</b> your own deck, both knights required, no Legendary or Mythic units, and a cliffhanger ending. Rewards: a Legendary chest and "The Chosen" badge.</li>
+            <li><b>19 new monsters and 8 new bosses</b> with charm, roar, split, layered phases and portals.</li>
+            <li><b>New statuses:</b> Rally, Irritation, Fatigue and Shellshock.</li>
+            <li><b>Lobby redesign</b> with swipeable Arena and Stories mode cards, and book and chapter carousels.</li>
+          </ul>
+          <div class="hotfixes">
+            <h4>Hotfixes</h4>
+            <div class="hotfix">
+              <span class="hotfix__ver">v1.2.1</span>
+              <div>
+                <b>Knights</b> <time datetime="2026-10-06">Oct 6</time>
+                <ul>
+                  <li>Pentagonal Knight Rally lasts 4s (was 2s).</li>
+                  <li>Rogue Knight attacks twice as fast and gets a 95% crit for &times;3.</li>
+                  <li>Lance Knight hits chain to up to 5 more monsters.</li>
+                  <li>Oath Knight gets +10% damage and +5% speed per adjacent Knight.</li>
+                  <li>Lantern Knight gains a mana pulse.</li>
+                  <li>Berserker Sellsword gets +15% damage per Mercenary.</li>
+                  <li>Hired Blade damage 46 to 60, speed &times;1.25.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="hotfix">
+              <span class="hotfix__ver">v1.2.2</span>
+              <div>
+                <b>Story card unlocks</b> <time datetime="2026-10-06">Oct 6</time>
+                <ul>
+                  <li>Rogue Knight and Pentagonal Knight no longer drop from chests until you earn them in Story 2.</li>
+                  <li>Locked story cards now point to the story that unlocks them.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section class="cta">
+      <img class="cta__bg" crossorigin="anonymous" src="https://assets.depedtoolkit.com/locations/lobby_landscape.webp" alt="" loading="lazy" />
+      <div class="cta__body">
+        <h2>See it for yourself.</h2>
+        <p>Every update is already live. Jump in free, right in your browser.</p>
+        <a class="btn btn--play btn--xl" data-play href="#"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play Crown &amp; Keep</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img crossorigin="anonymous" src="https://assets.depedtoolkit.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" loading="lazy" />
+    <nav>
+      <a href="index.html#codex">Units</a><a href="index.html#arenas">Arenas</a><a href="index.html#modes">Modes</a><a href="index.html#pvp">PvP</a><a href="index.html#news">News</a><a href="release-notes.html">Release notes</a><a data-play href="#">Play</a>
+    </nav>
+    <p>&copy; 2026 Crown &amp; Keep. All rights reserved.</p>
+  </footer>
+
+  <script>
+    (() => {
+      const GAME_URL = "https://tower-rush.philiplouis0717.workers.dev/";
+      document.querySelectorAll("[data-play]").forEach((a) => { a.href = GAME_URL; a.target = "_blank"; a.rel = "noopener"; });
+      const burger = document.getElementById("burger"), links = document.getElementById("navLinks");
+      burger.addEventListener("click", () => burger.setAttribute("aria-expanded", links.classList.toggle("is-open")));
+    })();
+  </script>
+</body>
+</html>
