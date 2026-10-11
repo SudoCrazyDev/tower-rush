@@ -61,6 +61,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   },
   // The Lucky Cat never attacks, so its neighbours' merges always keep their unit.
   "1.3.1": { units: {}, effects: { lucky: ["chance", "perRank", "max"] } },
+  // Rogue Knight crit on 95% of blows (~2.9x damage), far above every other epic.
+  "2.2.1": { units: {}, effects: { irritate: ["critChance"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

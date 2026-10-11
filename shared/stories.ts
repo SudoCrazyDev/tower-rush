@@ -716,7 +716,7 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_ondrath_isle",
       corruption: 0.3,
       hpScale: 10,
-      mechanics: { shell: { at: [0.45, 0.5, 0.55, 0.42, 0.5], stages: [2, 2, 1], hp: [4, 5, 9], brood: 6, cap: 3, mana: 4 } },
+      mechanics: { shell: { at: [0.45, 0.5, 0.55, 0.42, 0.5], stages: [2, 2, 1], hp: [6, 8, 14], brood: 6, cap: 3, mana: 4 } },
       intro: [
         panel("b2s2_p5_ondrath_found", "Ondrath, an island on a turtle's back, lies in the drained bay.", "The Tide Orb was torn from his shell. Violet barnacles cover him."),
         panel("b2s2_p6_isle_rolls", "He rolls in pain, and the whole island shifts.", "Break the barnacles, Keeper. Free him, don't fight him!"),

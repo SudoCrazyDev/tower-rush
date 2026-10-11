@@ -39,7 +39,7 @@ export const DEFAULT_EFFECTS = {
   aegis: { pulse: 4 },
   // Unit effects of the Knights and Mercenaries, and the statuses they cause.
   rally: { speed: 1, time: 4 },
-  irritate: { every: 4, miss: 0.25, time: 2, critChance: 0.95, critMult: 3 },
+  irritate: { every: 4, miss: 0.25, time: 2, critChance: 0.2, critMult: 3 },
   fatigue: { slow: 0.25, linger: 1, perMercenary: 0.15 },
   shellshock: { chance: 0.15, time: 1 },
   wages: { perRank: 10 },
@@ -238,7 +238,7 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
     every: F("Irritates its neighbours every N seconds", 0.5, 60, false, 0.5),
     miss: PCT("Irritation: chance an attack misses"),
     time: F("Irritation lasts (seconds)", 0.1, 20),
-    critChance: PCT("Rogue Knight's own crit chance (0.95 = 95%)"),
+    critChance: PCT("Rogue Knight's own crit chance (0.2 = 20%)"),
     critMult: F("Rogue Knight's crit multiplier (×)", 0.1, 20, false, 1),
   },
   fatigue: {
