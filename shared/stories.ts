@@ -193,6 +193,8 @@ export interface StoryChapter {
   corruption: number;
   /** Tint over the arena art (a corrupted look), or null. */
   tint: string | null;
+  /** v2.3: draw the arena art in sepia (a flashback). */
+  sepia?: boolean;
   /** Monster HP multiplier for the whole chapter (like a later arena's). */
   hpScale: number;
   waves: StoryWave[];
@@ -982,7 +984,7 @@ const THE_IRON_OATH: StoryDef = {
       layout: "volcano",
       art: "arena_burning_emberhold",
       corruption: 0,
-      tint: "#e0c79a",
+      sepia: true,
       hpScale: 3.8,
       mechanics: {
         evacuation: {

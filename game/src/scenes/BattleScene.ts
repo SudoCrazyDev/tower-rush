@@ -251,10 +251,14 @@ export class BattleScene extends Phaser.Scene {
     const tint = this.story?.chapter.tint ? Phaser.Display.Color.HexStringToColor(this.story.chapter.tint).color : null;
     const bg = this.add.image(0, 0, this.artKey).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
     if (tint !== null) bg.setTint(tint);
+    // A flashback chapter shows its arena in sepia (WebGL only).
+    const sepia = !!this.story?.chapter.sepia;
+    if (sepia) bg.preFX?.addColorMatrix().sepia();
     // Half the arenas have an ambient loop of the same picture (water, flags, lava...).
     ambientVideo(this, this.art, (v) => {
       v.setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
       if (tint !== null) v.setTint(tint);
+      if (sepia) v.preFX?.addColorMatrix().sepia();
     });
     this.tethers = this.add.graphics().setDepth(1400);
     // Wide layout: the world (arena coordinates) is centred by scrolling the camera;
@@ -558,7 +562,8 @@ export class BattleScene extends Phaser.Scene {
 
   private updateBossBar() {
     const b = this.sim.boss;
-    if (!b || b.gone) {
+    // v2.3: the Forge's part bars (oathView) replace the boss bar; they sit in the same spot.
+    if (!b || b.gone || b.parts.length) {
       this.bossBar.setVisible(false);
       return;
     }
@@ -578,9 +583,9 @@ export class BattleScene extends Phaser.Scene {
       }
       return;
     }
-    // v2.3: the Forge's bar is its core; the Colossus counts the iron it has eaten.
+    // v2.3: the Colossus counts the iron it has eaten.
     const eaten = b.boss!.skills?.some((k) => k.kind === "absorb") ? `   IRON x${b.stacks}` : "";
-    (this.bossBar.getData("name") as Phaser.GameObjects.Text).setText(`${b.parts.length ? "ANVIL-HEART" : b.boss!.name}${eaten}`);
+    (this.bossBar.getData("name") as Phaser.GameObjects.Text).setText(`${b.boss!.name}${eaten}`);
     const p = Math.max(0, b.hp / b.maxHp);
     g.fillStyle(0xe53935, 1).fillRoundedRect(-224, -12, Math.max(12, 448 * p), 24, 12);
   }
