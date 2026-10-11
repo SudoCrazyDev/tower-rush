@@ -176,6 +176,8 @@ export type SimEvent =
   | { type: "shell"; t: number; stage: number; stages: number; uids: number[] }
   /** A barnacle cluster broke at (x, y): `left` of `total` remain; `left` 0 means the boss is cleansed. */
   | { type: "cleanse"; t: number; uid: number; boss: number; left: number; total: number; x: number; y: number }
+  /** v2.2 Corvaline's lantern (ChapterMechanics.lanterns) lights (`lit`) or goes out; `first` on the first one. */
+  | { type: "lantern"; t: number; uid: number; lit: boolean; first: boolean; x: number; y: number }
   /** A unit moved by a boss (anchor hook): keeps its uid, like a swap. */
   | { type: "hooked"; t: number; uid: number; from: number; to: number; x: number; y: number }
   /** A unit fell asleep (siren song) or woke (`tapped` by the player, or the timer ran out). */
@@ -657,6 +659,12 @@ export class Sim {
   private shellStage = 0;
   private shellBroken = 0;
   private broodAt = new Map<number, number>();
+  /** v2.2 Corvaline's lanterns: the warded boss, the lantern lit now, when the next lights and this one goes out. */
+  private lanternBoss: SimMonster | null = null;
+  private lantern: SimMonster | null = null;
+  private lanternAt = 0;
+  private lanternOut = 0;
+  private lanterns = 0;
   /** When each cluster may next breed from being hit (shell `onHit`). */
   private hitBreedAt = new Map<number, number>();
   /** Brood uids per cluster uid (for the cap), and when the shell next pays its mana. */
@@ -1065,6 +1073,7 @@ export class Sim {
     this.monsters.push(m);
     if (this.story?.mechanics) this.facelessSpawn(m);
     if (q.boss && this.story?.mechanics?.shell && !this.shellBoss) this.shellStart(m);
+    if (q.boss && m.id === this.story?.mechanics?.lanterns?.boss && !this.lanternBoss) this.lanternStart(m);
     const f = m.foot;
     this.emit({ type: "spawn", t: this.now, uid: m.uid, id: m.id, boss: !!q.boss, x: f.x, y: f.y, hp: m.maxHp, path: Math.max(0, this.paths.indexOf(path)) });
     if (m.boss?.chains) this.startChains(m, m.boss.chains);
@@ -1157,6 +1166,7 @@ export class Sim {
     this.updateTethers();
     if (this.story?.mechanics?.faceless || this.story?.mechanics?.cage) this.updateFaceless(dt);
     if (this.shellClusters.length) this.tickShell();
+    if (this.lanternBoss) this.tickLanterns();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
@@ -1311,6 +1321,7 @@ export class Sim {
     if (m.has("armored")) dmg *= armorMult(perks);
     if (opts.crit && !opts.quiet) this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b" });
     if (m.chainTotal > 0) return this.hitChain(m, dmg, src, perks);
+    if (m === this.lantern) return this.hitLantern(m, dmg, src, perks);
     const dealt = Math.min(Math.max(0, m.hp), dmg);
     if (src === "hero") this.heroDamage += dealt;
     else this.damageBySlot[src] += dealt;
@@ -2147,6 +2158,70 @@ export class Sim {
       boss.shelled = false;
       this.kill(boss, src);
     }
+  }
+
+  // ---------------------------------------------------------------- Corvaline's lanterns (v2.2 Story 2 Ch 3)
+
+  /** The lantern boss can't be hurt or targeted; her first lantern lights a few seconds in. */
+  private lanternStart(boss: SimMonster) {
+    this.lanternBoss = boss;
+    boss.shelled = true;
+    this.lanternAt = this.now + this.story!.mechanics!.lanterns!.first;
+  }
+
+  /** Light a lantern every `every` seconds at a random spot on a random path; put it out after `lit`. */
+  private tickLanterns() {
+    const l = this.story!.mechanics!.lanterns!;
+    const boss = this.lanternBoss!;
+    if (this.lantern && (boss.gone || this.now >= this.lanternOut)) this.lanternDown();
+    if (boss.gone) {
+      this.lanternBoss = null;
+      return;
+    }
+    if (this.now < this.lanternAt) return;
+    this.lanternAt = this.now + l.every;
+    const def = MONSTER_BY_ID.corvaline_lantern;
+    if (!def) return;
+    if (this.lantern) this.lanternDown();
+    const path = this.paths[Math.floor(this.rand() * this.paths.length)];
+    const dist = path.length * (l.from + this.rand() * (l.to - l.from));
+    const c = this.spawn({ def }, { path, dist }, 1, 1);
+    c.pinned = dist;
+    c.baseSpeed = 0;
+    // Its bar is her bar: every hit on it comes off her health.
+    c.maxHp = boss.maxHp;
+    c.hp = boss.hp;
+    this.lantern = c;
+    this.lanternOut = this.now + l.lit;
+    const p = c.pos;
+    this.emit({ type: "lantern", t: this.now, uid: c.uid, lit: true, first: this.lanterns++ === 0, x: p.x, y: p.y });
+  }
+
+  /** The lit lantern goes out (no kill, no mana). */
+  private lanternDown() {
+    const c = this.lantern;
+    if (!c) return;
+    this.lantern = null;
+    c.gone = c.dead = true;
+    const p = c.pos;
+    this.emit({ type: "lantern", t: this.now, uid: c.uid, lit: false, first: false, x: p.x, y: p.y });
+  }
+
+  /** Damage on the lantern goes to the lantern boss; when she runs out of health she falls. */
+  private hitLantern(c: SimMonster, dmg: number, src: Source, perks: readonly ActivePerk[]) {
+    const boss = this.lanternBoss;
+    if (!boss || boss.gone) return false;
+    const dealt = Math.min(Math.max(0, boss.hp), dmg);
+    if (src === "hero") this.heroDamage += dealt;
+    else this.damageBySlot[src] += dealt;
+    boss.hp -= dmg;
+    c.hp = Math.max(1, boss.hp);
+    if (boss.hp > 0) return false;
+    this.lanternDown();
+    boss.shelled = false;
+    this.kill(boss, src);
+    if (plunderMana(perks) > 0) this.gainMana(plunderMana(perks), c.pos.x, c.pos.y - 40, "plunder");
+    return true;
   }
 
   /** Start of the boss wave with the cage open: the sphinx roars and stuns every monster. */

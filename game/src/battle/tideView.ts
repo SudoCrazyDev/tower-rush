@@ -181,6 +181,14 @@ export class TideView {
           this.scene.cameras.main.flash(500, 180, 255, 230);
         }
         break;
+      case "lantern":
+        // Corvaline's lantern: the only way to hurt her.
+        if (e.lit) {
+          this.scene.vfx("arcane_vortex", e.x, e.y - 20, 160);
+          if (e.first) banner(this.scene, "STRIKE THE LANTERN!", "#d9a8ff", 46, 520);
+          else this.scene.floater(e.x, e.y - 80, "LANTERN LIT!", "#d9a8ff", 30);
+        } else this.scene.vfx("shadow_smoke", e.x, e.y - 20, 140);
+        break;
       case "hooked":
         this.hook(e);
         break;

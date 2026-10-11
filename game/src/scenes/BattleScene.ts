@@ -210,6 +210,7 @@ export class BattleScene extends Phaser.Scene {
     const monsters = new Set(waves ? waves.flatMap((w) => w.spawns.map((s) => s.id)) : a.monsters);
     for (const b of bosses) if (BOSS_BY_ID[b]?.minion) monsters.add(BOSS_BY_ID[b].minion!);
     if (this.story?.chapter.mechanics?.shell) monsters.add("barnacle_cluster");
+    if (this.story?.chapter.mechanics?.lanterns) monsters.add("corvaline_lantern");
     for (const id of [...monsters]) if (SPLITS_INTO[id]) monsters.add(SPLITS_INTO[id]);
     for (const id of monsters) for (const anim of ["walk", "death"]) loadSheet(this, "monsters", `${sheetId("monsters", id)}_${anim}`);
     for (const boss of bosses) {
@@ -1061,6 +1062,11 @@ export class BattleScene extends Phaser.Scene {
           m.sprite.preFX?.addGlow(0xd17dff, 6, 0, false, 0.1, 14);
           m.sprite.setTint(0xc89bff);
         }
+        // Corvaline's lantern: a violet flame (drawn with the Fire Wisp art).
+        if (sm.id === "corvaline_lantern") {
+          m.sprite.preFX?.addGlow(0xb070ff, 8, 0, false, 0.1, 16);
+          m.sprite.setTint(0xd8b0ff);
+        }
         this.monsters.set(e.uid, m);
         break;
       }
@@ -1185,6 +1191,10 @@ export class BattleScene extends Phaser.Scene {
       case "hooked":
       case "sleep":
       case "beam":
+        this.tideView?.handle(e);
+        break;
+      case "lantern":
+        if (!e.lit) this.monsters.get(e.uid)?.remove();
         this.tideView?.handle(e);
         break;
       case "brazier":

@@ -70,6 +70,12 @@ export interface ChapterMechanics {
    * also breeds one Barnacle Spawn at once (at most once per `every` seconds, up to `cap` of its brood alive).
    */
   shell?: { at: number[]; stages: number[]; hp: number[]; brood: number; cap: number; mana: number; onHit?: { every: number; cap: number } };
+  /**
+   * Story 2 Ch 3: Corvaline's lanterns. The `boss` can't be hurt or targeted. `first` seconds after she
+   * appears, then every `every` seconds, a lantern lights at a random share (`from`-`to`) of a random path for
+   * `lit` seconds. Damage dealt to the lantern hurts her instead: the only way to beat her.
+   */
+  lanterns?: { boss: string; first: number; every: number; lit: number; from: number; to: number };
   /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
   cage?: { slot: number; lockHp: number; roarStun: number };
 }
@@ -733,7 +739,7 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_lantern_causeway",
       corruption: 0.4,
       hpScale: 1.3,
-      mechanics: { tide: { cycle: 30, flood: 4, lowSpeed: 0.8, highSpeed: 1.2 } },
+      mechanics: { tide: { cycle: 30, flood: 4, lowSpeed: 0.8, highSpeed: 1.2 }, lanterns: { boss: "corvaline", first: 4, every: 18, lit: 12, from: 0.25, to: 0.85 } },
       intro: [
         panel("b2s2_p7_ondrath_cleansed", "The barnacles crack. Ondrath breathes, but the Orb is gone.", "Ondrath: She did not steal it from greed. She stole it from grief."),
         panel("b2s2_p8_causeway", "A causeway runs to the lighthouse at the world's edge.", "Its beam sweeps the sea, and what it touches turns violet."),
@@ -761,12 +767,8 @@ const THE_DROWNED_COAST: StoryDef = {
         w(`${DS} 14, ${EE} 12, ${BS} 10, ${CO} 6`, { bark: say("corvaline", "You cannot know what the sea took from me.") }),
         w("", {
           boss: "corvaline",
+          hp: 0.2,
           bark: say("corvaline", "Hold, tide. Hold, and let no one drown."),
-          rally: {
-            before: [panel("b2s2_p10_tide_returns", "Ondrath rises from the bay, shaking off the last barnacles.", "Pearl: The sea is coming home. Merfolk, with me!")],
-            allies: ["ally_merfolk_warrior", "ally_merfolk_spear", "ally_tide_spirit", "ally_ondrath"],
-            after: [panel("b2s2_p11_lantern_flares", "The lantern flares. Corvaline screams over the roar of the sea.", "The tide will not hold!")],
-          },
           reveal: {
             at: 0.5,
             panels: [
@@ -1216,6 +1218,14 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
             num(sh.onHit.every, `${wc} shell on-hit cooldown`, 0.05);
             num(sh.onHit.cap, `${wc} shell on-hit brood cap`, 1);
           }
+        }
+        if (mech.lanterns) {
+          const l = mech.lanterns;
+          if (!ids.bosses.has(l.boss)) errs.push(`${wc}: unknown lantern boss "${l.boss}"`);
+          num(l.first, `${wc} lantern first`);
+          num(l.every, `${wc} lantern every`, 1);
+          num(l.lit, `${wc} lantern lit`, 1);
+          if (!(l.from >= 0 && l.to <= 1 && l.from < l.to)) errs.push(`${wc}: lanterns need 0 <= from < to <= 1`);
         }
         if (mech.cage) {
           slots([mech.cage.slot], "cage slot");
