@@ -25,6 +25,7 @@ prompt for every image is in `shared/art-requests.ts` (`B24` rows, group "v2.3 A
 | arenas | `locations/arena_{burning_emberhold,mountain_pass,oath_field}.png` + `animations/locations/<name>_loop.mp4` | Ch 1 / 2 / 3. Stills are 752x1344 |
 | cover | `story/covers/book2_story4_the_iron_oath.png` | |
 | portraits | `story/portraits/{durgrim,durgrim_young,brakka,anvil_heart,candy_knight_captain}.png` | |
+| rally allies | `story/allies/ally_{dwarf_guard,dwarf_gunner,candy_knight,candy_lancer}.png` | static keyed stills (no clips), like the v2.2 allies; built to `story/allies/` |
 | rune shields | `ui/rune_shield_{fire,ice,lightning,nature,poison,arcane}.png` | built to `ui/` |
 
 ## Panels (`story/panels/`)
