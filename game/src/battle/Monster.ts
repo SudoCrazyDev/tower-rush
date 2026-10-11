@@ -110,9 +110,10 @@ export class Monster {
       this.label.setText(text);
       this.label.setColor(m.masked ? "#c9c4e8" : friendly ? "#7dff7a" : "#ffffff");
     }
-    if (m.masked !== this.veiled) {
-      this.veiled = m.masked;
-      this.sprite.setAlpha(m.masked ? 0.6 : 1);
+    // Masked monsters and warded bosses (Ondrath's shell, Corvaline between lanterns) show faded.
+    if ((m.masked || m.shelled) !== this.veiled) {
+      this.veiled = m.masked || m.shelled;
+      this.sprite.setAlpha(this.veiled ? 0.6 : 1);
     }
     if (friendly && !this.ring) {
       this.ring = this.scene.add.graphics();

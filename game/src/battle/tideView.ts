@@ -182,12 +182,15 @@ export class TideView {
         }
         break;
       case "lantern":
-        // Corvaline's lantern: the only way to hurt her.
+        // Corvaline's lantern: while it burns she takes no damage; break it to hurt her.
         if (e.lit) {
           this.scene.vfx("arcane_vortex", e.x, e.y - 20, 160);
-          if (e.first) banner(this.scene, "STRIKE THE LANTERN!", "#d9a8ff", 46, 520);
-          else this.scene.floater(e.x, e.y - 80, "LANTERN LIT!", "#d9a8ff", 30);
-        } else this.scene.vfx("shadow_smoke", e.x, e.y - 20, 140);
+          if (e.first) banner(this.scene, "BREAK THE LANTERN!", "#d9a8ff", 46, 520);
+          else this.scene.floater(e.x, e.y - 80, "A NEW LANTERN! SHE IS WARDED", "#d9a8ff", 28);
+        } else if (e.first) {
+          this.splash(e.x, e.y);
+          this.scene.floater(e.x, e.y - 80, "LANTERN BROKEN! STRIKE HER!", "#7fffd4", 30);
+        }
         break;
       case "hooked":
         this.hook(e);

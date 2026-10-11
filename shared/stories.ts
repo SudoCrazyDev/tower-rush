@@ -71,11 +71,12 @@ export interface ChapterMechanics {
    */
   shell?: { at: number[]; stages: number[]; hp: number[]; brood: number; cap: number; mana: number; onHit?: { every: number; cap: number } };
   /**
-   * Story 2 Ch 3: Corvaline's lanterns. The `boss` can't be hurt or targeted. `first` seconds after she
-   * appears, then every `every` seconds, a lantern lights at a random share (`from`-`to`) of a random path for
-   * `lit` seconds. Damage dealt to the lantern hurts her instead: the only way to beat her.
+   * Story 2 Ch 3: Corvaline's lanterns. `first` seconds after the `boss` appears, then every `every` seconds,
+   * a lantern lights at a random share (`from`-`to`) of a random path (none while one still burns). While a
+   * lantern stands she takes no damage and can't be targeted; break it (HP x `hp` of a normal monster's)
+   * to hurt her until the next one lights.
    */
-  lanterns?: { boss: string; first: number; every: number; lit: number; from: number; to: number };
+  lanterns?: { boss: string; first: number; every: number; from: number; to: number; hp: number };
   /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
   cage?: { slot: number; lockHp: number; roarStun: number };
 }
@@ -739,7 +740,7 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_lantern_causeway",
       corruption: 0.4,
       hpScale: 1.3,
-      mechanics: { tide: { cycle: 30, flood: 4, lowSpeed: 0.8, highSpeed: 1.2 }, lanterns: { boss: "corvaline", first: 4, every: 18, lit: 12, from: 0.25, to: 0.85 } },
+      mechanics: { tide: { cycle: 30, flood: 4, lowSpeed: 0.8, highSpeed: 1.2 }, lanterns: { boss: "corvaline", first: 1, every: 20, from: 0.25, to: 0.85, hp: 8 } },
       intro: [
         panel("b2s2_p7_ondrath_cleansed", "The barnacles crack. Ondrath breathes, but the Orb is gone.", "Ondrath: She did not steal it from greed. She stole it from grief."),
         panel("b2s2_p8_causeway", "A causeway runs to the lighthouse at the world's edge.", "Its beam sweeps the sea, and what it touches turns violet."),
@@ -767,7 +768,7 @@ const THE_DROWNED_COAST: StoryDef = {
         w(`${DS} 14, ${EE} 12, ${BS} 10, ${CO} 6`, { bark: say("corvaline", "You cannot know what the sea took from me.") }),
         w("", {
           boss: "corvaline",
-          hp: 0.2,
+          hp: 0.25,
           bark: say("corvaline", "Hold, tide. Hold, and let no one drown."),
           reveal: {
             at: 0.5,
@@ -1224,7 +1225,7 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           if (!ids.bosses.has(l.boss)) errs.push(`${wc}: unknown lantern boss "${l.boss}"`);
           num(l.first, `${wc} lantern first`);
           num(l.every, `${wc} lantern every`, 1);
-          num(l.lit, `${wc} lantern lit`, 1);
+          num(l.hp, `${wc} lantern hp`, 0.01);
           if (!(l.from >= 0 && l.to <= 1 && l.from < l.to)) errs.push(`${wc}: lanterns need 0 <= from < to <= 1`);
         }
         if (mech.cage) {
