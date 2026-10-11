@@ -34,7 +34,7 @@ Unlocks after finishing Book 2 Story 1 (`wilds_warden`). No trophy gate.
 |---|---|---|---|---|---|---|
 | 1 | `b2s2c1` | The Stranded Harbor | `pirate_beach` | 10 | Bosun Grell (wave 10) | Tide cycle at low strength. Tide pools side objective. |
 | 2 | `b2s2c2` | Ondrath, the Sleeping Isle | `coral_reef` | 1 (boss only) | Ondrath | **Cleanse the shell:** Ondrath lies still at the path start and cannot be hurt. Barnacle clusters grow on the path beside the board in 3 stages (2, 2, 1); each breeds Barnacle Spawn (max 3 alive per cluster). Breaking all 5 cleanses him (the win). The shell pays 4 mana/s (one long wave, no wave income). His thrash still speeds monsters. |
-| 3 | `b2s2c3` | The Lantern at World's Edge | `pirate_beach` | 20 | Grell (6), Lusca (12), Corvaline (20) | Full tide cycle. Lanterns (2026-10-11): Corvaline walks slowly. Every 20 s a lantern lights at a random spot on a random path (none while one still stands). While a lantern stands she takes no damage and can't be targeted; break it to hurt her. The Pearl reveal stuns her at 50%. No ally rally. |
+| 3 | `b2s2c3` | The Lantern at World's Edge | `pirate_beach` | 20 | Grell (6), Lusca (12), Corvaline (20) | Full tide cycle. Lanterns (2026-10-11): Corvaline walks slowly. A lantern lights at a random spot on a random path, and the next one 4 s after each breaks, with +25% HP per lantern. While a lantern stands she takes no damage and can't be targeted; break it to hurt her, but until the next one lights she walks 1.6x faster. The Pearl reveal stuns her at 50%. No ally rally. |
 
 **Cast and speaker ids (proposed):** `corvaline`, `pearl` (becomes `maren` after the reveal),
 `ondrath_corrupted`, `ondrath_cleansed`, `grell`, `lusca`, `saltmere_villager`.

@@ -685,11 +685,12 @@ export class Sim {
   private shellStage = 0;
   private shellBroken = 0;
   private broodAt = new Map<number, number>();
-  /** v2.2 Corvaline's lanterns: the boss, the lantern standing now (it wards her), when the next lights, how many lit so far. */
+  /** v2.2 Corvaline's lanterns: the boss, the lantern standing now (it wards her), when the next lights, how many lit so far, whether she is hurrying. */
   private lanternBoss: SimMonster | null = null;
   private lantern: SimMonster | null = null;
   private lanternAt = 0;
   private lanterns = 0;
+  private lanternHaste = false;
   /** When each cluster may next breed from being hit (shell `onHit`). */
   private hitBreedAt = new Map<number, number>();
   /** Brood uids per cluster uid (for the cap), and when the shell next pays its mana. */
@@ -2451,7 +2452,7 @@ export class Sim {
     this.lanternAt = this.now + this.story!.mechanics!.lanterns!.first;
   }
 
-  /** Every `every` seconds a lantern lights at a random spot on a random path, unless one still burns. */
+  /** `gap` seconds after the last lantern broke, the next lights at a random spot on a random path, tougher each time. */
   private tickLanterns() {
     const l = this.story!.mechanics!.lanterns!;
     const boss = this.lanternBoss!;
@@ -2460,18 +2461,21 @@ export class Sim {
       this.lanternBoss = null;
       return;
     }
-    if (this.now < this.lanternAt) return;
-    this.lanternAt = this.now + l.every;
+    if (this.lantern || this.now < this.lanternAt) return;
     const def = MONSTER_BY_ID.corvaline_lantern;
-    if (!def || this.lantern) return;
+    if (!def) return;
     const path = this.paths[Math.floor(this.rand() * this.paths.length)];
     const dist = path.length * (l.from + this.rand() * (l.to - l.from));
-    const c = this.spawn({ def }, { path, dist }, 1, l.hp);
+    const c = this.spawn({ def }, { path, dist }, 1, l.hp * (1 + l.grow * this.lanterns));
     c.pinned = dist;
     c.baseSpeed = 0;
     this.lantern = c;
-    // While it burns she is warded: no damage, and units can't target her.
+    // While it burns she is warded (no damage, units can't target her) and back to her normal pace.
     boss.shelled = true;
+    if (this.lanternHaste) {
+      this.lanternHaste = false;
+      boss.speedMult /= l.haste;
+    }
     const p = c.pos;
     this.emit({ type: "lantern", t: this.now, uid: c.uid, boss: boss.uid, lit: true, first: this.lanterns++ === 0, x: p.x, y: p.y });
   }
@@ -2482,7 +2486,16 @@ export class Sim {
     this.lantern = null;
     if (!c.gone) c.gone = c.dead = true;
     const boss = this.lanternBoss;
-    if (boss) boss.shelled = false;
+    const l = this.story!.mechanics!.lanterns!;
+    this.lanternAt = this.now + l.gap;
+    // Unwarded, she hurries (until the next lantern lights).
+    if (boss) {
+      boss.shelled = false;
+      if (!this.lanternHaste && broken) {
+        this.lanternHaste = true;
+        boss.speedMult *= l.haste;
+      }
+    }
     const p = c.pos;
     this.emit({ type: "lantern", t: this.now, uid: c.uid, boss: boss?.uid ?? -1, lit: false, first: broken, x: p.x, y: p.y });
   }
