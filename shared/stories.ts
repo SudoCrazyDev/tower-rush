@@ -66,9 +66,10 @@ export interface ChapterMechanics {
    * order, with HP x `hp[stage]` of a normal monster's. Each cluster breeds Barnacle Spawn every
    * `brood` seconds (one per stage reached: 1, then 2, then 3), up to `cap` of its brood alive at once.
    * The fight is one long wave with no wave income, so the shell pays `mana` per second instead.
-   * Breaking all of them cleanses Ondrath: the chapter's win.
+   * Breaking all of them cleanses Ondrath: the chapter's win. With `onHit`, a cluster that takes a hit
+   * also breeds one Barnacle Spawn at once (at most once per `every` seconds, up to `cap` of its brood alive).
    */
-  shell?: { at: number[]; stages: number[]; hp: number[]; brood: number; cap: number; mana: number };
+  shell?: { at: number[]; stages: number[]; hp: number[]; brood: number; cap: number; mana: number; onHit?: { every: number; cap: number } };
   /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
   cage?: { slot: number; lockHp: number; roarStun: number };
 }
@@ -716,7 +717,7 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_ondrath_isle",
       corruption: 0.3,
       hpScale: 10,
-      mechanics: { shell: { at: [0.45, 0.5, 0.55, 0.42, 0.5], stages: [2, 2, 1], hp: [6, 8, 14], brood: 6, cap: 3, mana: 4 } },
+      mechanics: { shell: { at: [0.45, 0.5, 0.55, 0.42, 0.5], stages: [2, 2, 1], hp: [22.23, 31.12, 48.9], brood: 6, cap: 3, mana: 4, onHit: { every: 0.5, cap: 8 } } },
       intro: [
         panel("b2s2_p5_ondrath_found", "Ondrath, an island on a turtle's back, lies in the drained bay.", "The Tide Orb was torn from his shell. Violet barnacles cover him."),
         panel("b2s2_p6_isle_rolls", "He rolls in pain, and the whole island shifts.", "Break the barnacles, Keeper. Free him, don't fight him!"),
@@ -1211,6 +1212,10 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           num(sh.brood, `${wc} shell brood`, 1);
           num(sh.cap, `${wc} shell brood cap`, 1);
           num(sh.mana, `${wc} shell mana per second`);
+          if (sh.onHit) {
+            num(sh.onHit.every, `${wc} shell on-hit cooldown`, 0.05);
+            num(sh.onHit.cap, `${wc} shell on-hit brood cap`, 1);
+          }
         }
         if (mech.cage) {
           slots([mech.cage.slot], "cage slot");

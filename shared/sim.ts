@@ -657,6 +657,8 @@ export class Sim {
   private shellStage = 0;
   private shellBroken = 0;
   private broodAt = new Map<number, number>();
+  /** When each cluster may next breed from being hit (shell `onHit`). */
+  private hitBreedAt = new Map<number, number>();
   /** Brood uids per cluster uid (for the cap), and when the shell next pays its mana. */
   private brood = new Map<number, SimMonster[]>();
   private shellPayAt = 0;
@@ -1313,6 +1315,7 @@ export class Sim {
     if (src === "hero") this.heroDamage += dealt;
     else this.damageBySlot[src] += dealt;
     m.hp -= dmg;
+    if (m.hp > 0 && this.shellClusters.length) this.shellHit(m);
     if (m.hp <= 0) {
       this.kill(m, src);
       if (plunderMana(perks) > 0) this.gainMana(plunderMana(perks), m.pos.x, m.pos.y - 40, "plunder");
@@ -2084,24 +2087,37 @@ export class Sim {
       this.shellPayAt += SHELL_PAY;
       this.gainMana(Math.round(sh.mana * SHELL_PAY), null, null, "wave");
     }
-    const def = MONSTER_BY_ID[this.shellBoss?.boss?.minion ?? "barnacle_spawn"];
-    if (!def) return;
     for (const c of this.shellClusters) {
       if (c.gone || this.now < (this.broodAt.get(c.uid) ?? 0)) continue;
       this.broodAt.set(c.uid, this.now + sh.brood);
-      const alive = (this.brood.get(c.uid) ?? []).filter((x) => !x.gone);
-      const room = Math.min(this.shellStage + 1, sh.cap - alive.length);
-      const children: number[] = [];
-      for (let i = 0; i < room; i++) {
-        const s = this.spawn({ def }, { path: c.path, dist: Math.min(c.path.length, c.dist + 30 + i * 28) }, 0.9, 1.2);
-        alive.push(s);
-        children.push(s.uid);
-      }
-      this.brood.set(c.uid, alive);
-      if (!children.length) continue;
-      const p = c.pos;
-      this.emit({ type: "split", t: this.now, uid: c.uid, kind: "boss", children, x: p.x, y: p.y });
+      this.shellBreed(c, this.shellStage + 1, sh.cap);
     }
+  }
+
+  /** Breed up to `n` Barnacle Spawn from cluster `c`, never more than `cap` of its brood alive. */
+  private shellBreed(c: SimMonster, n: number, cap: number) {
+    const def = MONSTER_BY_ID[this.shellBoss?.boss?.minion ?? "barnacle_spawn"];
+    if (!def) return;
+    const alive = (this.brood.get(c.uid) ?? []).filter((x) => !x.gone);
+    const room = Math.min(n, cap - alive.length);
+    const children: number[] = [];
+    for (let i = 0; i < room; i++) {
+      const s = this.spawn({ def }, { path: c.path, dist: Math.min(c.path.length, c.dist + 30 + i * 28) }, 0.9, 1.2);
+      alive.push(s);
+      children.push(s.uid);
+    }
+    this.brood.set(c.uid, alive);
+    if (!children.length) return;
+    const p = c.pos;
+    this.emit({ type: "split", t: this.now, uid: c.uid, kind: "boss", children, x: p.x, y: p.y });
+  }
+
+  /** Shell `onHit`: a hit cluster breeds one Barnacle Spawn at once, on a short cooldown. */
+  private shellHit(c: SimMonster) {
+    const hit = this.story?.mechanics?.shell?.onHit;
+    if (!hit || this.now < (this.hitBreedAt.get(c.uid) ?? 0) || !this.shellClusters.includes(c)) return;
+    this.hitBreedAt.set(c.uid, this.now + hit.every);
+    this.shellBreed(c, 1, hit.cap);
   }
 
   /** A cluster broke: the boss's bar drops a share; the last one of a stage grows the next, the very last cleanses him. */
@@ -2110,6 +2126,7 @@ export class Sim {
     const boss = this.shellBoss;
     this.shellClusters = this.shellClusters.filter((x) => x !== c);
     this.broodAt.delete(c.uid);
+    this.hitBreedAt.delete(c.uid);
     this.brood.delete(c.uid);
     this.shellBroken++;
     const total = sh.at.length;
