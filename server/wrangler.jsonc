@@ -9,6 +9,8 @@
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
   "routes": [{ "pattern": "api.crownnkeep.com", "custom_domain": true }],
+  // Keep tower-rush.philiplouis0717.workers.dev alive: old bookmarks get a 301 to the game.
+  "workers_dev": true,
   "d1_databases": [
     {
       "binding": "DB",
