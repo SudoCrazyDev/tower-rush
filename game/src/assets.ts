@@ -92,8 +92,8 @@ export function hasAnim(folder: string, name: string) {
  * v2.1: sprites that stand in for monsters and bosses whose own art isn't in the pack yet, so a new
  * story can be played before its art lands. Drop an entry once the real sheets are built.
  */
-// v2.2: every Story 2-3 monster and boss now has its own sheets, so the table is empty.
-const STAND_IN: Record<string, string> = {};
+// v2.2: every Story 2-3 monster and boss has its own sheets; only the Barnacle Cluster (Ondrath's shell growth) borrows the Barnacle Spawn art.
+const STAND_IN: Record<string, string> = { barnacle_cluster: "barnacle_spawn" };
 
 /** The id whose sheets draw monster or boss `id` (itself, or its stand-in while its art is missing). */
 export function sheetId(folder: "monsters" | "bosses", id: string) {

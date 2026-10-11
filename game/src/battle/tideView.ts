@@ -1,6 +1,6 @@
 /**
  * v2.2 Story 2 ("The Drowned Coast") battle visuals: the tide meter and water over the flooded slots,
- * tide pools beside the path, the rolling isle, anchor hook, siren sleep (tap to wake) and the
+ * tide pools beside the path, Ondrath's shell (banners and cleanse bursts), the rolling isle, anchor hook, siren sleep (tap to wake) and the
  * lantern beam. A view only: every rule is in shared/tide.ts, this draws the Sim's events.
  */
 import Phaser from "phaser";
@@ -165,6 +165,20 @@ export class TideView {
         if (e.on) {
           banner(this.scene, "THE ISLE ROLLS!", "#ffb47a", 48, 520);
           this.scene.cameras.main.shake(e.dur * 1000, 0.004);
+        }
+        break;
+      case "shell":
+        // Ondrath's shell: a fresh stage of barnacle clusters.
+        if (e.stage === 0) banner(this.scene, "BREAK THE BARNACLES!", "#d9a8ff", 46, 520);
+        else banner(this.scene, e.stage === e.stages - 1 ? "THE LAST BARNACLE!" : "MORE BARNACLES GROW!", "#d9a8ff", 46, 520);
+        break;
+      case "cleanse":
+        this.splash(e.x, e.y);
+        this.scene.vfx("poison_cloud", e.x, e.y - 20, 140);
+        if (e.left > 0) this.scene.floater(e.x, e.y - 70, `SHELL ${e.total - e.left}/${e.total} CLEAN`, "#7fffd4", 28);
+        else {
+          banner(this.scene, "ONDRATH IS CLEANSED!", "#7fffd4", 52, 520);
+          this.scene.cameras.main.flash(500, 180, 255, 230);
         }
         break;
       case "hooked":

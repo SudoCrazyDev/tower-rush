@@ -66,6 +66,8 @@ import {
 export const SIM_DT = 1 / 30;
 /** Seconds a boss spends on its intro clip before walking (BattleScene plays ~1.4s). */
 const BOSS_INTRO = 1.4;
+/** Seconds between the mana payments of Ondrath's shell (ChapterMechanics.shell.mana). */
+const SHELL_PAY = 5;
 
 export interface BoardUnit {
   id: string;
@@ -170,6 +172,10 @@ export type SimEvent =
   | { type: "pool"; t: number; index: number; uid: number; x: number; y: number }
   /** The rolling isle: the path shifts (`on`) or settles. */
   | { type: "isle"; t: number; on: boolean; dur: number }
+  /** Ondrath's shell: a new stage of barnacle clusters (`uids`) grew; `stage` is 0-based of `stages`. */
+  | { type: "shell"; t: number; stage: number; stages: number; uids: number[] }
+  /** A barnacle cluster broke at (x, y): `left` of `total` remain; `left` 0 means the boss is cleansed. */
+  | { type: "cleanse"; t: number; uid: number; boss: number; left: number; total: number; x: number; y: number }
   /** A unit moved by a boss (anchor hook): keeps its uid, like a swap. */
   | { type: "hooked"; t: number; uid: number; from: number; to: number; x: number; y: number }
   /** A unit fell asleep (siren song) or woke (`tapped` by the player, or the timer ran out). */
@@ -432,8 +438,10 @@ export class SimMonster {
   dead = false;
   gone = false;
   leaked = false;
-  /** Training dummies stay put. */
+  /** Training dummies (and Ondrath's barnacle clusters) stay put at this distance. */
   pinned: number | null = null;
+  /** v2.2 Ondrath under his shell: untargetable and immune; only breaking his barnacle clusters cleanses him. */
+  shelled = false;
   slowPct = 0;
   slowUntil = 0;
   frozenUntil = 0;
@@ -643,6 +651,15 @@ export class Sim {
   private cageNext = 0;
   private roarUntil = 0;
   private roared = false;
+  /** v2.2 Ondrath's shell (ChapterMechanics.shell): the shelled boss, its live clusters, the stage, clusters broken, next brood time per cluster uid. */
+  private shellBoss: SimMonster | null = null;
+  private shellClusters: SimMonster[] = [];
+  private shellStage = 0;
+  private shellBroken = 0;
+  private broodAt = new Map<number, number>();
+  /** Brood uids per cluster uid (for the cap), and when the shell next pays its mana. */
+  private brood = new Map<number, SimMonster[]>();
+  private shellPayAt = 0;
   /** Equal ground: damage each unit fights with until `until`. */
   private equal: { until: number; dmg: Map<SimUnit, number> } | null = null;
 
@@ -1045,6 +1062,7 @@ export class Sim {
     }
     this.monsters.push(m);
     if (this.story?.mechanics) this.facelessSpawn(m);
+    if (q.boss && this.story?.mechanics?.shell && !this.shellBoss) this.shellStart(m);
     const f = m.foot;
     this.emit({ type: "spawn", t: this.now, uid: m.uid, id: m.id, boss: !!q.boss, x: f.x, y: f.y, hp: m.maxHp, path: Math.max(0, this.paths.indexOf(path)) });
     if (m.boss?.chains) this.startChains(m, m.boss.chains);
@@ -1136,6 +1154,7 @@ export class Sim {
 
     this.updateTethers();
     if (this.story?.mechanics?.faceless || this.story?.mechanics?.cage) this.updateFaceless(dt);
+    if (this.shellClusters.length) this.tickShell();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
@@ -1262,6 +1281,7 @@ export class Sim {
   /** Apply damage; returns true if it killed. */
   private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly ActivePerk[]; crit?: boolean; color?: string } = {}) {
     if (m.dead) return false;
+    if (m.shelled) return false;
     // Story 3: masked monsters are immune; an unmasked civilian is only counted as hit, never hurt.
     if ((m.masked || m.civilian) && this.facelessHurt(m)) return false;
     if (this.now < m.shieldUntil) {
@@ -1319,7 +1339,8 @@ export class Sim {
       this.log(`${m.boss.name} defeated`, "kill");
       this.mark("text", p.x, p.y - 40, "#ffd93b", { text: "BOSS DEFEATED" });
     }
-    if (m.pinned !== null) {
+    if (this.shellClusters.includes(m)) this.shellCleanse(m, src);
+    if (m.pinned !== null && this.setup.scenario.kind === "dummies") {
       // Training dummies come straight back.
       const sc = this.setup.scenario as Extract<Scenario, { kind: "dummies" }>;
       const i = Math.round((m.pinned - this.paths[0].length * 0.42) / 30);
@@ -2019,6 +2040,98 @@ export class Sim {
     }
   }
 
+  // ---------------------------------------------------------------- Ondrath's shell (v2.2 Story 2 Ch 2)
+
+  /** The shell boss lies still near the path's start, immune, while the first clusters grow. */
+  private shellStart(boss: SimMonster) {
+    this.shellBoss = boss;
+    boss.shelled = true;
+    boss.dist = boss.pinned = boss.path.length * 0.08;
+    this.shellStage = 0;
+    this.shellPayAt = this.now + SHELL_PAY;
+    this.shellBroken = 0;
+    this.shellGrow();
+  }
+
+  /** Grow the current stage's clusters on the path (alternating paths when there are two). */
+  private shellGrow() {
+    const sh = this.story!.mechanics!.shell!;
+    const from = sh.stages.slice(0, this.shellStage).reduce((a, b) => a + b, 0);
+    const def = MONSTER_BY_ID.barnacle_cluster;
+    if (!def) return;
+    const uids: number[] = [];
+    for (let i = 0; i < sh.stages[this.shellStage]; i++) {
+      const path = this.paths[(from + i) % this.paths.length];
+      const dist = path.length * sh.at[from + i];
+      const c = this.spawn({ def }, { path, dist }, 1, sh.hp[this.shellStage]);
+      c.pinned = dist;
+      c.baseSpeed = 0;
+      this.shellClusters.push(c);
+      // The first stage waits a while before breeding, so there is time to build a board.
+      this.broodAt.set(c.uid, this.now + sh.brood * (this.shellStage === 0 ? 2 : 0.5) + i * 1.5);
+      uids.push(c.uid);
+    }
+    this.emit({ type: "shell", t: this.now, stage: this.shellStage, stages: sh.stages.length, uids });
+  }
+
+  /**
+   * Each live cluster breeds Barnacle Spawn every `brood` seconds (one more per later stage, never more
+   * than `cap` of its own alive), walking on from where it sits. The shell also pays mana every few seconds.
+   */
+  private tickShell() {
+    const sh = this.story!.mechanics!.shell!;
+    if (sh.mana > 0 && this.now >= this.shellPayAt) {
+      this.shellPayAt += SHELL_PAY;
+      this.gainMana(Math.round(sh.mana * SHELL_PAY), null, null, "wave");
+    }
+    const def = MONSTER_BY_ID[this.shellBoss?.boss?.minion ?? "barnacle_spawn"];
+    if (!def) return;
+    for (const c of this.shellClusters) {
+      if (c.gone || this.now < (this.broodAt.get(c.uid) ?? 0)) continue;
+      this.broodAt.set(c.uid, this.now + sh.brood);
+      const alive = (this.brood.get(c.uid) ?? []).filter((x) => !x.gone);
+      const room = Math.min(this.shellStage + 1, sh.cap - alive.length);
+      const children: number[] = [];
+      for (let i = 0; i < room; i++) {
+        const s = this.spawn({ def }, { path: c.path, dist: Math.min(c.path.length, c.dist + 30 + i * 28) }, 0.9, 1.2);
+        alive.push(s);
+        children.push(s.uid);
+      }
+      this.brood.set(c.uid, alive);
+      if (!children.length) continue;
+      const p = c.pos;
+      this.emit({ type: "split", t: this.now, uid: c.uid, kind: "boss", children, x: p.x, y: p.y });
+    }
+  }
+
+  /** A cluster broke: the boss's bar drops a share; the last one of a stage grows the next, the very last cleanses him. */
+  private shellCleanse(c: SimMonster, src: Source) {
+    const sh = this.story!.mechanics!.shell!;
+    const boss = this.shellBoss;
+    this.shellClusters = this.shellClusters.filter((x) => x !== c);
+    this.broodAt.delete(c.uid);
+    this.brood.delete(c.uid);
+    this.shellBroken++;
+    const total = sh.at.length;
+    const left = total - this.shellBroken;
+    if (boss) boss.hp = boss.maxHp * (left / total);
+    const p = c.pos;
+    this.emit({ type: "cleanse", t: this.now, uid: c.uid, boss: boss?.uid ?? -1, left, total, x: p.x, y: p.y });
+    this.log(`Barnacle cluster broken (${left} left)`, "kill");
+    if (this.shellClusters.length) return;
+    if (this.shellStage + 1 < sh.stages.length) {
+      this.shellStage++;
+      this.shellGrow();
+      return;
+    }
+    // Cleansed: the brood washes away with the corruption, and Ondrath counts as beaten.
+    for (const m of this.monsters) if (!m.gone && m !== boss && m.def?.id === boss?.boss?.minion) this.kill(m, src);
+    if (boss && !boss.gone) {
+      boss.shelled = false;
+      this.kill(boss, src);
+    }
+  }
+
   /** Start of the boss wave with the cage open: the sphinx roars and stuns every monster. */
   private cageRoar(n: number) {
     const cage = this.story!.mechanics!.cage!;
@@ -2092,7 +2205,7 @@ export class Sim {
   pickTarget(mode: "first" | "strongest"): SimMonster | null {
     let best: SimMonster | null = null;
     for (const m of this.monsters) {
-      if (m.gone || m.intro > 0 || m.dist < this.targetFrom || m.masked || m.civilian) continue;
+      if (m.gone || m.intro > 0 || m.dist < this.targetFrom || m.masked || m.civilian || m.shelled) continue;
       if (!best) best = m;
       else if (mode === "first" ? m.progress > best.progress : m.hp > best.hp) best = m;
     }
@@ -2326,7 +2439,7 @@ export class Sim {
       let next: SimMonster | null = null;
       let bestD = e.chain.range;
       for (const m of this.monsters) {
-        if (m.gone || m.masked || hit.includes(m)) continue;
+        if (m.gone || m.masked || m.shelled || hit.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
         if (d < bestD) {
           bestD = d;
@@ -2356,7 +2469,7 @@ export class Sim {
       let next: SimMonster | null = null;
       let bestD = range;
       for (const m of this.monsters) {
-        if (m.gone || m.masked || skip.includes(m) || out.includes(m)) continue;
+        if (m.gone || m.masked || m.shelled || skip.includes(m) || out.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
         if (d < bestD) {
           bestD = d;
@@ -2390,7 +2503,7 @@ export class Sim {
   }
 
   private nearby(center: Pt, radius: number, except?: SimMonster) {
-    return this.monsters.filter((m) => !m.gone && !m.masked && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
+    return this.monsters.filter((m) => !m.gone && !m.masked && !m.shelled && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
   /**

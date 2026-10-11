@@ -100,6 +100,8 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   M("drowned_corsair", "Drowned Corsair", "undead", 1.6, 70, ["armored"], 12, 92),
   M("eel_swimmer", "Eel Swimmer", "beast", 0.6, 125, ["fast", "dodge"], 8, 78),
   M("barnacle_spawn", "Barnacle Spawn", "chaos", 0.5, 70, [], 4, 70),
+  // Ondrath's shell growths (ChapterMechanics.shell): rooted on the path, they breed Barnacle Spawn until broken.
+  M("barnacle_cluster", "Barnacle Cluster", "chaos", 2.5, 0, [], 30, 110),
   // Story 3 "The Throne of Dust": the Faceless (masked until a lit brazier unmasks them) and the desert's own.
   { ...M("faceless_soldier", "Faceless Soldier", "human", 1.1, 65, [], 10, 84), faceless: "soldier" },
   { ...M("faceless_archer", "Faceless Archer", "human", 0.9, 75, ["dodge"], 10, 82), faceless: "soldier" },
@@ -114,7 +116,7 @@ export const ADDED_MONSTERS = [
   "sprinkle_swarm", "sour_shard", "chaos_taffy",
   "corrupted_villager", "corrupted_courier", "corrupted_farmer", "corrupted_fisherman", "corrupted_lumberjack", "corrupted_herbalist", "corrupted_merchant", "chaos_eye",
   "corrupted_elf_scout", "corrupted_elf_warrior", "corrupted_elf_archer", "corrupted_elf_warden", "corrupted_sapling",
-  "reef_crab", "drowned_sailor", "drowned_corsair", "eel_swimmer", "barnacle_spawn",
+  "reef_crab", "drowned_sailor", "drowned_corsair", "eel_swimmer", "barnacle_spawn", "barnacle_cluster",
   "faceless_soldier", "faceless_archer", "faceless_civilian", "scarab", "jackal",
 ];
 
@@ -279,10 +281,8 @@ export const DEFAULT_BOSSES: BossDef[] = [
   },
   {
     id: "ondrath", name: "Ondrath, the Sleeping Isle", race: "beast", hp: 6.5, speed: 15, power: "none", minion: "barnacle_spawn", corrupted: true,
-    skills: [
-      { kind: "sapling_trail", every: 5, first: 3, n: [1, 2] },
-      { kind: "thrash", every: 25, first: 12, n: 1, dur: 6, amount: 1.25 },
-    ],
+    // His barnacle clusters (ChapterMechanics.shell) breed the minions; he only thrashes.
+    skills: [{ kind: "thrash", every: 25, first: 12, n: 1, dur: 6, amount: 1.25 }],
   },
   {
     id: "corvaline", name: "Corvaline, Keeper of the Lantern", race: "human", hp: 7.0, speed: 22, power: "none", corrupted: true,

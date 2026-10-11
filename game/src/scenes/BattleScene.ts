@@ -209,6 +209,7 @@ export class BattleScene extends Phaser.Scene {
     const bosses = waves ? [...new Set(waves.flatMap((w) => (w.boss ? [w.boss] : [])))] : a.bosses;
     const monsters = new Set(waves ? waves.flatMap((w) => w.spawns.map((s) => s.id)) : a.monsters);
     for (const b of bosses) if (BOSS_BY_ID[b]?.minion) monsters.add(BOSS_BY_ID[b].minion!);
+    if (this.story?.chapter.mechanics?.shell) monsters.add("barnacle_cluster");
     for (const id of [...monsters]) if (SPLITS_INTO[id]) monsters.add(SPLITS_INTO[id]);
     for (const id of monsters) for (const anim of ["walk", "death"]) loadSheet(this, "monsters", `${sheetId("monsters", id)}_${anim}`);
     for (const boss of bosses) {
@@ -1055,6 +1056,11 @@ export class BattleScene extends Phaser.Scene {
         const corrupted = !!sm.boss?.corrupted;
         const m = new Monster(this, sm, corrupted ? Math.max(0.3, corruption) : corruption);
         if (corrupted) m.sprite.preFX?.addGlow(0x9b4dff, 4, 0, false, 0.1, 12);
+        // Ondrath's barnacle clusters: a pulsing violet growth (drawn with the Barnacle Spawn art).
+        if (sm.id === "barnacle_cluster") {
+          m.sprite.preFX?.addGlow(0xd17dff, 6, 0, false, 0.1, 14);
+          m.sprite.setTint(0xc89bff);
+        }
         this.monsters.set(e.uid, m);
         break;
       }
@@ -1064,7 +1070,7 @@ export class BattleScene extends Phaser.Scene {
         else {
           sfx("boss_die");
           music("battle");
-          this.floater(e.x, e.y - 40, "BOSS DEFEATED!", "#ffd93b", 40);
+          if (!this.story?.chapter.mechanics?.shell) this.floater(e.x, e.y - 40, "BOSS DEFEATED!", "#ffd93b", 40);
           this.vfx("coin_burst", e.x, e.y, 220);
         }
         if (MONSTER_BY_ID[e.id]?.traits.includes("rich")) this.vfx("coin_burst", e.x, e.y, 120);
@@ -1174,6 +1180,8 @@ export class BattleScene extends Phaser.Scene {
       case "tide":
       case "pool":
       case "isle":
+      case "shell":
+      case "cleanse":
       case "hooked":
       case "sleep":
       case "beam":

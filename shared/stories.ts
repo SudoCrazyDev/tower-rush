@@ -60,6 +60,15 @@ export interface ChapterMechanics {
     hitCut: number;
     floor: number;
   };
+  /**
+   * Story 2 Ch 2: Ondrath's shell. The boss lies still at the path's start and can't be hurt. Barnacle
+   * clusters grow on the path in `stages` (how many at a time), at these shares (0-1) of the path, in
+   * order, with HP x `hp[stage]` of a normal monster's. Each cluster breeds Barnacle Spawn every
+   * `brood` seconds (one per stage reached: 1, then 2, then 3), up to `cap` of its brood alive at once.
+   * The fight is one long wave with no wave income, so the shell pays `mana` per second instead.
+   * Breaking all of them cleanses Ondrath: the chapter's win.
+   */
+  shell?: { at: number[]; stages: number[]; hp: number[]; brood: number; cap: number; mana: number };
   /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
   cage?: { slot: number; lockHp: number; roarStun: number };
 }
@@ -707,9 +716,10 @@ const THE_DROWNED_COAST: StoryDef = {
       art: "arena_ondrath_isle",
       corruption: 0.3,
       hpScale: 10,
+      mechanics: { shell: { at: [0.45, 0.5, 0.55, 0.42, 0.5], stages: [2, 2, 1], hp: [4, 5, 9], brood: 6, cap: 3, mana: 4 } },
       intro: [
         panel("b2s2_p5_ondrath_found", "Ondrath, an island on a turtle's back, lies in the drained bay.", "The Tide Orb was torn from his shell. Violet barnacles cover him."),
-        panel("b2s2_p6_isle_rolls", "He rolls in pain, and the whole island shifts.", "Hold your ground, Keeper!"),
+        panel("b2s2_p6_isle_rolls", "He rolls in pain, and the whole island shifts.", "Break the barnacles, Keeper. Free him, don't fight him!"),
       ],
       waves: [w("", { boss: "ondrath", bark: say("ondrath_corrupted", "The tide... stopped. I cannot... breathe.") })],
       reward: reward(2700, 55),
@@ -1188,6 +1198,19 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           num(mech.faceless.savedCap, `${wc} civilian saved cap`);
           num(mech.faceless.hitCut, `${wc} civilian hit cut`);
           num(mech.faceless.floor, `${wc} reward floor`);
+        }
+        if (mech.shell) {
+          const sh = mech.shell;
+          if (!Array.isArray(sh.at) || !sh.at.every((v) => typeof v === "number" && v > 0 && v < 1)) errs.push(`${wc}: shell clusters must sit at shares 0-1 of the path`);
+          if (!Array.isArray(sh.stages) || !sh.stages.length || !sh.stages.every((v) => Number.isInteger(v) && v >= 1)) errs.push(`${wc}: shell stages must be counts of 1 or more`);
+          else {
+            if (sh.stages.reduce((a, b) => a + b, 0) !== sh.at?.length) errs.push(`${wc}: shell stages must add up to the number of cluster spots`);
+            if (!Array.isArray(sh.hp) || sh.hp.length !== sh.stages.length) errs.push(`${wc}: shell needs one hp value per stage`);
+            else for (const v of sh.hp) num(v, `${wc} shell cluster hp`, 0.01);
+          }
+          num(sh.brood, `${wc} shell brood`, 1);
+          num(sh.cap, `${wc} shell brood cap`, 1);
+          num(sh.mana, `${wc} shell mana per second`);
         }
         if (mech.cage) {
           slots([mech.cage.slot], "cage slot");
