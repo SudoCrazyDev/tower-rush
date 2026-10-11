@@ -153,3 +153,4 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 - **Later:** Book 2 Stories 4-5 and Book 3 (pitched in the saga plan; the Book 3 finale reveals the
   mastermind).
 - Ideas waiting for a release are in the root [ROADMAP.md](../../ROADMAP.md).
+- Fantasy features (ideas only, not scheduled): [World Boss](fantasy/world-boss.md).
