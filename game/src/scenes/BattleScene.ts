@@ -6,7 +6,7 @@
  */
 import Phaser from "phaser";
 import { ambientVideo } from "../backdrop";
-import { BASE, ensureAnim, hasAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale, sheetId } from "../assets";
+import { BASE, ensureAnim, hasAnim, loadImages, loadSheet, assetIndex, animKey, sheetScale, sheetId, unitArt } from "../assets";
 import { ARENAS, ARENA_BY_ID, type ArenaDef } from "../data/arenas";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO } from "../data/monsters";
 import { maxRank, UNIT_BY_ID, boostMult, maxPowerUp, powerUpCost, type Element } from "../data/units";
@@ -32,6 +32,7 @@ import { Unit, canAwaken } from "../battle/Unit";
 import { ShotView, fxEvent, fxHit } from "../battle/vfx";
 import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
+import { OathView } from "../battle/oathView";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
 
@@ -109,6 +110,8 @@ export class BattleScene extends Phaser.Scene {
   /** v2.2 Sand & Sea visuals (story chapters only; they draw nothing without their mechanics). */
   private tideView: TideView | null = null;
   private faceless: FacelessView | null = null;
+  /** v2.3 The Iron Oath visuals (evacuation, forge parts, runes, absorb). */
+  private oath: OathView | null = null;
   /** Equal ground: units wear the balance tint until this sim time. */
   equalUntil = 0;
   /** Chaos Taffy tethers, redrawn every frame. */
@@ -146,7 +149,7 @@ export class BattleScene extends Phaser.Scene {
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
     this.deck = this.story ? [...this.story.start.deck] : [...profile.deck];
     this.tethers = null;
-    this.tideView = this.faceless = null;
+    this.tideView = this.faceless = this.oath = null;
     this.equalUntil = 0;
     this.acc = 0;
     this.speedMult = 1;
@@ -204,12 +207,14 @@ export class BattleScene extends Phaser.Scene {
     this.load.image(this.artKey, `${BASE}locations/${this.art}.webp`);
     // v2.2: a tide chapter's arena has a flooded twin (<art>_high) that fades in at high tide.
     if (this.story?.chapter.mechanics?.tide && assetIndex().locations.includes(`${this.art}_high`)) this.load.image(`${this.artKey}_high`, `${BASE}locations/${this.art}_high.webp`);
-    for (const id of this.deck) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${id}_${anim}`);
+    // v2.3: a chapter's hero unit isn't in the deck but is on the board; unitArt gives a stand-in sheet while its own art is missing.
+    for (const id of [...this.deck, ...(this.story?.chapter.hero ? [this.story.chapter.hero.unit] : [])]) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${unitArt(id)}_${anim}`);
     const waves = this.story?.chapter.waves;
     const bosses = waves ? [...new Set(waves.flatMap((w) => (w.boss ? [w.boss] : [])))] : a.bosses;
     const monsters = new Set(waves ? waves.flatMap((w) => w.spawns.map((s) => s.id)) : a.monsters);
     for (const b of bosses) if (BOSS_BY_ID[b]?.minion) monsters.add(BOSS_BY_ID[b].minion!);
     if (this.story?.chapter.mechanics?.shell) monsters.add("barnacle_cluster");
+    if (this.story?.chapter.mechanics?.evacuation) monsters.add(this.story.chapter.mechanics.evacuation.family);
     if (this.story?.chapter.mechanics?.lanterns) monsters.add("corvaline_lantern");
     for (const id of [...monsters]) if (SPLITS_INTO[id]) monsters.add(SPLITS_INTO[id]);
     for (const id of monsters) for (const anim of ["walk", "death"]) loadSheet(this, "monsters", `${sheetId("monsters", id)}_${anim}`);
@@ -221,10 +226,13 @@ export class BattleScene extends Phaser.Scene {
     loadImages(this, "boss_banner", "boss_banners", bosses);
     // Speakers of in-battle barks: unit portraits are loaded already; story portraits aren't.
     for (const w of waves ?? []) {
-      const who = w.bark?.who;
-      if (who && !UNIT_BY_ID[who] && !this.textures.exists(`story_portrait:${who}`)) this.load.image(`story_portrait:${who}`, `${BASE}story/portraits/${who}.webp`);
+      for (const who of [w.bark?.who]) if (who && !UNIT_BY_ID[who] && !this.textures.exists(`story_portrait:${who}`)) this.load.image(`story_portrait:${who}`, `${BASE}story/portraits/${who}.webp`);
       // v2.1: the allies of a rally cutscene.
       for (const id of w.rally?.allies ?? []) if (!this.textures.exists(`story_ally:${id}`)) this.load.image(`story_ally:${id}`, `${BASE}story/allies/${id}.webp`);
+    }
+    // v2.3: Brakka and the other speakers of the Forge's barks.
+    for (const line of Object.values(this.story?.chapter.mechanics?.forge?.barks ?? {})) {
+      if (!UNIT_BY_ID[line.who] && !this.textures.exists(`story_portrait:${line.who}`)) this.load.image(`story_portrait:${line.who}`, `${BASE}story/portraits/${line.who}.webp`);
     }
     if (this.hero) for (const anim of ["idle", "skill", "victory"]) loadSheet(this, "heroes", `${this.hero.id}_${anim}`);
   }
@@ -259,6 +267,7 @@ export class BattleScene extends Phaser.Scene {
       this.tideView = new TideView(this, this.story.chapter.mechanics);
       if (this.textures.exists(`${this.artKey}_high`)) this.tideView.highArt(`${this.artKey}_high`, tint);
       this.faceless = new FacelessView(this, this.story.chapter.mechanics);
+      this.oath = new OathView(this, this.story.chapter.mechanics);
     }
     this.input.keyboard?.on("keydown-D", () => this.toggleDebug());
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
@@ -569,7 +578,9 @@ export class BattleScene extends Phaser.Scene {
       }
       return;
     }
-    (this.bossBar.getData("name") as Phaser.GameObjects.Text).setText(b.boss!.name);
+    // v2.3: the Forge's bar is its core; the Colossus counts the iron it has eaten.
+    const eaten = b.boss!.skills?.some((k) => k.kind === "absorb") ? `   IRON x${b.stacks}` : "";
+    (this.bossBar.getData("name") as Phaser.GameObjects.Text).setText(`${b.parts.length ? "ANVIL-HEART" : b.boss!.name}${eaten}`);
     const p = Math.max(0, b.hp / b.maxHp);
     g.fillStyle(0xe53935, 1).fillRoundedRect(-224, -12, Math.max(12, 448 * p), 24, 12);
   }
@@ -886,6 +897,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateBossBar();
     this.refreshHud();
     this.tideView?.update(delta / 1000);
+    this.oath?.update();
   }
 
   /** Sim shots become projectile sprites: one per shot, gliding on between steps. */
@@ -1039,6 +1051,15 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case "wave": {
+        // v2.3: a scripted cutscene before the wave (the Colossus forms).
+        const cut = this.story?.chapter.waves[e.wave - 1]?.cutscene;
+        if (cut?.length) {
+          this.paused = true;
+          storyPanels(this, cut, () => {
+            this.paused = false;
+            this.acc = 0;
+          });
+        }
         if (e.boss) {
           this.showBanner(e.banner, true, e.boss, e.sub ?? undefined);
           sfx("boss");
@@ -1196,6 +1217,13 @@ export class BattleScene extends Phaser.Scene {
       case "lantern":
         if (!e.lit) this.monsters.get(e.uid)?.remove();
         this.tideView?.handle(e);
+        break;
+      case "family":
+      case "dive":
+      case "rune":
+      case "part":
+      case "absorb":
+        this.oath?.handle(e);
         break;
       case "brazier":
       case "unmask":

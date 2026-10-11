@@ -8,7 +8,8 @@
 | Release | Stories | Art budget (Higgsfield) | Promo |
 |---|---|---|---|
 | **v2.2.0 "Sand & Sea"** | B2 S2 "The Drowned Coast" + B2 S3 "The Throne of Dust" | ~350 credits (~450 with 30% retries): S2 ~172, S3 ~176. Includes stills and in-game animation clips (about 60% of the cost). Stills made on the website (unlimited Nano Banana Pro) cut the MCP spend to ~215. | Reuse game footage and panel zooms. No Seedance 2.5 trailer shots. |
-| later | B2 S4, B2 S5 (Book 2 finale) | not estimated | — |
+| **v2.3.0 "The Iron Oath"** | B2 S4 "The Iron Oath" (approved, built; see [v2.3 design doc](../v2.3-the-iron-oath/README.md)) | see the doc's art section | Game footage and panel zooms. |
+| later | B2 S5 (Book 2 finale) | not estimated | — |
 
 ## 1. The saga spine
 
@@ -205,7 +206,12 @@ the size of houses. Something is marching out of the mountains toward the human 
 |---|---|---|---|
 | 1 | Three Hundred Years Ago | **Flashback**, 10 waves, sepia tint, fixed dwarf Event deck | The player is young Durgrim defending Emberhold against dragons. Each wave a horn calls for the human army, and no one answers. The goal is not to win but to **evacuate**: get enough families out before the city falls. Last bark: "They swore... they're not coming." The intro of chapter 2 shows the city burning. |
 | 2 | The Walking Forge | **One moving boss across the whole chapter** | Back in the present, the Walking Forge crawls down the path toward the human lands. It has parts: legs, cannons, furnace, and the Anvil-Heart at its core. If it reaches the end, you lose. Brakka calls out which part to break. |
-| 3 | Oathbreakers | 15 waves, then the Colossus. **Hero turns ally** | Before the battle, the Candy Crown knights kneel to Durgrim: "Our oath was broken. We are here to keep it now." Durgrim falters, and the chaos tears out of him into every piece of iron on the field. The iron fuses into the **Chaos-Iron Colossus**, which attacks dwarves and humans alike. Durgrim fights in your deck. Rally: Emberhold dwarves and Candy Crown knights side by side. |
+| 3 | Oathbreakers | 15 waves, then the Colossus. **Hero turns ally** | Before the battle, the Candy Crown knights kneel to Durgrim: "Our oath was broken. We are here to keep it now." Durgrim falters. After wave 15 the chaos tears out of him into every piece of iron on the field. The iron fuses into the **Chaos-Iron Colossus**, which attacks dwarves and humans alike. Durgrim is a **hero unit** in a fixed deck slot (he starts on the board). The rest is an Event deck that needs at least 1 knight and 1 dwarf. Rally: Emberhold dwarves and Candy Crown knights side by side. |
+
+**Panels (17):** 4 intro (the shard flies north, the iron footprints, then two flashback setups: the
+gates of Emberhold and the Iron Oath), 3 between Ch 1 and Ch 2 (the city burning, the broken oath, the
+Forge in the present), 3 between Ch 2 and the Colossus (the knights kneel, Durgrim falters, the Colossus
+forms) and 7 for the ending. Slugs are in the [v2.3 design doc](../v2.3-the-iron-oath/README.md).
 
 ### Ending (draft beats)
 1. The Colossus falls apart into cold scrap. Durgrim stands among the knights, breathing hard.
@@ -213,20 +219,21 @@ the size of houses. Something is marching out of the mountains toward the human 
 3. The freed Anvil-Heart takes the Forge Orb back, and it cools from violet to ember-gold.
 4. Durgrim and the knights forge a new oath: dwarven steel and a human shield, both kept.
 5. Durgrim, troubled: "The voice spoke of justice. It sounded fair... and then it sounded cold."
-6. Cliffhanger: four shards hover over a **broken pair of scales**, one pan glowing white and the
-   other black. "One more heart. Then they will all be judged." To be continued.
+6. Cliffhanger, in two panels: four shards hover over a **broken pair of scales**, one pan glowing
+   white and the other black; then a gloved hand closes over them. "One more heart. Then they will
+   all be judged." To be continued.
 
 ### New mechanics
 | Mechanic | Where | What it does |
 |---|---|---|
-| **Evacuation** (headline) | Ch 1 | The win condition is not survival. Dwarf families walk out along a second route, and you win by getting a set number out. Dragons dive for the families, not for your units. |
+| **Evacuation** (headline) | Ch 1 | The win condition is not survival. Dwarf families walk out along a second route, and you win by getting a set number out (14 of 22). Dragons dive for the families, not for your units. |
 | **Walking boss** (headline) | Ch 2 | One boss for the whole chapter, moving slowly down the path. Each part has its own HP: breaking the **legs** slows it, the **cannons** stop shelling your units, the **furnace** stops it spawning soldiers, and the **core** ends the fight. You choose which order to break them. |
 | **Rune shields** | Ch 2, 3 | Iron enemies carry a rune of one element, and only units of that element break it. Deck building matters. |
-| **Hero unit** | Ch 3 | Durgrim takes a fixed slot in your deck: a strong dwarf hero you place like any unit. The rest is an Event deck that needs at least 1 knight and 1 dwarf. |
+| **Hero unit** | Ch 3 | Durgrim takes a fixed slot: a strong dwarf hero who starts on the board (you can drag him, but he is not in the deck, so he is never summoned or merged). The rest is an Event deck that needs at least 1 knight and 1 dwarf. |
 | **Chaos-Iron Colossus** | Ch 3 | It absorbs every iron enemy you leave alive and grows stronger for each one. Clearing iron fast keeps it small. |
 
-**Rewards:** story card **Brakka, Oathsmith** (tempers the unit next to her), dwarf cards from the
-flashback deck, and the badge **Oathkeeper**.
+**Rewards:** story card **Brakka, Oathsmith** (tempers the units around her), the two new dwarf cards
+(**Emberhold Gunner** and **Runecaller**), and the badge **Oathkeeper**.
 
 ---
 

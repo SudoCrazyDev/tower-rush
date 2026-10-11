@@ -42,6 +42,7 @@ import { starsFor, type StoryChapter, type StoryLine, type StoryObjectives } fro
 import { BoardRules, TIDE_RULES } from "./tide.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
 import { BURROW_MAX, BURROW_RANGE, CAGE_PULSE, CIVILIAN_FLEE, MIMIC_HP, brazierRadius, mimicDef } from "./faceless.ts";
+import { OATH, breaksRune, pickRuneElement, type PartState } from "./oath.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
@@ -202,6 +203,17 @@ export type SimEvent =
   | { type: "burrow"; t: number; uid: number; from: number; to: number }
   /** Equal ground: every unit fights at `rank` until `until`. */
   | { type: "equal"; t: number; rank: number; until: number }
+  // v2.3 Story 4 "The Iron Oath" (docs/features/v2.3-the-iron-oath).
+  /** A dwarf family got out (`saved`) or was lost to a dive; the running count and the goal. */
+  | { type: "family"; t: number; uid: number; fate: "saved" | "lost"; saved: number; lost: number; goal: number; total: number; x: number; y: number }
+  /** A hunter (whelp or dragon) dives on family `target`. */
+  | { type: "dive"; t: number; uid: number; target: number; x: number; y: number; x2: number; y2: number }
+  /** A monster walked in with a rune shield (`on`), or it broke (`broken`). */
+  | { type: "rune"; t: number; uid: number; element: Element; state: "on" | "broken"; x: number; y: number }
+  /** A boss part broke (`broken`) or the units' focus moved to it. */
+  | { type: "part"; t: number; uid: number; part: string; name: string; broken: boolean; x: number; y: number }
+  /** The Colossus ate iron monster `uid`; it has `stacks` now. */
+  | { type: "absorb"; t: number; boss: number; uid: number; stacks: number; x: number; y: number }
   // View-only events, emitted only with the `view` option (the solo scene): they never change a rule.
   /** A hit landed on `target`: main hit of a shot or ultimate, a pierce or chain extra, or a Lance Knight's bane chain. */
   | { type: "hit"; t: number; uid: number; target: number; kind: "main" | "pierce" | "chain" | "bane"; element: Element; x: number; y: number; size: number }
@@ -480,6 +492,20 @@ export class SimMonster {
   chainIndex = 0;
   chainHp = 0;
   chainMax = 0;
+  /**
+   * v2.3 Story 4 (renderer: draw these). `family`: a dwarf family walking out (friendly: untargetable, no damage, no lives).
+   * `rune`: the element of the rune shield it carries (null = none or broken), with `runeHp` of `runeMax` left.
+   * `parts`: a boss with parts (Walking Forge); `focus` is the part id the player picked (null = automatic).
+   * `stacks`: iron monsters the Colossus has eaten. `huntAt`: when a dragon may dive next.
+   */
+  family = false;
+  rune: Element | null = null;
+  runeHp = 0;
+  runeMax = 0;
+  parts: PartState[] = [];
+  focus: string | null = null;
+  stacks = 0;
+  huntAt = 0;
 
   constructor(uid: number, kind: { def?: MonsterDef; boss?: BossDef }, path: Path, hp: number, opts: { dist?: number; scale?: number; mana: number }) {
     this.uid = uid;
@@ -671,6 +697,19 @@ export class Sim {
   private shellPayAt = 0;
   /** Equal ground: damage each unit fights with until `until`. */
   private equal: { until: number; dmg: Map<SimUnit, number> } | null = null;
+  /**
+   * v2.3 Story 4 state (shared/oath.ts). Evacuation: families saved / lost, how many are still to come (`famTotal` over the
+   * whole chapter), the next one's time. Forge: the boss with parts, when it next pays mana and barks a hint.
+   * Read by the renderer: famSaved, famLost, famTotal.
+   */
+  famSaved = 0;
+  famLost = 0;
+  famTotal = 0;
+  private famQueue = 0;
+  private famAt = 0;
+  private forgeBoss: SimMonster | null = null;
+  private forgePayAt = 0;
+  private forgeHintAt = 0;
 
   // Results.
   kills = 0;
@@ -767,6 +806,13 @@ export class Sim {
     );
     while (this.units.length < 15) this.units.push(null);
     this.recomputeBuffs();
+    // v2.3: a chapter's hero unit starts on its tile (it isn't in the deck, so it is never summoned or merged).
+    const heroUnit = this.story?.hero;
+    if (heroUnit && UNIT_BY_ID[heroUnit.unit] && !this.units[heroUnit.slot]) {
+      const u = this.place(heroUnit.unit, heroUnit.rank, heroUnit.slot);
+      this.emit({ type: "summon", t: 0, uid: u.uid, id: u.def.id, rank: u.rank, slot: u.slot, x: u.x, y: u.y, awakened: u.awakened });
+    }
+    this.famTotal = (this.story?.mechanics?.evacuation?.perWave ?? []).reduce((a, b) => a + b, 0);
 
     const sc = setup.scenario;
     switch (sc.kind) {
@@ -1023,6 +1069,12 @@ export class Sim {
   private startScriptedWave(w: StoryChapter["waves"][number], n: number) {
     const e = ECONOMY;
     this.waveHp = w.hp;
+    // v2.3 evacuation: this wave brings its dwarf families.
+    const evac = this.story?.mechanics?.evacuation;
+    if (evac) {
+      this.famQueue += evac.perWave[n - 1] ?? 0;
+      this.famAt = Math.max(this.famAt, this.now + 2);
+    }
     const list: { def?: MonsterDef; boss?: BossDef }[] = w.spawns.flatMap((s) => (MONSTER_BY_ID[s.id] ? Array.from({ length: s.n }, () => ({ def: MONSTER_BY_ID[s.id] })) : []));
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(this.rand() * (i + 1));
@@ -1052,7 +1104,8 @@ export class Sim {
   }
 
   protected spawn(q: { def?: MonsterDef; boss?: BossDef }, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
-    const path = at?.path ?? this.paths[this.rand() < 0.5 ? 0 : 1];
+    // v2.3 evacuation: the monsters keep to path 0, the second route is for the families.
+    const path = at?.path ?? (this.story?.mechanics?.evacuation ? this.paths[0] : this.paths[this.rand() < 0.5 ? 0 : 1]);
     const n = this.wave;
     this.spawned++;
     let m: SimMonster;
@@ -1064,6 +1117,7 @@ export class Sim {
       m.skillUsed = (q.boss.skills ?? []).map(() => 0);
       m.intro = this.o.bossIntro && !this.o.bossIntro(q.boss.id) ? 0 : BOSS_INTRO;
       this.boss = this.trackedBoss = m;
+      if (q.boss.parts) this.partsInit(m, hp);
     } else {
       const def = q.def!;
       const hp = this.baseHp(n) * def.hp * hpMult * this.waveHp;
@@ -1071,6 +1125,8 @@ export class Sim {
     }
     this.monsters.push(m);
     if (this.story?.mechanics) this.facelessSpawn(m);
+    if (!q.boss && q.def?.iron && this.story?.mechanics?.runes) this.runeRoll(m);
+    if (q.boss?.parts && this.story?.mechanics?.forge && !this.forgeBoss) this.forgeStart(m);
     if (q.boss && this.story?.mechanics?.shell && !this.shellBoss) this.shellStart(m);
     if (q.boss && m.id === this.story?.mechanics?.lanterns?.boss && !this.lanternBoss) this.lanternStart(m);
     const f = m.foot;
@@ -1144,7 +1200,8 @@ export class Sim {
           m.powerTimer -= dt;
           if (m.powerTimer <= 0) {
             m.powerTimer = 6;
-            this.bossPower(m);
+            // v2.3: a dragon of the evacuation dives for families; it keeps no power.
+            if (!this.story?.mechanics?.evacuation?.quiet.includes(m.id)) this.bossPower(m);
           }
           if (m.skillAt.length) this.bossSkills(m, dt);
         }
@@ -1166,6 +1223,8 @@ export class Sim {
     if (this.story?.mechanics?.faceless || this.story?.mechanics?.cage) this.updateFaceless(dt);
     if (this.shellClusters.length) this.tickShell();
     if (this.lanternBoss) this.tickLanterns();
+    if (this.story?.mechanics?.evacuation) this.tickEvac();
+    if (this.forgeBoss) this.tickForge();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
@@ -1292,7 +1351,7 @@ export class Sim {
   /** Apply damage; returns true if it killed. */
   private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly ActivePerk[]; crit?: boolean; color?: string } = {}) {
     if (m.dead) return false;
-    if (m.shelled) return false;
+    if (m.shelled || m.family) return false;
     // Story 3: masked monsters are immune; an unmasked civilian is only counted as hit, never hurt.
     if ((m.masked || m.civilian) && this.facelessHurt(m)) return false;
     if (this.now < m.shieldUntil) {
@@ -1318,7 +1377,13 @@ export class Sim {
     }
     let dmg = amount * (1 + m.curse) * perkMult(perks, m);
     if (m.has("armored")) dmg *= armorMult(perks);
+    // v2.3: a rune shield eats the damage of the units that break it; the rest barely scratches the monster.
+    if (m.rune) {
+      dmg = this.runeHit(m, dmg, src);
+      if (dmg <= 0) return false;
+    }
     if (opts.crit && !opts.quiet) this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b" });
+    if (m.parts.length) return this.hitParts(m, dmg, src, perks);
     if (m.chainTotal > 0) return this.hitChain(m, dmg, src, perks);
     const dealt = Math.min(Math.max(0, m.hp), dmg);
     if (src === "hero") this.heroDamage += dealt;
@@ -1375,6 +1440,7 @@ export class Sim {
   }
 
   protected leak(m: SimMonster) {
+    if (m.family) return this.familyExit(m);
     if (m.civilian) return this.civilianExit(m);
     m.dead = m.gone = m.leaked = true;
     this.leaks++;
@@ -1490,6 +1556,8 @@ export class Sim {
     for (let i = 0; i < skills.length; i++) {
       const k = skills[i];
       if (k.uses !== undefined && m.skillUsed[i] >= k.uses) continue;
+      // v2.3: a skill that belongs to a part (the Forge's cannons, furnace) is off while the part is broken.
+      if (k.part && m.parts.some((p) => p.id === k.part && p.broken)) continue;
       m.skillAt[i] -= dt;
       if (m.skillAt[i] > 0) continue;
       m.skillAt[i] = k.every;
@@ -1551,6 +1619,9 @@ export class Sim {
           break;
         case "equal_ground":
           this.equalGround(k.dur ?? 5, say);
+          break;
+        case "absorb":
+          this.absorb(m, n, k.amount ?? 0.04, m.skillUsed[i] === 1, say);
           break;
       }
     }
@@ -2053,6 +2124,219 @@ export class Sim {
     }
   }
 
+  // ---------------------------------------------------------------- v2.3 Story 4 "The Iron Oath" (shared/oath.ts)
+
+  /** Evacuation: send the next family out on the second route, and let dragons dive on the ones they fly over. */
+  private tickEvac() {
+    const ev = this.story!.mechanics!.evacuation!;
+    const now = this.now;
+    if (this.famQueue > 0 && now >= this.famAt) {
+      this.famQueue--;
+      this.famAt = now + ev.gap;
+      const def = MONSTER_BY_ID[ev.family];
+      if (def) {
+        const f = this.spawn({ def }, { path: this.paths[1], dist: 0 });
+        f.family = true;
+        f.mana = 0;
+      }
+    }
+    for (const m of this.monsters) {
+      if (m.gone || m.family || m.intro > 0 || !ev.hunters.includes(m.id)) continue;
+      if (m.huntAt === 0) m.huntAt = now + (m.boss ? 2 : ev.huntFirst);
+      if (now < m.huntAt) continue;
+      let prey: SimMonster | null = null;
+      let best = OATH.diveRange;
+      for (const f of this.monsters) {
+        if (!f.family || f.gone) continue;
+        const d = Math.abs(f.progress - m.progress);
+        if (d < best) [prey, best] = [f, d];
+      }
+      if (!prey) {
+        m.huntAt = now + 1;
+        continue;
+      }
+      m.huntAt = now + (m.boss ? ev.bossHuntEvery : ev.huntEvery);
+      this.familyLost(prey, m);
+      if (this.over) return;
+    }
+  }
+
+  /** A hunter's dive takes a family. */
+  private familyLost(f: SimMonster, hunter: SimMonster) {
+    f.dead = f.gone = true;
+    this.famLost++;
+    const a = hunter.pos;
+    const b = f.pos;
+    this.emit({ type: "dive", t: this.now, uid: hunter.uid, target: f.uid, x: a.x, y: a.y, x2: b.x, y2: b.y });
+    this.emit({ type: "family", t: this.now, uid: f.uid, fate: "lost", saved: this.famSaved, lost: this.famLost, goal: this.story!.mechanics!.evacuation!.goal, total: this.famTotal, x: b.x, y: b.y });
+    this.log("A dragon took a dwarf family", "leak");
+    this.checkEvac();
+  }
+
+  /** A family reaches the exit: saved, no lives lost. */
+  private familyExit(f: SimMonster) {
+    f.dead = f.gone = true;
+    this.famSaved++;
+    const p = f.foot;
+    this.emit({ type: "family", t: this.now, uid: f.uid, fate: "saved", saved: this.famSaved, lost: this.famLost, goal: this.story!.mechanics!.evacuation!.goal, total: this.famTotal, x: p.x, y: p.y });
+    this.checkEvac();
+  }
+
+  /** Evacuation ends when every family is out or lost (won with `goal` saved), or early once the goal can't be reached. */
+  private checkEvac() {
+    const ev = this.story!.mechanics!.evacuation!;
+    if (this.famSaved + this.famLost >= this.famTotal) {
+      if (this.famSaved >= ev.goal) {
+        this.wavesCleared = this.wave;
+        this.finish("won");
+        return;
+      }
+    }
+    if (this.famTotal - this.famLost < ev.goal) {
+      this.endWhy = "Too many families were lost";
+      this.finish("lost");
+    }
+  }
+
+  /** An iron monster may walk in with a rune of an element that a unit on the board has. */
+  private runeRoll(m: SimMonster) {
+    const rn = this.story!.mechanics!.runes!;
+    if (this.rand() >= rn.chance) return;
+    const el = pickRuneElement(this.units.filter((u): u is SimUnit => !!u && !noAttack(u.primary)).map((u) => u.def.element), this.rand());
+    if (!el) return;
+    m.rune = el;
+    m.runeHp = m.runeMax = m.maxHp * rn.hp;
+    const f = m.foot;
+    this.emit({ type: "rune", t: this.now, uid: m.uid, element: el, state: "on", x: f.x, y: f.y });
+  }
+
+  /** Damage on a runed monster: a unit that breaks the rune wears it down (the monster takes nothing); any other unit's hit mostly bounces. Returns what reaches the monster. */
+  private runeHit(m: SimMonster, dmg: number, src: Source) {
+    const u = typeof src === "number" ? this.units[src] : null;
+    if (u && m.rune && breaksRune(u.def.element, u.def.role, m.rune)) {
+      m.runeHp -= dmg;
+      if (m.runeHp <= 0) {
+        const el = m.rune;
+        m.rune = null;
+        const p = m.pos;
+        this.emit({ type: "rune", t: this.now, uid: m.uid, element: el, state: "broken", x: p.x, y: p.y });
+      }
+      return 0;
+    }
+    return dmg * (this.story?.mechanics?.runes?.leak ?? 0.2);
+  }
+
+  /** A boss with parts: the core is the boss's own HP bar, the other parts are separate pools of `hp` x the boss's HP. */
+  private partsInit(m: SimMonster, hp: number) {
+    m.parts = m.boss!.parts!.map((p) => ({ id: p.id, name: p.name, hp: hp * p.hp, max: hp * p.hp, broken: false }));
+    const core = m.parts.find((p) => p.id === "core") ?? m.parts[m.parts.length - 1];
+    m.hp = m.maxHp = core.max;
+  }
+
+  /** The part units shoot at: the one the player picked, else the first unbroken one that isn't the core, else the core. */
+  private partTarget(m: SimMonster) {
+    const live = m.parts.filter((p) => !p.broken);
+    return live.find((p) => p.id === m.focus) ?? live.find((p) => p.id !== "core") ?? live[0];
+  }
+
+  /** The player taps a part of the boss: units shoot at it from now on (false if there is no such unbroken part). */
+  focusPart(id: string) {
+    const m = this.boss;
+    if (this.over || !m || !m.parts.some((p) => p.id === id && !p.broken)) return false;
+    m.focus = id;
+    return true;
+  }
+
+  /** Damage on a boss with parts goes to its target part; the last one, the core, ends the fight. */
+  private hitParts(m: SimMonster, dmg: number, src: Source, perks: readonly ActivePerk[]) {
+    const part = this.partTarget(m);
+    if (!part) return false;
+    const armored = part.id === "core" && m.parts.some((p) => p.id !== "core" && !p.broken);
+    const d = armored ? dmg * (m.boss!.coreArmor ?? OATH.coreArmor) : dmg;
+    const dealt = Math.min(part.hp, d);
+    if (src === "hero") this.heroDamage += dealt;
+    else this.damageBySlot[src] += dealt;
+    part.hp -= d;
+    if (part.id === "core") m.hp = Math.max(0, part.hp);
+    if (part.hp > 0) return false;
+    part.hp = 0;
+    part.broken = true;
+    this.partBroken(m, part);
+    if (part.id !== "core") return false;
+    m.hp = 0;
+    this.kill(m, src);
+    // The Forge falls and the iron it made falls with it.
+    for (const o of this.monsters) if (o !== m && !o.gone && !o.family) this.kill(o, "hero");
+    if (plunderMana(perks) > 0) this.gainMana(plunderMana(perks), m.pos.x, m.pos.y - 40, "plunder");
+    return true;
+  }
+
+  private partBroken(m: SimMonster, part: PartState) {
+    const def = m.boss!.parts!.find((p) => p.id === part.id);
+    if (def?.slow) m.speedMult *= def.slow;
+    if (m.focus === part.id) m.focus = null;
+    const p = m.pos;
+    this.emit({ type: "part", t: this.now, uid: m.uid, part: part.id, name: part.name, broken: true, x: p.x, y: p.y });
+    this.log(`${m.boss!.name}: ${part.name} broken`, "boss");
+    if (part.id === "core") return;
+    this.forgeBark(`broke_${part.id}`, 0.5);
+    if (m.parts.every((x) => x.id === "core" || x.broken)) this.forgeBark("core", 3);
+  }
+
+  /** Brakka's line `key` (ChapterMechanics.forge.barks), `delay` seconds from now. */
+  private forgeBark(key: string, delay: number) {
+    const line = this.story?.mechanics?.forge?.barks[key];
+    if (line) this.barks.push({ at: this.now + delay, line });
+  }
+
+  private forgeStart(m: SimMonster) {
+    const f = this.story!.mechanics!.forge!;
+    this.forgeBoss = m;
+    this.forgePayAt = this.now + OATH.forgePay;
+    this.forgeHintAt = this.now + f.hintEvery;
+    this.forgeBark("start", 3);
+  }
+
+  /** The Forge pays mana (the fight is one long wave) and Brakka hints at the next part to break. */
+  private tickForge() {
+    const f = this.story!.mechanics!.forge!;
+    const m = this.forgeBoss!;
+    if (m.gone) {
+      this.forgeBoss = null;
+      return;
+    }
+    if (f.mana > 0 && this.now >= this.forgePayAt) {
+      this.forgePayAt += OATH.forgePay;
+      this.gainMana(Math.round(f.mana * OATH.forgePay), null, null, "wave");
+    }
+    if (this.now >= this.forgeHintAt) {
+      this.forgeHintAt = this.now + f.hintEvery;
+      const next = m.parts.find((p) => !p.broken && p.id !== "core") ?? m.parts.find((p) => p.id === "core");
+      if (next) this.forgeBark(`hint_${next.id}`, 0);
+    }
+  }
+
+  /** The Colossus eats iron monsters (the first time every one alive, then those close by); each makes it tougher and a little faster. */
+  private absorb(m: SimMonster, n: number, amount: number, first: boolean, say: (text: string) => void) {
+    const reach = first ? Infinity : OATH.absorbReach;
+    const prey = this.monsters.filter((o) => !o.gone && o !== m && o.def?.iron && Math.hypot(o.pos.x - m.pos.x, o.pos.y - m.pos.y) <= reach).slice(0, n);
+    if (!prey.length) return;
+    say("ABSORB");
+    for (const o of prey) {
+      o.dead = o.gone = true;
+      if (m.stacks < OATH.absorbMax) {
+        m.stacks++;
+        const gain = m.maxHp * amount;
+        m.maxHp += gain;
+        m.hp += gain;
+        m.speedMult *= 1 + OATH.absorbSpeed;
+      }
+      const p = o.pos;
+      this.emit({ type: "absorb", t: this.now, boss: m.uid, uid: o.uid, stacks: m.stacks, x: p.x, y: p.y });
+    }
+    this.log(`${m.boss!.name} absorbs ${prey.length} iron (${m.stacks} stacks)`, "boss");
+  }
+
   // ---------------------------------------------------------------- Ondrath's shell (v2.2 Story 2 Ch 2)
 
   /** The shell boss lies still near the path's start, immune, while the first clusters grow. */
@@ -2276,7 +2560,7 @@ export class Sim {
   pickTarget(mode: "first" | "strongest"): SimMonster | null {
     let best: SimMonster | null = null;
     for (const m of this.monsters) {
-      if (m.gone || m.intro > 0 || m.dist < this.targetFrom || m.masked || m.civilian || m.shelled) continue;
+      if (m.gone || m.intro > 0 || m.dist < this.targetFrom || m.masked || m.civilian || m.shelled || m.family) continue;
       if (!best) best = m;
       else if (mode === "first" ? m.progress > best.progress : m.hp > best.hp) best = m;
     }
@@ -2510,7 +2794,7 @@ export class Sim {
       let next: SimMonster | null = null;
       let bestD = e.chain.range;
       for (const m of this.monsters) {
-        if (m.gone || m.masked || m.shelled || hit.includes(m)) continue;
+        if (m.gone || m.masked || m.shelled || m.family || hit.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
         if (d < bestD) {
           bestD = d;
@@ -2540,7 +2824,7 @@ export class Sim {
       let next: SimMonster | null = null;
       let bestD = range;
       for (const m of this.monsters) {
-        if (m.gone || m.masked || m.shelled || skip.includes(m) || out.includes(m)) continue;
+        if (m.gone || m.masked || m.shelled || m.family || skip.includes(m) || out.includes(m)) continue;
         const d = Math.hypot(m.pos.x - cur.pos.x, m.pos.y - cur.pos.y);
         if (d < bestD) {
           bestD = d;
@@ -2574,7 +2858,7 @@ export class Sim {
   }
 
   private nearby(center: Pt, radius: number, except?: SimMonster) {
-    return this.monsters.filter((m) => !m.gone && !m.masked && !m.shelled && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
+    return this.monsters.filter((m) => !m.gone && !m.masked && !m.shelled && !m.family && m !== except && Math.hypot(m.pos.x - center.x, m.pos.y - center.y) <= radius);
   }
 
   /**

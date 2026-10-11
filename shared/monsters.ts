@@ -22,6 +22,16 @@ export interface MonsterDef {
    * costs no lives, and must not be hit (see ChapterMechanics.faceless).
    */
   faceless?: "soldier" | "civilian";
+  /**
+   * v2.3 Story 4: an iron enemy of the Walking Forge. In a chapter with ChapterMechanics.runes it may
+   * walk in carrying a rune shield (see shared/oath.ts).
+   */
+  iron?: boolean;
+  /**
+   * v2.3 Story 4 evacuation: a dwarf family walking out (friendly). Units never target it and it takes
+   * no damage; it costs no lives. Reaching the exit saves it; a dragon's dive loses it.
+   */
+  family?: boolean;
 }
 
 const M = (id: string, name: string, race: Race, hp: number, speed: number, traits: Trait[] = [], mana = 10, size = 84): MonsterDef => ({
@@ -110,6 +120,12 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   { ...M("faceless_civilian", "Faceless Civilian", "human", 0.9, 58, [], 6, 80), faceless: "civilian" },
   M("scarab", "Scarab", "beast", 0.8, 90, ["armored"], 10, 80),
   M("jackal", "Jackal", "beast", 0.6, 125, ["fast"], 8, 78),
+  // v2.3 Book 2, Story 4 "The Iron Oath": the dragon war of the flashback, the Walking Forge's iron army.
+  M("drake_whelp", "Drake Whelp", "dragon", 0.7, 105, ["fast"], 10, 88),
+  { ...M("dwarf_family", "Dwarf Family", "dwarf", 1, 40, [], 0, 84), family: true },
+  { ...M("iron_soldier", "Iron Soldier", "construct", 1.1, 62, ["armored"], 10, 88), iron: true },
+  { ...M("iron_crossbow", "Iron Crossbow", "construct", 0.9, 72, ["dodge"], 10, 88), iron: true },
+  { ...M("iron_brute", "Iron Brute", "construct", 2.4, 46, ["tank", "armored"], 16, 104), iron: true },
 ];
 
 /** Monsters added after configs were already saved: appended to an older saved list. */
@@ -120,6 +136,7 @@ export const ADDED_MONSTERS = [
   "corrupted_elf_scout", "corrupted_elf_warrior", "corrupted_elf_archer", "corrupted_elf_warden", "corrupted_sapling",
   "reef_crab", "drowned_sailor", "drowned_corsair", "eel_swimmer", "barnacle_spawn", "barnacle_cluster", "corvaline_lantern",
   "faceless_soldier", "faceless_archer", "faceless_civilian", "scarab", "jackal",
+  "drake_whelp", "dwarf_family", "iron_soldier", "iron_crossbow", "iron_brute",
 ];
 
 /** What a splitter breaks into: a smaller copy of itself unless listed here. */
@@ -161,9 +178,14 @@ export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "f
  * - mimic: spawns a faceless copy of the strongest unit as a monster (at most `n` alive)
  * - burrow: swallows up to `n` monsters near the boss and brings them up `amount` (0-1) of the path ahead
  * - equal_ground: every unit fights at the board's average rank for `dur` seconds
+ * v2.3 Book 2 Story 4 adds:
+ * - absorb: swallows up to `n` iron monsters alive (the first use: all of them; later: those within a short reach);
+ *   each one makes the boss `amount` (share) tougher and a little faster (see shared/oath.ts)
+ *
+ * A skill with `part` only works while that BossPart is unbroken (see BossDef.parts).
  */
-export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley" | "anchor_hook" | "siren_song" | "lantern_beam" | "thrash" | "mimic" | "burrow" | "equal_ground";
-export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley", "anchor_hook", "siren_song", "lantern_beam", "thrash", "mimic", "burrow", "equal_ground"];
+export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley" | "anchor_hook" | "siren_song" | "lantern_beam" | "thrash" | "mimic" | "burrow" | "equal_ground" | "absorb";
+export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley", "anchor_hook", "siren_song", "lantern_beam", "thrash", "mimic", "burrow", "equal_ground", "absorb"];
 export interface BossSkill {
   kind: BossSkillKind;
   /** Seconds between uses (the first use comes after `first`, default `every`). */
@@ -179,6 +201,23 @@ export interface BossSkill {
   amount?: number;
   /** v2.2: how long an effect lingers after the skill (lantern_beam glimmer). */
   hold?: number;
+  /** v2.3: the skill stops while this BossPart (by id) is broken. */
+  part?: string;
+}
+
+/**
+ * v2.3 Walking Forge: a boss made of parts, each with its own HP bar (BossDef.parts). The player
+ * picks which one units shoot at (Sim.focusPart); with no pick, the first unbroken one in list order.
+ * Breaking a part has a rule effect: legs slow the boss; a skill whose `part` is the part's id stops while it is broken.
+ * The part with id "core" ends the fight when it breaks, and takes only `coreArmor` of damage while another part stands.
+ */
+export interface BossPart {
+  id: string;
+  name: string;
+  /** Part HP as a multiple of the boss's normal HP (the core is 1). */
+  hp: number;
+  /** Breaking it multiplies the boss's speed by this (legs). */
+  slow?: number;
 }
 
 /**
@@ -226,6 +265,10 @@ export interface BossDef {
    * Breaking the last chain beats the boss.
    */
   chains?: number;
+  /** v2.3 Walking Forge: the boss's parts (see BossPart). The last one is the core. */
+  parts?: BossPart[];
+  /** v2.3 Walking Forge: share of damage the core takes while another part stands. */
+  coreArmor?: number;
 }
 
 export const DEFAULT_BOSSES: BossDef[] = [
@@ -306,12 +349,42 @@ export const DEFAULT_BOSSES: BossDef[] = [
     skills: [{ kind: "equal_ground", every: 15, first: 10, n: 1, dur: 5 }],
     rally: { at: 0.45, damage: 0, speed: 1.15 },
   },
+  // v2.3 Book 2, Story 4 "The Iron Oath".
+  {
+    // The Dragon Mother of the flashback: she summons whelps and dives for families (ChapterMechanics.evacuation). Not corrupted.
+    id: "ashmaw", name: "Ashmaw, the Dragon Mother", race: "dragon", hp: 1.4, speed: 30, power: "summon", minion: "drake_whelp",
+  },
+  {
+    // One moving boss for the whole chapter. Legs slow it, cannons shell units, the furnace makes iron soldiers, the core (the Anvil-Heart) ends it.
+    id: "walking_forge", name: "The Walking Forge", race: "construct", hp: 5.0, speed: 12, power: "none", minion: "iron_soldier", corrupted: true,
+    skills: [
+      { kind: "impale", every: 9, first: 6, n: 2, dur: 4, part: "cannons" },
+      { kind: "sapling_trail", every: 7, first: 4, n: [1, 2], part: "furnace" },
+    ],
+    parts: [
+      { id: "legs", name: "Legs", hp: 0.45, slow: 0.4 },
+      { id: "cannons", name: "Cannons", hp: 0.4 },
+      { id: "furnace", name: "Furnace", hp: 0.4 },
+      { id: "core", name: "Anvil-Heart", hp: 1 },
+    ],
+    coreArmor: 0.3,
+  },
+  {
+    // Durgrim's grief, torn out of him into all the iron. It eats every iron enemy alive and grows with each one; the rally (the dwarves and the knights) shoves it back once.
+    id: "chaos_colossus", name: "The Chaos-Iron Colossus", race: "construct", hp: 6.5, speed: 13, power: "none", corrupted: true,
+    skills: [
+      { kind: "absorb", every: 4, first: 2, n: 99, amount: 0.04 },
+      { kind: "impale", every: 8, first: 7, n: 2, dur: 4 },
+    ],
+    rally: { at: 0.55, damage: 0.3, speed: 1.1 },
+  },
 ];
 
 /** Bosses added after configs were already saved: appended to an older saved list. */
 export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker", "corrupted_fae", "corrupted_bear", "portal_wizard",
   "elf_captain_morvane", "elf_captain_sylris", "elf_captain_kaelen", "thalmyr", "vaeltharion",
-  "grell", "lusca", "ondrath", "corvaline", "faceless_herald", "dune_warden", "sefa"];
+  "grell", "lusca", "ondrath", "corvaline", "faceless_herald", "dune_warden", "sefa",
+  "ashmaw", "walking_forge", "chaos_colossus"];
 
 export const BOSSES: BossDef[] = structuredClone(DEFAULT_BOSSES);
 export const BOSS_BY_ID: Record<string, BossDef> = {};

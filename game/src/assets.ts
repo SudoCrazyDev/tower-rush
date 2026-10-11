@@ -69,8 +69,26 @@ export type ButtonColor = keyof typeof BUTTON;
 export const sheetKey = (folder: string, name: string) => `sheet:${folder}/${name}`;
 export const animKey = sheetKey;
 
+/**
+ * v2.3: unit cards whose own art isn't in the pack yet borrow an existing card's (portrait, still, card and sheets), so
+ * Story 4 can be earned and played before its art lands. Drop an entry once the art is built.
+ */
+const UNIT_STAND_IN: Record<string, string> = { brakka: "thunder_dwarf", durgrim: "bear_rider", emberhold_gunner: "pirate_gunner", runecaller: "frost_sorceress" };
+
+/** The unit id whose sheets draw unit `id` (itself, or its stand-in while its own sheets are missing). */
+export function unitArt(id: string) {
+  return !hasAnim("units", `${id}_idle`) && UNIT_STAND_IN[id] ? UNIT_STAND_IN[id] : id;
+}
+
 /** Queue a set of static images under `<prefix>:<id>` keys. */
 export function loadImages(scene: Phaser.Scene, prefix: string, folder: string, ids: string[]) {
+  // A unit without its own portrait, still or card image loads its stand-in's file under its own key.
+  if (folder === "portraits" || folder === "units" || folder === "cards") {
+    for (const [id, from] of Object.entries(UNIT_STAND_IN)) {
+      const key = `${prefix}:${id}`;
+      if (!ids.includes(id) && ids.includes(from) && !scene.textures.exists(key)) scene.load.image(key, `${BASE}${folder}/${from}.webp`);
+    }
+  }
   for (const id of ids) {
     const key = `${prefix}:${id}`;
     if (!scene.textures.exists(key)) scene.load.image(key, `${BASE}${folder}/${id}.webp`);
@@ -93,7 +111,19 @@ export function hasAnim(folder: string, name: string) {
  * story can be played before its art lands. Drop an entry once the real sheets are built.
  */
 // v2.2: every Story 2-3 monster and boss has its own sheets; the Barnacle Cluster (Ondrath's shell growth) borrows the Barnacle Spawn art and Corvaline's Lantern the Fire Wisp art.
-const STAND_IN: Record<string, string> = { barnacle_cluster: "barnacle_spawn", corvaline_lantern: "fire_wisp" };
+const STAND_IN: Record<string, string> = {
+  barnacle_cluster: "barnacle_spawn",
+  corvaline_lantern: "fire_wisp",
+  // v2.3 Story 4 "The Iron Oath": borrowed sprites until its own sheets are built.
+  drake_whelp: "lava_imp",
+  dwarf_family: "kobold_miner",
+  iron_soldier: "gargoyle",
+  iron_crossbow: "corrupted_elf_archer",
+  iron_brute: "door_ogre",
+  ashmaw: "fire_dragon",
+  walking_forge: "goblin_war_machine",
+  chaos_colossus: "stone_colossus",
+};
 
 /** The id whose sheets draw monster or boss `id` (itself, or its stand-in while its art is missing). */
 export function sheetId(folder: "monsters" | "bosses", id: string) {

@@ -152,7 +152,7 @@ export class StoryScene extends Phaser.Scene {
     parts.push(txt(this, 0, y + 40, `CHAPTER ${i + 1} OF ${s.chapters.length}`, 24, "#ffd27a"));
     parts.push(txt(this, 0, y + 92, c.title, 38, "#fff4c2").setWordWrapWidth(cw - 40));
     parts.push(starRow(this, 0, y + 170, best, 52));
-    const deckLine = c.eventDeck ? `Event deck: pick ${c.eventDeck.pick} of ${c.eventDeck.units.length}` : c.rules ? "Your deck, with rules" : "Your own deck";
+    const deckLine = c.eventDeck ? (c.eventDeck.pick >= c.eventDeck.units.length ? "Fixed Event deck" : `Event deck: pick ${c.eventDeck.pick} of ${c.eventDeck.units.length}`) : c.rules ? "Your deck, with rules" : "Your own deck";
     parts.push(txt(this, 0, y + 240, `${c.waves.length} waves · ${deckLine}`, 22, "#c9d2ff").setWordWrapWidth(cw - 60));
     if (lock) parts.push(txt(this, 0, ch / 2 - 80, lock, 26, "#ffb0b0").setWordWrapWidth(cw - 60));
     else parts.push(button(this, 0, ch / 2 - 80, 320, 104, best ? "REPLAY" : "PLAY", best ? "blue" : "green", () => (i === this.focus ? this.play(s, c) : this.go(i)), 48));
@@ -168,7 +168,9 @@ export class StoryScene extends Phaser.Scene {
 
   private play(s: StoryDef, c: StoryChapter) {
     if (this.starting) return;
-    if (c.eventDeck) this.pickDeck(c, (pick) => this.begin(s, c, pick));
+    // v2.3: an Event deck with nothing to choose (Story 4 Ch 1) starts at once with every unit.
+    if (c.eventDeck && c.eventDeck.pick >= c.eventDeck.units.length) this.begin(s, c, [...c.eventDeck.units]);
+    else if (c.eventDeck) this.pickDeck(c, (pick) => this.begin(s, c, pick));
     else if (c.rules) this.checkDeck(c, () => this.begin(s, c));
     else this.begin(s, c);
   }
@@ -205,8 +207,10 @@ export class StoryScene extends Phaser.Scene {
     const top = cy - mh / 2;
     m.add(txt(this, cx, top + 96, `Pick ${ed.pick}. Every unit fights at level ${ed.level}.`, 26, "#c9d2ff"));
     const picked = new Set(lastPick(c.id).filter((id) => ed.units.includes(id)).slice(0, ed.pick));
-    const size = 140;
-    const cols = 3;
+    // v2.3: more cards than a 3x3 grid holds (Story 4 Ch 3) go on a smaller 4-wide one.
+    const big = ed.units.length > 9;
+    const size = big ? 120 : 140;
+    const cols = big ? 4 : 3;
     const info = txt(this, cx, top + mh - 250, "Tap a card to pick it. Knights help their neighbours;\nMercenaries hit hard but bother them.", 22, "#ffffff").setWordWrapWidth(620);
     const count = txt(this, cx, top + mh - 170, "", 26, "#ffd93b");
     const play = button(this, cx, top + mh - 90, 360, 96, "TO BATTLE!", "green", () => {
@@ -218,7 +222,7 @@ export class StoryScene extends Phaser.Scene {
     const marks = new Map<string, Phaser.GameObjects.GameObject[]>();
     const refresh = () => {
       const why = picked.size === ed.pick ? eventPickProblem(ed, [...picked]) : null;
-      const needs = Object.entries(ed.minRoles ?? {}).map(([role, n]) => `at least ${n} ${role}${n > 1 ? "s" : ""}`);
+      const needs = [...Object.entries(ed.minRoles ?? {}), ...Object.entries(ed.minRaces ?? {})].map(([role, n]) => `at least ${n} ${role}${n > 1 ? "s" : ""}`);
       count.setText(why ?? `Picked ${picked.size} / ${ed.pick}${needs.length ? ` · ${needs.join(", ")}` : ""}`).setColor(why ? "#ff8080" : "#ffd93b");
       play.setEnabled(!eventPickProblem(ed, [...picked]));
       for (const [id, objs] of marks) for (const o of objs) (o as Phaser.GameObjects.Image).setVisible(picked.has(id));
@@ -226,14 +230,14 @@ export class StoryScene extends Phaser.Scene {
     ed.units.forEach((id, i) => {
       const def = UNIT_BY_ID[id];
       if (!def) return;
-      const x = cx + ((i % cols) - (cols - 1) / 2) * (size + 50);
-      const y = top + 220 + Math.floor(i / cols) * (size + 92);
+      const x = cx + ((i % cols) - (cols - 1) / 2) * (size + (big ? 30 : 50));
+      const y = top + (big ? 200 : 220) + Math.floor(i / cols) * (size + (big ? 78 : 92));
       const card = cardView(this, 0, 0, size, id);
       const ring = this.add.graphics();
       ring.lineStyle(8, 0x7dff7a, 1).strokeRoundedRect(-size / 2 - 6, -size / 2 - 6, size + 12, size + 12, 16);
       const check = txt(this, -size / 2 + 10, -size / 2 + 10, "✔", 36, "#7dff7a");
       const name = txt(this, 0, size * 0.6, def.name, 19, "#ffffff").setWordWrapWidth(size + 40);
-      const role = txt(this, 0, size * 0.6 + 26, (def.role ?? "").toUpperCase(), 17, def.role === "Knight" ? "#9fd0ff" : "#ff9a9a");
+      const role = txt(this, 0, size * 0.6 + 26, (def.role ?? def.race).toUpperCase(), 17, def.role === "Knight" ? "#9fd0ff" : def.race === "dwarf" ? "#ffd27a" : "#ff9a9a");
       const box = this.add.container(x, y, [ring, card, check, name, role]).setSize(size, size);
       marks.set(id, [ring, check]);
       m.add(box);

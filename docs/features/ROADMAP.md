@@ -24,7 +24,8 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v2.0.0 | **The Grand Revamp** | 2026-10-09 | tag `v2.0.0` | [v2.0](v2.0-the-grand-revamp/README.md) |
 | v2.1.0 | **Chaos Corrupted** | 2026-10-10 | tag `v2.1.0` | [v2.1](v2.1-chaos-corrupted/README.md) |
 | v2.2.0 | **Sand & Sea** | 2026-10-11 | tag `v2.2.0` | [v2.2](v2.2-sand-and-sea/README.md) |
-| next | Balance pass, Book 2 Stories 4-5, Book 3 | — | — | — |
+| v2.3.0 | **The Iron Oath** | not shipped (built on branch `v2.3-iron-oath`) | — | [v2.3](v2.3-the-iron-oath/README.md) |
+| next | Balance pass, Book 2 Story 5, Book 3 | — | — | — |
 
 ---
 
@@ -150,7 +151,8 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
   Dust", pitched in the [saga plan](concepts/forsakens-saga.md). Art budget: about 350 Higgsfield
   credits (about 450 with retries), stills and in-game animation clips included. Promo reuses game
   footage and panel zooms, with no generated trailer video.
-- **Later:** Book 2 Stories 4-5 and Book 3 (pitched in the saga plan; the Book 3 finale reveals the
+- **v2.3.0 "The Iron Oath" (built, not shipped):** Book 2 Story 4, see [v2.3](v2.3-the-iron-oath/README.md).
+- **Later:** Book 2 Story 5 and Book 3 (pitched in the saga plan; the Book 3 finale reveals the
   mastermind).
 - Ideas waiting for a release are in the root [ROADMAP.md](../../ROADMAP.md).
 - Fantasy features (ideas only, not scheduled): [World Boss](fantasy/world-boss.md).

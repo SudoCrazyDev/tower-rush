@@ -447,10 +447,15 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   // v2.2 Book 2 Stories 2-3: Event cards, earned from the story's last chapter and from replays (like Princess Muse).
   { ...U("maren", "Maren, the Tide-Born", "event", "ice", "aegis", "water", "The tide washes the curse off everyone beside her.", "fae", "balanced", "none"), role: "Tidecaller" },
   { ...U("bako", "Bako, Chainbreaker", "event", "nature", "pierce", "spark", "Breaks the line, and rallies everyone beside him.", "human", "heavy", "none"), role: "Gladiator", effect: "rally", weapon: "flail" },
+  // v2.3 Book 2 Story 4 "The Iron Oath": Brakka (Event card), the two dwarf cards (story rewards: Chests drop them once owned), and Durgrim (a story-only hero).
+  { ...U("brakka", "Brakka Emberhold", "event", "fire", "aura", "fireball", "She tempers every unit beside her. Every bolt of the Forge answers her hammer.", "dwarf", "balanced", "none"), role: "Oathsmith" },
+  { ...U("emberhold_gunner", "Emberhold Gunner", "rare", "fire", "shot", "cannonball", "Dwarf powder, no wasted shot. Plate means little to him.", "dwarf", "rapid", "armor_breaker"), storyReward: true },
+  { ...U("runecaller", "Runecaller", "rare", "arcane", "shot", "arcane_orb", "Her runes pick any rune apart, whatever its element.", "dwarf", "balanced", "none"), role: "Runecaller", storyReward: true },
+  { ...U("durgrim", "Durgrim Emberhold", "epic", "fire", "burn", "fireball", "An oath broken must be paid. Stronger beside every Knight.", "dwarf", "heavy", "none"), damage: 70, role: "Thane", storyOnly: true, effect: "oath" },
 ], DEFAULT_EFFECTS);
 
-/** The Story units: Muse, the Knights and the Mercenaries (v1.2), Maren and Bako (v2.2). */
-export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade", "maren", "bako"];
+/** The Story units: Muse, the Knights and the Mercenaries (v1.2), Maren and Bako (v2.2), Brakka, the Emberhold dwarves and Durgrim (v2.3). */
+export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade", "maren", "bako", "brakka", "emberhold_gunner", "runecaller", "durgrim"];
 
 /**
  * Units added to the defaults after configs were already saved (the v1.1 support units):

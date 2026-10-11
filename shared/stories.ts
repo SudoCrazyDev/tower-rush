@@ -6,6 +6,7 @@
  * Everything here is part of the game config, so the admin Stories page can edit it.
  */
 import type { Reward } from "./daily.ts";
+import { BOSS_BY_ID } from "./monsters.ts";
 import { UNIT_BY_ID, deckable, type Rarity } from "./units.ts";
 
 /** `n` monsters of one kind. */
@@ -32,6 +33,8 @@ export interface StoryWave {
    * battle pauses for `panels`, then the boss is stunned for `stun` seconds (Pearl's cry in Story 2).
    */
   reveal?: { at: number; panels: StoryPanel[]; stun: number };
+  /** v2.3: panels that play (the battle holds) just before this wave starts (Story 4: the Colossus forms). */
+  cutscene?: StoryPanel[];
 }
 
 /**
@@ -79,6 +82,25 @@ export interface ChapterMechanics {
   lanterns?: { boss: string; first: number; every: number; from: number; to: number; hp: number };
   /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
   cage?: { slot: number; lockHp: number; roarStun: number };
+  /**
+   * v2.3 Story 4 Ch 1: evacuation. Monsters walk path 0; dwarf families (`family`, a monster id) walk path 1 (the second
+   * route), `perWave[n - 1]` of them in wave n, `gap` seconds apart. The chapter is won when `goal` families get out; lost
+   * when too many are lost to reach it. `hunters` (monster and boss ids) dive on a family on the same stretch of road
+   * (`huntFirst` s after appearing, then every `huntEvery` s; bosses every `bossHuntEvery` s) and lose it. Bosses in
+   * `quiet` give up their powers (a dragon here dives for families, it does not freeze units).
+   */
+  evacuation?: { family: string; goal: number; perWave: number[]; gap: number; hunters: string[]; huntFirst: number; huntEvery: number; bossHuntEvery: number; quiet: string[] };
+  /**
+   * v2.3 Story 4 Ch 2: the Walking Forge. `barks` are Brakka's lines: "start", "hint_<part>" (every `hintEvery` s,
+   * for the next unbroken part), "broke_<part>" and "core" (every other part is down).
+   */
+  forge?: { hintEvery: number; mana: number; barks: Record<string, StoryLine> };
+  /**
+   * v2.3 Story 4 Ch 2-3: rune shields. An iron monster (MonsterDef.iron) walks in with chance `chance` carrying one rune
+   * of an element that a unit on the board has. Only units of that element (and the Runecaller, any element) break it;
+   * it takes `hp` of the monster's HP. Other units deal only `leak` (a share) of their damage to the monster meanwhile.
+   */
+  runes?: { chance: number; hp: number; leak: number };
 }
 
 /** v2.2: an arena duel chapter (Story 3): a best-of PvP match against the bot with a fixed deck. */
@@ -137,10 +159,16 @@ export interface EventDeck {
   level: number;
   /** The pick needs at least this many units of each role, e.g. { Mercenary: 1 }. */
   minRoles?: Record<string, number>;
+  /** v2.3: the pick needs at least this many units of each race, e.g. { dwarf: 1 }. */
+  minRaces?: Record<string, number>;
 }
 
 /** What's wrong with an Event deck pick so far, or null when it's ready. */
 export function eventPickProblem(ed: EventDeck, pick: string[]): string | null {
+  for (const [race, n] of Object.entries(ed.minRaces ?? {})) {
+    const have = pick.filter((id) => UNIT_BY_ID[id]?.race === race).length;
+    if (have < n) return `Pick at least ${n} ${race}${n > 1 ? "s" : ""}`;
+  }
   for (const [role, n] of Object.entries(ed.minRoles ?? {})) {
     const have = pick.filter((id) => UNIT_BY_ID[id]?.role === role).length;
     if (have < n) return `Pick at least ${n} ${role}${n > 1 ? "s" : ""}`;
@@ -177,6 +205,11 @@ export interface StoryChapter {
   rules: DeckRules | null;
   /** v2.2: board mechanics (tide, pools, Faceless, cage). */
   mechanics?: ChapterMechanics;
+  /**
+   * v2.3 Story 4 Ch 3: a hero unit. It starts the battle on `slot` at `rank`, at the Event deck's level, and is not in
+   * the deck: it is never summoned, merged or powered up. (Durgrim.)
+   */
+  hero?: { unit: string; slot: number; rank: number };
   /** v2.2: an arena duel instead of a scripted battle; `waves` is then ignored (keep one boss wave for the validator). */
   duel?: StoryDuel;
 }
@@ -919,8 +952,166 @@ const THE_THRONE_OF_DUST: StoryDef = {
   ],
 };
 
+// ---------------------------------------------------------------- Book 2 · Story 4: The Iron Oath (v2.3)
+
+const DW = "drake_whelp";
+const LI = "lava_imp";
+const FWISP = "fire_wisp";
+const GG = "gargoyle";
+const IS = "iron_soldier";
+const IC = "iron_crossbow";
+const IB = "iron_brute";
+const DURG = "durgrim";
+const YOUNG = "durgrim_young";
+const KNIGHT_CAP = "candy_knight_captain";
+const DWARVES = ["thunder_dwarf", "bear_rider", "emberhold_gunner", "runecaller"];
+/** Every iron enemy may carry a rune of an element on the board (Ch 2-3). */
+const RUNES = { chance: 0.45, hp: 0.3, leak: 0.2 };
+
+const THE_IRON_OATH: StoryDef = {
+  id: "b2s4",
+  title: "The Iron Oath",
+  blurb: "Three hundred years ago the crown broke a sacred oath. Live the betrayal, stop the Walking Forge, and keep the oath now.",
+  cover: "book2_story4_the_iron_oath",
+  trophies: 0,
+  replayCards: ["brakka"],
+  chapters: [
+    chapter({
+      id: "b2s4c1",
+      title: "Three Hundred Years Ago",
+      layout: "volcano",
+      art: "arena_burning_emberhold",
+      corruption: 0,
+      tint: "#e0c79a",
+      hpScale: 3.8,
+      mechanics: {
+        evacuation: {
+          family: "dwarf_family",
+          goal: 14,
+          perWave: [2, 2, 2, 2, 2, 2, 2, 2, 2, 4],
+          gap: 4,
+          hunters: [DW, "frost_wyrm", "fire_dragon", "ashmaw"],
+          huntFirst: 3,
+          huntEvery: 8,
+          bossHuntEvery: 7,
+          quiet: ["frost_wyrm", "fire_dragon"],
+        },
+      },
+      eventDeck: { units: [DURG, ...DWARVES], pick: 5, level: 7 },
+      intro: [
+        panel("b2s4_p1_shard_north", "The third shard streaks north, into the mountains.", "Far below, the ground begins to shake."),
+        panel("b2s4_p2_footprints", "Villagers whisper of iron footprints, each as big as a house.", "\"Something walks the mountain. And it is not alive.\""),
+        panel("b2s4_p3_young_durgrim", "Three hundred years ago. The gates of Emberhold, the great dwarven halls.", "Young Thane Durgrim holds the oath scroll of the human crown."),
+        panel("b2s4_p4_iron_oath", "\"We swear the Iron Oath: when dragons come, the crown's army will stand with Emberhold.\"", "Then the sky above the mountain turns red."),
+      ],
+      waves: [
+        w(`${DW} 5, ${LI} 3`, { bark: say(YOUNG, "Dragons! Get the families out! Sound the horn for the crown's army!") }),
+        w(`${DW} 6, ${FWISP} 4`, { bark: say(YOUNG, "The horn sounded twice. The oath will bring them. It must.") }),
+        w(`${LI} 6, ${GG} 3, ${DW} 4`, { bark: say(YOUNG, "Hold the road! Every family counts!") }),
+        w(`${DW} 4, ${LI} 3`, { boss: "frost_wyrm", hp: 0.8, bark: say(YOUNG, "A frost wyrm! It dives for the children. Shoot it down!") }),
+        w(`${DW} 7, ${GG} 4, ${FWISP} 4`, { bark: say(YOUNG, "No banners on the road yet. Blow the horn again!") }),
+        w(`${LI} 8, ${DW} 6, ${GG} 3`, { bark: say(YOUNG, "Where is the crown's army? They swore!") }),
+        w(`${DW} 5, ${GG} 3`, { boss: "fire_dragon", hp: 0.8, bark: say(YOUNG, "A fire dragon! Keep the families ahead of its shadow!") }),
+        w(`${DW} 8, ${LI} 8, ${FWISP} 5`, { bark: say(YOUNG, "The horn again... Nobody answers.") }),
+        w(`${GG} 5, ${DW} 9, ${LI} 6`, { bark: say(YOUNG, "Another wave of whelps. They are everywhere!") }),
+        w(`${DW} 6, ${LI} 4`, { boss: "ashmaw", hp: 0.5, bark: say(YOUNG, "They swore... they're not coming.") }),
+      ],
+      reward: reward(2400, 45, null, ["emberhold_gunner"]),
+      replay: replay(400),
+    }),
+    chapter({
+      id: "b2s4c2",
+      title: "The Walking Forge",
+      layout: "clockwork_city",
+      art: "arena_mountain_pass",
+      corruption: 0.35,
+      hpScale: 12,
+      mechanics: {
+        runes: RUNES,
+        forge: {
+          mana: 4,
+          hintEvery: 28,
+          barks: {
+            start: say("brakka", "That's the Walking Forge! I know every bolt in it. Break its legs first, or it'll crush us."),
+            hint_legs: say("brakka", "Its legs, Keeper! Tap the LEGS bar. Break them and the Forge crawls."),
+            hint_cannons: say("brakka", "The cannons are shelling your units! Tap CANNONS and silence them."),
+            hint_furnace: say("brakka", "The furnace feeds it iron soldiers. Tap FURNACE and let it go cold."),
+            hint_core: say("brakka", "Now the heart! The Anvil-Heart is chained inside. Break the core, but gently."),
+            broke_legs: say("brakka", "The legs buckle! It's slowing down!"),
+            broke_cannons: say("brakka", "The cannons are quiet. Your units can breathe."),
+            broke_furnace: say("brakka", "The furnace is cold. No more soldiers!"),
+            core: say("brakka", "Everything else is down. Hit the Anvil-Heart with all you have!"),
+          },
+        },
+      },
+      intro: [
+        panel("b2s4_p5_emberhold_burns", "Emberhold burns. Dwarves climb the stairs of the great hall with their children.", "The oath is only a scroll now."),
+        panel("b2s4_p6_unanswered_horn", "In the ashes, Durgrim holds the unanswered horn and the torn oath scroll.", "\"An oath broken must be paid.\""),
+        panel("b2s4_p7_walking_forge", "Today. A smith named Brakka stands before the mountain, hammer in hand.", "\"My father's grief built that thing. I know every bolt in it.\""),
+      ],
+      waves: [w(`${IS} 6, ${IC} 4, ${IB} 2`, { boss: "walking_forge", hp: 1, bark: say("brakka", "Here it comes! Watch its parts. Break them one by one!") })],
+      reward: reward(3000, 60, null, ["runecaller"]),
+      replay: replay(500),
+    }),
+    chapter({
+      id: "b2s4c3",
+      title: "Oathbreakers",
+      layout: "crystal_cave",
+      art: "arena_oath_field",
+      corruption: 0.5,
+      hpScale: 1.3,
+      mechanics: { runes: RUNES },
+      hero: { unit: DURG, slot: 7, rank: 3 },
+      eventDeck: { units: [...KNIGHTS, ...DWARVES], pick: 5, level: 8, minRoles: { Knight: 1 }, minRaces: { dwarf: 1 } },
+      intro: [
+        panel("b2s4_p8_knights_kneel", "The Knights of the Candy Crown ride into the dwarven hall and kneel before Durgrim.", `"Our oath was broken. We are here to keep it now."`),
+        panel("b2s4_p9_durgrim_falters", "Durgrim lifts the Forge Orb, but his hands shake. Violet light crawls up his arms.", `"A voice told me they must pay... and it sounded so fair."`),
+      ],
+      waves: [
+        w(`${IS} 8, ${IC} 3`, { bark: say(KNIGHT_CAP, "Form up! The Forge's legions will not wait for our regrets.") }),
+        w(`${IS} 8, ${IC} 5`, { bark: say("brakka", "Watch the runes! Match each unit to its rune's element.") }),
+        w(`${IB} 2, ${IS} 8, ${IC} 4`),
+        w(`${IS} 10, ${IC} 6`, { bark: say(DURG, "My shoulders carry three hundred years. Let them carry this too.") }),
+        w(`${IB} 3, ${IS} 8, ${IC} 5`),
+        w(`${IS} 12, ${IC} 6, ${IB} 2`, { bark: say(KNIGHT_CAP, "Stand with the dwarves! Shield beside hammer!") }),
+        w(`${IC} 10, ${IS} 8`),
+        w(`${IB} 4, ${IS} 10, ${IC} 5`, { bark: say("brakka", "Father, stay beside the knights. Your oath hits harder there.") }),
+        w(`${IS} 14, ${IC} 8, ${IB} 2`),
+        w(`${IB} 4, ${IC} 8, ${IS} 8`, { bark: say(DURG, "Something is moving in the iron. Something that is not mine.") }),
+        w(`${IS} 14, ${IC} 8, ${IB} 3`),
+        w(`${IB} 5, ${IS} 12, ${IC} 8`, { bark: say("brakka", "The iron is humming. It's calling to him!") }),
+        w(`${IC} 12, ${IS} 12, ${IB} 3`),
+        w(`${IB} 6, ${IS} 14, ${IC} 8`, { bark: say(KNIGHT_CAP, "Kill the iron before it gathers! Don't let any survive!") }),
+        w(`${IS} 16, ${IC} 10, ${IB} 6`, { bark: say("anvil_heart", "He is breaking... Do not let the iron reach him.") }),
+        w(`${IS} 8, ${IB} 2`, {
+          boss: "chaos_colossus",
+          hp: 0.35,
+          bark: say(DURG, "No... it's tearing out of me! Run!"),
+          cutscene: [panel("b2s4_p10_colossus_rises", "Chaos tears out of Durgrim, flowing into every piece of iron.", "The iron stands up as one: the Chaos-Iron Colossus.")],
+          rally: {
+            before: [],
+            allies: ["ally_dwarf_guard", "ally_dwarf_gunner", "ally_candy_knight", "ally_candy_lancer"],
+            after: [],
+          },
+        }),
+      ],
+      reward: reward(0, 150, "mythic", ["brakka"], "oathkeeper"),
+      replay: replay(600),
+    }),
+  ],
+  ending: [
+    panel("b2s4_p11_colossus_falls", "The Colossus falls apart into scrap and cold iron.", "The mountain goes quiet."),
+    panel("b2s4_p12_brakka_confronts", "Brakka helps her father to his feet.", `"You wanted them to pay. They came. That was the debt."`),
+    panel("b2s4_p13_anvil_heart", "The Anvil-Heart takes the Forge Orb back. The violet fades to ember-gold.", "The Forge breathes again, warm and whole."),
+    panel("b2s4_p14_new_oath", "Dwarven steel and a human shield, forged side by side.", "A new oath, and both sides keep it."),
+    panel("b2s4_p15_durgrim_troubled", "Durgrim stares at the cold iron in his hands.", `"The voice spoke of justice. It sounded fair... and then it sounded cold."`),
+    panel("b2s4_p16_broken_scales", "Four violet shards hover over a broken pair of scales.", "One pan is white. The other is black."),
+    panel("b2s4_p17_to_be_continued", "A gloved hand closes over the scales.", `"One more heart. Then they will all be judged." To be continued.`),
+  ],
+};
+
 /** Book 2: its stories can be edited by the admin. */
-export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST], unlockBadge: "the_chosen", planned: 5 };
+export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST, THE_IRON_OATH], unlockBadge: "the_chosen", planned: 5 };
 
 /** The saga title shown above the books. */
 export const SAGA = "The Forsakens";
@@ -955,7 +1146,7 @@ export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
  * Stories added to the defaults after configs were saved (like ADDED_MONSTERS): appended by id to the
  * saved book that holds the story's neighbours (its default book's index), unless a saved book already has it.
  */
-export const ADDED_STORIES = ["b2s2", "b2s3"];
+export const ADDED_STORIES = ["b2s2", "b2s3", "b2s4"];
 function withAddedStories(books: BookDef[]): BookDef[] {
   const have = new Set(books.flatMap((b) => b.stories.map((s) => s.id)));
   let out = books;
@@ -977,6 +1168,7 @@ export const BADGES: Record<string, { label: string; text: string }> = {
   wilds_warden: { label: "Wilds Warden", text: "Finished Book 2 · Story 1" },
   tidewarden: { label: "Tidewarden", text: "Finished Book 2 · Story 2" },
   dunewarden: { label: "Dunewarden", text: "Finished Book 2 · Story 3" },
+  oathkeeper: { label: "Oathkeeper", text: "Finished Book 2 · Story 4" },
 };
 
 // ---------------------------------------------------------------- progress
@@ -1102,7 +1294,10 @@ export function chapterDeck(
     }
     const why = eventPickProblem(ed, p);
     if (why) return { problem: why };
-    return { deck: [...p], levels: Object.fromEntries(p.map((id) => [id, ed.level])) };
+    const levels = Object.fromEntries(p.map((id) => [id, ed.level]));
+    // v2.3: the chapter's hero unit isn't in the deck but fights at the Event deck's level.
+    if (chapter.hero) levels[chapter.hero.unit] = ed.level;
+    return { deck: [...p], levels };
   }
   const deck = [...own.deck];
   if (deck.length !== 5 || !deck.every((id) => deckable(UNIT_BY_ID[id]))) return { problem: "Your deck needs 5 cards" };
@@ -1113,6 +1308,7 @@ export function chapterDeck(
     if (failed) return { problem: `Deck rule: ${failed.text}` };
     for (const id of rules.requiredUnits) levels[id] = Math.max(levels[id], rules.levelFloor);
   }
+  if (chapter.hero) levels[chapter.hero.unit] = own.level(chapter.hero.unit);
   return { deck, levels };
 }
 
@@ -1168,7 +1364,17 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           num(n, `${wc} Event deck minimum ${role}`, 0);
           if (c.eventDeck.units.filter((id) => UNIT_BY_ID[id]?.role === role).length < n) errs.push(`${wc}: Event deck has fewer ${role} units than it requires`);
         }
-        if (Object.values(c.eventDeck.minRoles ?? {}).reduce((a, b) => a + b, 0) > c.eventDeck.pick) errs.push(`${wc}: Event deck requires more units than it picks`);
+        for (const [race, n] of Object.entries(c.eventDeck.minRaces ?? {})) {
+          num(n, `${wc} Event deck minimum ${race} units`, 0);
+          if (c.eventDeck.units.filter((id) => UNIT_BY_ID[id]?.race === race).length < n) errs.push(`${wc}: Event deck has fewer ${race} units than it requires`);
+        }
+        const need = Object.values(c.eventDeck.minRoles ?? {}).reduce((a, b) => a + b, 0) + Object.values(c.eventDeck.minRaces ?? {}).reduce((a, b) => a + b, 0);
+        if (need > c.eventDeck.pick) errs.push(`${wc}: Event deck requires more units than it picks`);
+      }
+      if (c.hero) {
+        if (!ids.units.has(c.hero.unit)) errs.push(`${wc}: unknown hero unit "${c.hero.unit}"`);
+        if (!Number.isInteger(c.hero.slot) || c.hero.slot < 0 || c.hero.slot > 14) errs.push(`${wc}: the hero slot must be 0-14`);
+        num(c.hero.rank, `${wc} hero rank`, 1);
       }
       if (c.rules) for (const id of c.rules.requiredUnits) if (!ids.units.has(id)) errs.push(`${wc}: unknown required unit "${id}"`);
       c.waves?.forEach((wv, i) => {
@@ -1232,6 +1438,28 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           slots([mech.cage.slot], "cage slot");
           num(mech.cage.lockHp, `${wc} cage lock HP`, 1);
           num(mech.cage.roarStun, `${wc} cage roar stun`);
+        }
+        if (mech.evacuation) {
+          const ev = mech.evacuation;
+          if (!ids.monsters.has(ev.family)) errs.push(`${wc}: unknown evacuation family "${ev.family}"`);
+          for (const id of ev.hunters ?? []) if (!ids.monsters.has(id) && !ids.bosses.has(id)) errs.push(`${wc}: unknown evacuation hunter "${id}"`);
+          for (const id of ev.quiet ?? []) if (!ids.bosses.has(id)) errs.push(`${wc}: unknown quiet boss "${id}"`);
+          if (!Array.isArray(ev.perWave) || ev.perWave.length !== c.waves?.length || !ev.perWave.every((v) => Number.isInteger(v) && v >= 0)) errs.push(`${wc}: evacuation needs a family count for each wave`);
+          else if (ev.goal > ev.perWave.reduce((a, b) => a + b, 0)) errs.push(`${wc}: evacuation goal is more than the families that come`);
+          num(ev.goal, `${wc} evacuation goal`, 1);
+          num(ev.gap, `${wc} evacuation gap`, 0.1);
+          num(ev.huntFirst, `${wc} evacuation first dive`);
+          num(ev.huntEvery, `${wc} evacuation dive every`, 1);
+          num(ev.bossHuntEvery, `${wc} evacuation boss dive every`, 1);
+        }
+        if (mech.forge) {
+          num(mech.forge.hintEvery, `${wc} forge hint every`, 1);
+          if (!c.waves?.some((wv) => wv.boss && BOSS_BY_ID[wv.boss]?.parts)) errs.push(`${wc}: the forge chapter needs a boss with parts`);
+        }
+        if (mech.runes) {
+          num(mech.runes.chance, `${wc} rune chance`);
+          num(mech.runes.hp, `${wc} rune HP`, 0.01);
+          num(mech.runes.leak, `${wc} rune leak`);
         }
       }
       const duel = c.duel;

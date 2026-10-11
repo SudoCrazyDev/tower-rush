@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { animKey, hasAnim, sheetScale } from "../assets";
+import { animKey, hasAnim, sheetScale, unitArt } from "../assets";
 import { fxKey, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
@@ -77,7 +77,7 @@ export class Unit {
       }
       scene.tweens.add({ targets: this.aura, scale: { from: 0.85, to: 1.12 }, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     }
-    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.def.id}_idle`));
+    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${unitArt(this.def.id)}_idle`));
     this.sprite.setScale(this.baseScale).setOrigin(0.5, 0.62);
     this.playIdle();
     this.pips = scene.add.graphics();
@@ -274,7 +274,7 @@ export class Unit {
   }
 
   playIdle() {
-    const key = animKey(this.folder, `${this.def.id}_idle`);
+    const key = animKey(this.folder, `${unitArt(this.def.id)}_idle`);
     const was = this.sprite.anims.currentAnim?.key;
     this.sprite.play(key, true);
     // Switching to the late-loaded awakened art: its frames may be a different size.
@@ -285,7 +285,7 @@ export class Unit {
   }
 
   playOnce(anim: "attack" | "skill", timeScale = 1) {
-    const key = animKey(this.folder, `${this.def.id}_${anim}`);
+    const key = animKey(this.folder, `${unitArt(this.def.id)}_${anim}`);
     if (!this.scene.anims.exists(key)) {
       // No clean clip for this action: squash and stretch the idle instead.
       const s = this.baseScale;
