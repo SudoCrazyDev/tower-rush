@@ -2,7 +2,7 @@
  * Player progress lives on the server; this module mirrors it locally and wraps every
  * action that changes it. Scenes read `profile` synchronously and await the actions.
  */
-import { get, post, put, del, setToken } from "./api";
+import { get, post, put, del, setToken, onOutdated, versionBelow } from "./api";
 import { applyConfig, type GameConfig } from "../../shared/config.ts";
 import { newProfile, canUpgrade as canUpgradeShared, type Profile, type ChestLoot } from "../../shared/profile.ts";
 
@@ -36,7 +36,8 @@ export const serverNow = () => Date.now() + clockOffset;
 
 export async function loadConfig() {
   const sent = Date.now();
-  const r = await get<{ version: number; config: GameConfig; now?: number }>("/config");
+  const r = await get<{ version: number; config: GameConfig; now?: number; minClient?: string | null }>("/config");
+  if (r.minClient && versionBelow(__APP_VERSION__, r.minClient)) onOutdated();
   applyConfig(r.config);
   // Server time at the middle of the round trip, so countdowns match what the server enforces.
   if (r.now) clockOffset = r.now - (sent + Date.now()) / 2;

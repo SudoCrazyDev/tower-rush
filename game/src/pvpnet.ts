@@ -3,15 +3,26 @@
  * WebSockets to the server's Durable Objects. The session token goes in the subprotocol
  * list, since browsers can't set headers on a WebSocket.
  */
-import { deviceId, getToken, post } from "./api";
+import { API_BASE, deviceId, getToken, post, probeVersion } from "./api";
 import type { ClientMsg, MatchSetup, PvpMode, ServerMsg } from "../../shared/pvp.ts";
 import type { Profile, Promotion } from "../../shared/profile.ts";
 
 const PROTOCOL = "tower-rush";
 
+/** ws(s) origin of the API: the page's own host in dev (Vite proxy), else the API Worker. */
+const WS_BASE = API_BASE
+  ? API_BASE.replace(/^http/, "ws")
+  : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+
 function socket(path: string) {
-  const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api${path}`;
-  return new WebSocket(url, [PROTOCOL, getToken() ?? ""]);
+  // `v` is the client version for the server's gate (browsers can't set headers on a WebSocket).
+  const url = `${WS_BASE}/api${path}${path.includes("?") ? "&" : "?"}v=${__APP_VERSION__}`;
+  const ws = new WebSocket(url, [PROTOCOL, getToken() ?? ""]);
+  // A socket that never opened may have been refused for an old version: check.
+  let opened = false;
+  ws.addEventListener("open", () => (opened = true));
+  ws.addEventListener("close", () => !opened && probeVersion());
+  return ws;
 }
 
 export type QueueEvent =

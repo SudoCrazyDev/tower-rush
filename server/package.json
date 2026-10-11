@@ -1,11 +1,12 @@
 {
   "name": "tower-rush-server",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node -e \"require('fs').mkdirSync('../dist',{recursive:true})\" && cd .. && wrangler dev --port 8787",
+    "dev": "wrangler dev --port 8787 --var DEV:1 --var ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174",
     "typecheck": "tsc --noEmit",
-    "types": "cd .. && wrangler types server/worker-configuration.d.ts"
+    "types": "wrangler types worker-configuration.d.ts"
   },
   "dependencies": {
     "hono": "^4.13.12"

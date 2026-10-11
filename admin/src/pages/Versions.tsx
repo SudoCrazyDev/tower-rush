@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { api, tokenFor } from "../api";
+import { currentEnv } from "../env";
 import { useConfig } from "../config";
 import { PageHead, fmtDate, toast } from "../components";
 import { validateConfig, type GameConfig } from "../../../shared/config.ts";
@@ -63,12 +64,28 @@ export function VersionsPage() {
     }
   };
 
+  /** Staging only: publish the live staging config as a new production version. */
+  const copyToProduction = async () => {
+    if (tokenFor.get("production") === null) return toast("Sign in to Production first (switch environment, then sign in).", "err");
+    if (!confirm(`Copy the live STAGING config (v${version}) to PRODUCTION?
+
+This publishes it to live players as a new production version. You can restore the previous production version from Production > Versions.`)) return;
+    try {
+      const staging = await api<{ config: GameConfig }>("GET", "/config");
+      const r = await api<{ version: number }>("PUT", "/config", { config: staging.config, note: `Copied from staging v${version}` }, "production");
+      toast(`Production is now on v${r.version}`);
+    } catch (e) {
+      toast(`Copy failed: ${(e as Error).message}`, "err");
+    }
+  };
+
   return (
     <>
       <PageHead title="Versions" desc="Every publish is kept. Restore any version to make it live again.">
         <button className="btn ghost" onClick={() => download()}>Export draft</button>
         <button className="btn ghost" onClick={() => file.current?.click()}>Import JSON</button>
         <input ref={file} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])} />
+        {currentEnv === "staging" && <button className="btn" onClick={copyToProduction}>Copy config to Production</button>}
         <button className="btn danger" onClick={reset}>Reset to defaults</button>
       </PageHead>
       <div className="table-wrap">

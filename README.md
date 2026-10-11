@@ -10,8 +10,9 @@ protocol) so players keep their logins and settings; only the player-facing name
 | Folder | What | Dev URL |
 |---|---|---|
 | `game/` | The game: Phaser 3 + TypeScript + Vite ([game/README.md](game/README.md)) | http://localhost:5173 |
-| `admin/` | Admin panel: React + Vite | http://localhost:5174/admin/ |
-| `server/` | API: Cloudflare Worker (Hono) with a D1 database ([DEPLOY.md](DEPLOY.md)) | http://localhost:8787 |
+| `admin/` | Admin panel: React + Vite | http://localhost:5174/ |
+| `server/` | API: Cloudflare Worker (Hono) with a D1 database and PvP Durable Objects ([DEPLOY.md](DEPLOY.md)) | http://localhost:8787 |
+| `website/` | Marketing site (static, [website/README.md](website/README.md)) | open `website/index.html` |
 | `shared/` | Game data and rules used by all three (units, monsters, arenas, economy, config validation) | |
 | `assets/` | The generated art pack, source files ([assets/README.md](assets/README.md)) | |
 
@@ -22,9 +23,9 @@ Needs Node 24+ and Python 3 with Pillow/numpy (only for the asset conversion).
     npm run setup   # installs everything, creates the local database, converts the art
     npm run dev     # starts the API (wrangler dev), game and admin together
 
-The API runs locally in `wrangler dev` with a local copy of the D1 database (in `.wrangler/`).
-For the admin panel, copy `.dev.vars.example` to `.dev.vars` and pick a password. The first
-sign-in at http://localhost:5174/admin/ as `admin` creates that account. In dev the art is
+The API runs locally in `wrangler dev` with a local copy of the D1 database (in `server/.wrangler/`).
+For the admin panel, copy `server/.dev.vars.example` to `server/.dev.vars` and pick a password. The first
+sign-in at http://localhost:5174/ as `admin` creates that account. In dev the art is
 served from `game/public/assets`; production loads it from R2.
 
 ## How the pieces fit
@@ -64,11 +65,13 @@ served from `game/public/assets`; production loads it from R2.
 
 ## Production
 
-It all runs on Cloudflare: one Worker serves the API, the game (`/`) and the admin panel
-(`/admin/`), with a D1 database. The art comes from an R2 bucket. Pushes to master deploy
-automatically. See [DEPLOY.md](DEPLOY.md).
+It all runs on Cloudflare as four Workers: the game (game.crownnkeep.com), the API with its D1
+database (api.crownnkeep.com), the admin panel (manage.crownnkeep.com) and the website
+(crownnkeep.com), each with a staging copy (the admin panel has a Production/Staging switch instead). The art comes from an R2 bucket
+(assets.crownnkeep.com). Deploys are by hand, per app. See [DEPLOY.md](DEPLOY.md) and
+[RELEASING.md](RELEASING.md).
 
-    npm run deploy   # build, migrate the database, deploy (by hand)
+    npm run deploy:api:staging   # or deploy:game, deploy:admin, deploy:website, ...
 
 ## API overview
 

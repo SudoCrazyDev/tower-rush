@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, token, setOnUnauthorized, ApiError, ASSETS } from "./api";
+import { EnvBar } from "./EnvBar";
 import { ConfigProvider, useConfig } from "./config";
 import { Toasts, toast } from "./components";
 import { Dashboard } from "./pages/Dashboard";
@@ -78,12 +79,14 @@ export function App() {
   if (!admin)
     return (
       <>
+        <EnvBar />
         <Login onDone={setAdmin} />
         <Toasts />
       </>
     );
   return (
     <ConfigProvider>
+      <EnvBar />
       <Shell admin={admin} onLogout={() => setAdmin(null)} />
       <Toasts />
     </ConfigProvider>

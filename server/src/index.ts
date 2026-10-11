@@ -1,6 +1,6 @@
 /**
- * Crown & Keep API on Cloudflare Workers. The game and admin panel are static files served
- * by Workers static assets (see wrangler.jsonc); requests that aren't files land here.
+ * Crown & Keep API on Cloudflare Workers (api.crownnkeep.com). The game, admin panel and
+ * website are separate static Workers; see wrangler.jsonc and RELEASING.md.
  */
 import { Hono } from "hono";
 import { ensureConfig } from "./config-store.ts";
@@ -9,10 +9,20 @@ import { player } from "./player.ts";
 import { admin } from "./admin.ts";
 import { pvp } from "./pvp.ts";
 import { play } from "./play.ts";
+import { corsMiddleware, versionGate } from "./gate.ts";
 
 export { Matchmaker, MatchRoom } from "./pvp.ts";
 
 const app = new Hono<AppEnv>();
+
+// Old bookmarks (the API used to serve the game at /) go to the game's own host.
+app.all("*", (c, next) => {
+  if (c.req.path.startsWith("/api/")) return next();
+  return c.redirect(c.env.GAME_URL ?? "https://game.crownnkeep.com/", 301);
+});
+
+app.use("/api/*", corsMiddleware);
+app.use("/api/*", versionGate);
 
 // The shared game tables must hold the live config before any route uses them.
 app.use("/api/*", async (c, next) => {

@@ -21,7 +21,7 @@ export const player = new Hono<AppEnv>();
 player.get("/config", (c) => {
   const cfg = currentConfig();
   // `now` lets the game line its event and offer countdowns up with the server's clock.
-  return c.json({ version: cfg.id, config: cfg.config, now: Date.now() });
+  return c.json({ version: cfg.id, config: cfg.config, now: Date.now(), minClient: c.env.MIN_CLIENT ?? null });
 });
 
 // ---------------------------------------------------------------- auth

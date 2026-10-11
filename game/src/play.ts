@@ -3,7 +3,7 @@
  * solo battle or PvP; if another device has it, ask whether to play here instead. While
  * playing, a heartbeat keeps the slot; if another device takes over, `onPlayLost` fires.
  */
-import { ApiError, deviceId, getToken, post } from "./api";
+import { API_BASE, ApiError, clientHeaders, getToken, post } from "./api";
 import { ensureCss } from "./authOverlay";
 
 export type PlayKind = "battle" | "pvp";
@@ -68,7 +68,7 @@ function stopBeat() {
 addEventListener("pagehide", () => {
   if (!beat) return;
   const token = getToken();
-  fetch("/api/play/release", { method: "POST", keepalive: true, headers: { "X-Device": deviceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }).catch(() => {});
+  fetch(`${API_BASE}/api/play/release`, { method: "POST", keepalive: true, headers: { ...clientHeaders, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }).catch(() => {});
 });
 
 const TAKEOVER_TEXT: Record<PlayKind, string> = {

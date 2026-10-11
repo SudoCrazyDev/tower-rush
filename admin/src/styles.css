@@ -53,7 +53,7 @@ button.icon { background: none; border: none; font-size: 24px; line-height: 1; c
 
 /* layout */
 .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-.side { background: var(--side); color: #c9d2ff; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.side { background: var(--side); color: #c9d2ff; display: flex; flex-direction: column; position: sticky; top: 36px; height: calc(100vh - 36px); }
 .brand { display: flex; align-items: center; gap: 8px; padding: 16px; font-weight: 700; color: #fff4c2; letter-spacing: .5px; }
 .brand img { width: 92px; }
 .side nav { flex: 1; overflow: auto; padding: 0 8px; }
@@ -307,3 +307,13 @@ tr.baseline td { font-style: italic; color: var(--muted); }
 .kit-slot summary { cursor: pointer; }
 .kit-slot-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
 .kit-add { margin-top: 6px; }
+
+/* Environment bar (EnvBar.tsx): red for production, amber for staging. */
+.envbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 12px; height: 36px; box-sizing: border-box; padding: 0 16px; font-size: 13px; color: #fff; }
+.envbar.production { background: #b3261e; }
+.envbar.staging { background: #b26a00; }
+.envbar strong { letter-spacing: .12em; }
+.envbar span { flex: 1; opacity: .9; }
+.envbar .btn { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.4); }
+.shell { min-height: calc(100vh - 36px); }
+.login-wrap { min-height: calc(100vh - 36px); }

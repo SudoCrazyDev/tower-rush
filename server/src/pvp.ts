@@ -10,6 +10,7 @@
  * WebSockets authenticate with the session token as a subprotocol (browsers can't set
  * headers on a WebSocket): `new WebSocket(url, ["tower-rush", token])`.
  */
+import { checkOrigin } from "./gate.ts";
 import { DurableObject } from "cloudflare:workers";
 import { Hono } from "hono";
 import { one, run } from "./db.ts";
@@ -238,6 +239,7 @@ function forward(c: Ctx, stub: DurableObjectStub, userId: number, extra: Record<
  * friend challenge and answers with its code; `?join=CODE` accepts one.
  */
 pvp.get("/queue", async (c) => {
+  checkOrigin(c);
   const userId = await socketPlayer(c);
   const join = normalizeCode(c.req.query("join") ?? "");
   const host = c.req.query("challenge") === "host";
@@ -252,6 +254,7 @@ pvp.get("/queue", async (c) => {
 });
 
 pvp.get("/match/:id", async (c) => {
+  checkOrigin(c);
   const userId = await socketPlayer(c);
   const id = param(c, "id");
   const m = await one<{ p1: number; p2: number | null }>(c.env.DB, "SELECT p1, p2 FROM pvp_matches WHERE id = ?", id);

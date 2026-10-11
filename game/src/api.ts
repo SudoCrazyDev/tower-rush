@@ -52,6 +52,23 @@ export const deviceId = (() => {
   return id;
 })();
 
+/** API origin: "" in dev (Vite proxy), else the API Worker (vite.config.ts). */
+export const API_BASE = __API_BASE__;
+/** Headers every game request carries; the server refuses versions below MIN_CLIENT with 426. */
+export const clientHeaders = { "X-Device": deviceId, "X-Client-Version": __APP_VERSION__ };
+
+/** "2.3.0" < "2.10.0": compares dotted numeric versions. */
+export function versionBelow(a: string, b: string) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) < (pb[i] || 0);
+  return false;
+}
+
+/** Called when this build is older than the server's minimum (426, or config minClient). */
+export let onOutdated: () => void = () => {};
+export const setOnOutdated = (fn: typeof onOutdated) => (onOutdated = fn);
+
 /** Called when the server says the account is banned (any request). */
 export let onBanned: (reason: string | null) => void = () => {};
 export const setOnBanned = (fn: typeof onBanned) => (onBanned = fn);
@@ -60,10 +77,10 @@ export async function api<T = Record<string, unknown>>(method: string, path: str
   const token = getToken() ?? memoryToken;
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       method,
       headers: {
-        "X-Device": deviceId,
+        ...clientHeaders,
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
@@ -74,6 +91,7 @@ export async function api<T = Record<string, unknown>>(method: string, path: str
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
+    if (res.status === 426) onOutdated();
     if (res.status === 403 && data.error === "banned") onBanned((data.reason as string) ?? null);
     throw new ApiError(res.status, String(data.error ?? `Request failed (${res.status})`), data);
   }
@@ -84,3 +102,6 @@ export const get = <T>(path: string) => api<T>("GET", path);
 export const post = <T>(path: string, body: unknown = {}) => api<T>("POST", path, body);
 export const put = <T>(path: string, body: unknown) => api<T>("PUT", path, body);
 export const del = <T>(path: string) => api<T>("DELETE", path);
+
+/** After a WebSocket refusal (browsers hide the 426): a plain request surfaces the update prompt. */
+export const probeVersion = () => void get("/config").catch(() => {});

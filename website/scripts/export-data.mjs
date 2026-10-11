@@ -18,7 +18,7 @@ import {
 import { storyUnlocking } from "../../shared/stories.ts";
 
 // Which art exists (awakened portraits, arena videos) comes from the live asset index on R2.
-const index = await (await fetch("https://assets.depedtoolkit.com/index.json")).json();
+const index = await (await fetch("https://assets.crownnkeep.com/index.json")).json();
 
 // ---- The unit card dialog, worked out the same way as DeckScene.showCard / statsTab (card level 1).
 const hex = (n) => "#" + n.toString(16).padStart(6, "0");

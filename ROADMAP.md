@@ -114,8 +114,8 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
   - D1 replaces SQLite, with the same schema plus a `rev` column. Requests now run
     concurrently, so a profile save only lands if nothing else saved it in between; double
     taps can't double-spend or double-claim.
-  - The art is served from R2 (`assets.depedtoolkit.com`, with CORS).
-  - Live at tower-rush.philiplouis0717.workers.dev. Pushes to master deploy once Workers
+  - The art is served from R2 (`assets.crownnkeep.com` (was assets.depedtoolkit.com), with CORS).
+  - Live at game.crownnkeep.com (was tower-rush.philiplouis0717.workers.dev). Deploys are per app now (see RELEASING.md); this was once Workers
     Builds is connected.
   - Ideas for later: a custom domain, and the Paid plan when traffic grows (then raise the
     password hash cost).

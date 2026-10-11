@@ -537,7 +537,7 @@ p { margin: 0; }
    insets 110/80/60/80) with the name on its ribbon, the card, then DETAILS / STATS tabs. */
 .dlg {
   width: min(640px, 100%); border-radius: 0; background: none; box-shadow: none; overflow: visible;
-  border: solid transparent; border-width: 88px 64px 48px; border-image: url("https://assets.depedtoolkit.com/ui/panel_dialog.webp") 110 80 60 80 fill / 88px 64px 48px;
+  border: solid transparent; border-width: 88px 64px 48px; border-image: url("https://assets.crownnkeep.com/ui/panel_dialog.webp") 110 80 60 80 fill / 88px 64px 48px;
   filter: drop-shadow(0 30px 50px rgba(0, 0, 0, .6));
 }
 .dlg__scroll { max-height: calc(100svh - 32px - 136px); overflow: auto; overscroll-behavior: contain; padding: 0 6px 6px; margin: -14px -14px 0; text-align: center; scrollbar-width: thin; scrollbar-color: var(--brass) transparent; }

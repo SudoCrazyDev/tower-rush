@@ -10,6 +10,14 @@ export interface Bindings {
   AUTH_LIMIT: RateLimit;
   ADMIN_LIMIT: RateLimit;
   ADMIN_USERNAME: string;
+  /** Comma list of browser origins allowed by CORS and WebSocket upgrades (gate.ts). */
+  ALLOWED_ORIGINS?: string;
+  /** Oldest game version still served; older clients get 426 (gate.ts). */
+  MIN_CLIENT?: string;
+  /** Where non-API requests are redirected. */
+  GAME_URL?: string;
+  /** Set only by the local dev script: allows WebSockets without an Origin. */
+  DEV?: string;
   /** Secret, set with `wrangler secret put`. Creates the first admin when there is none. */
   ADMIN_PASSWORD?: string;
 }

@@ -1,8 +1,8 @@
 // Crown & Keep website: renders the codex, heroes, arenas, bosses, the PvP demo and leagues from data/game.js
 // (exported from shared/ by scripts/export-data.mjs). Art is loaded from the game's R2 bucket.
 (() => {
-  const ART = "https://assets.depedtoolkit.com";
-  const GAME_URL = "https://tower-rush.philiplouis0717.workers.dev/";
+  const ART = "https://assets.crownnkeep.com";
+  const GAME_URL = "https://game.crownnkeep.com/";
   const D = window.GAME_DATA;
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];

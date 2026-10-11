@@ -1,0 +1,18 @@
+// Game: static assets only (the built Vite app in dist/). Art comes from R2 (assets.crownnkeep.com).
+// Build first: `npm run build` (prod) or `npm run build:staging`. See RELEASING.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tower-rush-game",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "routes": [{ "pattern": "game.crownnkeep.com", "custom_domain": true }],
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "env": {
+    "staging": {
+      "name": "tower-rush-game-staging",
+      "routes": [{ "pattern": "staging-game.crownnkeep.com", "custom_domain": true }],
+      "observability": { "enabled": true },
+      "assets": { "directory": "./dist", "not_found_handling": "single-page-application" }
+    }
+  }
+}

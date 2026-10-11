@@ -12,8 +12,8 @@ The game's marketing site: a static one-page site (HTML, CSS and vanilla JS, no 
 | `scripts/export-data.mjs` | Writes `data/game.js` |
 
 All art (portraits, arena backgrounds and videos, the trailer) is loaded from the game's R2
-bucket at `https://assets.depedtoolkit.com`, always with `crossorigin="anonymous"`. "Play" buttons
-open the live game at https://tower-rush.philiplouis0717.workers.dev.
+bucket at `https://assets.crownnkeep.com`, always with `crossorigin="anonymous"`. "Play" buttons
+open the live game at https://game.crownnkeep.com.
 
 ## Update the game data
 

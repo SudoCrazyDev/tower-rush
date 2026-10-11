@@ -1,0 +1,11 @@
+// Admin panel: static assets only (the built Vite app in dist/). One app for both
+// environments: it picks the Production or Staging API at runtime (src/env.ts).
+// Put Cloudflare Access in front of manage.crownnkeep.com. See RELEASING.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tower-rush-admin",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "routes": [{ "pattern": "manage.crownnkeep.com", "custom_domain": true }],
+  "assets": { "directory": "./dist" }
+}

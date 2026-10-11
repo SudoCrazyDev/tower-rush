@@ -1,0 +1,75 @@
+// Cloudflare Worker: the API only (Hono, D1, Durable Objects). The game, admin panel and
+// website are separate static Workers (game/, admin/, website/). See DEPLOY.md and RELEASING.md.
+// Wrangler envs don't inherit bindings, so env.staging repeats them.
+// `npm run dev` (local) overrides ALLOWED_ORIGINS and sets DEV with --var; see package.json.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tower-rush",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "routes": [{ "pattern": "api.crownnkeep.com", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tower-rush",
+      "database_id": "8633ac1c-c935-448e-9473-05d5554e6df3",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Sign-in attempts per IP per minute.
+  "ratelimits": [
+    { "name": "AUTH_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+    { "name": "ADMIN_LIMIT", "namespace_id": "1002", "simple": { "limit": 5, "period": 60 } }
+  ],
+  // PvP: one matchmaker plus one room per match (src/pvp.ts, PVP.md).
+  "durable_objects": {
+    "bindings": [
+      { "name": "MATCHMAKER", "class_name": "Matchmaker" },
+      { "name": "MATCH", "class_name": "MatchRoom" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Matchmaker", "MatchRoom"] }],
+  // ALLOWED_ORIGINS: browser origins for CORS and WebSocket upgrades (comma list).
+  // MIN_CLIENT: oldest game version still served; older clients get 426 and must reload.
+  // GAME_URL: where non-API requests are redirected.
+  "vars": {
+    "ADMIN_USERNAME": "admin",
+    "ALLOWED_ORIGINS": "https://game.crownnkeep.com,https://manage.crownnkeep.com",
+    "MIN_CLIENT": "2.3.0",
+    "GAME_URL": "https://game.crownnkeep.com/"
+  },
+  // Secret (not in this file): ADMIN_PASSWORD, used once to create the first admin.
+  "env": {
+    "staging": {
+      "name": "tower-rush-staging",
+      "routes": [{ "pattern": "staging-api.crownnkeep.com", "custom_domain": true }],
+      "observability": { "enabled": true },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tower-rush-staging",
+          "database_id": "7a9cd407-6eb7-415e-8367-d00309e64e97",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "ratelimits": [
+        { "name": "AUTH_LIMIT", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } },
+        { "name": "ADMIN_LIMIT", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } }
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "MATCHMAKER", "class_name": "Matchmaker" },
+          { "name": "MATCH", "class_name": "MatchRoom" }
+        ]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Matchmaker", "MatchRoom"] }],
+      "vars": {
+        "ADMIN_USERNAME": "admin",
+        "ALLOWED_ORIGINS": "https://staging-game.crownnkeep.com,https://manage.crownnkeep.com,http://localhost:5173,http://localhost:5174",
+        "MIN_CLIENT": "2.3.0",
+        "GAME_URL": "https://staging-game.crownnkeep.com/"
+      }
+    }
+  }
+}

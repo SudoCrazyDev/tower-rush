@@ -11,7 +11,7 @@ import { PvpScene } from "./scenes/PvpScene";
 import { StoryScene } from "./scenes/StoryScene";
 import { W, H } from "./ui";
 import { RES } from "./display";
-import { setOnBanned, setToken } from "./api";
+import { setOnBanned, setOnOutdated, setToken } from "./api";
 import { showBlocker } from "./authOverlay";
 import { BASE } from "./assets";
 
@@ -36,6 +36,31 @@ setOnBanned((reason) =>
     },
   }),
 );
+
+/** Reload with a cache-busting query; at most once per 30 s so a stale cache can't loop. */
+function updateNow() {
+  const KEY = "tower-rush-update-at";
+  let last = 0;
+  try {
+    last = Number(sessionStorage.getItem(KEY)) || 0;
+  } catch {
+    // Storage blocked: no guard possible beyond the player's own click.
+  }
+  if (Date.now() - last < 30_000) return outdated("Still loading the new version. Wait a few seconds, then try again.");
+  try {
+    sessionStorage.setItem(KEY, String(Date.now()));
+  } catch {
+    // As above.
+  }
+  const url = new URL(location.href);
+  url.searchParams.set("update", String(Date.now()));
+  location.replace(url.toString());
+}
+
+function outdated(message = "Crown & Keep has been updated. Reload to get the latest version.") {
+  showBlocker("New version available", message, { label: "UPDATE", onClick: updateNow });
+}
+setOnOutdated(() => outdated());
 
 async function start() {
   // Make sure the display font is ready before any text is rasterised.

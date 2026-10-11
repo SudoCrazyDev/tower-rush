@@ -20,7 +20,7 @@ const DB = "tower-rush";
 const SCOPE = /^(Monster trait icons|Perk icons|Archetype icons|Element emblems|Race crests|VFX: .*|Weapons \((generic|signature)\)|v2.1 Arts Requirements)$/;
 
 const wrangler = (cmd) =>
-  JSON.parse(execFileSync("npx", ["wrangler", "d1", "execute", DB, "--remote", "--json", "--command", `"${cmd}"`], { cwd: ROOT, shell: true, encoding: "utf8", maxBuffer: 1 << 26 }))[0].results;
+  JSON.parse(execFileSync("npx", ["wrangler", "d1", "execute", DB, "-c", "server/wrangler.jsonc", "--remote", "--json", "--command", `"${cmd}"`], { cwd: ROOT, shell: true, encoding: "utf8", maxBuffer: 1 << 26 }))[0].results;
 
 const reqs = new Map(artRequests({ units_awakened: [], portraits_awakened: [] }).filter((r) => SCOPE.test(r.group)).map((r) => [r.id, r]));
 const rows = wrangler("SELECT id,url,status FROM art_requests WHERE status='ready'");

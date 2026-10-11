@@ -1,7 +1,19 @@
 // Marketing site: static assets only (no Worker code, no bindings).
-// Deploy from this folder: npx wrangler deploy
+// Deploy from the repo root: npm run deploy:website (or :staging). See RELEASING.md.
 {
+  "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "crown-and-keep",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "." }
+  "routes": [
+    { "pattern": "crownnkeep.com", "custom_domain": true },
+    { "pattern": "www.crownnkeep.com", "custom_domain": true }
+  ],
+  "assets": { "directory": "." },
+  "env": {
+    "staging": {
+      "name": "crown-and-keep-staging",
+      "routes": [{ "pattern": "staging.crownnkeep.com", "custom_domain": true }],
+      "assets": { "directory": "." }
+    }
+  }
 }
