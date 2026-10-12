@@ -6,6 +6,7 @@
 - Hotfix `2.4.1-forge-parts`: resets the `walking_forge` boss parts again for the new part HP (legs 0.25, cannons 0.5, furnace 0.7 of the core). A separate id, because staging had already applied `2.4.1-forge`.
 - Hotfix `2.4.1-forge-speed`: resets the `walking_forge` speed in a saved config (12 to 8).
 - Hotfix `2.4.1-forge-haste`: resets the `walking_forge` boss parts so broken legs speed the furnace up 3.5x instead of 2x.
+- Hotfix `2.4.1-forge-repair`: resets the `walking_forge` boss parts (legs regrow, lower cannon and furnace HP) and the `b2s4c2` forge lines.
 
 ## 1.1.0
 - Shared battle rules and story data for Book 2 Story 5 (the Silver Tribunal): `chapterDeck` gives trial witnesses their level, the story config validates the new chapter mechanics, new unit and monsters.

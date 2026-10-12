@@ -38,4 +38,7 @@ export interface PartState {
   hp: number;
   max: number;
   broken: boolean;
+  /** A broken part with BossPart.repair: when it started to regrow, and the boss's speed multiplier before it broke. */
+  repairFrom?: number;
+  speedBefore?: number;
 }

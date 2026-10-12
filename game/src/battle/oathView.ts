@@ -108,6 +108,12 @@ export class OathView {
         }
         break;
       case "part": {
+        if (!e.broken) {
+          // A part that regrew (BossPart.repair): the Forge's legs walk on.
+          s.vfx("hit_impact", e.x, e.y, 200);
+          banner(s, `${e.name.toUpperCase()} REPAIRED!`, "#ff8a3b", 50, 480);
+          break;
+        }
         s.cameras.main.shake(300, 0.012);
         s.vfx("hit_impact", e.x, e.y, 260);
         s.vfx("fire_explosion", e.x, e.y, 200);
@@ -146,13 +152,17 @@ export class OathView {
       const y = this.rows.indexOf(row) * ROW;
       const color = COLORS[p.id] ?? 0xb48cff;
       row.bar.clear();
-      if (p.broken) row.bar.fillStyle(0x3b4270, 0.6).fillRoundedRect(-206, y - 18, 412, 36, 12);
+      if (p.broken) {
+        row.bar.fillStyle(0x3b4270, 0.6).fillRoundedRect(-206, y - 18, 412, 36, 12);
+        // Regrowing (BossPart.repair): the HP fills back in, dimmed, until the part stands again.
+        if (p.repairFrom !== undefined && frac > 0) row.bar.fillStyle(color, 0.35).fillRoundedRect(-206, y - 18, Math.max(14, 412 * frac), 36, 12);
+      }
       else {
         row.bar.fillStyle(color, 0.9).fillRoundedRect(-206, y - 18, Math.max(14, 412 * frac), 36, 12);
         if (target?.id === p.id) row.bar.lineStyle(5, 0xffffff, 1).strokeRoundedRect(-208, y - 20, 416, 40, 13);
       }
       row.label.setColor(p.broken ? "#8a90b8" : "#ffffff");
-      row.note.setText(p.broken ? "BROKEN" : p.id === "core" && armored ? "ARMORED" : target?.id === p.id ? "AIMING" : "TAP TO AIM");
+      row.note.setText(p.broken ? (p.repairFrom !== undefined ? "REPAIRING" : "BROKEN") : p.id === "core" && armored ? "ARMORED" : target?.id === p.id ? "AIMING" : "TAP TO AIM");
     }
   }
 }

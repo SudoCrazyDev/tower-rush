@@ -231,6 +231,11 @@ export interface BossPart {
   slow?: number;
   /** Breaking it makes the skills of part `part` fire `mult` times as often (the stuck Forge stokes its furnace). */
   haste?: { part: string; mult: number };
+  /**
+   * A broken part regrows: its HP fills over `time` seconds up to `keep` x its last max, then it stands again (the Forge's
+   * legs walk on and its furnace cools back). It can't be hit while it regrows, and it can break and regrow again.
+   */
+  repair?: { time: number; keep: number };
 }
 
 /**
@@ -370,16 +375,16 @@ export const DEFAULT_BOSSES: BossDef[] = [
     id: "ashmaw", name: "Ashmaw, the Dragon Mother", race: "dragon", hp: 1.4, speed: 30, power: "summon", minion: "drake_whelp",
   },
   {
-    // One moving boss for the whole chapter. Legs slow it, cannons shell units, the furnace makes iron soldiers, the core (the Anvil-Heart) ends it.
+    // One moving boss for the whole chapter. Legs stop it (and regrow), cannons shell units, the furnace makes iron soldiers, the core (the Anvil-Heart) ends it.
     id: "walking_forge", name: "The Walking Forge", race: "construct", hp: 5.0, speed: 8, power: "none", minion: "iron_soldier", corrupted: true,
     skills: [
       { kind: "impale", every: 9, first: 6, n: 2, dur: 4, part: "cannons" },
       { kind: "sapling_trail", every: 7, first: 4, n: [1, 2], part: "furnace" },
     ],
     parts: [
-      { id: "legs", name: "Legs", hp: 0.25, slow: 0, haste: { part: "furnace", mult: 3.5 } },
-      { id: "cannons", name: "Cannons", hp: 0.5 },
-      { id: "furnace", name: "Furnace", hp: 0.7 },
+      { id: "legs", name: "Legs", hp: 0.25, slow: 0, haste: { part: "furnace", mult: 3.5 }, repair: { time: 30, keep: 0.6 } },
+      { id: "cannons", name: "Cannons", hp: 0.35 },
+      { id: "furnace", name: "Furnace", hp: 0.5 },
       { id: "core", name: "Anvil-Heart", hp: 1 },
     ],
     coreArmor: 0.3,

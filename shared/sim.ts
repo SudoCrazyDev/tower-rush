@@ -2375,7 +2375,11 @@ export class Sim {
 
   private partBroken(m: SimMonster, part: PartState) {
     const def = m.boss!.parts!.find((p) => p.id === part.id);
-    if (def?.slow !== undefined) m.speedMult *= def.slow;
+    if (def?.slow !== undefined) {
+      part.speedBefore = m.speedMult;
+      m.speedMult *= def.slow;
+    }
+    if (def?.repair && part.id !== "core") part.repairFrom = this.now;
     if (m.focus === part.id) m.focus = null;
     const p = m.pos;
     this.emit({ type: "part", t: this.now, uid: m.uid, part: part.id, name: part.name, broken: true, x: p.x, y: p.y });
@@ -2411,10 +2415,31 @@ export class Sim {
       this.forgePayAt += OATH.forgePay;
       this.gainMana(Math.round(f.mana * OATH.forgePay), null, null, "wave");
     }
+    this.tickRepair(m);
     if (this.now >= this.forgeHintAt) {
       this.forgeHintAt = this.now + f.hintEvery;
       const next = m.parts.find((p) => !p.broken && p.id !== "core") ?? m.parts.find((p) => p.id === "core");
       if (next) this.forgeBark(`hint_${next.id}`, 0);
+    }
+  }
+
+  /** Broken parts with BossPart.repair regrow; a full one stands again at `keep` of its last max. */
+  private tickRepair(m: SimMonster) {
+    for (const part of m.parts) {
+      if (!part.broken || part.repairFrom === undefined) continue;
+      const r = m.boss!.parts!.find((d) => d.id === part.id)!.repair!;
+      const max = part.max * r.keep;
+      part.hp = Math.min(max, (max * (this.now - part.repairFrom)) / r.time);
+      if (this.now - part.repairFrom < r.time) continue;
+      part.max = part.hp = max;
+      part.broken = false;
+      part.repairFrom = undefined;
+      const def = m.boss!.parts!.find((d) => d.id === part.id)!;
+      if (def.slow !== undefined) m.speedMult = def.slow ? m.speedMult / def.slow : (part.speedBefore ?? 1);
+      const p = m.pos;
+      this.emit({ type: "part", t: this.now, uid: m.uid, part: part.id, name: part.name, broken: false, x: p.x, y: p.y });
+      this.log(`${m.boss!.name}: ${part.name} repaired`, "boss");
+      this.forgeBark(`repaired_${part.id}`, 0.5);
     }
   }
 
