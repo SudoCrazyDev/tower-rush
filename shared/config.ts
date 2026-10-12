@@ -68,6 +68,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   // Walking Forge: hpScale 12 made its iron minions ~1200 HP; the wave's minionHp 0.1 brings them to ~120.
   // Broken legs now stop it dead and double its furnace (parts), with Brakka's lines to match (forge).
   "2.4.1-forge": { units: {}, effects: {}, chapters: { b2s4c2: ["waves", "forge"] }, bosses: { walking_forge: ["parts"] } },
+  // Walking Forge part HP: legs 0.45 -> 0.25 of the core, cannons 0.4 -> 0.5, furnace 0.4 -> 0.7 (it must last while it spawns).
+  "2.4.1-forge-parts": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

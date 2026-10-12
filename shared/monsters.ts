@@ -377,9 +377,9 @@ export const DEFAULT_BOSSES: BossDef[] = [
       { kind: "sapling_trail", every: 7, first: 4, n: [1, 2], part: "furnace" },
     ],
     parts: [
-      { id: "legs", name: "Legs", hp: 0.45, slow: 0, haste: { part: "furnace", mult: 2 } },
-      { id: "cannons", name: "Cannons", hp: 0.4 },
-      { id: "furnace", name: "Furnace", hp: 0.4 },
+      { id: "legs", name: "Legs", hp: 0.25, slow: 0, haste: { part: "furnace", mult: 2 } },
+      { id: "cannons", name: "Cannons", hp: 0.5 },
+      { id: "furnace", name: "Furnace", hp: 0.7 },
       { id: "core", name: "Anvil-Heart", hp: 1 },
     ],
     coreArmor: 0.3,

@@ -8,6 +8,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Fix: the Walking Forge part bars (The Iron Oath, chapter 2) can now be tapped on desktop. In the wide layout their tap targets had been offset by the camera scroll.
 - Balance: the Walking Forge's iron minions (The Iron Oath, chapter 2) have a tenth of their old HP. A new wave option, `StoryWave.minionHp: 0.1`, brings the soldier from about 1188 to 119 HP; the Forge keeps 243,000.
 - Balance: breaking the Walking Forge's legs now stops it dead, where before it only slowed. In return its furnace spawns iron soldiers twice as often, every 3.5 s instead of 7 s. New `BossPart.haste`; Brakka's lines updated to match.
+- Balance: the Walking Forge's parts are rebalanced. The legs drop from 109,350 to 60,750 HP (0.45 to 0.25 of the core), the cannons rise from 97,200 to 121,500 (0.4 to 0.5) and the furnace from 97,200 to 170,100 (0.4 to 0.7), so it keeps spawning longer. The core keeps 243,000.
 
 ## 2.4.0
 - Book 2 Story 5, "The Silver Tribunal": pleas and laws, the confiscated deck and cells, chains, the Great Scale, the collapsing city, Argent. New card Argent, the Merciful and badge Unbroken. See docs/features/v2.4-the-silver-tribunal.
