@@ -5,6 +5,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 ## 2.4.1
 - Hotfix: in The Throne of Dust (Book 2 Story 3, chapter 3) any unit can be dragged onto an empty tile, so you can reach the braziers. Driven by a new chapter flag, `ChapterMechanics.freeMove`; `ADDED_MECHANICS` copies it into saved configs, which would otherwise hide it. Only the game changed; the API did not, and `MIN_CLIENT` stays 2.4.0.
 - Hotfix: in The Iron Oath (Book 2 Story 4, chapter 1) families no longer die at the start of the road. Hunters dive only on a family ahead of them, within 15% of the path (it was 30% in either direction), and only 6 s after spawning (it was 3 s). Ships with API 1.1.1, which resets the saved chapter.
+- Fix: on the Event deck pick screen (The Iron Oath) a dwarf's info line showed "(undefined)" in place of its role; it now shows its race, like the card label.
 - Fix: the Walking Forge part bars (The Iron Oath, chapter 2) can now be tapped on desktop. In the wide layout their tap targets had been offset by the camera scroll.
 - Balance: the Walking Forge's iron minions (The Iron Oath, chapter 2) have a tenth of their old HP. A new wave option, `StoryWave.minionHp: 0.1`, brings the soldier from about 1188 to 119 HP; the Forge keeps 243,000.
 - Balance: breaking the Walking Forge's legs now stops it dead, where before it only slowed. In return its furnace spawns iron soldiers twice as often, every 3.5 s instead of 7 s. New `BossPart.haste`; Brakka's lines updated to match.

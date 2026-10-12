@@ -246,7 +246,8 @@ export class StoryScene extends Phaser.Scene {
         else if (picked.size < ed.pick) picked.add(id);
         else sfx("error");
         const effect = kitSummary(def, 1).join("\n");
-        info.setText(`${def.name} (${def.role}): ${def.blurb}\n${effect}`);
+        // Dwarves have a race but no role (the card label falls back the same way).
+        info.setText(`${def.name} (${def.role ?? def.race}): ${def.blurb}\n${effect}`);
         refresh();
       });
     });
