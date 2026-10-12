@@ -78,6 +78,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.4.1-forge-repair": { units: {}, effects: {}, chapters: { b2s4c2: ["forge"] }, bosses: { walking_forge: ["parts"] } },
   // Leg repair 30 s -> 55 s.
   "2.4.1-forge-repair-55": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
+  // Chaos-Iron Colossus grows more per iron monster eaten: absorb amount 0.04 -> 0.05 (4% -> 5% HP each).
+  "2.4.1-colossus": { units: {}, effects: {}, bosses: { chaos_colossus: ["skills"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

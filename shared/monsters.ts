@@ -393,7 +393,7 @@ export const DEFAULT_BOSSES: BossDef[] = [
     // Durgrim's grief, torn out of him into all the iron. It eats every iron enemy alive and grows with each one; the rally (the dwarves and the knights) shoves it back once.
     id: "chaos_colossus", name: "The Chaos-Iron Colossus", race: "construct", hp: 6.5, speed: 13, power: "none", corrupted: true,
     skills: [
-      { kind: "absorb", every: 4, first: 2, n: 99, amount: 0.04 },
+      { kind: "absorb", every: 4, first: 2, n: 99, amount: 0.05 },
       { kind: "impale", every: 8, first: 7, n: 2, dur: 4 },
     ],
     rally: { at: 0.55, damage: 0.3, speed: 1.1 },

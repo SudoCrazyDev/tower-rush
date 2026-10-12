@@ -8,6 +8,7 @@
 - Hotfix `2.4.1-forge-haste`: resets the `walking_forge` boss parts so broken legs speed the furnace up 3.5x instead of 2x.
 - Hotfix `2.4.1-forge-repair`: resets the `walking_forge` boss parts (legs regrow, lower cannon and furnace HP) and the `b2s4c2` forge lines.
 - Hotfix `2.4.1-forge-repair-55`: resets the `walking_forge` boss parts again, so the legs take 55 s to regrow instead of 30 s.
+- Hotfix `2.4.1-colossus`: resets the `chaos_colossus` skills in a saved config, so each iron monster it absorbs adds 5% HP instead of 4%.
 
 ## 1.1.0
 - Shared battle rules and story data for Book 2 Story 5 (the Silver Tribunal): `chapterDeck` gives trial witnesses their level, the story config validates the new chapter mechanics, new unit and monsters.
