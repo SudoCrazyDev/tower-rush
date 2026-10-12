@@ -1362,7 +1362,29 @@ export const bookSlots = (b: BookDef) => Math.max(b.stories.length, b.planned ??
 
 /** The saved books of a config: `books`, or a legacy single `book` followed by the Book 2 placeholder. */
 export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
-  return withAddedStories(c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2]);
+  return withAddedMechanics(withAddedStories(c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2]));
+}
+
+/**
+ * Chapter mechanics added to the defaults after configs were saved: copied from the default chapter
+ * into a saved chapter that lacks the key (an admin value, once saved, wins).
+ */
+export const ADDED_MECHANICS: Record<string, (keyof ChapterMechanics)[]> = { b2s3c3: ["freeMove"] };
+function withAddedMechanics(books: BookDef[]): BookDef[] {
+  const defaults = new Map([DEFAULT_BOOK, DEFAULT_BOOK2].flatMap((b) => b.stories.flatMap((s) => s.chapters.map((c) => [c.id, c] as const))));
+  return books.map((b) => ({
+    ...b,
+    stories: b.stories.map((s) => ({
+      ...s,
+      chapters: s.chapters.map((c) => {
+        const keys = ADDED_MECHANICS[c.id]?.filter((k) => c.mechanics?.[k] === undefined && defaults.get(c.id)?.mechanics?.[k] !== undefined);
+        if (!keys?.length) return c;
+        const mechanics = { ...c.mechanics };
+        for (const k of keys) Object.assign(mechanics, { [k]: structuredClone(defaults.get(c.id)!.mechanics![k]) });
+        return { ...c, mechanics };
+      }),
+    })),
+  }));
 }
 
 /**
