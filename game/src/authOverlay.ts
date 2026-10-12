@@ -25,9 +25,9 @@ const css = (base: string) => `
 .tr-auth form { flex: none; width: min(400px, calc(100vw - 24px)); box-sizing: border-box; position: relative; color: #fff; text-align: center;
   border-style: solid; border-width: 66px 46px 36px;
   border-image: url(${base}ui/panel_dialog.webp) 110 80 60 / 66px 48px 36px stretch;
-  background: linear-gradient(#0d2150, #112656) padding-box; padding: 0 8px 4px;
+  background: linear-gradient(#0d2150, #112656) padding-box; padding: 14px 8px 4px;
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.55)); animation: tr-pop .18s cubic-bezier(.34,1.56,.64,1); }
-.tr-auth h2 { margin: -49px -30px 26px; font-size: 27px; line-height: 32px; font-weight: 400; color: #fff4c2; white-space: nowrap;
+.tr-auth h2 { margin: -63px -30px 26px; font-size: 27px; line-height: 32px; font-weight: 400; color: #fff4c2; white-space: nowrap;
   -webkit-text-stroke: 6px #14183a; paint-order: stroke fill; text-shadow: 0 3px 0 #14183a; }
 .tr-auth p { margin: 0 0 14px; color: #c9d2ff; font: 14px/1.45 system-ui, sans-serif; }
 .tr-auth input { width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 12px 14px; border-radius: 12px; border: 3px solid #050c26;

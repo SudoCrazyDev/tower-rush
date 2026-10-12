@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.5.2
+- Sign-in panels: the first line under the title no longer touches the panel's top frame (14 px more room; the title stays on the ribbon).
+
 ## 2.5.1
 - Welcome, sign in, create account, forgot/reset password and the other HTML panels now use the game's art: the logo above, the gold-framed dialog panel with the title on its ribbon, the 9-slice yellow and green buttons, dark inset fields with a gold focus ring, and a gold checkbox. The backdrop behind is blurred.
 
