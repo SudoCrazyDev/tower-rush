@@ -1,5 +1,9 @@
 # Website changelog
 
+## 1.1.3
+- Trophy leagues: every league wears an ornate frame (the legendary one recoloured bronze, silver, gold, platinum and diamond; the flaming mythic one for Master and Champion) with a glow that grows each step. The frame's own backdrop now fills the card, so the lighter square behind the content is gone.
+- PvP: the toy duel demo is replaced by a 48-second recording of a real Mirror match (sends, merges, boss waves, a leak, the victory screen). It plays muted on a loop while on screen, from `assets.crownnkeep.com/video/pvp_highlights.mp4` with a poster frame. The rules and mode cards below it stay.
+
 ## 1.1.2
 - Latest news on the home page shows only the latest five releases (v2.4 featured, then v2.3, v2.2, v2.1, v2.0) in two columns; older posts are left to the release notes. Adds the missing v2.2.0 and v2.0.0 posts.
 

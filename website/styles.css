@@ -364,13 +364,13 @@ p { margin: 0; }
 .earn__card dd { font: 400 18px/1 var(--display); color: var(--muted); }
 .earn__card dd.pos { color: var(--green); }
 .earn__card dd.neg { color: #ff8095; }
-/* Leagues as a staircase: each step sits higher than the one before. */
 /* Leagues as a staircase: every card is the same size and each sits a step higher than the last. */
 .ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; }
-.rung { position: relative; margin-bottom: calc(var(--i) * 22px); text-align: center; padding: 24px 18px 20px; border-radius: 20px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 30%, var(--panel)), color-mix(in srgb, var(--c) 8%, var(--panel))); box-shadow: 0 16px 24px rgba(0, 0, 0, .45); display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
-.rung::before { /* the unit-card frame art, 9-sliced so its corners and ornaments keep their shape */
-  content: ""; position: absolute; inset: -9px; pointer-events: none; z-index: 1;
-  border: 38px solid transparent; border-image: var(--frame) 30% stretch; filter: var(--tint) drop-shadow(0 4px 4px rgba(0, 0, 0, .5));
+.rung { position: relative; isolation: isolate; margin-bottom: calc(var(--i) * 22px); text-align: center; padding: 30px 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .2s; }
+.rung::before { /* the frame art, 9-sliced and filled so its own backdrop covers the whole card */
+  content: ""; position: absolute; inset: -6px; z-index: -1; pointer-events: none;
+  border: 40px solid transparent; border-image: var(--frame) 30% fill stretch;
+  filter: var(--tint) drop-shadow(0 0 calc(4px + var(--i) * 3px) color-mix(in srgb, var(--c) 55%, transparent)) drop-shadow(0 14px 14px rgba(0, 0, 0, .55));
 }
 .rung:hover { transform: translateY(-6px); }
 .rung > img { width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
@@ -383,62 +383,15 @@ p { margin: 0; }
 .rung__reward img { width: 20px; height: 20px; object-fit: contain; }
 .ladder__note { text-align: center; color: var(--muted); max-width: 720px; margin: 28px auto 0; }
 
-/* ---------- PvP demo ---------- */
+/* ---------- PvP match video ---------- */
+.duel { position: relative; margin: 0; border-radius: 24px; overflow: hidden; background: #0d1235; aspect-ratio: 16 / 9; box-shadow: 0 20px 40px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 59, 92, .35); }
+.duel video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.duel__live { position: absolute; right: 14px; top: 14px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(5, 8, 25, .7); font-size: 13px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.duel__live i { width: 9px; height: 9px; border-radius: 50%; background: #ff3b5c; box-shadow: 0 0 8px #ff3b5c; animation: blink 1.4s infinite; }
+@keyframes blink { 50% { opacity: .3; } }
 .section--pvp .section__head { margin-bottom: 32px; }
-.duel { position: relative; border-radius: 24px; overflow: hidden; background: #0d1235; box-shadow: 0 20px 40px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 59, 92, .35); }
-.duel__top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 12px 18px; background: linear-gradient(90deg, rgba(58, 160, 255, .25), transparent 40%, transparent 60%, rgba(255, 59, 92, .25)); }
-.duel__side { display: flex; align-items: center; gap: 12px; font: 400 22px/1 var(--display); }
-.duel__side--r { justify-content: flex-end; }
-.duel__hp { display: flex; align-items: center; gap: 4px; padding: 4px 12px 4px 4px; border-radius: 999px; background: rgba(0, 0, 0, .4); }
-.duel__hp img { width: 28px; height: 28px; }
-.duel__hp i { font-style: normal; min-width: 2ch; }
-.duel__hp.is-leak { animation: leak .4s; }
-@keyframes leak { 40% { background: rgba(255, 59, 92, .7); transform: scale(1.12); } }
-.duel__clock { text-align: center; display: flex; flex-direction: column; }
-.duel__clock b { font: 400 24px/1 var(--display); color: var(--gold); }
-.duel__clock span { font-size: 13px; color: var(--muted); font-weight: 800; }
-.duel__boards { display: flex; justify-content: center; align-items: center; gap: 18px; padding: 16px; background: radial-gradient(ellipse at center, rgba(255, 59, 92, .18), transparent 70%); }
-.duel__vs { font: 400 40px/1 var(--display); color: var(--gold); text-shadow: 0 4px 0 #b35a00, 0 0 24px rgba(255, 201, 60, .5); }
-.board { position: relative; width: min(300px, 40vw); aspect-ratio: 750 / 1334; overflow: hidden; border-radius: 16px; box-shadow: 0 0 0 3px rgba(58, 160, 255, .7), 0 12px 30px rgba(0, 0, 0, .5); }
-.board--r { box-shadow: 0 0 0 3px rgba(255, 59, 92, .7), 0 12px 30px rgba(0, 0, 0, .5); }
-.board__bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.board.is-hit { animation: hitflash .5s; }
-@keyframes hitflash { 30% { box-shadow: 0 0 0 5px #ff3b5c, 0 0 40px rgba(255, 59, 92, .8); } }
-.board__units, .board__foes { position: absolute; inset: 0; }
-.board__foes { z-index: 2; }
-.foe-run { position: absolute; width: 13%; aspect-ratio: 1; translate: -50% -60%; transition: opacity .2s; }
-.foe-run img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); }
-.foe-run::after { /* health bar */
-  content: ""; position: absolute; left: 15%; top: -8%; width: calc(70% * var(--hp, 1)); height: 4px; border-radius: 2px; background: var(--green);
-}
-.foe-run.is-sent img { filter: drop-shadow(0 0 5px rgba(255, 59, 92, 1)); }
-.foe-run.is-sent::after { background: #ff5577; }
-.foe-run.is-boss { width: 24%; }
-.foe-run.is-dead { animation: pop .3s reverse forwards; }
 .tower { position: absolute; width: 11%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 4px 8px rgba(0, 0, 0, .5); background: var(--panel); }
 .tower img { width: 100%; height: 100%; object-fit: cover; }
-.duel__bar { display: flex; align-items: center; gap: 16px; padding: 12px 18px; background: rgba(0, 0, 0, .35); flex-wrap: wrap; }
-.duel__mana { display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; }
-.duel__mana img { width: 40px; height: 40px; grid-row: span 2; }
-.duel__mana b { font: 400 26px/1 var(--display); color: #8fd8ff; }
-.duel__mana span { font-size: 12px; font-weight: 800; color: var(--green); }
-.duel__sends { display: flex; gap: 8px; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
-.send { position: relative; width: 72px; padding: 6px 4px 4px; border: 0; border-radius: 14px; background: linear-gradient(180deg, #7a2335, #3e1020); box-shadow: inset 0 0 0 2px rgba(255, 120, 140, .5), 0 4px 0 rgba(0, 0, 0, .4); color: #fff; cursor: pointer; font: inherit; transition: transform .1s, filter .2s; }
-.send:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.15); }
-.send:disabled { cursor: not-allowed; filter: grayscale(.8) brightness(.6); }
-.send > img { width: 44px; height: 44px; object-fit: contain; display: block; margin: 0 auto; }
-.send em { position: absolute; right: 6px; top: 4px; font: 400 14px/1 var(--display); font-style: normal; }
-.send i { position: absolute; left: 6px; top: 4px; font-style: normal; font-size: 12px; font-weight: 900; color: #7dff7a; }
-.send span { display: flex; align-items: center; justify-content: center; gap: 2px; font-weight: 900; font-size: 13px; }
-.send span img { width: 16px; height: 16px; }
-.send small { position: absolute; inset: 0; display: grid; place-items: center; font: 400 20px/1 var(--display); color: #fff; text-shadow: 0 2px 0 #000; pointer-events: none; }
-.send small:empty { display: none; }
-.send.is-fired { animation: fire .35s; }
-@keyframes fire { 40% { transform: translateY(-8px) scale(1.08); box-shadow: inset 0 0 0 2px #fff, 0 0 24px rgba(255, 59, 92, .9); } }
-.duel__end { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(5, 8, 25, .78); backdrop-filter: blur(3px); }
-.duel__end[hidden] { display: none; }
-.duel__end img { width: min(420px, 80%); }
-.duel__end p { font: 400 22px/1 var(--display); color: var(--gold-text); }
 .duel__rules { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; padding: 0; }
 .duel__rules li { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 18px 14px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 0 0 2px var(--line); }
 .duel__rules img { width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .5)); }
@@ -620,7 +573,6 @@ p { margin: 0; }
   .mode--story { grid-row: auto; }
   .news { grid-template-columns: 1fr; }
   .earn { grid-template-columns: 1fr; }
-  .duel__sends { justify-content: center; }
   .cards { grid-template-columns: repeat(6, 1fr); }
   .shelf:not(.is-open) .card:nth-child(n + 7) { display: none; }
   .heroes__stage { grid-template-columns: 1fr; min-height: 0; }
@@ -665,14 +617,6 @@ p { margin: 0; }
   .bosses { grid-template-columns: repeat(2, 1fr); }
   .ladder { grid-template-columns: repeat(2, 1fr); }
   .ladder .rung:last-child { grid-column: span 2; }
-  .duel__top { padding: 10px; gap: 6px; }
-  .duel__side { font-size: 17px; gap: 6px; }
-  .duel__clock b { font-size: 19px; }
-  .duel__boards { gap: 8px; padding: 10px 6px; }
-  .duel__vs { font-size: 24px; }
-  .send { width: 62px; }
-  .send > img { width: 36px; height: 36px; }
-  .duel__mana { width: 100%; justify-content: center; }
 }
 
 /* ---------- v2.1 book 2 ---------- */

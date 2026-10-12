@@ -235,25 +235,12 @@
       <div class="section__head">
         <span class="eyebrow eyebrow--red">Real-time PvP</span>
         <h2>A duel, up close</h2>
-        <p>Two boards, the same waves on the same clock. Hold your keep and flood your rival's with monsters. Try the send buttons below.</p>
+        <p>Two boards, the same waves on the same clock. Hold your keep and flood your rival's with monsters. This is a real match, recorded in the game.</p>
       </div>
-      <div class="duel" id="duel">
-        <div class="duel__top">
-          <div class="duel__side"><b>You</b><span class="duel__hp"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/items/heart_life.webp" alt="HP" loading="lazy" /><i data-hp="0">20</i></span></div>
-          <div class="duel__clock"><b id="duelWave">WAVE 1</b><span id="duelNext">next wave in 20s</span></div>
-          <div class="duel__side duel__side--r"><span class="duel__hp"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/items/heart_life.webp" alt="HP" loading="lazy" /><i data-hp="1">20</i></span><b>Rival</b></div>
-        </div>
-        <div class="duel__boards">
-          <div class="board" data-board="0"><img class="board__bg" crossorigin="anonymous" src="https://assets.crownnkeep.com/locations/arena_meadow.webp" alt="" loading="lazy" /><div class="board__units"></div><div class="board__foes"></div></div>
-          <div class="duel__vs">VS</div>
-          <div class="board board--r" data-board="1"><img class="board__bg" crossorigin="anonymous" src="https://assets.crownnkeep.com/locations/arena_meadow.webp" alt="" loading="lazy" /><div class="board__units"></div><div class="board__foes"></div></div>
-        </div>
-        <div class="duel__bar">
-          <div class="duel__mana"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/items/mana_orb.webp" alt="Mana" loading="lazy" /><b id="duelMana">0</b><span id="duelIncome">+6 every 6s</span></div>
-          <div class="duel__sends" id="duelSends" aria-label="Send monsters to your rival"></div>
-        </div>
-        <div class="duel__end" id="duelEnd" hidden></div>
-      </div>
+      <figure class="duel" id="duel">
+        <video id="duelVideo" crossorigin="anonymous" src="https://assets.crownnkeep.com/video/pvp_highlights.mp4" poster="https://assets.crownnkeep.com/video/pvp_highlights.webp" muted loop playsinline preload="none" aria-label="A real PvP match: sends, merges, a boss wave and the win"></video>
+        <figcaption class="duel__live"><i></i>Real match footage</figcaption>
+      </figure>
       <ol class="duel__rules" id="duelRules"></ol>
       <div class="pvpmodes" id="duelModes"></div>
     </section>
