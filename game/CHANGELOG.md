@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.5.3
+- Sign-in panels: the dark fill now comes from the panel art itself, so its square corners no longer show past the rounded frame.
+
 ## 2.5.2
 - Sign-in panels: the first line under the title no longer touches the panel's top frame (14 px more room; the title stays on the ribbon).
 

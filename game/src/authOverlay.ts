@@ -24,8 +24,8 @@ const css = (base: string) => `
 @media (max-height: 760px) { .tr-auth.brand::before { display: none; } }
 .tr-auth form { flex: none; width: min(400px, calc(100vw - 24px)); box-sizing: border-box; position: relative; color: #fff; text-align: center;
   border-style: solid; border-width: 66px 46px 36px;
-  border-image: url(${base}ui/panel_dialog.webp) 110 80 60 / 66px 48px 36px stretch;
-  background: linear-gradient(#0d2150, #112656) padding-box; padding: 14px 8px 4px;
+  border-image: url(${base}ui/panel_dialog.webp) 110 80 60 fill / 66px 48px 36px stretch;
+  padding: 14px 8px 4px;
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.55)); animation: tr-pop .18s cubic-bezier(.34,1.56,.64,1); }
 .tr-auth h2 { margin: -63px -30px 26px; font-size: 27px; line-height: 32px; font-weight: 400; color: #fff4c2; white-space: nowrap;
   -webkit-text-stroke: 6px #14183a; paint-order: stroke fill; text-shadow: 0 3px 0 #14183a; }
