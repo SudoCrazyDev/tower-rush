@@ -60,7 +60,8 @@ export class OathView {
       const note = txt(this.scene, 196, y, "", 18, "#ffd27a", [1, 0.5]);
       bg.fillStyle(NAVY, 0.92).fillRoundedRect(-210, y - 22, 420, 44, 14);
       const root = this.scene.add.container(0, 0, [bg, bar, label, note]);
-      const hit = this.scene.add.rectangle(0, y, 420, 44, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+      // scrollFactor 0 like the panel: the wide layout scrolls the camera, and input hit-tests each child by its own factor.
+      const hit = this.scene.add.rectangle(0, y, 420, 44, 0xffffff, 0.001).setScrollFactor(0).setInteractive({ useHandCursor: true });
       hit.on("pointerdown", () => {
         if (this.scene.over || this.scene.paused) return;
         this.scene.sim.focusPart(p.id);
