@@ -371,7 +371,7 @@ export const DEFAULT_BOSSES: BossDef[] = [
   },
   {
     // One moving boss for the whole chapter. Legs slow it, cannons shell units, the furnace makes iron soldiers, the core (the Anvil-Heart) ends it.
-    id: "walking_forge", name: "The Walking Forge", race: "construct", hp: 5.0, speed: 12, power: "none", minion: "iron_soldier", corrupted: true,
+    id: "walking_forge", name: "The Walking Forge", race: "construct", hp: 5.0, speed: 8, power: "none", minion: "iron_soldier", corrupted: true,
     skills: [
       { kind: "impale", every: 9, first: 6, n: 2, dur: 4, part: "cannons" },
       { kind: "sapling_trail", every: 7, first: 4, n: [1, 2], part: "furnace" },

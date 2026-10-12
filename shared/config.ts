@@ -70,6 +70,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.4.1-forge": { units: {}, effects: {}, chapters: { b2s4c2: ["waves", "forge"] }, bosses: { walking_forge: ["parts"] } },
   // Walking Forge part HP: legs 0.45 -> 0.25 of the core, cannons 0.4 -> 0.5, furnace 0.4 -> 0.7 (it must last while it spawns).
   "2.4.1-forge-parts": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
+  // Walking Forge walks slower: speed 12 -> 8 px/s.
+  "2.4.1-forge-speed": { units: {}, effects: {}, bosses: { walking_forge: ["speed"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
