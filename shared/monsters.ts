@@ -219,7 +219,7 @@ export interface BossSkill {
 /**
  * v2.3 Walking Forge: a boss made of parts, each with its own HP bar (BossDef.parts). The player
  * picks which one units shoot at (Sim.focusPart); with no pick, the first unbroken one in list order.
- * Breaking a part has a rule effect: legs slow the boss; a skill whose `part` is the part's id stops while it is broken.
+ * Breaking a part has a rule effect: legs stop (or slow) the boss and stoke the furnace; a skill whose `part` is the part's id stops while it is broken.
  * The part with id "core" ends the fight when it breaks, and takes only `coreArmor` of damage while another part stands.
  */
 export interface BossPart {
@@ -227,8 +227,10 @@ export interface BossPart {
   name: string;
   /** Part HP as a multiple of the boss's normal HP (the core is 1). */
   hp: number;
-  /** Breaking it multiplies the boss's speed by this (legs). */
+  /** Breaking it multiplies the boss's speed by this (legs; 0 stops it). */
   slow?: number;
+  /** Breaking it makes the skills of part `part` fire `mult` times as often (the stuck Forge stokes its furnace). */
+  haste?: { part: string; mult: number };
 }
 
 /**
@@ -375,7 +377,7 @@ export const DEFAULT_BOSSES: BossDef[] = [
       { kind: "sapling_trail", every: 7, first: 4, n: [1, 2], part: "furnace" },
     ],
     parts: [
-      { id: "legs", name: "Legs", hp: 0.45, slow: 0.4 },
+      { id: "legs", name: "Legs", hp: 0.45, slow: 0, haste: { part: "furnace", mult: 2 } },
       { id: "cannons", name: "Cannons", hp: 0.4 },
       { id: "furnace", name: "Furnace", hp: 0.4 },
       { id: "core", name: "Anvil-Heart", hp: 1 },

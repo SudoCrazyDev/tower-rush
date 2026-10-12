@@ -1054,11 +1054,11 @@ const THE_IRON_OATH: StoryDef = {
           hintEvery: 28,
           barks: {
             start: say("brakka", "That's the Walking Forge! I know every bolt in it. Break its legs first, or it'll crush us."),
-            hint_legs: say("brakka", "Its legs, Keeper! Tap the LEGS bar. Break them and the Forge crawls."),
+            hint_legs: say("brakka", "Its legs, Keeper! Tap the LEGS bar. Break them and the Forge stops dead."),
             hint_cannons: say("brakka", "The cannons are shelling your units! Tap CANNONS and silence them."),
             hint_furnace: say("brakka", "The furnace feeds it iron soldiers. Tap FURNACE and let it go cold."),
             hint_core: say("brakka", "Now the heart! The Anvil-Heart is chained inside. Break the core, but gently."),
-            broke_legs: say("brakka", "The legs buckle! It's slowing down!"),
+            broke_legs: say("brakka", "The legs buckle! It's stuck, but hear that furnace roar. Shut it down!"),
             broke_cannons: say("brakka", "The cannons are quiet. Your units can breathe."),
             broke_furnace: say("brakka", "The furnace is cold. No more soldiers!"),
             core: say("brakka", "Everything else is down. Hit the Anvil-Heart with all you have!"),

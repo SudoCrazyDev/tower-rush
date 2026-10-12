@@ -1627,8 +1627,11 @@ export class Sim {
       if (k.part && m.parts.some((p) => p.id === k.part && p.broken)) continue;
       m.skillAt[i] -= dt;
       if (m.skillAt[i] > 0) continue;
-      m.skillAt[i] = k.every;
-      if (k.kind === "sapling_trail" && m.speed(this.now) <= 0) continue;
+      // v2.4.1: a broken part may stoke another part's skills (the Forge's legs, its furnace).
+      const haste = k.part ? (b.parts ?? []).reduce((x, d) => (d.haste?.part === k.part && m.parts.some((p) => p.id === d.id && p.broken) ? x * d.haste!.mult : x), 1) : 1;
+      m.skillAt[i] = k.every / haste;
+      // Frozen or stunned: no trail. A boss stopped by its broken legs still spawns (speed 0, not held).
+      if (k.kind === "sapling_trail" && (this.now < m.frozenUntil || this.now < m.stunUntil)) continue;
       m.skillUsed[i]++;
       const p = m.pos;
       const n = this.count(k.n);
@@ -2372,7 +2375,7 @@ export class Sim {
 
   private partBroken(m: SimMonster, part: PartState) {
     const def = m.boss!.parts!.find((p) => p.id === part.id);
-    if (def?.slow) m.speedMult *= def.slow;
+    if (def?.slow !== undefined) m.speedMult *= def.slow;
     if (m.focus === part.id) m.focus = null;
     const p = m.pos;
     this.emit({ type: "part", t: this.now, uid: m.uid, part: part.id, name: part.name, broken: true, x: p.x, y: p.y });
