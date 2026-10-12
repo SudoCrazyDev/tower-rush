@@ -5,37 +5,68 @@
 import { ApiError } from "./api";
 import { account, changePassword, forgotPassword, inviteOnly, playAsGuest, register, resendEmailCode, resetPassword, setEmail, setMarketing, signIn, verifyEmail } from "./save";
 import { mountTurnstile } from "./turnstile";
+import { BASE } from "./assets";
 
-const CSS = `
-.tr-auth { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10;
-  background: rgba(5, 8, 30, 0.55); font-family: 'Lilita One', 'Arial Black', sans-serif; }
-.tr-auth form { width: min(360px, calc(100vw - 32px)); background: #1b2257; border: 5px solid #f2b630; border-radius: 22px;
-  padding: 22px 22px 18px; box-shadow: 0 8px 0 #14183a, 0 18px 40px rgba(0,0,0,.5); color: #fff; text-align: center; }
-.tr-auth h2 { margin: 0 0 4px; font-size: 30px; color: #fff4c2; text-shadow: 0 3px 0 #14183a; font-weight: 400; }
-.tr-auth p { margin: 0 0 14px; color: #c9d2ff; font-family: system-ui, sans-serif; font-size: 14px; }
-.tr-auth input { width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 12px 14px; border-radius: 12px; border: 3px solid #14183a;
-  font: 16px system-ui, sans-serif; background: #fff; color: #14183a; }
-.tr-auth button { width: 100%; padding: 12px; margin-top: 6px; border: 3px solid #14183a; border-radius: 14px; cursor: pointer;
-  font: 22px 'Lilita One', 'Arial Black', sans-serif; color: #fff; text-shadow: 0 2px 0 #14183a; box-shadow: 0 4px 0 #14183a; }
-.tr-auth button:active { transform: translateY(2px); box-shadow: 0 2px 0 #14183a; }
-.tr-auth button:disabled { opacity: .6; cursor: default; }
-.tr-auth .primary { background: linear-gradient(#ffd23a, #f29b16); }
-.tr-auth .green { background: linear-gradient(#78e04f, #3aa62a); }
-.tr-auth .link { background: none; border: none; box-shadow: none; color: #9fd0ff; font: 15px system-ui, sans-serif; text-shadow: none;
-  text-decoration: underline; padding: 6px; }
+/**
+ * Styled with the game's own art: the gold-framed dialog panel (title on its ribbon), the
+ * 9-slice buttons and the logo. Slice sizes match the Phaser versions in ui.ts.
+ */
+const css = (base: string) => `
+@keyframes tr-pop { from { transform: scale(.9); opacity: 0; } }
+@keyframes tr-fade { from { opacity: 0; } }
+.tr-auth { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center;
+  overflow-y: auto; padding: 16px 0; box-sizing: border-box; z-index: 10; animation: tr-fade .15s;
+  background: radial-gradient(ellipse at center, rgba(8, 14, 48, .45), rgba(3, 5, 20, .82));
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); font-family: 'Lilita One', 'Arial Black', sans-serif; }
+.tr-auth.brand::before { content: ""; flex: none; width: min(300px, 72vw); aspect-ratio: 640 / 449; margin: 0 0 -6px; position: relative; z-index: 1;
+  background: url(${base}ui/logo.webp?v=1.3.0) center / contain no-repeat; filter: drop-shadow(0 8px 14px rgba(0,0,0,.55));
+  animation: tr-pop .2s cubic-bezier(.34,1.56,.64,1); pointer-events: none; }
+@media (max-height: 760px) { .tr-auth.brand::before { display: none; } }
+.tr-auth form { flex: none; width: min(400px, calc(100vw - 24px)); box-sizing: border-box; position: relative; color: #fff; text-align: center;
+  border-style: solid; border-width: 66px 46px 36px;
+  border-image: url(${base}ui/panel_dialog.webp) 110 80 60 / 66px 48px 36px stretch;
+  background: linear-gradient(#0d2150, #112656) padding-box; padding: 0 8px 4px;
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,.55)); animation: tr-pop .18s cubic-bezier(.34,1.56,.64,1); }
+.tr-auth h2 { margin: -49px -30px 26px; font-size: 27px; line-height: 32px; font-weight: 400; color: #fff4c2; white-space: nowrap;
+  -webkit-text-stroke: 6px #14183a; paint-order: stroke fill; text-shadow: 0 3px 0 #14183a; }
+.tr-auth p { margin: 0 0 14px; color: #c9d2ff; font: 14px/1.45 system-ui, sans-serif; }
+.tr-auth input { width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 12px 14px; border-radius: 12px; border: 3px solid #050c26;
+  font: 16px system-ui, sans-serif; background: #071434; color: #fff; outline: none;
+  box-shadow: inset 0 3px 0 rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.12); transition: border-color .12s, box-shadow .12s; }
+.tr-auth input::placeholder { color: #7f8fc4; }
+.tr-auth input:focus { border-color: #f2b630; box-shadow: inset 0 3px 0 rgba(0,0,0,.4), 0 0 0 3px rgba(242,182,48,.28); }
+.tr-auth input[readonly] { color: #ffd27a; background: #0b1a40; border-style: dashed; }
+.tr-auth input:-webkit-autofill { -webkit-text-fill-color: #fff; caret-color: #fff; box-shadow: inset 0 0 0 40px #071434; }
+.tr-auth button { width: 100%; height: 60px; margin-top: 6px; padding: 0; cursor: pointer; background: none; color: #fff;
+  border-style: solid; border-width: 19px 23px 21px; border-image: url(${base}ui/button_1.webp) 40 48 44 fill / 19px 23px 21px stretch;
+  font: 24px/14px 'Lilita One', 'Arial Black', sans-serif; letter-spacing: .5px;
+  -webkit-text-stroke: 5px #14183a; paint-order: stroke fill; text-shadow: 0 2px 0 #14183a;
+  filter: drop-shadow(0 4px 0 rgba(5,8,30,.55)); transition: transform .08s, filter .08s; }
+.tr-auth button:hover:not(:disabled) { filter: drop-shadow(0 4px 0 rgba(5,8,30,.55)) brightness(1.08); }
+.tr-auth button:active:not(:disabled) { transform: translateY(3px) scale(.98); filter: drop-shadow(0 1px 0 rgba(5,8,30,.55)); }
+.tr-auth button:disabled { filter: grayscale(.6) brightness(.75); cursor: default; }
+.tr-auth .primary { border-image-source: url(${base}ui/button_1.webp); }
+.tr-auth .green { border-image-source: url(${base}ui/button_0.webp); }
+.tr-auth .blue { border-image-source: url(${base}ui/button_2.webp); }
+.tr-auth .link { width: auto; height: auto; border: none; border-image: none; filter: none; display: block; margin: 8px auto 0; padding: 6px 10px;
+  color: #ffd27a; font: 600 15px system-ui, sans-serif; -webkit-text-stroke: 0; text-shadow: 0 1px 0 #050c26; letter-spacing: 0; }
+.tr-auth .link:hover:not(:disabled) { filter: none; color: #fff4c2; text-decoration: underline; }
 .tr-auth .err { color: #ff8a8a; min-height: 18px; font: 14px system-ui, sans-serif; margin: 2px 0 4px; }
 .tr-auth .ok { color: #8ee07a; font: 14px system-ui, sans-serif; margin: 2px 0 4px; }
 .tr-auth .ok:empty { display: none; }
 .tr-auth .warn { color: #ffd27a; font: 14px system-ui, sans-serif; }
 .tr-auth input.code { text-align: center; letter-spacing: 10px; font: 26px 'Lilita One', 'Arial Black', sans-serif; }
 .tr-auth input.code::placeholder { letter-spacing: normal; font: 16px system-ui, sans-serif; }
-.tr-auth form { max-height: calc(100vh - 24px); overflow-y: auto; }
 .tr-auth .check { display: flex; gap: 10px; align-items: center; text-align: left; margin: 2px 0 8px; color: #c9d2ff;
   font: 14px system-ui, sans-serif; cursor: pointer; }
-.tr-auth .check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: #f2b630; }
+.tr-auth .check input { appearance: none; -webkit-appearance: none; width: 24px; height: 24px; margin: 0; padding: 0; flex: none; cursor: pointer;
+  border-radius: 7px; display: grid; place-content: center; }
+.tr-auth .check input:checked { background: linear-gradient(#ffd23a, #f29b16); border-color: #14183a; }
+.tr-auth .check input:checked::after { content: "\\2714"; color: #14183a; font: 900 15px system-ui, sans-serif; }
 .tr-auth .ts { display: flex; justify-content: center; }
 .tr-auth .ts:has(iframe) { margin: 0 0 8px; }
-.tr-auth .box { background: #14183a; border-radius: 14px; padding: 12px; margin: 0 0 12px; font: 14px system-ui, sans-serif; }
+.tr-auth .box { background: rgba(3, 8, 30, .55); border: 2px solid #050c26; border-radius: 14px; padding: 12px; margin: 0 0 12px;
+  font: 14px system-ui, sans-serif; box-shadow: inset 0 2px 0 rgba(0,0,0,.35); }
 .tr-auth .box .label { color: #9aa3d8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
 .tr-auth .box .value { color: #fff; font-size: 17px; margin: 2px 0 4px; word-break: break-all; }
 `;
@@ -46,7 +77,7 @@ export function ensureCss() {
   if (document.getElementById("tr-auth-css")) return;
   const style = document.createElement("style");
   style.id = "tr-auth-css";
-  style.textContent = CSS;
+  style.textContent = css(BASE);
   document.head.appendChild(style);
 }
 
@@ -89,7 +120,7 @@ export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean
   ensureCss();
   return new Promise((resolve) => {
     const root = document.createElement("div");
-    root.className = "tr-auth";
+    root.className = "tr-auth brand";
     document.body.appendChild(root);
     const done = (ok: boolean) => {
       root.remove();

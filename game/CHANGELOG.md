@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.5.1
+- Welcome, sign in, create account, forgot/reset password and the other HTML panels now use the game's art: the logo above, the gold-framed dialog panel with the title on its ribbon, the 9-slice yellow and green buttons, dark inset fields with a gold focus ring, and a gold checkbox. The backdrop behind is blurred.
+
 ## 2.5.0
 - Email and password recovery. Creating an account now asks for an email (guests still play without one), with an optional newsletter checkbox. A 6-digit code is mailed to confirm the address.
 - Forgot password: Sign in, "Forgot password?", enter the account email, then type the 6-digit code from the email (valid 15 minutes) and a new password. Other devices are signed out.
