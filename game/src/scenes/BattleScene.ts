@@ -775,7 +775,7 @@ export class BattleScene extends Phaser.Scene {
       const portal = kitPrimary(u.def) === "portal" && this.sim.portalReady(u.slot);
       this.sim.units.forEach((other, slot) => {
         if (!other) {
-          if (portal) mark(slot);
+          if (portal || (this.sim.freeMove && !this.sim.fallen.has(slot))) mark(slot);
           return;
         }
         if (other === u.sim) return;
@@ -834,6 +834,8 @@ export class BattleScene extends Phaser.Scene {
         if (!sim.portalReady(from)) this.refuse(u, `Ready in ${Math.ceil(u.sim.timer)}s`);
         else if (target && target.rank !== u.rank) this.refuse(u, `Needs ★${u.rank}`);
         else done(target ? sim.swap(from, target.slot) : sim.hop(from, this.emptySlotAt(obj.x, obj.y)));
+      } else if (!target && sim.freeMove && this.emptySlotAt(obj.x, obj.y) >= 0) {
+        done(sim.move(from, this.emptySlotAt(obj.x, obj.y)));
       } else back();
     });
   }

@@ -2011,6 +2011,24 @@ export class Sim {
     return true;
   }
 
+  /** Whether any unit may move to an empty tile (ChapterMechanics.freeMove). */
+  get freeMove() {
+    return !!this.story?.mechanics?.freeMove;
+  }
+
+  /** freeMove chapters: the unit on `from` walks to the empty tile `to` (no cooldown, no cost). */
+  move(from: number, to: number) {
+    const x = this.units[from];
+    if (this.over || !this.freeMove || !x || to < 0 || to >= 15 || this.units[to] || this.fallen.has(to) || x.chain > 0) return false;
+    x.moveTo(to, slotPos(this.arena, to));
+    x.dragging = false;
+    this.units[to] = x;
+    this.units[from] = null;
+    this.recomputeBuffs();
+    this.emit({ type: "swap", t: this.now, uid: x.uid, other: null, from, to });
+    return true;
+  }
+
   /** Buy the next power-up level of a deck unit (every unit of that id on the board gets stronger). */
   powerUp(id: string) {
     const lvl = this.powerUps[id];

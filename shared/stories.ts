@@ -85,6 +85,8 @@ export interface ChapterMechanics {
   lanterns?: { boss: string; first: number; gap: number; from: number; to: number; hp: number; grow: number; haste: number };
   /** Story 3: the sphinx's cage. Units next to `slot` hit the lock between waves; open before the boss wave, the sphinx roars (stuns every monster for `roarStun` seconds). */
   cage?: { slot: number; lockHp: number; roarStun: number };
+  /** Any unit can be dragged onto an empty tile (normally only a Portal Imp can). Story 3 Ch 3 uses it to reach the braziers. */
+  freeMove?: boolean;
   /**
    * v2.3 Story 4 Ch 1: evacuation. Monsters walk path 0; dwarf families (`family`, a monster id) walk path 1 (the second
    * route), `perWave[n - 1]` of them in wave n, `gap` seconds apart. The chapter is won when `goal` families get out; lost
@@ -925,7 +927,7 @@ const THE_THRONE_OF_DUST: StoryDef = {
       art: "arena_throne_end",
       corruption: 0.5,
       hpScale: 3.4,
-      mechanics: { faceless: FACELESS, cage: { slot: 0, lockHp: 2500, roarStun: 3 } },
+      mechanics: { faceless: FACELESS, cage: { slot: 0, lockHp: 2500, roarStun: 3 }, freeMove: true },
       intro: [
         panel("b2s3_p6_throw", "In the last round, Bako lowers his guard and takes the blow.", "Sefa: Bury him in the sand."),
         panel("b2s3_p7_cage", "From her cage above the arena, Nefrael calls out.", "\"Free me, and I will free him.\""),
