@@ -89,6 +89,8 @@ export interface ChapterMechanics {
   cage?: { slot: number; lockHp: number; roarStun: number };
   /** Any unit can be dragged onto an empty tile (normally only a Portal Imp can). Story 3 Ch 3 uses it to reach the braziers. */
   freeMove?: boolean;
+  /** The chapter ends without a boss (validation otherwise wants one in the last wave). Story 5 Ch 3, the Great Scale, ends on its balance wave. */
+  noBoss?: boolean;
   /**
    * v2.3 Story 4 Ch 1: evacuation. Monsters walk path 0; dwarf families (`family`, a monster id) walk path 1 (the second
    * route), `perWave[n - 1]` of them in wave n, `gap` seconds apart. The chapter is won when `goal` families get out; lost
@@ -1252,7 +1254,7 @@ const THE_SILVER_TRIBUNAL: StoryDef = {
       art: "arena_great_scale",
       corruption: 0,
       hpScale: 3.1,
-      mechanics: { scale: { every: 6, gap: 4, stun: 2.2 } },
+      mechanics: { scale: { every: 6, gap: 4, stun: 2.2 }, noBoss: true },
       intro: [
         panel("b2s5_p7_escape_great_scale", "The Walk of Judgment ends at the heart of Aurelion: the brass law-engine that holds the city in the sky.", "The Great Scale. Two pans, each wide as a courtyard."),
         panel("b2s5_p8_scale_pans", "The Keeper steps onto the pans. They hum, and begin to lean.", `"Stand even, Keeper," says Aelyria. "The Scale crushes the heavier side."`),
@@ -1372,7 +1374,7 @@ export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
  * Chapter mechanics added to the defaults after configs were saved: copied from the default chapter
  * into a saved chapter that lacks the key (an admin value, once saved, wins).
  */
-export const ADDED_MECHANICS: Record<string, (keyof ChapterMechanics)[]> = { b2s3c3: ["freeMove"] };
+export const ADDED_MECHANICS: Record<string, (keyof ChapterMechanics)[]> = { b2s3c3: ["freeMove"], b2s5c3: ["noBoss"] };
 function withAddedMechanics(books: BookDef[]): BookDef[] {
   const defaults = new Map([DEFAULT_BOOK, DEFAULT_BOOK2].flatMap((b) => b.stories.flatMap((s) => s.chapters.map((c) => [c.id, c] as const))));
   return books.map((b) => ({
@@ -1611,7 +1613,7 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
         }
         if (wv.boss && !ids.bosses.has(wv.boss)) errs.push(`${ww}: unknown boss "${wv.boss}"`);
       });
-      if (c.waves?.length && !c.waves[c.waves.length - 1].boss) errs.push(`${wc}: the last wave needs a boss`);
+      if (c.waves?.length && !c.mechanics?.noBoss && !c.waves[c.waves.length - 1].boss) errs.push(`${wc}: the last wave needs a boss`);
       rew(c.reward, `${wc} reward`);
       rew(c.replay, `${wc} replay reward`);
       if (c.eventDeck) {

@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.1.2
+- Fix: config validation no longer rejects `b2s5c3` (The Great Scale) with "the last wave needs a boss". The chapter has no boss by design; new chapter flag `ChapterMechanics.noBoss`, backfilled into saved configs through `ADDED_MECHANICS`. Admin saves of the config work again. `MIN_CLIENT` stays 2.4.0.
+
 ## 1.1.1
 - Hotfix `2.4.1`: `HOTFIXES` can now reset chapter mechanics in a saved config. It resets `b2s4c1` evacuation, so the first whelp dive moves from 3 s to 6 s after spawning (The Iron Oath, chapter 1). `MIN_CLIENT` stays 2.4.0.
 - Hotfix `2.4.1-forge`: resets the waves of `b2s4c2` in a saved config, so the Walking Forge's minions get `minionHp: 0.1`. It also resets the `walking_forge` boss parts (broken legs stop it and double the furnace) and the chapter's `forge` lines. `HOTFIXES` can now reset boss fields too.
