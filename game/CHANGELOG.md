@@ -9,6 +9,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Settings, ACCOUNT (registered players): confirm the email, add or change it (needs the password), change the password, newsletter on or off. Settings nudges players who have no email or haven't confirmed it.
 - Cloudflare Turnstile bot check on sign in, create account and forgot password. It stays invisible unless Cloudflare wants a click; then the form says "Tick the box above to continue" and goes on by itself once ticked. The sitekey comes from `/api/config` (`turnstileSiteKey`).
 - Needs API 1.2.0 (`MIN_CLIENT` 2.5.0): older clients can't send the bot check.
+- Invites: the link in an invitation email (`?invite=`) opens a "You're invited!" sign-up with the invited email filled in and locked; the account starts with that email confirmed. Where the server is invite only (staging), the start screen offers only SIGN IN, and a used or expired link says so.
 
 ## 2.4.1
 - Hotfix: in The Throne of Dust (Book 2 Story 3, chapter 3) any unit can be dragged onto an empty tile, so you can reach the braziers. Driven by a new chapter flag, `ChapterMechanics.freeMove`; `ADDED_MECHANICS` copies it into saved configs, which would otherwise hide it. Only the game changed; the API did not, and `MIN_CLIENT` stays 2.4.0.

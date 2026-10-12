@@ -1,6 +1,6 @@
 /**
- * Player email: 6-digit codes (verify an address, reset a password) and the branded
- * messages that carry them, sent with Cloudflare Email Service (the EMAIL binding).
+ * Player email: 6-digit codes (verify an address, reset a password), invitations, and the
+ * branded messages that carry them, sent with Cloudflare Email Service (the EMAIL binding).
  * `wrangler dev` only simulates sending: the message is printed in the dev console.
  */
 import { one, run } from "./db.ts";
@@ -77,8 +77,20 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};
  * game's panels, the code in big digits, and a short footer. Tables and inline styles only,
  * so it renders the same in Gmail, Outlook and phone mail apps.
  */
-function layout(o: { preheader: string; title: string; intro: string; code: string; outro: string }) {
-  const digits = o.code
+interface Layout {
+  preheader: string;
+  title: string;
+  intro: string;
+  /** The 6 big digits, or a gold button. */
+  code?: string;
+  button?: { label: string; url: string };
+  /** Gold line under the code or button (how long it works). */
+  note: string;
+  outro: string;
+}
+
+function layout(o: Layout) {
+  const digits = (o.code ?? "")
     .split("")
     .map(
       (d) =>
@@ -99,12 +111,18 @@ function layout(o: { preheader: string; title: string; intro: string; code: stri
     <tr><td style="background:#1b2257;border:5px solid #f2b630;border-radius:22px;padding:28px 26px 26px;text-align:center">
       <h1 style="margin:0 0 10px;font:normal 28px 'Arial Black',Arial,sans-serif;color:#fff4c2;text-shadow:0 3px 0 #14183a">${esc(o.title)}</h1>
       <p style="margin:0 0 22px;font:16px/1.5 Arial,Helvetica,sans-serif;color:#c9d2ff">${esc(o.intro)}</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 22px"><tr>${digits}</tr></table>
-      <p style="margin:0 0 6px;font:14px/1.5 Arial,Helvetica,sans-serif;color:#ffd27a">This code expires in ${CODE_MINUTES} minutes.</p>
+      ${
+        o.button
+          ? `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 22px"><tr><td style="background:#f29b16;background-image:linear-gradient(#ffd23a,#f29b16);border:3px solid #14183a;border-radius:14px">
+        <a href="${esc(o.button.url)}" style="display:inline-block;padding:14px 34px;font:22px 'Arial Black',Arial,sans-serif;color:#ffffff;text-decoration:none;text-shadow:0 2px 0 #14183a">${esc(o.button.label)}</a>
+      </td></tr></table>`
+          : `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 22px"><tr>${digits}</tr></table>`
+      }
+      <p style="margin:0 0 6px;font:14px/1.5 Arial,Helvetica,sans-serif;color:#ffd27a">${esc(o.note)}</p>
       <p style="margin:0;font:14px/1.5 Arial,Helvetica,sans-serif;color:#9aa3d8">${esc(o.outro)}</p>
     </td></tr>
     <tr><td align="center" style="padding:20px 10px 0;font:12px/1.6 Arial,Helvetica,sans-serif;color:#6f78b0">
-      You got this email because of your Crown &amp; Keep account.<br>
+      ${o.button ? "You got this email because someone on the Crown &amp; Keep team invited you." : "You got this email because of your Crown &amp; Keep account."}<br>
       <a href="${GAME}" style="color:#9fd0ff">Play Crown &amp; Keep</a> &nbsp;·&nbsp; <a href="https://crownnkeep.com" style="color:#9fd0ff">crownnkeep.com</a>
     </td></tr>
   </table>
@@ -112,8 +130,8 @@ function layout(o: { preheader: string; title: string; intro: string; code: stri
 </body></html>`;
 }
 
-const text = (o: { title: string; intro: string; code: string; outro: string }) =>
-  `${o.title}\n\n${o.intro}\n\n    ${o.code}\n\nThis code expires in ${CODE_MINUTES} minutes.\n${o.outro}\n\nCrown & Keep - ${GAME}\n`;
+const text = (o: Layout) =>
+  `${o.title}\n\n${o.intro}\n\n    ${o.code ?? o.button!.url}\n\n${o.note}\n${o.outro}\n\nCrown & Keep - ${GAME}\n`;
 
 const MESSAGES: Record<CodePurpose, (name: string) => { subject: string; title: string; intro: string; outro: string }> = {
   verify: (name) => ({
@@ -133,11 +151,24 @@ const MESSAGES: Record<CodePurpose, (name: string) => { subject: string; title: 
 /** Mail a code. Failures are logged, not thrown: the caller's response never depends on delivery. */
 export async function sendCode(env: Bindings, to: string, name: string, purpose: CodePurpose, code: string) {
   const m = MESSAGES[purpose](name);
-  const parts = { ...m, code, preheader: `Your code is ${code}` };
+  const parts = { ...m, code, note: `This code expires in ${CODE_MINUTES} minutes.`, preheader: `Your code is ${code}` };
   try {
     await env.EMAIL.send({ from: FROM, to, subject: m.subject, html: layout(parts), text: text(parts) });
   } catch (e) {
     const err = e as Error & { code?: string };
     console.error("email send failed", purpose, err.code, err.message);
   }
+}
+
+/** Mail an invitation link. Unlike codes, this throws so the admin panel can show the failure. */
+export async function sendInvite(env: Bindings, to: string, url: string, days: number) {
+  const parts: Layout = {
+    preheader: "Your invitation to Crown & Keep",
+    title: "You're invited!",
+    intro: "You've been invited to play Crown & Keep. Tap the button to choose your username and password.",
+    button: { label: "ACCEPT INVITE", url },
+    note: `This invite works for ${days} days, for this email address only.`,
+    outro: "Not expecting this? You can ignore this email.",
+  };
+  await env.EMAIL.send({ from: FROM, to, subject: "You're invited to Crown & Keep", html: layout(parts), text: text(parts) });
 }

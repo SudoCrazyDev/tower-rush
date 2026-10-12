@@ -3,7 +3,7 @@
  * in Phaser): sign in, register, forgot/reset password, and account settings.
  */
 import { ApiError } from "./api";
-import { account, changePassword, forgotPassword, playAsGuest, register, resendEmailCode, resetPassword, setEmail, setMarketing, signIn, verifyEmail } from "./save";
+import { account, changePassword, forgotPassword, inviteOnly, playAsGuest, register, resendEmailCode, resetPassword, setEmail, setMarketing, signIn, verifyEmail } from "./save";
 import { mountTurnstile } from "./turnstile";
 
 const CSS = `
@@ -79,7 +79,13 @@ async function attempt(submit: HTMLButtonElement, err: HTMLElement, fn: () => Pr
   }
 }
 
-export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean } = {}): Promise<boolean> {
+/** An invite from the link in the invitation email (`?invite=`): its token and the address it went to. */
+export interface Invite {
+  token: string;
+  email: string;
+}
+
+export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean; invite?: Invite; notice?: string } = {}): Promise<boolean> {
   ensureCss();
   return new Promise((resolve) => {
     const root = document.createElement("div");
@@ -105,9 +111,16 @@ export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean
 
       if (mode === "start") {
         h("h2", {}, opts.title ?? "Welcome!");
+        if (inviteOnly && !opts.invite) {
+          // Staging: accounts come only from the link in an invitation email.
+          h("p", {}, "This server is invite only. Sign in, or open the link in your invitation email.");
+          h("div", { className: "err" }, opts.notice ?? "");
+          h("button", { type: "button", className: "green" }, "SIGN IN").onclick = () => render("signin");
+          return;
+        }
         h("p", {}, "Play right away, or sign in to keep your progress on any device.");
         const guest = h("button", { type: "button", className: "primary" }, "PLAY AS GUEST") as HTMLButtonElement;
-        const err = h("div", { className: "err" });
+        const err = h("div", { className: "err" }, opts.notice ?? "");
         h("button", { type: "button", className: "green" }, "SIGN IN").onclick = () => render("signin");
         h("button", { type: "button", className: "link" }, "Create an account").onclick = () => render("register");
         guest.onclick = () => attempt(guest, err, async () => (await playAsGuest(), done(true)));
@@ -162,10 +175,13 @@ export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean
       }
 
       const isReg = mode === "register";
-      h("h2", {}, opts.title && mode === opts.mode ? opts.title : isReg ? "Create account" : "Sign in");
-      h("p", {}, isReg ? "Your current progress is kept." : "Welcome back, commander.");
+      const invite = isReg ? opts.invite : undefined;
+      h("h2", {}, invite ? "You're invited!" : opts.title && mode === opts.mode ? opts.title : isReg ? "Create account" : "Sign in");
+      h("p", {}, invite ? "Choose a username and password for your account." : isReg ? "Your current progress is kept." : "Welcome back, commander.");
       const user = input(isReg ? "Username" : "Username or email", { autocomplete: "username", maxLength: isReg ? 20 : 254 });
-      const email = isReg ? input("Email (for password recovery)", { type: "email", autocomplete: "email", maxLength: 254 }) : null;
+      const email = isReg
+        ? input("Email (for password recovery)", { type: "email", autocomplete: "email", maxLength: 254, value: invite?.email ?? "", readOnly: !!invite })
+        : null;
       const pass = input(isReg ? "Password (6+ characters)" : "Password", { type: "password", autocomplete: isReg ? "new-password" : "current-password" });
       let marketing: HTMLInputElement | null = null;
       if (isReg) {
@@ -177,13 +193,18 @@ export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean
       const err = h("div", { className: "err" });
       const submit = h("button", { type: "submit", className: "primary" }, isReg ? "CREATE" : "SIGN IN") as HTMLButtonElement;
       if (!isReg) h("button", { type: "button", className: "link" }, "Forgot password?").onclick = () => render("forgot");
-      back();
+      if (invite) h("button", { type: "button", className: "link" }, "I already have an account").onclick = () => render("signin");
+      else back();
       form.onsubmit = (ev) => {
         ev.preventDefault();
         attempt(submit, err, async () => {
           try {
             const token = await check.token();
-            if (isReg) await register({ username: user.value.trim(), email: email!.value.trim(), password: pass.value, marketing: marketing!.checked }, token);
+            if (isReg)
+              await register(
+                { username: user.value.trim(), email: email!.value.trim(), password: pass.value, marketing: marketing!.checked, invite: invite?.token },
+                token,
+              );
             else await signIn(user.value.trim(), pass.value, token);
             done(true);
           } finally {

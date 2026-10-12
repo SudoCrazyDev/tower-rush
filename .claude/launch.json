@@ -13,6 +13,20 @@
       "port": 8787
     },
     {
+      "name": "server-invite",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "server",
+        "run",
+        "dev",
+        "--",
+        "--var",
+        "INVITE_ONLY:1"
+      ],
+      "port": 8787
+    },
+    {
       "name": "tower-rush",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

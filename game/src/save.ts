@@ -31,6 +31,8 @@ export const account: Account = { id: 0, name: "", username: null, isGuest: true
 
 /** Turnstile (bot check) sitekey for the sign-in forms, from /config; null when the server has none. */
 export let turnstileSiteKey: string | null = null;
+/** True where new accounts need an admin invite and guest play is off (staging). */
+export let inviteOnly = false;
 
 function setProfile(p: Profile) {
   Object.assign(profile, p);
@@ -42,8 +44,11 @@ export const serverNow = () => Date.now() + clockOffset;
 
 export async function loadConfig() {
   const sent = Date.now();
-  const r = await get<{ version: number; config: GameConfig; now?: number; minClient?: string | null; turnstileSiteKey?: string | null }>("/config");
+  const r = await get<{ version: number; config: GameConfig; now?: number; minClient?: string | null; turnstileSiteKey?: string | null; inviteOnly?: boolean }>(
+    "/config",
+  );
   turnstileSiteKey = r.turnstileSiteKey ?? null;
+  inviteOnly = !!r.inviteOnly;
   if (r.minClient && versionBelow(__APP_VERSION__, r.minClient)) onOutdated();
   applyConfig(r.config);
   // Server time at the middle of the round trip, so countdowns match what the server enforces.
@@ -71,8 +76,16 @@ export async function signIn(username: string, password: string, turnstile: stri
   await loadMe();
 }
 
-/** Create an account; if currently a guest, the guest's progress is kept. A confirmation code is mailed. */
-export async function register(f: { username: string; email: string; password: string; marketing: boolean }, turnstile: string) {
+/** The email an invite link was sent to. Throws ApiError if the link is bad, used or expired. */
+export async function checkInvite(token: string) {
+  return (await get<{ email: string }>(`/auth/invite?token=${encodeURIComponent(token)}`)).email;
+}
+
+/**
+ * Create an account; if currently a guest, the guest's progress is kept. A confirmation code is
+ * mailed, except with an `invite` token: the account then takes the invite's email, already confirmed.
+ */
+export async function register(f: { username: string; email: string; password: string; marketing: boolean; invite?: string }, turnstile: string) {
   const r = await post<{ token: string }>("/auth/register", { ...f, turnstile });
   setToken(r.token);
   await loadMe();

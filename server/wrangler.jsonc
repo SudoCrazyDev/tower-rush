@@ -38,6 +38,7 @@
   // MIN_CLIENT: oldest game version still served; older clients get 426 and must reload.
   // GAME_URL: where non-API requests are redirected.
   // TURNSTILE_SITEKEY / TURNSTILE_HOSTNAMES: the bot-check widget and the game hostnames its tokens may come from.
+  // INVITE_ONLY ("1", staging only): new accounts only through admin invites, no guest play.
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ALLOWED_ORIGINS": "https://game.crownnkeep.com,https://manage.crownnkeep.com",
@@ -79,7 +80,8 @@
         "MIN_CLIENT": "2.5.0",
         "GAME_URL": "https://staging-game.crownnkeep.com/",
         "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
-        "TURNSTILE_HOSTNAMES": "staging-game.crownnkeep.com"
+        "TURNSTILE_HOSTNAMES": "staging-game.crownnkeep.com",
+        "INVITE_ONLY": "1"
       }
     }
   }

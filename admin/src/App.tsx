@@ -17,6 +17,7 @@ import { PerksPage } from "./pages/Perks";
 import { VersionsPage } from "./pages/Versions";
 import { UsersPage, UserDetail } from "./pages/Users";
 import { AdminsPage, AuditPage } from "./pages/Admins";
+import { InvitesPage } from "./pages/Invites";
 import { MailPage } from "./pages/Mail";
 import { OffersPage } from "./pages/Offers";
 import { AnalyticsPage } from "./pages/Analytics";
@@ -56,6 +57,7 @@ const NAV: { path: string; label: string; group?: string }[] = [
   { path: "/versions", label: "Versions" },
   { path: "/art", label: "Art requests" },
   { path: "/users", label: "Players", group: "People" },
+  { path: "/invites", label: "Invites" },
   { path: "/mail", label: "Mail" },
   { path: "/admins", label: "Admins" },
   { path: "/audit", label: "Audit log" },
@@ -175,6 +177,7 @@ function Shell({ admin, onLogout }: { admin: { username: string }; onLogout: () 
     case "/art": page = <ArtPage />; break;
     case "/users": page = id ? <UserDetail id={Number(id)} /> : <UsersPage />; break;
     case "/mail": page = <MailPage to={id ? Number(id) : undefined} />; break;
+    case "/invites": page = <InvitesPage />; break;
     case "/admins": page = <AdminsPage />; break;
     case "/audit": page = <AuditPage />; break;
     default: page = <Dashboard />;

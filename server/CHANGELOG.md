@@ -10,6 +10,8 @@
 - `/me` and auth answers include `email`, `emailVerified`, `marketingOptIn` (only for the player themselves).
 - Admin: user detail shows the email; `PATCH /admin/users/:id` can set or clear `email`; the user search matches emails.
 - `MIN_CLIENT` raised to 2.5.0: older clients don't send the Turnstile token.
+- Invites (`src/invites.ts`, migration `0008_invites.sql`): admins send an invitation email with a one-time link (7 days, hashed token). `GET /auth/invite?token=` returns the invited email; `POST /auth/register` accepts `invite`, which sets the account's email from the invite and marks it confirmed. With var `INVITE_ONLY="1"` (staging) the invite is required and `POST /auth/guest` is refused; `/config` sends `inviteOnly`.
+- Admin: `GET/POST /admin/invites`, `POST /admin/invites/:id/resend` (new link, old one stops working), `DELETE /admin/invites/:id` (revoke).
 
 ## 1.1.2
 - Fix: config validation no longer rejects `b2s5c3` (The Great Scale) with "the last wave needs a boss". The chapter has no boss by design; new chapter flag `ChapterMechanics.noBoss`, backfilled into saved configs through `ADDED_MECHANICS`. Admin saves of the config work again. `MIN_CLIENT` stays 2.4.0.

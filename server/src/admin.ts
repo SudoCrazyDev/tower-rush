@@ -5,7 +5,8 @@ import { createSession, deleteSession, deleteSessionsFor, hashPassword, needsReh
 import { currentConfig, getVersion, listVersions, saveConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Bindings, type Ctx } from "./http.ts";
 import { getUser, ownUser, readProfile, writeProfile, NAME_RE, USERNAME_RE } from "./users.ts";
-import { normEmail, validEmail } from "./email.ts";
+import { normEmail, sendInvite, validEmail } from "./email.ts";
+import { INVITE_DAYS, inviteOnly, inviteUrl, newInviteToken } from "./invites.ts";
 import { defaultConfig, type GameConfig } from "../../shared/config.ts";
 import { newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
@@ -438,6 +439,77 @@ admin.delete("/mail/:id", async (c) => {
   if (!m) fail(404, "No such message");
   await run(db, "DELETE FROM mail WHERE id = ?", m.id);
   await audit(db, c.get("adminId"), "mail.recall", `mail:${m.id}`, { title: m.title });
+  return c.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- invites
+
+admin.get("/invites", async (c) =>
+  c.json({
+    inviteOnly: inviteOnly(c.env),
+    days: INVITE_DAYS,
+    invites: await all(
+      c.env.DB,
+      `SELECT i.id, i.email, i.created_at AS createdAt, i.sent_at AS sentAt, i.expires_at AS expiresAt, i.used_at AS usedAt,
+         i.revoked_at AS revokedAt, i.user_id AS userId, u.username, a.username AS invitedBy
+       FROM invites i LEFT JOIN users u ON u.id = i.user_id LEFT JOIN admins a ON a.id = i.created_by
+       ORDER BY i.id DESC LIMIT 500`,
+    ),
+  }),
+);
+
+/** Give an invite a fresh token and expiry, and mail the link. The old link stops working. */
+async function mailInvite(c: Ctx, id: number, email: string) {
+  const { token, hash } = await newInviteToken();
+  const now = Date.now();
+  await run(c.env.DB, "UPDATE invites SET token_hash = ?, sent_at = ?, expires_at = ?, revoked_at = NULL WHERE id = ?", hash, now, now + INVITE_DAYS * 86_400_000, id);
+  try {
+    await sendInvite(c.env, email, inviteUrl(c.env, token), INVITE_DAYS);
+  } catch (e) {
+    const err = e as Error & { code?: string };
+    console.error("invite send failed", err.code, err.message);
+    fail(502, `The email could not be sent: ${err.message}`);
+  }
+}
+
+admin.post("/invites", async (c) => {
+  const db = c.env.DB;
+  const email = normEmail((await body(c)).email);
+  if (!validEmail(email)) fail(400, "Enter a valid email address");
+  if (await one(db, "SELECT id FROM users WHERE email = ?", email)) fail(409, "That email already has an account");
+  const pending = await one<{ id: number }>(db, "SELECT id FROM invites WHERE email = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1", email);
+  let id = pending?.id;
+  if (!id) {
+    const now = Date.now();
+    const { hash } = await newInviteToken();
+    const r = await run(
+      db,
+      "INSERT INTO invites (email, token_hash, created_by, created_at, sent_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+      email, hash, c.get("adminId"), now, now, now,
+    );
+    id = r.meta.last_row_id;
+  }
+  await mailInvite(c, id, email);
+  await audit(db, c.get("adminId"), "invite.send", email);
+  return c.json({ ok: true, id });
+});
+
+admin.post("/invites/:id/resend", async (c) => {
+  const db = c.env.DB;
+  const inv = await one<{ id: number; email: string; used_at: number | null }>(db, "SELECT id, email, used_at FROM invites WHERE id = ?", numParam(c, "id"));
+  if (!inv) fail(404, "No such invite");
+  if (inv.used_at) fail(409, "That invite was already used");
+  await mailInvite(c, inv.id, inv.email);
+  await audit(db, c.get("adminId"), "invite.resend", inv.email);
+  return c.json({ ok: true });
+});
+
+admin.delete("/invites/:id", async (c) => {
+  const db = c.env.DB;
+  const id = numParam(c, "id");
+  const r = await run(db, "UPDATE invites SET revoked_at = ? WHERE id = ? AND used_at IS NULL", Date.now(), id);
+  if (!r.meta.changes) fail(409, "That invite was already used");
+  await audit(db, c.get("adminId"), "invite.revoke", `invite:${id}`);
   return c.json({ ok: true });
 });
 

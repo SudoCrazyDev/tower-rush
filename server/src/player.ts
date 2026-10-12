@@ -5,6 +5,7 @@ import { currentConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { CODE_MINUTES, newCode, normEmail, sendCode, useCode, validEmail, type CodePurpose } from "./email.ts";
 import { requireHuman } from "./turnstile.ts";
+import { claimInvite, findInvite, inviteOnly } from "./invites.ts";
 import { createUser, getUser, getUserByEmail, getUserByName, ownUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
 import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
@@ -29,6 +30,7 @@ player.get("/config", (c) => {
     now: Date.now(),
     minClient: c.env.MIN_CLIENT ?? null,
     turnstileSiteKey: c.env.TURNSTILE_SITEKEY || null,
+    inviteOnly: inviteOnly(c.env),
   });
 });
 
@@ -37,6 +39,7 @@ player.get("/config", (c) => {
 const authLimit = rateLimit("AUTH_LIMIT");
 
 player.post("/auth/guest", authLimit, async (c) => {
+  if (inviteOnly(c.env)) fail(403, "Guest play is off here. Sign in, or ask for an invite");
   const u = await createUser(c.env.DB, `Player${Math.floor(1000 + Math.random() * 9000)}`);
   return c.json({ token: await createSession(c.env.DB, "player", u.id), user: ownUser(u) });
 });
@@ -54,11 +57,28 @@ player.post("/auth/login", authLimit, async (c) => {
   return c.json({ token: await createSession(db, "player", u.id), user: ownUser(u) });
 });
 
-/** Register a new account, or claim the current guest account by giving it a username. */
+/** The email an invite link was sent to, so the sign-up form can show it. */
+player.get("/auth/invite", authLimit, async (c) => {
+  const f = await findInvite(c.env.DB, c.req.query("token"));
+  if (!f.ok) fail(410, f.error);
+  return c.json({ email: f.invite.email });
+});
+
+/**
+ * Register a new account, or claim the current guest account by giving it a username.
+ * With an invite token the account takes the invite's email, already confirmed (the link
+ * reached that inbox). With INVITE_ONLY set, the token is required.
+ */
 player.post("/auth/register", authLimit, async (c) => {
   const db = c.env.DB;
-  const { username, password, email: rawEmail, marketing, turnstile } = await body(c);
-  const email = normEmail(rawEmail);
+  const { username, password, email: rawEmail, marketing, turnstile, invite: inviteToken } = await body(c);
+  let invite = null;
+  if (inviteToken || inviteOnly(c.env)) {
+    const f = await findInvite(db, inviteToken);
+    if (!f.ok) fail(403, inviteToken ? f.error : "Sign-up here is by invitation only", { invite: true });
+    invite = f.invite;
+  }
+  const email = invite ? normEmail(invite.email) : normEmail(rawEmail);
   if (typeof username !== "string" || !USERNAME_RE.test(username)) fail(400, "Username: 3-20 letters, digits, _ . -");
   if (!validEmail(email)) fail(400, "Enter a valid email address");
   if (typeof password !== "string" || password.length < 6) fail(400, "Password must be at least 6 characters");
@@ -72,16 +92,18 @@ player.post("/auth/register", authLimit, async (c) => {
   if (!u || !u.is_guest) u = await createUser(db, username);
   await run(
     db,
-    "UPDATE users SET username = ?, password_hash = ?, email = ?, email_verified_at = NULL, marketing_opt_in = ?, is_guest = 0, display_name = ? WHERE id = ?",
+    "UPDATE users SET username = ?, password_hash = ?, email = ?, email_verified_at = ?, marketing_opt_in = ?, is_guest = 0, display_name = ? WHERE id = ?",
     username,
     await hashPassword(password),
     email,
+    invite ? Date.now() : null,
     marketing ? 1 : 0,
     u.is_guest ? username : u.display_name,
     u.id,
   );
   u = (await getUser(db, u.id))!;
-  await mailCode(c, u, "verify");
+  if (invite) await claimInvite(db, invite.id, u.id);
+  else await mailCode(c, u, "verify");
   return c.json({ token: await createSession(db, "player", u.id), user: ownUser(u) });
 });
 

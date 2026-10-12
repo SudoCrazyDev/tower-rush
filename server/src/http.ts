@@ -23,6 +23,8 @@ export interface Bindings {
   /** Turnstile widget: public sitekey (sent to the game in /config), and the frontend hostnames its tokens may come from. */
   TURNSTILE_SITEKEY?: string;
   TURNSTILE_HOSTNAMES?: string;
+  /** "1": accounts only through admin invites, no guests (staging; invites.ts). */
+  INVITE_ONLY?: string;
   /** Secret, set with `wrangler secret put`. Redeems Turnstile tokens (turnstile.ts). */
   TURNSTILE_SECRET?: string;
   /** Secret, set with `wrangler secret put`. Creates the first admin when there is none. */

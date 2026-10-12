@@ -2,11 +2,30 @@ import Phaser from "phaser";
 import { BASE, loadImages, setAssetIndex, type AssetIndex } from "../assets";
 import { W, H, txt, NAVY } from "../ui";
 import { ApiError, getToken, setToken } from "../api";
-import { loadConfig, loadMe } from "../save";
-import { showAuth, showBlocker } from "../authOverlay";
+import { checkInvite, loadConfig, loadMe } from "../save";
+import { showAuth, showBlocker, type Invite } from "../authOverlay";
 import { unlockAudio } from "../audio";
 import { ambientVideo, coverFit } from "../backdrop";
 import { ELEMENTS } from "../data/units";
+
+/** The token from an invitation email's link (`?invite=`), taken out of the address bar so a reload doesn't reuse it. */
+const linkInvite = new URLSearchParams(location.search).get("invite");
+if (linkInvite) {
+  const u = new URL(location.href);
+  u.searchParams.delete("invite");
+  history.replaceState(null, "", u);
+}
+
+/** Open the sign-up form for the invite in the link, or say why it can't be used. */
+async function inviteFromLink(): Promise<{ mode?: "register"; invite?: Invite; notice?: string }> {
+  if (!linkInvite) return {};
+  try {
+    return { mode: "register", invite: { token: linkInvite, email: await checkInvite(linkInvite) } };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 410) return { notice: e.message };
+    throw e;
+  }
+}
 
 /** Loads the index, then every image the menus need (battle sheets load per battle). */
 export class BootScene extends Phaser.Scene {
@@ -70,7 +89,7 @@ export class BootScene extends Phaser.Scene {
             setToken(null);
           }
         }
-        await showAuth();
+        await showAuth(await inviteFromLink());
         return;
       } catch (e) {
         // Banned accounts get their own screen (see main.ts) and stop here.
