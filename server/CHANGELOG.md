@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.2.1
+- Turnstile: siteverify's 400 answers are read rather than thrown away, and every rejection logs its error codes, action and hostname.
+
 ## 1.2.0
 - Player email via Cloudflare Email Service (`send_email` binding `EMAIL`, from `noreply@crownnkeep.com`). Branded HTML + text messages in `src/email.ts`; the logo is `email/logo.png` on R2.
 - Migration `0007_email.sql`: `users.email` (unique, case-insensitive), `email_verified_at`, `marketing_opt_in`; table `email_codes` (one hashed 6-digit code per player and purpose, 15 minutes, 5 tries, one send a minute).
