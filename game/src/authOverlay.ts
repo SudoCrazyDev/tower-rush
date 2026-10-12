@@ -118,7 +118,7 @@ export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean
         h("h2", {}, "Forgot password");
         h("p", {}, "Enter your account's email. We'll send you a 6-digit code.");
         const email = input("Email", { type: "email", autocomplete: "email", value: resetEmail });
-        const check = mountTurnstile(h("div", { className: "ts" }), "forgot");
+        const check = mountTurnstile(h("div", { className: "ts" }), "forgot", (m) => (err.textContent = m));
         const err = h("div", { className: "err" });
         const submit = h("button", { type: "submit", className: "primary" }, "SEND CODE") as HTMLButtonElement;
         h("button", { type: "button", className: "link" }, "I already have a code").onclick = () => ((resetEmail = email.value.trim()), render("reset"));
@@ -173,7 +173,7 @@ export function showAuth(opts: { mode?: Mode; title?: string; canClose?: boolean
         marketing = h("input", { type: "checkbox" }, "", label) as HTMLInputElement;
         h("span", {}, "Send me news, events and gifts by email", label);
       }
-      const check = mountTurnstile(h("div", { className: "ts" }), isReg ? "register" : "login");
+      const check = mountTurnstile(h("div", { className: "ts" }), isReg ? "register" : "login", (m) => (err.textContent = m));
       const err = h("div", { className: "err" });
       const submit = h("button", { type: "submit", className: "primary" }, isReg ? "CREATE" : "SIGN IN") as HTMLButtonElement;
       if (!isReg) h("button", { type: "button", className: "link" }, "Forgot password?").onclick = () => render("forgot");

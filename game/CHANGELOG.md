@@ -7,7 +7,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Forgot password: Sign in, "Forgot password?", enter the account email, then type the 6-digit code from the email (valid 15 minutes) and a new password. Other devices are signed out.
 - Sign in with your username or your email.
 - Settings, ACCOUNT (registered players): confirm the email, add or change it (needs the password), change the password, newsletter on or off. Settings nudges players who have no email or haven't confirmed it.
-- Cloudflare Turnstile bot check on sign in, create account and forgot password. It stays invisible unless Cloudflare wants a click. The sitekey comes from `/api/config` (`turnstileSiteKey`).
+- Cloudflare Turnstile bot check on sign in, create account and forgot password. It stays invisible unless Cloudflare wants a click; then the form says "Tick the box above to continue" and goes on by itself once ticked. The sitekey comes from `/api/config` (`turnstileSiteKey`).
 - Needs API 1.2.0 (`MIN_CLIENT` 2.5.0): older clients can't send the bot check.
 
 ## 2.4.1

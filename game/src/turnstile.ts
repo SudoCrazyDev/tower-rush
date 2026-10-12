@@ -38,12 +38,14 @@ export interface HumanCheck {
   reset(): void;
 }
 
-export function mountTurnstile(el: HTMLElement, action: "login" | "register" | "forgot"): HumanCheck {
+/** `hint` shows (or, with "", clears) a line asking the player to tick the box when Cloudflare wants a click. */
+export function mountTurnstile(el: HTMLElement, action: "login" | "register" | "forgot", hint: (msg: string) => void = () => {}): HumanCheck {
   const sitekey = turnstileSiteKey;
   // No sitekey: the server isn't checking either (it would refuse with a clear error if it were).
   if (!sitekey) return { token: async () => "", reset() {} };
   let token = "";
   let failed: string | null = null;
+  let needsClick = false;
   let waiters: { ok: (t: string) => void; fail: (e: Error) => void }[] = [];
   let id: string | undefined;
   let api: TurnstileApi | undefined;
@@ -57,7 +59,16 @@ export function mountTurnstile(el: HTMLElement, action: "login" | "register" | "
       action,
       theme: "dark",
       appearance: "interaction-only",
-      callback: (t: string) => ((token = t), (failed = null), settle()),
+      callback: (t: string) => {
+        token = t;
+        failed = null;
+        if (needsClick) hint("");
+        settle();
+      },
+      "before-interactive-callback": () => {
+        needsClick = true;
+        hint("Tick the box above to continue.");
+      },
       "expired-callback": () => (token = ""),
       "error-callback": () => {
         failed = "Security check failed, please try again";
@@ -71,9 +82,12 @@ export function mountTurnstile(el: HTMLElement, action: "login" | "register" | "
       await ready;
       if (token) return token;
       if (failed) throw new Error(failed);
+      if (needsClick) hint("Tick the box above to continue.");
+      // Waits for the player's tick as long as it takes; an invisible check that hangs gives up after 30 s.
       return new Promise<string>((ok, fail) => {
         waiters.push({ ok, fail });
         setTimeout(() => {
+          if (needsClick || !waiters.some((w) => w.ok === ok)) return;
           waiters = waiters.filter((w) => w.ok !== ok);
           fail(new Error("Security check is taking too long, please try again"));
         }, 30_000);
