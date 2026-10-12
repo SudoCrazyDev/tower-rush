@@ -569,13 +569,13 @@ export class DeckScene extends Phaser.Scene {
     const rarityCss = "#" + RARITY_STATS[def.rarity].color.toString(16).padStart(6, "0");
     const rarityLine = txt(this, cx, cy - 120, `${def.rarity.toUpperCase()} · ${def.element.toUpperCase()}`, 28, rarityCss);
     info.add(rarityLine);
-    // Awakened form: a small preview to the side; tap either card to flip between them.
+    // Awakened form: a small preview to the side (inside the dialog's border); tap either card to flip between them.
     if (canAwaken(id) && this.textures.exists(`portrait_awakened:${id}`)) {
       const awake = cardView(this, cx, cardY, 260, id, { awakened: true, locked: !owned }).setVisible(false);
       m.add(awake);
-      const thumb = cardView(this, cx + 225, cardY - 60, 96, id, { awakened: true, locked: !owned });
+      const thumb = cardView(this, cx + 196, cardY - 44, 96, id, { awakened: true, locked: !owned });
       m.add(thumb);
-      const label = txt(this, cx + 225, cardY + 12, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
+      const label = txt(this, cx + 196, cardY + 28, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
       m.add(label);
       const awakeText = txt(this, cx, cy - 120, `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ULTIMATE every ${ECONOMY.ultimateCooldown}s`, 22, "#ffd93b");
       info.add(awakeText.setVisible(false));

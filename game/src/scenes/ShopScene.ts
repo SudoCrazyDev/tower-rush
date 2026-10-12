@@ -71,6 +71,7 @@ export class ShopScene extends Phaser.Scene {
   /** One-second clock for countdowns; each tick returns true when the shelves need rebuilding. */
   private clock?: Phaser.Time.TimerEvent;
   private ticks: (() => boolean)[] = [];
+  private bar!: ReturnType<typeof topBar>;
 
   preload() {
     loadSheet(this, "vfx", "chest_open");
@@ -87,7 +88,7 @@ export class ShopScene extends Phaser.Scene {
     this.tabs = [];
 
     this.ambience();
-    topBar(this);
+    this.bar = topBar(this);
     iconButton(this, 50, 130, "back", 76, () => this.scene.start("Lobby"));
     this.sign();
     this.filterBar(WIDE ? 285 : 268);
@@ -595,8 +596,15 @@ export class ShopScene extends Phaser.Scene {
     const claim: Button = button(this, w / 2 - 30 - bw / 2, h / 2, bw, 90, "CLAIM", "green", this.tap(() => {
       claim.setEnabled(false);
       attempt(this, claimGift).then((ok) => {
-        if (ok) sfx("coin");
-        this.scene.restart();
+        if (!ok) return void claim.setEnabled(true);
+        // Show what came in, then swap just this card for its countdown; the rest of the shop stays put.
+        this.bar.refresh();
+        const fresh = this.giftCard(x, top, w);
+        this.tweens.killTweensOf([card, ...card.list]);
+        this.content.addAt(fresh, this.content.getIndex(card));
+        card.destroy();
+        bakeAll(fresh);
+        rewardPopup(this, "FREE GIFT", { reward: { coins: ECONOMY.giftCoins, gems: ECONOMY.giftGems, chest: null }, loot: null }, () => {});
       });
     }), WIDE ? 36 : 30).setEnabled(ready);
     card.add(claim);

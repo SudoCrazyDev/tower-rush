@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { bakeAll } from "./bake";
 import { BUTTON, ICON, type ButtonColor } from "./assets";
 import { UNIT_BY_ID, RARITY_STATS } from "./data/units";
 import { sfx, audioSettings, setAudio } from "./audio";
@@ -376,11 +377,12 @@ export function raceBadge(scene: Phaser.Scene, x: number, y: number, race: Race)
   const g = scene.add.graphics();
   g.fillStyle(0x0b1530, 0.85).fillRoundedRect(-64, -h / 2, 128, h, 16);
   g.lineStyle(3, color, 1).strokeRoundedRect(-64, -h / 2, 128, h, 16);
-  if (crest) {
-    const img = fitImage(scene.add.image(0, -14, `race:${race}`), 64);
-    return scene.add.container(x, y, [g, img, txt(scene, 0, 34, raceLabel(race).toUpperCase(), 18, raceCss(race))]);
-  }
-  return scene.add.container(x, y, [g, txt(scene, 0, -14, "RACE", 18, "#c9d2ff"), txt(scene, 0, 12, raceLabel(race).toUpperCase(), 20, raceCss(race))]);
+  const c = crest
+    ? scene.add.container(x, y, [g, fitImage(scene.add.image(0, -14, `race:${race}`), 64), txt(scene, 0, 34, raceLabel(race).toUpperCase(), 18, raceCss(race))])
+    : scene.add.container(x, y, [g, txt(scene, 0, -14, "RACE", 18, "#c9d2ff"), txt(scene, 0, 12, raceLabel(race).toUpperCase(), 20, raceCss(race))]);
+  // Baked: a live Graphics here cut off the bottom of the next NineSlice drawn (the hero modal's USE HERO button).
+  bakeAll(c);
+  return c;
 }
 
 export function fmt(n: number) {
