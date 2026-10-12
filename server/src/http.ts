@@ -18,6 +18,13 @@ export interface Bindings {
   GAME_URL?: string;
   /** Set only by the local dev script: allows WebSockets without an Origin. */
   DEV?: string;
+  /** Cloudflare Email Service: verification and password reset codes (email.ts). */
+  EMAIL: SendEmail;
+  /** Turnstile widget: public sitekey (sent to the game in /config), and the frontend hostnames its tokens may come from. */
+  TURNSTILE_SITEKEY?: string;
+  TURNSTILE_HOSTNAMES?: string;
+  /** Secret, set with `wrangler secret put`. Redeems Turnstile tokens (turnstile.ts). */
+  TURNSTILE_SECRET?: string;
   /** Secret, set with `wrangler secret put`. Creates the first admin when there is none. */
   ADMIN_PASSWORD?: string;
 }

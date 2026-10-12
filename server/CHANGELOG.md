@@ -1,5 +1,16 @@
 # API changelog
 
+## 1.2.0
+- Player email via Cloudflare Email Service (`send_email` binding `EMAIL`, from `noreply@crownnkeep.com`). Branded HTML + text messages in `src/email.ts`; the logo is `email/logo.png` on R2.
+- Migration `0007_email.sql`: `users.email` (unique, case-insensitive), `email_verified_at`, `marketing_opt_in`; table `email_codes` (one hashed 6-digit code per player and purpose, 15 minutes, 5 tries, one send a minute).
+- `POST /auth/register` requires `email` (accepts `marketing`); mails a confirmation code. `POST /auth/login` accepts an email as the username.
+- New: `POST /auth/forgot` (same answer whether or not the email has an account), `POST /auth/reset` (code + new password; signs out every session, confirms the email, signs in).
+- New: `PUT /me/email` (needs the password), `POST /me/email/resend`, `POST /me/email/verify`, `PUT /me/marketing`, `POST /me/password` (signs out other sessions).
+- Turnstile: login, register and forgot require a `turnstile` token, redeemed at siteverify with action and hostname checks (`src/turnstile.ts`). Vars `TURNSTILE_SITEKEY`, `TURNSTILE_HOSTNAMES`; secret `TURNSTILE_SECRET`. `/config` sends `turnstileSiteKey`.
+- `/me` and auth answers include `email`, `emailVerified`, `marketingOptIn` (only for the player themselves).
+- Admin: user detail shows the email; `PATCH /admin/users/:id` can set or clear `email`; the user search matches emails.
+- `MIN_CLIENT` raised to 2.5.0: older clients don't send the Turnstile token.
+
 ## 1.1.2
 - Fix: config validation no longer rejects `b2s5c3` (The Great Scale) with "the last wave needs a boss". The chapter has no boss by design; new chapter flag `ChapterMechanics.noBoss`, backfilled into saved configs through `ADDED_MECHANICS`. Admin saves of the config work again. `MIN_CLIENT` stays 2.4.0.
 

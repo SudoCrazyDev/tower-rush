@@ -9,6 +9,9 @@ export interface UserRow {
   id: number;
   username: string | null;
   password_hash: string | null;
+  email: string | null;
+  email_verified_at: number | null;
+  marketing_opt_in: number;
   display_name: string;
   is_guest: number;
   banned: number;
@@ -22,6 +25,8 @@ export interface UserRow {
 export const getUser = (db: D1Database, id: number) => one<UserRow>(db, "SELECT * FROM users WHERE id = ?", id);
 
 export const getUserByName = (db: D1Database, username: string) => one<UserRow>(db, "SELECT * FROM users WHERE username = ?", username);
+
+export const getUserByEmail = (db: D1Database, email: string) => one<UserRow>(db, "SELECT * FROM users WHERE email = ?", email);
 
 /** Parse a stored profile, repairing anything a config change may have invalidated. */
 export function readProfile(row: UserRow): Profile {
@@ -87,6 +92,11 @@ export async function createUser(db: D1Database, displayName: string) {
 
 export function publicUser(u: UserRow) {
   return { id: u.id, name: u.display_name, username: u.username, isGuest: !!u.is_guest };
+}
+
+/** publicUser plus what only the player themselves (and admins) may see. */
+export function ownUser(u: UserRow) {
+  return { ...publicUser(u), email: u.email, emailVerified: !!u.email_verified_at, marketingOptIn: !!u.marketing_opt_in };
 }
 
 export const NAME_RE = /^[\p{L}\p{N} _.-]{3,20}$/u;

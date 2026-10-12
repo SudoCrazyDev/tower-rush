@@ -45,7 +45,7 @@ export function UsersPage() {
   return (
     <>
       <PageHead title="Players" desc={data ? `${data.total.toLocaleString()} players` : undefined}>
-        <input className="search" placeholder="Search name, username or ID…" value={q} onChange={(e) => (setQ(e.target.value), setPage(0))} />
+        <input className="search" placeholder="Search name, username, email or ID…" value={q} onChange={(e) => (setQ(e.target.value), setPage(0))} />
         <Select value={filter} options={["all", "registered", "guests", "banned"] as const} onChange={(v) => (setFilter(v), setPage(0))} />
         <Select value={sort} options={["seen", "created", "trophies", "name"] as const} labels={{ seen: "Last seen", created: "Newest", trophies: "Trophies", name: "Name" }} onChange={setSort} />
       </PageHead>
@@ -101,7 +101,7 @@ export function UsersPage() {
 }
 
 interface Detail {
-  user: { id: number; name: string; username: string | null; isGuest: boolean; banned: boolean; banReason: string | null; createdAt: number; lastSeenAt: number; hasPassword: boolean };
+  user: { id: number; name: string; username: string | null; email: string | null; emailVerified: boolean; marketingOptIn: boolean; isGuest: boolean; banned: boolean; banReason: string | null; createdAt: number; lastSeenAt: number; hasPassword: boolean };
   profile: Profile;
   battles: { id: number; arena: string; deck: string; startedAt: number; finishedAt: number | null; wave: number | null; kills: number | null; bosses: number | null; coins: number | null; gems: number | null; trophies: number | null }[];
 }
@@ -171,7 +171,7 @@ export function UserDetail({ id }: { id: number }) {
   return (
     <>
       <a href="#/users" className="back">‹ All players</a>
-      <PageHead title={user.name} desc={`#${user.id} · ${user.isGuest ? "guest account" : `@${user.username}`} · joined ${fmtDate(user.createdAt)} · last seen ${timeAgo(user.lastSeenAt)}`}>
+      <PageHead title={user.name} desc={`#${user.id} · ${user.isGuest ? "guest account" : `@${user.username}`}${user.email ? ` · ${user.email} (${user.emailVerified ? "confirmed" : "unconfirmed"}${user.marketingOptIn ? ", newsletter" : ""})` : ""} · joined ${fmtDate(user.createdAt)} · last seen ${timeAgo(user.lastSeenAt)}`}>
         <button className="btn" onClick={editProfile}>Edit</button>
         <a className="btn" href={`#/mail/${user.id}`}>Send mail</a>
         {user.banned ? (
@@ -459,6 +459,7 @@ function EditProfile({ d, onSave, onClose }: { d: Detail; onSave: (body: Record<
   const [f, setF] = useState({
     name: d.user.name,
     username: d.user.username ?? "",
+    email: d.user.email ?? "",
     coins: d.profile.coins,
     gems: d.profile.gems,
     trophies: d.profile.trophies,
@@ -468,6 +469,7 @@ function EditProfile({ d, onSave, onClose }: { d: Detail; onSave: (body: Record<
     const body: Record<string, unknown> = {};
     if (f.name !== d.user.name) body.name = f.name;
     if (f.username && f.username !== d.user.username) body.username = f.username;
+    if (f.email.trim() !== (d.user.email ?? "")) body.email = f.email.trim();
     for (const k of ["coins", "gems", "trophies", "bestWave"] as const) if (f[k] !== d.profile[k]) body[k] = f[k];
     if (!Object.keys(body).length) return onClose();
     onSave(body);
@@ -486,6 +488,7 @@ function EditProfile({ d, onSave, onClose }: { d: Detail; onSave: (body: Record<
       <div className="form">
         <label>Display name<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
         <label>Username {d.user.isGuest && <span className="muted">(guests have none)</span>}<input value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></label>
+        <label>Email <span className="muted">(a new address starts unconfirmed)</span><input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
         <div className="row">
           <label>Gold<Num value={f.coins} min={0} width={120} onChange={(v) => setF({ ...f, coins: Math.round(v) })} /></label>
           <label>Gems<Num value={f.gems} min={0} width={120} onChange={(v) => setF({ ...f, gems: Math.round(v) })} /></label>

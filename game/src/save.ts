@@ -21,10 +21,16 @@ export interface Account {
   name: string;
   username: string | null;
   isGuest: boolean;
+  email: string | null;
+  emailVerified: boolean;
+  marketingOptIn: boolean;
 }
 
 export const profile: Profile = newProfile();
-export const account: Account = { id: 0, name: "", username: null, isGuest: true };
+export const account: Account = { id: 0, name: "", username: null, isGuest: true, email: null, emailVerified: false, marketingOptIn: false };
+
+/** Turnstile (bot check) sitekey for the sign-in forms, from /config; null when the server has none. */
+export let turnstileSiteKey: string | null = null;
 
 function setProfile(p: Profile) {
   Object.assign(profile, p);
@@ -36,7 +42,8 @@ export const serverNow = () => Date.now() + clockOffset;
 
 export async function loadConfig() {
   const sent = Date.now();
-  const r = await get<{ version: number; config: GameConfig; now?: number; minClient?: string | null }>("/config");
+  const r = await get<{ version: number; config: GameConfig; now?: number; minClient?: string | null; turnstileSiteKey?: string | null }>("/config");
+  turnstileSiteKey = r.turnstileSiteKey ?? null;
   if (r.minClient && versionBelow(__APP_VERSION__, r.minClient)) onOutdated();
   applyConfig(r.config);
   // Server time at the middle of the round trip, so countdowns match what the server enforces.
@@ -57,18 +64,51 @@ export async function playAsGuest() {
   await loadMe();
 }
 
-export async function signIn(username: string, password: string) {
-  const r = await post<{ token: string }>("/auth/login", { username, password });
+/** `username` may also be the account's email. `turnstile` is the bot-check token. */
+export async function signIn(username: string, password: string, turnstile: string) {
+  const r = await post<{ token: string }>("/auth/login", { username, password, turnstile });
   setToken(r.token);
   await loadMe();
 }
 
-/** Create an account; if currently a guest, the guest's progress is kept. */
-export async function register(username: string, password: string) {
-  const r = await post<{ token: string }>("/auth/register", { username, password });
+/** Create an account; if currently a guest, the guest's progress is kept. A confirmation code is mailed. */
+export async function register(f: { username: string; email: string; password: string; marketing: boolean }, turnstile: string) {
+  const r = await post<{ token: string }>("/auth/register", { ...f, turnstile });
   setToken(r.token);
   await loadMe();
 }
+
+/** Forgot password: mail a reset code to this address (if it has an account). Returns how many minutes the code lasts. */
+export async function forgotPassword(email: string, turnstile: string) {
+  return (await post<{ minutes: number }>("/auth/forgot", { email, turnstile })).minutes;
+}
+
+/** Forgot password: the mailed code and a new password; signs in. */
+export async function resetPassword(email: string, code: string, password: string) {
+  const r = await post<{ token: string }>("/auth/reset", { email, code, password });
+  setToken(r.token);
+  await loadMe();
+}
+
+const setAccount = (r: { user: Account }) => Object.assign(account, r.user);
+
+/** Add or change the email (needs the password); a confirmation code is mailed. */
+export async function setEmail(email: string, password: string) {
+  setAccount(await put<{ user: Account }>("/me/email", { email, password }));
+}
+
+export async function verifyEmail(code: string) {
+  setAccount(await post<{ user: Account }>("/me/email/verify", { code }));
+}
+
+export const resendEmailCode = () => post("/me/email/resend");
+
+export async function setMarketing(optIn: boolean) {
+  setAccount(await put<{ user: Account }>("/me/marketing", { optIn }));
+}
+
+/** Change the password; other devices are signed out. */
+export const changePassword = (current: string, password: string) => post("/me/password", { current, password });
 
 export async function signOut() {
   try {

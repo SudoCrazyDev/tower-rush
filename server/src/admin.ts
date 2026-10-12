@@ -4,7 +4,8 @@ import { analytics } from "./analytics.ts";
 import { createSession, deleteSession, deleteSessionsFor, hashPassword, needsRehash, rateLimit, requireAdmin, verifyPassword } from "./auth.ts";
 import { currentConfig, getVersion, listVersions, saveConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Bindings, type Ctx } from "./http.ts";
-import { getUser, publicUser, readProfile, writeProfile, NAME_RE, USERNAME_RE } from "./users.ts";
+import { getUser, ownUser, readProfile, writeProfile, NAME_RE, USERNAME_RE } from "./users.ts";
+import { normEmail, validEmail } from "./email.ts";
 import { defaultConfig, type GameConfig } from "../../shared/config.ts";
 import { newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
@@ -194,8 +195,8 @@ admin.get("/users", async (c) => {
   const where: string[] = [];
   const args: (string | number)[] = [];
   if (q) {
-    where.push("(display_name LIKE ? OR username LIKE ? OR CAST(id AS TEXT) = ?)");
-    args.push(`%${q}%`, `%${q}%`, q);
+    where.push("(display_name LIKE ? OR username LIKE ? OR email LIKE ? OR CAST(id AS TEXT) = ?)");
+    args.push(`%${q}%`, `%${q}%`, `%${q}%`, q);
   }
   if (filter === "banned") where.push("banned = 1");
   if (filter === "guests") where.push("is_guest = 1");
@@ -232,7 +233,7 @@ admin.get("/users/:id", async (c) => {
     u.id,
   );
   return c.json({
-    user: { ...publicUser(u), banned: !!u.banned, banReason: u.ban_reason, createdAt: u.created_at, lastSeenAt: u.last_seen_at, hasPassword: !!u.password_hash },
+    user: { ...ownUser(u), banned: !!u.banned, banReason: u.ban_reason, createdAt: u.created_at, lastSeenAt: u.last_seen_at, hasPassword: !!u.password_hash },
     profile: readProfile(u),
     battles,
   });
@@ -257,6 +258,12 @@ admin.patch("/users/:id", async (c) => {
     if (!USERNAME_RE.test(String(b.username))) fail(400, "Username: 3-20 letters, digits, _ . -");
     if (await one(db, "SELECT id FROM users WHERE username = ? AND id != ?", String(b.username), id)) fail(409, "That username is taken");
   }
+  // Email: "" clears it; a new address starts unconfirmed.
+  const email = b.email === undefined ? undefined : normEmail(b.email);
+  if (email) {
+    if (!validEmail(email)) fail(400, "Not a valid email address");
+    if (await one(db, "SELECT id FROM users WHERE email = ? AND id != ?", email, id)) fail(409, "That email is used by another account");
+  }
   await editProfile(c, (p) => {
     for (const k of ["coins", "gems", "trophies", "bestWave"] as const) {
       if (b[k] === undefined) continue;
@@ -280,6 +287,10 @@ admin.patch("/users/:id", async (c) => {
   });
   if (b.name !== undefined) await run(db, "UPDATE users SET display_name = ? WHERE id = ?", String(b.name), id);
   if (b.username !== undefined) await run(db, "UPDATE users SET username = ? WHERE id = ?", String(b.username), id);
+  if (email !== undefined) {
+    await run(db, "UPDATE users SET email = ?, email_verified_at = NULL WHERE id = ? AND email IS NOT ?", email || null, id, email || null);
+    await run(db, "DELETE FROM email_codes WHERE user_id = ?", id);
+  }
   await audit(db, c.get("adminId"), "user.edit", `user:${id}`, b);
   return c.json({ ok: true });
 });

@@ -2,6 +2,14 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.5.0
+- Email and password recovery. Creating an account now asks for an email (guests still play without one), with an optional newsletter checkbox. A 6-digit code is mailed to confirm the address.
+- Forgot password: Sign in, "Forgot password?", enter the account email, then type the 6-digit code from the email (valid 15 minutes) and a new password. Other devices are signed out.
+- Sign in with your username or your email.
+- Settings, ACCOUNT (registered players): confirm the email, add or change it (needs the password), change the password, newsletter on or off. Settings nudges players who have no email or haven't confirmed it.
+- Cloudflare Turnstile bot check on sign in, create account and forgot password. It stays invisible unless Cloudflare wants a click. The sitekey comes from `/api/config` (`turnstileSiteKey`).
+- Needs API 1.2.0 (`MIN_CLIENT` 2.5.0): older clients can't send the bot check.
+
 ## 2.4.1
 - Hotfix: in The Throne of Dust (Book 2 Story 3, chapter 3) any unit can be dragged onto an empty tile, so you can reach the braziers. Driven by a new chapter flag, `ChapterMechanics.freeMove`; `ADDED_MECHANICS` copies it into saved configs, which would otherwise hide it. Only the game changed; the API did not, and `MIN_CLIENT` stays 2.4.0.
 - Hotfix: in The Iron Oath (Book 2 Story 4, chapter 1) families no longer die at the start of the road. Hunters dive only on a family ahead of them, within 15% of the path (it was 30% in either direction), and only 6 s after spawning (it was 3 s). Ships with API 1.1.1, which resets the saved chapter.

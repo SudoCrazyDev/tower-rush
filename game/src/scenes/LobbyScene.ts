@@ -11,7 +11,7 @@ import { dailyCounts, loginModal, questsModal } from "./daily";
 import { leagueBadge, leagueModal } from "./leagues";
 import { inboxModal, mailIcon } from "./inbox";
 import { leagueFor } from "../../../shared/leagues.ts";
-import { showAuth } from "../authOverlay";
+import { showAccount, showAuth } from "../authOverlay";
 import { claimPlay, releasePlay } from "../play";
 import { music } from "../audio";
 import { bakeAll } from "../bake";
@@ -694,6 +694,15 @@ export class LobbyScene extends Phaser.Scene {
         button(this, cx, cy + 150, 400, 96, "SAVE PROGRESS", "green", async () => {
           m.close();
           if (await showAuth({ mode: "register", canClose: true })) this.scene.restart();
+        }, 34),
+      );
+    } else {
+      const note = !account.email ? "Add an email so you can\nreset your password." : !account.emailVerified ? "Confirm your email with\nthe code we sent you." : "";
+      if (note) m.add(txt(this, cx, cy + 50, note, 24, "#ffd27a"));
+      m.add(
+        button(this, cx, cy + 150, 400, 96, "ACCOUNT", "blue", async () => {
+          m.close();
+          await showAccount();
         }, 34),
       );
     }

@@ -32,16 +32,22 @@
     ]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Matchmaker", "MatchRoom"] }],
+  // Cloudflare Email Service: sends from noreply@crownnkeep.com (src/email.ts).
+  "send_email": [{ "name": "EMAIL" }],
   // ALLOWED_ORIGINS: browser origins for CORS and WebSocket upgrades (comma list).
   // MIN_CLIENT: oldest game version still served; older clients get 426 and must reload.
   // GAME_URL: where non-API requests are redirected.
+  // TURNSTILE_SITEKEY / TURNSTILE_HOSTNAMES: the bot-check widget and the game hostnames its tokens may come from.
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ALLOWED_ORIGINS": "https://game.crownnkeep.com,https://manage.crownnkeep.com",
-    "MIN_CLIENT": "2.4.0",
-    "GAME_URL": "https://game.crownnkeep.com/"
+    "MIN_CLIENT": "2.5.0",
+    "GAME_URL": "https://game.crownnkeep.com/",
+    "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
+    "TURNSTILE_HOSTNAMES": "game.crownnkeep.com"
   },
-  // Secret (not in this file): ADMIN_PASSWORD, used once to create the first admin.
+  // Secrets (not in this file): ADMIN_PASSWORD, used once to create the first admin;
+  // TURNSTILE_SECRET, the Turnstile widget's secret key.
   "env": {
     "staging": {
       "name": "tower-rush-staging",
@@ -66,11 +72,14 @@
         ]
       },
       "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Matchmaker", "MatchRoom"] }],
+      "send_email": [{ "name": "EMAIL" }],
       "vars": {
         "ADMIN_USERNAME": "admin",
         "ALLOWED_ORIGINS": "https://staging-game.crownnkeep.com,https://manage.crownnkeep.com,http://localhost:5173,http://localhost:5174",
-        "MIN_CLIENT": "2.4.0",
-        "GAME_URL": "https://staging-game.crownnkeep.com/"
+        "MIN_CLIENT": "2.5.0",
+        "GAME_URL": "https://staging-game.crownnkeep.com/",
+        "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
+        "TURNSTILE_HOSTNAMES": "staging-game.crownnkeep.com"
       }
     }
   }

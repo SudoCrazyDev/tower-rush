@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import { all, count, one, run } from "./db.ts";
-import { createSession, deleteSession, hashPassword, needsRehash, rateLimit, requirePlayer, sessionFor, verifyPassword } from "./auth.ts";
+import { createSession, deleteSession, deleteSessionsFor, hashPassword, needsRehash, rateLimit, requirePlayer, sessionFor, verifyPassword } from "./auth.ts";
 import { currentConfig } from "./config-store.ts";
 import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
-import { createUser, getUser, getUserByName, publicUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
+import { CODE_MINUTES, newCode, normEmail, sendCode, useCode, validEmail, type CodePurpose } from "./email.ts";
+import { requireHuman } from "./turnstile.ts";
+import { createUser, getUser, getUserByEmail, getUserByName, ownUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
 import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
 import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, AVATAR_RE, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
@@ -21,7 +23,13 @@ export const player = new Hono<AppEnv>();
 player.get("/config", (c) => {
   const cfg = currentConfig();
   // `now` lets the game line its event and offer countdowns up with the server's clock.
-  return c.json({ version: cfg.id, config: cfg.config, now: Date.now(), minClient: c.env.MIN_CLIENT ?? null });
+  return c.json({
+    version: cfg.id,
+    config: cfg.config,
+    now: Date.now(),
+    minClient: c.env.MIN_CLIENT ?? null,
+    turnstileSiteKey: c.env.TURNSTILE_SITEKEY || null,
+  });
 });
 
 // ---------------------------------------------------------------- auth
@@ -30,26 +38,33 @@ const authLimit = rateLimit("AUTH_LIMIT");
 
 player.post("/auth/guest", authLimit, async (c) => {
   const u = await createUser(c.env.DB, `Player${Math.floor(1000 + Math.random() * 9000)}`);
-  return c.json({ token: await createSession(c.env.DB, "player", u.id), user: publicUser(u) });
+  return c.json({ token: await createSession(c.env.DB, "player", u.id), user: ownUser(u) });
 });
 
+/** Sign in with a username or an email address. */
 player.post("/auth/login", authLimit, async (c) => {
   const db = c.env.DB;
-  const { username, password } = await body(c);
-  const u = typeof username === "string" ? await getUserByName(db, username) : null;
+  const { username, password, turnstile } = await body(c);
+  await requireHuman(c, turnstile, "login");
+  const login = typeof username === "string" ? username.trim() : "";
+  const u = !login ? null : login.includes("@") ? await getUserByEmail(db, normEmail(login)) : await getUserByName(db, login);
   if (!u || !(await verifyPassword(String(password ?? ""), u.password_hash))) fail(401, "Wrong username or password");
   if (u.banned) fail(403, "banned", { reason: u.ban_reason });
   if (needsRehash(u.password_hash!)) await run(db, "UPDATE users SET password_hash = ? WHERE id = ?", await hashPassword(String(password)), u.id);
-  return c.json({ token: await createSession(db, "player", u.id), user: publicUser(u) });
+  return c.json({ token: await createSession(db, "player", u.id), user: ownUser(u) });
 });
 
 /** Register a new account, or claim the current guest account by giving it a username. */
 player.post("/auth/register", authLimit, async (c) => {
   const db = c.env.DB;
-  const { username, password } = await body(c);
+  const { username, password, email: rawEmail, marketing, turnstile } = await body(c);
+  const email = normEmail(rawEmail);
   if (typeof username !== "string" || !USERNAME_RE.test(username)) fail(400, "Username: 3-20 letters, digits, _ . -");
+  if (!validEmail(email)) fail(400, "Enter a valid email address");
   if (typeof password !== "string" || password.length < 6) fail(400, "Password must be at least 6 characters");
+  await requireHuman(c, turnstile, "register");
   if (await getUserByName(db, username)) fail(409, "That username is taken");
+  if (await getUserByEmail(db, email)) fail(409, "That email is already used by another account");
 
   // Upgrade the caller's guest account if they're signed in as one.
   const s = await sessionFor(c, "player");
@@ -57,19 +72,58 @@ player.post("/auth/register", authLimit, async (c) => {
   if (!u || !u.is_guest) u = await createUser(db, username);
   await run(
     db,
-    "UPDATE users SET username = ?, password_hash = ?, is_guest = 0, display_name = ? WHERE id = ?",
+    "UPDATE users SET username = ?, password_hash = ?, email = ?, email_verified_at = NULL, marketing_opt_in = ?, is_guest = 0, display_name = ? WHERE id = ?",
     username,
     await hashPassword(password),
+    email,
+    marketing ? 1 : 0,
     u.is_guest ? username : u.display_name,
     u.id,
   );
   u = (await getUser(db, u.id))!;
-  return c.json({ token: await createSession(db, "player", u.id), user: publicUser(u) });
+  await mailCode(c, u, "verify");
+  return c.json({ token: await createSession(db, "player", u.id), user: ownUser(u) });
 });
 
 player.post("/auth/logout", requirePlayer, async (c) => {
   await deleteSession(c.env.DB, c.get("token"));
   return c.json({ ok: true });
+});
+
+/** Mail a fresh code to the player's address (quietly skipped if one went out under a minute ago). */
+async function mailCode(c: Ctx, u: UserRow, purpose: CodePurpose) {
+  if (!u.email) return;
+  const code = await newCode(c.env.DB, u.id, purpose, u.email);
+  if (code) c.executionCtx.waitUntil(sendCode(c.env, u.email, u.display_name, purpose, code));
+}
+
+/**
+ * Forgot password, step 1: mail a reset code to the account with this email. The answer
+ * is the same whether or not the address has an account, so it can't be used to probe.
+ */
+player.post("/auth/forgot", authLimit, async (c) => {
+  const { email: rawEmail, turnstile } = await body(c);
+  const email = normEmail(rawEmail);
+  if (!validEmail(email)) fail(400, "Enter a valid email address");
+  await requireHuman(c, turnstile, "forgot");
+  const u = await getUserByEmail(c.env.DB, email);
+  if (u && !u.banned && u.username) await mailCode(c, u, "reset");
+  return c.json({ ok: true, minutes: CODE_MINUTES });
+});
+
+/** Forgot password, step 2: the mailed code and a new password. Signs out everywhere else, then signs in here. */
+player.post("/auth/reset", authLimit, async (c) => {
+  const db = c.env.DB;
+  const { email: rawEmail, code, password } = await body(c);
+  if (typeof password !== "string" || password.length < 6) fail(400, "Password must be at least 6 characters");
+  const u = await getUserByEmail(db, normEmail(rawEmail));
+  const r = u ? await useCode(db, u.id, "reset", code) : ({ ok: false, reason: "wrong" } as const);
+  if (!u || !r.ok) fail(400, !r.ok && r.reason === "expired" ? "That code has expired, ask for a new one" : "Wrong code");
+  if (u.banned) fail(403, "banned", { reason: u.ban_reason });
+  // The code reached this inbox, so the address is confirmed too.
+  await run(db, "UPDATE users SET password_hash = ?, email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?", await hashPassword(password), Date.now(), u.id);
+  await deleteSessionsFor(db, "player", u.id);
+  return c.json({ token: await createSession(db, "player", u.id), user: ownUser((await getUser(db, u.id))!) });
 });
 
 // ---------------------------------------------------------------- profile
@@ -108,7 +162,7 @@ const P = requirePlayer;
 
 player.get("/me", P, async (c) => {
   const m = await me(c);
-  return c.json({ user: publicUser(m.u), profile: m.p });
+  return c.json({ user: ownUser(m.u), profile: m.p });
 });
 
 player.put("/me/deck", P, async (c) => {
@@ -190,7 +244,67 @@ player.put("/me/name", P, async (c) => {
   const name = String((await body(c)).name ?? "").trim();
   if (!NAME_RE.test(name)) fail(400, "Name: 3-20 characters");
   await run(db, "UPDATE users SET display_name = ? WHERE id = ?", name, m.u.id);
-  return c.json({ user: publicUser((await getUser(db, m.u.id))!) });
+  return c.json({ user: ownUser((await getUser(db, m.u.id))!) });
+});
+
+/** Add or change the account's email (needs the current password), then mail a code to confirm it. */
+player.put("/me/email", P, authLimit, async (c) => {
+  const db = c.env.DB;
+  const m = await me(c);
+  const { email: rawEmail, password } = await body(c);
+  const email = normEmail(rawEmail);
+  if (m.u.is_guest) fail(400, "Create an account first");
+  if (!validEmail(email)) fail(400, "Enter a valid email address");
+  if (!(await verifyPassword(String(password ?? ""), m.u.password_hash))) fail(401, "Wrong password");
+  if (email !== m.u.email) {
+    if (await one(db, "SELECT id FROM users WHERE email = ? AND id != ?", email, m.u.id)) fail(409, "That email is already used by another account");
+    await run(db, "UPDATE users SET email = ?, email_verified_at = NULL WHERE id = ?", email, m.u.id);
+    await run(db, "DELETE FROM email_codes WHERE user_id = ?", m.u.id);
+  }
+  const u = (await getUser(db, m.u.id))!;
+  if (!u.email_verified_at) await mailCode(c, u, "verify");
+  return c.json({ user: ownUser(u) });
+});
+
+/** Mail another confirmation code (at most one a minute). */
+player.post("/me/email/resend", P, authLimit, async (c) => {
+  const m = await me(c);
+  if (!m.u.email) fail(400, "Add an email first");
+  if (m.u.email_verified_at) fail(400, "Your email is already confirmed");
+  await mailCode(c, m.u, "verify");
+  return c.json({ ok: true, minutes: CODE_MINUTES });
+});
+
+/** Confirm the account's email with the mailed code. */
+player.post("/me/email/verify", P, authLimit, async (c) => {
+  const db = c.env.DB;
+  const m = await me(c);
+  const r = await useCode(db, m.u.id, "verify", (await body(c)).code);
+  if (!r.ok) fail(400, r.reason === "expired" ? "That code has expired, ask for a new one" : "Wrong code");
+  if (r.email !== m.u.email) fail(400, "Your email changed since that code was sent; ask for a new one");
+  await run(db, "UPDATE users SET email_verified_at = ? WHERE id = ?", Date.now(), m.u.id);
+  return c.json({ user: ownUser((await getUser(db, m.u.id))!) });
+});
+
+/** Newsletter consent, on or off. */
+player.put("/me/marketing", P, async (c) => {
+  const db = c.env.DB;
+  const m = await me(c);
+  await run(db, "UPDATE users SET marketing_opt_in = ? WHERE id = ?", (await body(c)).optIn ? 1 : 0, m.u.id);
+  return c.json({ user: ownUser((await getUser(db, m.u.id))!) });
+});
+
+/** Change the password; signs out every other device. */
+player.post("/me/password", P, authLimit, async (c) => {
+  const db = c.env.DB;
+  const m = await me(c);
+  const { current, password } = await body(c);
+  if (m.u.is_guest) fail(400, "Create an account first");
+  if (typeof password !== "string" || password.length < 6) fail(400, "Password must be at least 6 characters");
+  if (!(await verifyPassword(String(current ?? ""), m.u.password_hash))) fail(401, "Wrong current password");
+  await run(db, "UPDATE users SET password_hash = ? WHERE id = ?", await hashPassword(password), m.u.id);
+  await run(db, "DELETE FROM sessions WHERE kind = 'player' AND subject_id = ? AND token != ?", m.u.id, c.get("token"));
+  return c.json({ ok: true });
 });
 
 player.post("/cards/:id/upgrade", P, async (c) => {
