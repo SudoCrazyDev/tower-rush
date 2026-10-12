@@ -24,8 +24,9 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v2.0.0 | **The Grand Revamp** | 2026-10-09 | tag `v2.0.0` | [v2.0](v2.0-the-grand-revamp/README.md) |
 | v2.1.0 | **Chaos Corrupted** | 2026-10-10 | tag `v2.1.0` | [v2.1](v2.1-chaos-corrupted/README.md) |
 | v2.2.0 | **Sand & Sea** | 2026-10-11 | tag `v2.2.0` | [v2.2](v2.2-sand-and-sea/README.md) |
-| v2.3.0 | **The Iron Oath** | not shipped (built on branch `v2.3-iron-oath`) | — | [v2.3](v2.3-the-iron-oath/README.md) |
-| v2.4.0 | **The Silver Tribunal** (Book 2 finale) | not shipped (built on branch `v2.4-silver-tribunal`) | — | [v2.4](v2.4-the-silver-tribunal/README.md) |
+| v2.3.0 | **The Iron Oath** | 2026-10-11 | tag `v2.3.0` / `game-v2.3.0` | [v2.3](v2.3-the-iron-oath/README.md) |
+| v2.4.0 | **The Silver Tribunal** (Book 2 finale) | 2026-10-12 | tag `game-v2.4.0` (API `api-v1.1.0`) | [v2.4](v2.4-the-silver-tribunal/README.md) |
+| v2.4.1 | Story hotfixes: Throne of Dust free move, Iron Oath families, Walking Forge rework (legs stop it and regrow, faster furnace), Colossus 5% absorb | 2026-10-12 | tag `game-v2.4.1` (API `api-v1.1.1`) | [game CHANGELOG](../../game/CHANGELOG.md) |
 | next | Balance pass, Book 3 | — | — | — |
 
 ---
@@ -152,8 +153,8 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
   Dust", pitched in the [saga plan](concepts/forsakens-saga.md). Art budget: about 350 Higgsfield
   credits (about 450 with retries), stills and in-game animation clips included. Promo reuses game
   footage and panel zooms, with no generated trailer video.
-- **v2.3.0 "The Iron Oath" (built, not shipped):** Book 2 Story 4, see [v2.3](v2.3-the-iron-oath/README.md).
-- **v2.4.0 "The Silver Tribunal" (built, not shipped):** Book 2 Story 5, the finale, see [v2.4](v2.4-the-silver-tribunal/README.md).
+- **v2.3.0 "The Iron Oath" (live 2026-10-11):** Book 2 Story 4, see [v2.3](v2.3-the-iron-oath/README.md).
+- **v2.4.0 "The Silver Tribunal" (live 2026-10-12, with hotfix 2.4.1):** Book 2 Story 5, the finale, see [v2.4](v2.4-the-silver-tribunal/README.md).
 - **Later:** Book 3 (pitched in the saga plan; the Book 3 finale reveals the mastermind).
 - Ideas waiting for a release are in the root [ROADMAP.md](../../ROADMAP.md).
 - Fantasy features (ideas only, not scheduled): [World Boss](fantasy/world-boss.md).
