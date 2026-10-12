@@ -126,6 +126,12 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   { ...M("iron_soldier", "Iron Soldier", "construct", 1.1, 62, ["armored"], 10, 88), iron: true },
   { ...M("iron_crossbow", "Iron Crossbow", "construct", 0.9, 72, ["dodge"], 10, 88), iron: true },
   { ...M("iron_brute", "Iron Brute", "construct", 2.4, 46, ["tank", "armored"], 16, 104), iron: true },
+  // v2.4 Book 2, Story 5 "The Silver Tribunal": the brass law-engines of Aurelion.
+  M("brass_warden", "Brass Warden", "construct", 1.2, 60, ["armored"], 10, 88),
+  M("ledger_crossbowman", "Ledger Crossbowman", "construct", 0.9, 72, ["dodge"], 10, 88),
+  M("chainbearer", "Chainbearer", "construct", 1.8, 52, ["tank"], 14, 96),
+  M("quill_drone", "Quill Drone", "construct", 0.6, 125, ["fast", "dodge"], 8, 76),
+  M("gavel_golem", "Gavel Golem", "construct", 2.6, 44, ["tank", "armored"], 18, 108),
 ];
 
 /** Monsters added after configs were already saved: appended to an older saved list. */
@@ -137,6 +143,7 @@ export const ADDED_MONSTERS = [
   "reef_crab", "drowned_sailor", "drowned_corsair", "eel_swimmer", "barnacle_spawn", "barnacle_cluster", "corvaline_lantern",
   "faceless_soldier", "faceless_archer", "faceless_civilian", "scarab", "jackal",
   "drake_whelp", "dwarf_family", "iron_soldier", "iron_crossbow", "iron_brute",
+  "brass_warden", "ledger_crossbowman", "chainbearer", "quill_drone", "gavel_golem",
 ];
 
 /** What a splitter breaks into: a smaller copy of itself unless listed here. */
@@ -181,11 +188,15 @@ export const BOSS_POWERS: BossPower[] = ["summon", "heal", "haste", "shield", "f
  * v2.3 Book 2 Story 4 adds:
  * - absorb: swallows up to `n` iron monsters alive (the first use: all of them; later: those within a short reach);
  *   each one makes the boss `amount` (share) tougher and a little faster (see shared/oath.ts)
+ * v2.4 Book 2 Story 5 adds (see shared/tribunal.ts):
+ * - decree: the boss declares a law for `dur` seconds on top of the plea's law (units that break it are jailed)
+ * - chain: chains `n` units in place (no moving, merging or copying) until `amount` of their attacks (or taps) break it
+ * - sentence: a counter that gains one every use and condemns the strongest unit at `amount` (then starts over)
  *
  * A skill with `part` only works while that BossPart is unbroken (see BossDef.parts).
  */
-export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley" | "anchor_hook" | "siren_song" | "lantern_beam" | "thrash" | "mimic" | "burrow" | "equal_ground" | "absorb";
-export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley", "anchor_hook", "siren_song", "lantern_beam", "thrash", "mimic", "burrow", "equal_ground", "absorb"];
+export type BossSkillKind = "entangle" | "impale" | "sapling_trail" | "volley" | "anchor_hook" | "siren_song" | "lantern_beam" | "thrash" | "mimic" | "burrow" | "equal_ground" | "absorb" | "decree" | "chain" | "sentence";
+export const BOSS_SKILLS: BossSkillKind[] = ["entangle", "impale", "sapling_trail", "volley", "anchor_hook", "siren_song", "lantern_beam", "thrash", "mimic", "burrow", "equal_ground", "absorb", "decree", "chain", "sentence"];
 export interface BossSkill {
   kind: BossSkillKind;
   /** Seconds between uses (the first use comes after `first`, default `every`). */
@@ -269,6 +280,8 @@ export interface BossDef {
   parts?: BossPart[];
   /** v2.3 Walking Forge: share of damage the core takes while another part stands. */
   coreArmor?: number;
+  /** v2.4 Argent: cold silver light, not violet. Effects that only hurt chaos (the Lance Knight's bane) do nothing to it. */
+  silver?: boolean;
 }
 
 export const DEFAULT_BOSSES: BossDef[] = [
@@ -378,13 +391,38 @@ export const DEFAULT_BOSSES: BossDef[] = [
     ],
     rally: { at: 0.55, damage: 0.3, speed: 1.1 },
   },
+  // v2.4 Book 2, Story 5 "The Silver Tribunal".
+  {
+    // The reading-automaton: unrolls the charges and declares a law now and then.
+    id: "prosecutor", name: "The Prosecutor", race: "construct", hp: 3.2, speed: 24, power: "none", corrupted: true,
+    skills: [{ kind: "decree", every: 16, first: 8, n: 1, dur: 9 }],
+  },
+  {
+    // The chain construct of the cells: chains units where they stand.
+    id: "bailiff", name: "The Bailiff", race: "construct", hp: 4.6, speed: 26, power: "none", corrupted: true,
+    skills: [{ kind: "chain", every: 11, first: 6, n: [1, 2], amount: 12 }],
+  },
+  {
+    // Vaeltharion, a handful of golden dust on the wind: a warning, a short fight.
+    id: "vaeltharion_dust", name: "Vaeltharion's Dust", race: "elf", hp: 2.2, speed: 26, power: "none",
+  },
+  {
+    // High Justiciar Argent: perfect, cold silver light, not violet. Condemns the strongest unit when her sentence fills; the Book 2 allies charge her once.
+    id: "argent_justiciar", name: "High Justiciar Argent", race: "construct", hp: 8.5, speed: 15, power: "none", silver: true,
+    skills: [
+      { kind: "sentence", every: 3, first: 3, n: 1, amount: 9 },
+      { kind: "decree", every: 18, first: 10, n: 1, dur: 8 },
+    ],
+    rally: { at: 0.5, damage: 0.25, speed: 1.15 },
+  },
 ];
 
 /** Bosses added after configs were already saved: appended to an older saved list. */
 export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyrant", "sour_gummy_hydra", "chaos_jawbreaker", "corrupted_fae", "corrupted_bear", "portal_wizard",
   "elf_captain_morvane", "elf_captain_sylris", "elf_captain_kaelen", "thalmyr", "vaeltharion",
   "grell", "lusca", "ondrath", "corvaline", "faceless_herald", "dune_warden", "sefa",
-  "ashmaw", "walking_forge", "chaos_colossus"];
+  "ashmaw", "walking_forge", "chaos_colossus",
+  "prosecutor", "bailiff", "vaeltharion_dust", "argent_justiciar"];
 
 export const BOSSES: BossDef[] = structuredClone(DEFAULT_BOSSES);
 export const BOSS_BY_ID: Record<string, BossDef> = {};

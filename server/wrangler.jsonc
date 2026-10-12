@@ -38,7 +38,7 @@
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ALLOWED_ORIGINS": "https://game.crownnkeep.com,https://manage.crownnkeep.com",
-    "MIN_CLIENT": "2.3.0",
+    "MIN_CLIENT": "2.4.0",
     "GAME_URL": "https://game.crownnkeep.com/"
   },
   // Secret (not in this file): ADMIN_PASSWORD, used once to create the first admin.
@@ -69,7 +69,7 @@
       "vars": {
         "ADMIN_USERNAME": "admin",
         "ALLOWED_ORIGINS": "https://staging-game.crownnkeep.com,https://manage.crownnkeep.com,http://localhost:5173,http://localhost:5174",
-        "MIN_CLIENT": "2.3.0",
+        "MIN_CLIENT": "2.4.0",
         "GAME_URL": "https://staging-game.crownnkeep.com/"
       }
     }

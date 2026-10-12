@@ -325,8 +325,8 @@ export class Unit {
     // v2.2 board rules: submerged (high tide), asleep (siren song), glimmered (lantern beam), equal ground.
     const under = now < s.status.submergedUntil;
     const asleep = now < s.status.asleepUntil;
-    if (frozen || now < s.status.shockedUntil || now < s.status.entangledUntil || asleep) {
-      this.sprite.setTint(frozen ? 0x7fd8ff : now < s.status.entangledUntil ? 0x8fcf6a : asleep ? 0x8f98c8 : 0xb0a890);
+    if (frozen || now < s.status.shockedUntil || now < s.status.entangledUntil || asleep || s.jailed) {
+      this.sprite.setTint(frozen ? 0x7fd8ff : now < s.status.entangledUntil ? 0x8fcf6a : asleep ? 0x8f98c8 : s.jailed ? 0x7f86a0 : 0xb0a890);
       this.sprite.setAlpha(under ? 0.55 : 1);
       this.sprite.anims.timeScale = 0;
       this.envShown = true;

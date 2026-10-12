@@ -33,6 +33,7 @@ import { ShotView, fxEvent, fxHit } from "../battle/vfx";
 import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
+import { TribunalView } from "../battle/tribunalView";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
 
@@ -112,6 +113,8 @@ export class BattleScene extends Phaser.Scene {
   private faceless: FacelessView | null = null;
   /** v2.3 The Iron Oath visuals (evacuation, forge parts, runes, absorb). */
   private oath: OathView | null = null;
+  /** v2.4 The Silver Tribunal visuals (pleas, laws, jail, cells, pans, falling city, sentence). */
+  private tribunal: TribunalView | null = null;
   /** Equal ground: units wear the balance tint until this sim time. */
   equalUntil = 0;
   /** Chaos Taffy tethers, redrawn every frame. */
@@ -149,7 +152,7 @@ export class BattleScene extends Phaser.Scene {
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
     this.deck = this.story ? [...this.story.start.deck] : [...profile.deck];
     this.tethers = null;
-    this.tideView = this.faceless = this.oath = null;
+    this.tideView = this.faceless = this.oath = this.tribunal = null;
     this.equalUntil = 0;
     this.acc = 0;
     this.speedMult = 1;
@@ -208,7 +211,9 @@ export class BattleScene extends Phaser.Scene {
     // v2.2: a tide chapter's arena has a flooded twin (<art>_high) that fades in at high tide.
     if (this.story?.chapter.mechanics?.tide && assetIndex().locations.includes(`${this.art}_high`)) this.load.image(`${this.artKey}_high`, `${BASE}locations/${this.art}_high.webp`);
     // v2.3: a chapter's hero unit isn't in the deck but is on the board; unitArt gives a stand-in sheet while its own art is missing.
-    for (const id of [...this.deck, ...(this.story?.chapter.hero ? [this.story.chapter.hero.unit] : [])]) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${unitArt(id)}_${anim}`);
+    // v2.4: the trial's witnesses are lent to the board for a count, so their sheets load too.
+    const witnesses = this.story?.chapter.mechanics?.trial ? this.story.chapter.waves.flatMap((w) => (w.charge ? [w.charge.witness] : [])) : [];
+    for (const id of [...new Set([...this.deck, ...witnesses, ...(this.story?.chapter.hero ? [this.story.chapter.hero.unit] : [])])]) for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units", `${unitArt(id)}_${anim}`);
     const waves = this.story?.chapter.waves;
     const bosses = waves ? [...new Set(waves.flatMap((w) => (w.boss ? [w.boss] : [])))] : a.bosses;
     const monsters = new Set(waves ? waves.flatMap((w) => w.spawns.map((s) => s.id)) : a.monsters);
@@ -272,6 +277,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.textures.exists(`${this.artKey}_high`)) this.tideView.highArt(`${this.artKey}_high`, tint);
       this.faceless = new FacelessView(this, this.story.chapter.mechanics);
       this.oath = new OathView(this, this.story.chapter.mechanics);
+      this.tribunal = new TribunalView(this, this.story.chapter.mechanics);
     }
     this.input.keyboard?.on("keydown-D", () => this.toggleDebug());
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
@@ -549,6 +555,13 @@ export class BattleScene extends Phaser.Scene {
     this.hearts.forEach((h, i) => h.setAlpha(i < sim.lives ? 1 : 0.2));
     for (const c of this.deckCards) {
       const lvl = sim.powerUps[c.id];
+      // v2.4 chapter 2: a card still locked in its cell.
+      if (lvl === undefined) {
+        c.cost.setText("LOCKED");
+        c.root.setAlpha(0.3);
+        c.pips.clear();
+        continue;
+      }
       const cost = powerUpCost(lvl);
       c.cost.setText(lvl >= maxPowerUp() ? "MAX" : fmt(cost));
       c.root.setAlpha(lvl < maxPowerUp() && sim.mana >= cost ? 1 : 0.65);
@@ -728,9 +741,16 @@ export class BattleScene extends Phaser.Scene {
     let origin: Unit | null = null;
     // v2.2 siren song: a tap on a sleeping unit only wakes it (never a drag, merge or swap).
     let sleeper: Unit | null = null;
+    let shaker: Unit | null = null;
     this.input.on("dragstart", (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Sprite & { unit?: Unit }) => {
       const u = obj.unit;
       if (!u || this.over || this.paused || !u.sprite.active) return;
+      // v2.4: a lent witness can't be moved; a chained unit can't be picked up, a tap shakes its chain.
+      if (u.sim.witness) return;
+      if (u.sim.chain > 0) {
+        shaker = u;
+        return;
+      }
       if (this.now < u.sim.status.asleepUntil) {
         sleeper = u;
         return;
@@ -770,6 +790,14 @@ export class BattleScene extends Phaser.Scene {
       const u = obj.unit;
       this.highlights.forEach((h) => h.destroy());
       this.highlights = [];
+      if (u && u === shaker) {
+        shaker = null;
+        if (!this.over && !this.paused && this.sim.shake(u.slot)) {
+          this.floater(u.sprite.x, u.sprite.y - 70, `${u.sim.chain}`, "#e8ecff", 26);
+          this.pump();
+        }
+        return;
+      }
       if (u && u === sleeper) {
         sleeper = null;
         if (!this.over && !this.paused && this.sim.units[u.slot] === u.sim && this.sim.wake(u.slot)) this.pump();
@@ -852,6 +880,30 @@ export class BattleScene extends Phaser.Scene {
     this.floater(x, u.sprite.y - 80, why, "#ffb0b0", 24);
   }
 
+  /** v2.4: hold the battle (the plea screen) or let it go on. */
+  hold(on: boolean) {
+    this.paused = on;
+    if (!on) this.acc = 0;
+  }
+
+  /** v2.4: process the Sim's events at once (after the plea). */
+  flush() {
+    this.pump();
+    this.refreshHud();
+  }
+
+  /** v2.4: a unit left the board (a witness, a condemned unit, a fallen tile). */
+  removeUnit(uid: number) {
+    this.dropUnit(uid);
+  }
+
+  /** v2.4 chapter 2: a card came back from its cell. */
+  unlockCard(id: string) {
+    const c = this.deckCards.find((d) => d.id === id);
+    if (c) this.tweens.add({ targets: c.root, scale: c.root.scale * 1.25, yoyo: true, duration: 220 });
+    this.refreshHud();
+  }
+
   private pause() {
     if (this.over) return;
     this.paused = true;
@@ -903,6 +955,7 @@ export class BattleScene extends Phaser.Scene {
     this.refreshHud();
     this.tideView?.update(delta / 1000);
     this.oath?.update();
+    this.tribunal?.update();
   }
 
   /** Sim shots become projectile sprites: one per shot, gliding on between steps. */
@@ -1222,6 +1275,18 @@ export class BattleScene extends Phaser.Scene {
       case "lantern":
         if (!e.lit) this.monsters.get(e.uid)?.remove();
         this.tideView?.handle(e);
+        break;
+      case "plea":
+      case "pleaed":
+      case "law":
+      case "jail":
+      case "shackle":
+      case "cell":
+      case "crush":
+      case "collapse":
+      case "unit_gone":
+      case "sentence":
+        this.tribunal?.handle(e);
         break;
       case "family":
       case "dive":

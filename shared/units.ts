@@ -452,10 +452,12 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   { ...U("emberhold_gunner", "Emberhold Gunner", "rare", "fire", "shot", "cannonball", "Dwarf powder, no wasted shot. Plate means little to him.", "dwarf", "rapid", "armor_breaker"), storyReward: true },
   { ...U("runecaller", "Runecaller", "rare", "arcane", "shot", "arcane_orb", "Her runes pick any rune apart, whatever its element.", "dwarf", "balanced", "none"), role: "Runecaller", storyReward: true },
   { ...U("durgrim", "Durgrim Emberhold", "epic", "fire", "burn", "fireball", "An oath broken must be paid. Stronger beside every Knight.", "dwarf", "heavy", "none"), damage: 70, role: "Thane", storyOnly: true, effect: "oath" },
+  // v2.4 Book 2 Story 5 "The Silver Tribunal": Argent (Event card). Mercy is a rule in the Sim (shared/tribunal.ts): beside her, no unit is jailed, chained or condemned.
+  { ...U("argent", "Argent, the Merciful", "event", "arcane", "pierce", "spark", "Her gavel-sword runs the line through. Beside her, no one is jailed, chained or condemned.", "construct", "heavy", "none"), damage: 80, role: "Justiciar", weapon: "sword" },
 ], DEFAULT_EFFECTS);
 
-/** The Story units: Muse, the Knights and the Mercenaries (v1.2), Maren and Bako (v2.2), Brakka, the Emberhold dwarves and Durgrim (v2.3). */
-export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade", "maren", "bako", "brakka", "emberhold_gunner", "runecaller", "durgrim"];
+/** The Story units: Muse, the Knights and the Mercenaries (v1.2), Maren and Bako (v2.2), Brakka, the Emberhold dwarves and Durgrim (v2.3), Argent (v2.4). */
+export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight", "aegis_knight", "lance_knight", "oath_knight", "lantern_knight", "berserker_sellsword", "powder_grenadier", "hired_blade", "maren", "bako", "brakka", "emberhold_gunner", "runecaller", "durgrim", "argent"];
 
 /**
  * Units added to the defaults after configs were already saved (the v1.1 support units):

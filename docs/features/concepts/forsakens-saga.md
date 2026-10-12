@@ -31,7 +31,7 @@ torn between the justice of Good and the justice of Evil.
 | B2 S2 | Drowned Coast | Corvaline | **Protection:** "No one will ever be taken again." |
 | B2 S3 | Sunspire Desert | Sefa the Chainbreaker | **Equality:** "No one will ever kneel again." |
 | B2 S4 | Emberhold | Thane Durgrim | **Vengeance:** "An oath broken must be paid in blood." |
-| B2 S5 | The Silver Tribunal | High Justiciar Seraphel | **Law without mercy:** "Every wrong is judged." |
+| B2 S5 | The Silver Tribunal | High Justiciar Argent | **Law without mercy:** "Every wrong is judged." |
 
 ### The shard count
 One shard per story. The Story 2 cliffhanger says "Two hearts taken. Three remain." The Book 2 finale
@@ -239,63 +239,65 @@ forms) and 7 for the ending. Slugs are in the [v2.3 design doc](../v2.3-the-iron
 
 ## 5. Book 2 Story 5: "The Silver Tribunal" (Book 2 finale, 4 chapters)
 
-**Logline:** In a city above the clouds, the angels of law put the Keeper on trial for every elf,
-sailor, Faceless and dwarf struck down on the road. The judge is incorruptible, which is exactly what
-the chaos used.
+**Status:** approved pitch, built in v2.4.0 (see [v2.4](../v2.4-the-silver-tribunal/README.md)).
+**No angels or divine beings anywhere in this story**: the user reserves angels for a later series.
 
-**Shape:** a courtroom where the player chooses a plea for each charge, a prison break with no deck,
-a chapter with no boss where the arena itself judges you, and a finale on a city falling out of the
-sky. The guardian is the board itself.
+**Logline:** Aurelion is a floating city of clockwork law. A long-vanished artificer people built
+brass judges to give the world justice without bias; they have ruled a thousand years and the city
+flies on law-engines. The judge is incorruptible, which is exactly what the chaos used.
+
+**Shape:** a courtroom where the player chooses a plea for each charge, a prison break with a
+confiscated deck, a chapter with no boss where the arena itself judges you, and a finale on a city
+falling out of the sky. The guardian is the board itself.
 
 ### Bridge from Story 4
-A silver light pulls the Keeper up into the sky. They wake in chains in **Aurelion**, the floating
-city of the Lawkeepers, which guards the last Orb: the **Orb of Verdicts**.
+A silver light pulls the Keeper up into the sky. They wake in chains in **Aurelion**, which guards
+the last Orb: the **Orb of Verdicts**.
 
 ### Cast
-- **High Justiciar Seraphel** (fallen hero). An angel who has judged for a thousand years and never
-  shown mercy, because mercy is not in the law. A voice told her that the world's chaos exists
-  because wrongdoers go unjudged. She bound the Orb of Verdicts to her sword. She is corrupted
-  *without turning violet*: her light is cold, silver and perfect.
-- **The Great Scale** (guardian, arena). A living set of golden scales as big as a city square. The
-  whole Chapter 3 board stands on its two pans.
+- **High Justiciar Argent** (fallen hero). The oldest clockwork judge, built without mercy. She bound
+  the Orb of Verdicts into her gavel-sword. She is corrupted *without turning violet*: her light is
+  cold, perfect silver. (Story card: **Argent, the Merciful**, earned at the end.)
+- **The Great Scale** (guardian). The brass law-engine that holds Aurelion up; the Chapter 3 board
+  stands on its two pans.
 - **The witnesses.** The Keeper's past allies are called to testify: Queen Aelyria, Corvaline and
-  Maren, Bako, Durgrim and Brakka. Vaeltharion appears as golden dust and speaks once.
-- **Captains:** **The Bailiff** (chains units in place) and **The Prosecutor** (reads the charges and
-  declares laws).
+  Maren, Bako, Durgrim and Brakka. Vaeltharion appears once as golden dust.
+- **Bosses:** **The Prosecutor** (a reading-automaton that unrolls the charges and declares laws),
+  **The Bailiff** (a chain construct) and **Argent**.
 
 ### Chapters
 | # | Chapter | Format | Beat |
 |---|---|---|---|
-| 1 | The Trial | 8 counts (waves). **Plea choice** before each one | Each count is a charge from one land, and its wave is drawn from that land's monsters: elves, the drowned crew, Faceless, iron. Before each count the player pleads. A witness speaks for or against the Keeper between counts. |
+| 1 | The Trial | 8 counts (waves). **Plea choice** before each one; the last count brings the Prosecutor | Each count is a charge from one land (Elven Wilds, Drowned Coast, Sunspire, Emberhold: two counts each), and its wave is drawn from that land's monsters. A witness speaks between counts. |
 | 2 | Cells of Aurelion | 12 waves, boss: The Bailiff. **Prison break** | The verdict is guilty whatever you pleaded. Your deck is confiscated, and you start with one unit. Your other cards are locked in cells along the path. Break a cell to get that card back mid-battle. |
 | 3 | The Great Scale | 12 waves, **no boss** | The board stands on the Scale's two pans. Survive while keeping it level. At the end the Scale weighs the Keeper and settles even: "Neither guiltless nor guilty. Human." The judgment cracks Aurelion's foundation, and the city begins to fall. |
-| 4 | Verdict | 20 waves, then Seraphel. **Collapsing board** | Seraphel passes sentence on the whole world as the city falls apart around you. Mid-boss, Vaeltharion's golden dust speaks: "Justice without mercy is only another chaos." Seraphel falters. Rally: every Book 2 ally charges at once. |
+| 4 | Verdict | 20 waves, then Argent. **Collapsing board** | Argent passes sentence as the city falls apart around you. Mid-boss, Vaeltharion's golden dust speaks: "Justice without mercy is only another chaos." Argent falters. Rally: every Book 2 ally charges at once. |
 
-### Ending (draft beats)
-1. Seraphel's sword shatters. For the first time in a thousand years, she weeps.
+### Ending beats
+1. Argent's gavel-sword shatters. For the first time in a thousand years a tear runs down her brass
+   face: quicksilver.
 2. The Orb of Verdicts is cleansed, and the fifth shard tears free.
-3. The Keeper and Aelyria watch the five shards fly to one point: a **broken pair of scales** in the
-   sky.
+3. The Keeper and Aelyria watch five shards fly to a **broken pair of scales** in the sky.
 4. The two-toned voice, heard openly for the first time: "Good failed them. Evil failed them. I am
    the balance they forgot."
-5. The scales crack. Violet chaos pours down onto **every land at once**: the Candy Kingdom, the
-   Elven Wilds, the Drowned Coast, Sunspire, Emberhold.
-6. Seraphel, kneeling: "The voice I obeyed... I know it. It once sat beside me in this court."
-   End of Book 2.
+5. Violet chaos pours onto **every land at once**: the Candy Kingdom, the Elven Wilds, the Drowned
+   Coast, Sunspire, Emberhold.
+6. Argent, kneeling: "The voice I obeyed... it once sat beside me in this court."
+7. "End of Book 2" title card.
 
 ### New mechanics
 | Mechanic | Where | What it does |
 |---|---|---|
-| **Pleas** (headline) | Ch 1 | Before each count: **Guilty** makes the wave harder (more HP), but that land's witness fights for you that wave. **Not guilty** keeps the wave normal, but the Prosecutor declares a **law** for it, such as "No fire" or "Only four may strike". A unit that breaks the law is jailed for the wave. This is the first player choice in story mode, and replays let players try the other plea. |
-| **Confiscated deck** | Ch 2 | You start with 1 unit. Cells along the path hold your other cards. Killing monsters next to a cell breaks it and returns the card to your hand. You rebuild your army as the fight goes on. |
-| **Chains** | The Bailiff | Chains a unit in place. It cannot be moved or sold until the chain breaks. |
-| **Balance** | Ch 3 | The board is two pans. The heavier pan, the one with more unit levels on it, tilts down, and its units take crushing hits. Waves come to both sides, so you have to build evenly. |
-| **Collapsing board** | Ch 4 | Every few waves a section of the city falls away, and the units on it fall with it (returned to hand). The board shrinks toward the final duel. |
-| **Witness deck** | Ch 4 | An Event deck built from every Book 2 story card: Maren, Bako, Brakka and the dwarf cards, and the Story 1 rewards. |
-| **Silver light** | Seraphel | Her attacks ignore effects that only hurt chaos. A sentence counter fills, and when it is full she *condemns* the strongest unit on the board. |
+| **Pleas** (headline) | Ch 1 | Before each count: **Guilty** makes the wave harder (more HP), but that land's witness fights for you that wave. **Not guilty** keeps the wave normal, but the Prosecutor declares a **law** for it ("No fire", "Only four may strike", "No merging", "No summoning after the bell"). A unit that breaks the law is jailed (disabled) for the wave. The first player choice in story mode; replays let players try the other plea. |
+| **Confiscated deck** | Ch 2 | You start with 1 unit. Cells along the path hold your other cards. Killing monsters next to a cell breaks it and returns the card to your hand. |
+| **Chains** | The Bailiff | Chains a unit in place: it cannot be moved or merged until the chain breaks (its attacks and your taps wear it down). |
+| **Balance** | Ch 3 | The board is two pans. The pan with more total unit ranks tilts down, and its units take crushing hits (stunned). Waves come down both sides, so build evenly. |
+| **Collapsing board** | Ch 4 | Every few waves a section of the city falls away. Units on it are caught by a free tile, or returned as mana. The board shrinks toward the final duel. |
+| **Witness deck** | Ch 4 | An Event deck built from every Book 2 story card. |
+| **Silver light** | Argent | Effects that only hurt chaos (the Lance Knight's bane) do nothing to her. A sentence counter fills, and when it is full she *condemns* the strongest unit on the board. Her mercy is the answer: beside her card, no unit is jailed, chained or condemned. |
 
-**Rewards:** a mythic chest, the badge **Unbroken** (finished Book 2), and a card back or frame
-showing the broken scales.
+**Rewards:** a mythic chest, the card **Argent, the Merciful**, the badge **Unbroken** (finished
+Book 2). A card back showing the broken scales is open: the game has no card-back system yet.
 
 ---
 
@@ -305,9 +307,9 @@ showing the broken scales.
   of Evil. It could choose neither, and that division spawned **Chaos** itself.
 - Its symbol is the **broken pair of scales** (white pan, black pan), seeded in Book 2 Stories 4-5.
 - Its voice has two tones, and the fallen heroes all describe it the same way.
-- It once sat in the Silver Tribunal beside Seraphel (Book 2 Story 5, panel 6).
+- It once sat in the Silver Tribunal beside Argent (Book 2 Story 5, panel 6).
 - Open question: is it a new character or an existing unit in the roster? If it is an existing unit,
   its card and description need quiet hints from Book 2 onward.
 - Book 3 Stories 1-4: TBD. Natural setup: the lands of Books 1-2 fall again, and the Keeper gathers
-  the healed heroes (Aelyria, Corvaline, Bako, Durgrim and Seraphel) as allies.
+  the healed heroes (Aelyria, Corvaline, Bako, Durgrim and Argent) as allies.
 - Sefa can wake from her statue in Book 3 (decided 2026-10-10).

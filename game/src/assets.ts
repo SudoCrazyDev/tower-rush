@@ -73,7 +73,7 @@ export const animKey = sheetKey;
  * v2.3: unit cards whose own art isn't in the pack yet borrow an existing card's (portrait, still, card and sheets), so
  * Story 4 can be earned and played before its art lands. Drop an entry once the art is built.
  */
-const UNIT_STAND_IN: Record<string, string> = { brakka: "thunder_dwarf", durgrim: "bear_rider", emberhold_gunner: "pirate_gunner", runecaller: "frost_sorceress" };
+const UNIT_STAND_IN: Record<string, string> = { brakka: "thunder_dwarf", durgrim: "bear_rider", emberhold_gunner: "pirate_gunner", runecaller: "frost_sorceress", argent: "aegis_knight" };
 
 /** The unit id whose sheets draw unit `id` (itself, or its stand-in while its own sheets are missing). */
 export function unitArt(id: string) {
@@ -123,6 +123,16 @@ const STAND_IN: Record<string, string> = {
   ashmaw: "fire_dragon",
   walking_forge: "goblin_war_machine",
   chaos_colossus: "stone_colossus",
+  // v2.4 Story 5 "The Silver Tribunal": borrowed sprites until its own sheets are built (the art is in the pack now; these only apply to a build without it).
+  brass_warden: "armored_beetle",
+  ledger_crossbowman: "corrupted_elf_archer",
+  chainbearer: "orc_brute",
+  quill_drone: "flying_eyeball",
+  gavel_golem: "ice_golem_minion",
+  prosecutor: "goblin_war_machine",
+  bailiff: "stone_colossus",
+  argent_justiciar: "lich_king",
+  vaeltharion_dust: "vaeltharion",
 };
 
 /** The id whose sheets draw monster or boss `id` (itself, or its stand-in while its art is missing). */

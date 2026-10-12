@@ -12,6 +12,7 @@ document and a promo kit for social media. The release timeline is in [ROADMAP.m
 | v2.1.0 | **Chaos Corrupted** | Live (2026-10-10) | [README.md](v2.1-chaos-corrupted/README.md) | [PROMO.md](v2.1-chaos-corrupted/PROMO.md) |
 | v2.2.0 | **Sand & Sea** | Live | [README.md](v2.2-sand-and-sea/README.md) | [PROMO.md](v2.2-sand-and-sea/PROMO.md) |
 | v2.3.0 | **The Iron Oath** | Testing | [README.md](v2.3-the-iron-oath/README.md) | [PROMO.md](v2.3-the-iron-oath/PROMO.md) |
+| v2.4.0 | **The Silver Tribunal** | Testing | [README.md](v2.4-the-silver-tribunal/README.md) | [PROMO.md](v2.4-the-silver-tribunal/PROMO.md) |
 
 ## Conventions
 

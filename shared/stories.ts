@@ -7,6 +7,7 @@
  */
 import type { Reward } from "./daily.ts";
 import { BOSS_BY_ID } from "./monsters.ts";
+import { LAWS, type CellRules, type Charge, type CollapseRules, type ScaleRules, type TrialRules } from "./tribunal.ts";
 import { UNIT_BY_ID, deckable, type Rarity } from "./units.ts";
 
 /** `n` monsters of one kind. */
@@ -35,6 +36,8 @@ export interface StoryWave {
   reveal?: { at: number; panels: StoryPanel[]; stun: number };
   /** v2.3: panels that play (the battle holds) just before this wave starts (Story 4: the Colossus forms). */
   cutscene?: StoryPanel[];
+  /** v2.4 Story 5 Ch 1: this wave is a count of the trial: the player pleads before it (see ChapterMechanics.trial). */
+  charge?: Charge;
 }
 
 /**
@@ -101,6 +104,18 @@ export interface ChapterMechanics {
    * it takes `hp` of the monster's HP. Other units deal only `leak` (a share) of their damage to the monster meanwhile.
    */
   runes?: { chance: number; hp: number; leak: number };
+  /**
+   * v2.4 Story 5 Ch 1: the trial. Before each wave that has a `charge` the player pleads. Guilty: the count's monsters have
+   * `guiltyHp` x HP, but the charge's witness fights beside you until the count ends. Not guilty: the Prosecutor declares
+   * the charge's law; a unit that breaks it is jailed (disabled) until the count ends.
+   */
+  trial?: TrialRules;
+  /** v2.4 Story 5 Ch 2: the deck is confiscated: only the first card is in hand, the rest sit in cells along the path. */
+  cells?: CellRules;
+  /** v2.4 Story 5 Ch 3: the Great Scale's pans (left and right columns); the heavier pan is crushed. Waves come down both sides. */
+  scale?: ScaleRules;
+  /** v2.4 Story 5 Ch 4: tiles of the city fall away at set waves; units on them are caught by a free tile or returned as mana. */
+  collapse?: CollapseRules;
 }
 
 /** v2.2: an arena duel chapter (Story 3): a best-of PvP match against the bot with a fixed deck. */
@@ -1112,8 +1127,212 @@ const THE_IRON_OATH: StoryDef = {
   ],
 };
 
+// ---------------------------------------------------------------- Book 2 · Story 5: The Silver Tribunal (v2.4)
+
+const BW = "brass_warden";
+const LX = "ledger_crossbowman";
+const CB = "chainbearer";
+const QD = "quill_drone";
+const GL = "gavel_golem";
+const PROS = "prosecutor";
+const ARG = "argent";
+/** Every Book 2 ally that charges Argent at the end (story/allies art from Stories 1, 3 and 4; the Story 2 coast has none). */
+const BOOK2_ALLIES = [
+  "ally_elf_spearman", "ally_gnome", "ally_fae", "ally_earth_elemental", "ally_forest_beast",
+  "ally_gladiator", "ally_spearwoman", "ally_slinger", "ally_nefrael",
+  "ally_dwarf_guard", "ally_dwarf_gunner", "ally_candy_knight", "ally_candy_lancer",
+];
+/** The witness deck of the finale: every Book 2 story card. */
+const WITNESS_DECK = ["princess_muse", "maren", "bako", "brakka", "emberhold_gunner", "runecaller", "durgrim"];
+
+const count = (land: string, title: string, text: string, witness: string, law: Charge["law"]): Charge => ({ land, title, text, witness, law });
+
+/** Chapter 4: each wave's HP share, easing off as the city shrinks (a smaller board must still hold). */
+const FALLING = [1, 1, 1, 1, 0.9, 0.9, 0.9, 0.9, 0.75, 0.75, 0.75, 0.75, 0.6, 0.6, 0.6, 0.6, 0.5, 0.5, 0.5, 0.5, 1];
+
+const THE_SILVER_TRIBUNAL: StoryDef = {
+  id: "b2s5",
+  title: "The Silver Tribunal",
+  blurb: "A silver light lifts the Keeper into the sky. In Aurelion, the city of clockwork law, every land has a charge, and the judge cannot be bribed.",
+  cover: "book2_story5_the_silver_tribunal",
+  trophies: 0,
+  replayCards: ["argent"],
+  chapters: [
+    chapter({
+      id: "b2s5c1",
+      title: "The Trial",
+      layout: "sky_temple",
+      art: "arena_aurelion_court",
+      corruption: 0,
+      hpScale: 3.8,
+      mechanics: { trial: { guiltyHp: 1.2, witnessRank: 5, witnessLevel: 8, prep: 8 } },
+      intro: [
+        panel("b2s5_p1_silver_light", "A silver light falls on the Keeper's camp. It does not burn. It lifts.", "The ground shrinks away beneath them."),
+        panel("b2s5_p2_aurelion", "Above the clouds hangs a city of brass and glass, ticking like a clock: Aurelion.", "A thousand years of law, built by hands that vanished."),
+        panel("b2s5_p3_chains_in_court", "The Keeper wakes in chains in the Hall of Law. Queen Aelyria is bound beside them.", `"The Orb of Verdicts is here," she whispers. "And so is the judge."`),
+      ],
+      waves: [
+        w(`${SC} 12, ${WR} 5, ${AR} 4`, {
+          charge: count("Elven Wilds", "Felling the Elderwood", "A thousand trees were burned to feed a war. The court calls the Keeper to answer.", "princess_muse", "no_fire"),
+          bark: say(Q, "I stand witness. The forest burned, and the Keeper came late. But they came."),
+        }),
+        w(`${SC} 10, ${WD} 3, ${WR} 6`, {
+          charge: count("Elven Wilds", "Abandoning the Fleeing", "The fleeing were hunted through the deep wood while the Keeper was elsewhere.", "princess_muse", "no_merge"),
+          bark: say(Q, "They were few and frightened. The Keeper stayed with them in the end."),
+        }),
+        w(`${DS} 14, ${CR} 4, ${EE} 6`, {
+          charge: count("Drowned Coast", "Flooding Saltmere", "The tide took Saltmere's harbour on the Keeper's watch.", "maren", "only_four"),
+          bark: say("maren", "The sea takes things. It never takes the blame. Let the Keeper be heard."),
+        }),
+        w(`${CO} 7, ${EE} 10, ${CR} 5, ${BS} 6`, {
+          charge: count("Drowned Coast", "Dimming the Lantern", "A lighthouse went dark at the world's edge, and ships were lost.", "maren", "no_summon"),
+          bark: say("corvaline", "I kept that light forty years. I will not let my grief be used as a charge."),
+        }),
+        w(`${FS} 14, ${FA} 6, ${JK} 8`, {
+          charge: count("Sunspire", "Letting the Faceless Walk", "The masked ones crossed Sunspire's gates, and the Keeper let them pass.", "bako", "no_fire"),
+          bark: say("bako", "Masks, chains, crowds. I fought for Sunspire, and the Keeper stood beside me."),
+        }),
+        w(`${SB} 14, ${FS} 10, ${FA} 8`, {
+          charge: count("Sunspire", "Opening the Sphinx's Cage", "A sphinx was loosed on the sands, and the sands remember.", "bako", "only_four"),
+          bark: say("bako", "A cage is a cage. The Keeper opened it to end a worse one."),
+        }),
+        w(`${IS} 12, ${IC} 6, ${DW} 8`, {
+          charge: count("Emberhold", "Breaking the Iron Oath", "The crown swore to stand with the dwarves, and did not come.", "brakka", "no_merge"),
+          bark: say("durgrim", "Three hundred years I carried that broken scroll. The Keeper brought a new one."),
+        }),
+        w(`${IS} 8, ${IB} 3, ${IC} 4`, {
+          charge: count("Emberhold", "Leaving the Forge to Burn", "The Walking Forge rose, and nothing stopped it in time. The eighth charge: the Keeper themselves.", "brakka", "no_summon"),
+          boss: PROS,
+          hp: 0.8,
+          bark: say(PROS, "Count the eighth. The accused has pleaded to seven. Now the court reads the law itself."),
+        }),
+      ],
+      reward: reward(2600, 55),
+      replay: replay(450),
+    }),
+    chapter({
+      id: "b2s5c2",
+      title: "Cells of Aurelion",
+      layout: "clockwork_city",
+      art: "arena_aurelion_cells",
+      corruption: 0,
+      hpScale: 1.8,
+      mechanics: { cells: { at: [0.2, 0.4, 0.6, 0.8], hp: [4, 6, 8, 10], reach: 180 } },
+      intro: [
+        panel("b2s5_p4_verdict_guilty", "The verdict rings through the Hall: guilty, whatever was pleaded.", `"The court weighs deeds, not words," says the Prosecutor.`),
+        panel("b2s5_p5_lockboxes", "Brass hands take the Keeper's cards, one by one, and carry them away.", "Only one is left in their pocket."),
+        panel("b2s5_p6_cell_galleries", "Along the Walk of Judgment, the cards hang in brass cells.", "Break a cell and the card comes home."),
+      ],
+      waves: [
+        w(`${BW} 6, ${QD} 3`, { hp: 0.5, bark: say(Q, "I can hear them from here. Break the cells!") }),
+        w(`${BW} 8, ${LX} 3`, { hp: 0.55 }),
+        w(`${QD} 10, ${BW} 5`, { hp: 0.6, bark: say("bako", "The first cell cracks when the road is cleared beside it!") }),
+        w(`${CB} 3, ${BW} 8, ${LX} 3`, { hp: 0.7 }),
+        w(`${BW} 10, ${QD} 8, ${LX} 4`, { hp: 0.8 }),
+        w(`${CB} 4, ${LX} 6, ${BW} 8`, { hp: 0.85, bark: say(PROS, "A cell is a sentence served. Do not interfere.") }),
+        w(`${QD} 14, ${CB} 3, ${BW} 8`),
+        w(`${BW} 12, ${LX} 7, ${CB} 4`, { bark: say("maren", "Your cards are coming back. Keep the road clear!") }),
+        w(`${CB} 6, ${QD} 10, ${LX} 6`),
+        w(`${BW} 14, ${CB} 5, ${GL} 2`, { bark: say("brakka", "Brass chains, iron will. I know a chain-smith when I see one.") }),
+        w(`${LX} 10, ${QD} 12, ${CB} 5`),
+        w(`${BW} 8, ${CB} 4, ${LX} 4`, { boss: "bailiff", hp: 0.8, bark: say("bailiff", "Stay where you are. The law keeps what it holds.") }),
+      ],
+      reward: reward(3200, 65),
+      replay: replay(550),
+    }),
+    chapter({
+      id: "b2s5c3",
+      title: "The Great Scale",
+      layout: "candy_land",
+      art: "arena_great_scale",
+      corruption: 0,
+      hpScale: 3.1,
+      mechanics: { scale: { every: 6, gap: 4, stun: 2.2 } },
+      intro: [
+        panel("b2s5_p7_escape_great_scale", "The Walk of Judgment ends at the heart of Aurelion: the brass law-engine that holds the city in the sky.", "The Great Scale. Two pans, each wide as a courtyard."),
+        panel("b2s5_p8_scale_pans", "The Keeper steps onto the pans. They hum, and begin to lean.", `"Stand even, Keeper," says Aelyria. "The Scale crushes the heavier side."`),
+      ],
+      waves: [
+        w(`${BW} 10, ${QD} 6`, { bark: say("great_scale", "WEIGHING.") }),
+        w(`${LX} 8, ${BW} 8, ${QD} 6`, { bark: say(Q, "Build evenly. Left and right, left and right!") }),
+        w(`${GL} 2, ${BW} 10, ${LX} 5`),
+        w(`${QD} 14, ${BW} 8, ${LX} 6`, { bark: say("great_scale", "THE PAN FALLS. THE LAW FALLS WITH IT.") }),
+        w(`${GL} 3, ${LX} 8, ${BW} 10`),
+        w(`${BW} 14, ${QD} 10, ${LX} 6`, { bark: say("maren", "The tide balances itself. So can you.") }),
+        w(`${GL} 4, ${BW} 10, ${LX} 8`),
+        w(`${QD} 16, ${BW} 12, ${LX} 6`, { bark: say("bako", "Spread your fighters like a good phalanx!") }),
+        w(`${GL} 4, ${LX} 10, ${BW} 12`),
+        w(`${BW} 16, ${QD} 12, ${LX} 8`, { bark: say("great_scale", "GUILT HAS WEIGHT. INNOCENCE HAS WEIGHT. WHAT DOES THE KEEPER WEIGH?") }),
+        w(`${GL} 5, ${BW} 14, ${LX} 10`),
+        w(`${GL} 4, ${BW} 14, ${QD} 14, ${LX} 8`, { bark: say("great_scale", "NEITHER GUILTLESS NOR GUILTY. HUMAN.") }),
+      ],
+      reward: reward(3600, 70),
+      replay: replay(650),
+    }),
+    chapter({
+      id: "b2s5c4",
+      title: "Verdict",
+      layout: "sky_temple",
+      art: "arena_falling_aurelion",
+      corruption: 0,
+      hpScale: 0.57,
+      mechanics: { collapse: { at: [5, 9, 13, 17], slots: [[10, 14], [0, 4], [5, 9], [1, 3]], warn: 6 } },
+      eventDeck: { units: WITNESS_DECK, pick: 5, level: 9 },
+      intro: [
+        panel("b2s5_p9_scale_level", "The Scale settles level and falls silent: neither guiltless nor guilty.", `"Human," it says, and the brass groans.`),
+        panel("b2s5_p10_foundation_cracks", "A crack runs through Aurelion's foundation. Towers lean. The city begins to fall.", "A law-engine cannot judge a verdict it was never built for."),
+        panel("b2s5_p11_sentence_on_the_world", "High Justiciar Argent rises from the bench, gavel-sword in her cold silver hand.", `"The sentence stands," she says. "Whatever the Scale may say."`),
+      ],
+      waves: [
+        w(`${BW} 10, ${QD} 5`, { bark: say("argent", "The court does not adjourn for a falling city.") }),
+        w(`${LX} 6, ${BW} 8, ${QD} 4`),
+        w(`${CB} 2, ${BW} 10, ${LX} 5`),
+        w(`${GL} 1, ${QD} 10, ${BW} 6`, { bark: say(Q, "Hold the center, Keeper! The edges will fall!") }),
+        w(`${BW} 10, ${LX} 6, ${CB} 3`, { bark: say("great_scale", "FOUNDATION FAILING.") }),
+        w(`${QD} 12, ${BW} 8, ${LX} 4`),
+        w(`${GL} 2, ${BW} 10, ${CB} 3`),
+        w(`${LX} 8, ${QD} 10, ${BW} 8`, { bark: say("brakka", "Stone and brass groan the same way. Keep moving your line!") }),
+        w(`${BW} 10, ${CB} 4, ${GL} 2`, { bark: say("bako", "Another edge goes! Tighten up!") }),
+        w(`${QD} 12, ${LX} 6, ${BW} 8`),
+        w(`${BW} 5, ${GL} 1`, {
+          boss: "vaeltharion_dust",
+          hp: 0.6,
+          bark: say("vaeltharion_dust", "Justice without mercy is only another chaos."),
+          cutscene: [panel("b2s5_p12_golden_dust", "Golden dust gathers in the falling light, and forms a tall, tired shape.", `"Justice without mercy is only another chaos."`)],
+        }),
+        w(`${GL} 3, ${BW} 8, ${LX} 6`),
+        w(`${CB} 3, ${QD} 10, ${BW} 8`, { bark: say("maren", "Everything bends. Everything that bends can hold.") }),
+        w(`${LX} 8, ${BW} 10, ${GL} 2`),
+        w(`${GL} 3, ${CB} 3, ${QD} 8`, { bark: say("durgrim", "I know the weight of a verdict. It is not the weight of the stone.") }),
+        w(`${BW} 10, ${LX} 7, ${QD} 7`),
+        w(`${GL} 3, ${BW} 8, ${CB} 4`, { bark: say("argent", "Come. Let the sentence be read.") }),
+        w(`${QD} 12, ${LX} 8, ${GL} 2`),
+        w(`${BW} 10, ${CB} 4, ${GL} 3`, { bark: say("princess_muse", "Hold on. The last stretch is all that is left.") }),
+        w(`${GL} 4, ${LX} 8, ${QD} 8, ${BW} 6`),
+        w(`${GL} 2, ${BW} 6, ${LX} 4`, {
+          boss: "argent_justiciar",
+          hp: 0.25,
+          bark: say("argent", "I was built without mercy. It was meant as a gift."),
+          rally: { before: [], allies: BOOK2_ALLIES, after: [] },
+        }),
+      ].map((wv, i) => ({ ...wv, hp: wv.hp * (FALLING[i] ?? 1) })),
+      reward: reward(0, 200, "mythic", [ARG], "unbroken"),
+      replay: replay(800),
+    }),
+  ],
+  ending: [
+    panel("b2s5_p13_gavel_shatters", "Argent's gavel-sword shatters. For the first time in a thousand years, a tear runs down her brass face.", "It is quicksilver."),
+    panel("b2s5_p14_orb_cleansed", "The Orb of Verdicts is cleansed. The fifth shard tears free of it, bright and violet.", "The law-engines fall quiet, and the city slows."),
+    panel("b2s5_p15_five_shards", "The Keeper and Aelyria watch five shards fly to a broken pair of scales in the sky.", "Two pans. One white, one black. All of them, together."),
+    panel("b2s5_p16_two_toned_voice", "A voice with two tones, one warm and one cold, speaks openly for the first time.", `"Good failed them. Evil failed them. I am the balance they forgot."`),
+    panel("b2s5_p17_violet_chaos", "Violet chaos pours onto every land at once: the Candy Kingdom, the Elven Wilds, the Drowned Coast, Sunspire and Emberhold.", "The whole world is on the scale now."),
+    panel("b2s5_p18_argent_kneels", "Argent kneels in the ruins of her court, her sword in pieces.", `"The voice I obeyed... it once sat beside me in this court."`),
+    panel("b2s5_p19_end_of_book_two", "The broken scales swing over the dark.", "END OF BOOK 2"),
+  ],
+};
+
 /** Book 2: its stories can be edited by the admin. */
-export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST, THE_IRON_OATH], unlockBadge: "the_chosen", planned: 5 };
+export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST, THE_IRON_OATH, THE_SILVER_TRIBUNAL], unlockBadge: "the_chosen", planned: 5 };
 
 /** The saga title shown above the books. */
 export const SAGA = "The Forsakens";
@@ -1148,7 +1367,7 @@ export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
  * Stories added to the defaults after configs were saved (like ADDED_MONSTERS): appended by id to the
  * saved book that holds the story's neighbours (its default book's index), unless a saved book already has it.
  */
-export const ADDED_STORIES = ["b2s2", "b2s3", "b2s4"];
+export const ADDED_STORIES = ["b2s2", "b2s3", "b2s4", "b2s5"];
 function withAddedStories(books: BookDef[]): BookDef[] {
   const have = new Set(books.flatMap((b) => b.stories.map((s) => s.id)));
   let out = books;
@@ -1171,6 +1390,7 @@ export const BADGES: Record<string, { label: string; text: string }> = {
   tidewarden: { label: "Tidewarden", text: "Finished Book 2 · Story 2" },
   dunewarden: { label: "Dunewarden", text: "Finished Book 2 · Story 3" },
   oathkeeper: { label: "Oathkeeper", text: "Finished Book 2 · Story 4" },
+  unbroken: { label: "Unbroken", text: "Finished Book 2 · The Silver Tribunal" },
 };
 
 // ---------------------------------------------------------------- progress
@@ -1299,6 +1519,7 @@ export function chapterDeck(
     const levels = Object.fromEntries(p.map((id) => [id, ed.level]));
     // v2.3: the chapter's hero unit isn't in the deck but fights at the Event deck's level.
     if (chapter.hero) levels[chapter.hero.unit] = ed.level;
+    witnessLevels(chapter, levels);
     return { deck: [...p], levels };
   }
   const deck = [...own.deck];
@@ -1311,7 +1532,15 @@ export function chapterDeck(
     for (const id of rules.requiredUnits) levels[id] = Math.max(levels[id], rules.levelFloor);
   }
   if (chapter.hero) levels[chapter.hero.unit] = own.level(chapter.hero.unit);
+  witnessLevels(chapter, levels);
   return { deck, levels };
+}
+
+/** v2.4: the witnesses of a trial chapter (not in the deck) fight at the trial's witness level. */
+function witnessLevels(chapter: StoryChapter, levels: Record<string, number>) {
+  const trial = chapter.mechanics?.trial;
+  if (!trial) return;
+  for (const wv of chapter.waves) if (wv.charge && !(wv.charge.witness in levels)) levels[wv.charge.witness] = trial.witnessLevel;
 }
 
 // ---------------------------------------------------------------- config
@@ -1464,6 +1693,38 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
           num(mech.runes.chance, `${wc} rune chance`);
           num(mech.runes.hp, `${wc} rune HP`, 0.01);
           num(mech.runes.leak, `${wc} rune leak`);
+        }
+        if (mech.trial) {
+          num(mech.trial.guiltyHp, `${wc} guilty HP multiplier`, 1);
+          num(mech.trial.witnessRank, `${wc} witness rank`, 1);
+          num(mech.trial.witnessLevel, `${wc} witness level`, 1);
+          num(mech.trial.prep, `${wc} plea-to-bell time`);
+          c.waves?.forEach((wv, i) => {
+            const ch = wv.charge;
+            if (!ch) return errs.push(`${wc} wave ${i + 1}: every wave of a trial needs a charge`);
+            if (!ids.units.has(ch.witness)) errs.push(`${wc} wave ${i + 1}: unknown witness "${ch.witness}"`);
+            if (!LAWS[ch.law]) errs.push(`${wc} wave ${i + 1}: unknown law "${ch.law}"`);
+            if (!ch.title || !ch.text || !ch.land) errs.push(`${wc} wave ${i + 1}: a charge needs a land, title and text`);
+          });
+        }
+        if (mech.cells) {
+          if (!Array.isArray(mech.cells.at) || !mech.cells.at.length || !mech.cells.at.every((v) => typeof v === "number" && v > 0 && v < 1)) errs.push(`${wc}: cells must sit at shares 0-1 of the path`);
+          if (!Array.isArray(mech.cells.hp) || !mech.cells.hp.length || !mech.cells.hp.every((v) => Number.isInteger(v) && v >= 1)) errs.push(`${wc}: cell HP must be counts of 1 or more`);
+          num(mech.cells.reach, `${wc} cell reach`, 1);
+        }
+        if (mech.scale) {
+          num(mech.scale.every, `${wc} scale crush every`, 1);
+          num(mech.scale.gap, `${wc} scale gap`, 1);
+          num(mech.scale.stun, `${wc} scale stun`);
+        }
+        if (mech.collapse) {
+          const cl = mech.collapse;
+          if (!Array.isArray(cl.at) || !Array.isArray(cl.slots) || cl.at.length !== cl.slots.length) errs.push(`${wc}: collapse needs a list of tiles for each wave it happens at`);
+          else {
+            cl.at.forEach((n) => (!Number.isInteger(n) || n < 1 || n > (c.waves?.length ?? 0)) && errs.push(`${wc}: collapse wave ${n} is not a wave of the chapter`));
+            cl.slots.forEach((list) => slots(list, "collapse tiles"));
+          }
+          num(cl.warn, `${wc} collapse warning`);
         }
       }
       const duel = c.duel;

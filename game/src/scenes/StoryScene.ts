@@ -152,7 +152,7 @@ export class StoryScene extends Phaser.Scene {
     parts.push(txt(this, 0, y + 40, `CHAPTER ${i + 1} OF ${s.chapters.length}`, 24, "#ffd27a"));
     parts.push(txt(this, 0, y + 92, c.title, 38, "#fff4c2").setWordWrapWidth(cw - 40));
     parts.push(starRow(this, 0, y + 170, best, 52));
-    const deckLine = c.eventDeck ? (c.eventDeck.pick >= c.eventDeck.units.length ? "Fixed Event deck" : `Event deck: pick ${c.eventDeck.pick} of ${c.eventDeck.units.length}`) : c.rules ? "Your deck, with rules" : "Your own deck";
+    const deckLine = c.mechanics?.cells ? "Your deck is confiscated: free it" : c.eventDeck ? (c.eventDeck.pick >= c.eventDeck.units.length ? "Fixed Event deck" : `Event deck: pick ${c.eventDeck.pick} of ${c.eventDeck.units.length}`) : c.rules ? "Your deck, with rules" : "Your own deck";
     parts.push(txt(this, 0, y + 240, `${c.waves.length} waves · ${deckLine}`, 22, "#c9d2ff").setWordWrapWidth(cw - 60));
     if (lock) parts.push(txt(this, 0, ch / 2 - 80, lock, 26, "#ffb0b0").setWordWrapWidth(cw - 60));
     else parts.push(button(this, 0, ch / 2 - 80, 320, 104, best ? "REPLAY" : "PLAY", best ? "blue" : "green", () => (i === this.focus ? this.play(s, c) : this.go(i)), 48));

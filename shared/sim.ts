@@ -43,6 +43,7 @@ import { BoardRules, TIDE_RULES } from "./tide.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
 import { BURROW_MAX, BURROW_RANGE, CAGE_PULSE, CIVILIAN_FLEE, MIMIC_HP, brazierRadius, mimicDef } from "./faceless.ts";
 import { OATH, breaksRune, pickRuneElement, type PartState } from "./oath.ts";
+import { LAWS, LAW_IDS, TRIBUNAL, panOf, type CellState, type LawId } from "./tribunal.ts";
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
@@ -214,6 +215,27 @@ export type SimEvent =
   | { type: "part"; t: number; uid: number; part: string; name: string; broken: boolean; x: number; y: number }
   /** The Colossus ate iron monster `uid`; it has `stacks` now. */
   | { type: "absorb"; t: number; boss: number; uid: number; stacks: number; x: number; y: number }
+  // v2.4 Story 5 "The Silver Tribunal" (docs/features/v2.4-the-silver-tribunal).
+  /** The count at the bar: the player must plead (Sim.plead) before it starts. The charge is the wave's. */
+  | { type: "plea"; t: number; wave: number; total: number; land: string; title: string; text: string; witness: string; law: LawId; guiltyHp: number }
+  /** The plea was entered (`law` is declared on Not guilty, null on Guilty). */
+  | { type: "pleaed"; t: number; wave: number; guilty: boolean; law: LawId | null }
+  /** The laws in force changed: `law` is the plea's, `decree` a boss's (until `until`). Both null: no law. */
+  | { type: "law"; t: number; law: LawId | null; decree: LawId | null; until: number | null }
+  /** A unit was jailed (disabled) by a law, or freed. */
+  | { type: "jail"; t: number; uid: number; on: boolean; law: LawId | null; x: number; y: number }
+  /** A unit left the board: the witness (or the unit it replaced, `lent`) at the end of a count, a condemned unit, a tile that fell. `mana` was refunded. */
+  | { type: "unit_gone"; t: number; uid: number; why: "witness" | "lent" | "condemned" | "fell"; x: number; y: number; mana: number }
+  /** A unit was chained in place (`on`, `hp` links of `max`), or its chain broke. */
+  | { type: "shackle"; t: number; uid: number; on: boolean; hp: number; max: number; x: number; y: number }
+  /** A cell took a hit, or broke (`broken`) and returned `card` to the hand. */
+  | { type: "cell"; t: number; index: number; card: string; hp: number; max: number; broken: boolean; x: number; y: number }
+  /** The Great Scale crushed a unit of its heavy pan. */
+  | { type: "crush"; t: number; uid: number; heavy: "left" | "right"; x: number; y: number }
+  /** The floor trembles (`warn`, the tiles fall in `in` seconds) or tiles fell. */
+  | { type: "collapse"; t: number; warn: boolean; slots: number[]; in: number }
+  /** The sentence counter is at `count` of `max`; at `max` the strongest unit (`uid`) is condemned and it starts over. */
+  | { type: "sentence"; t: number; count: number; max: number; uid: number | null; x: number; y: number }
   // View-only events, emitted only with the `view` option (the solo scene): they never change a rule.
   /** A hit landed on `target`: main hit of a shot or ultimate, a pierce or chain extra, or a Lance Knight's bane chain. */
   | { type: "hit"; t: number; uid: number; target: number; kind: "main" | "pierce" | "chain" | "bane"; element: Element; x: number; y: number; size: number }
@@ -410,6 +432,15 @@ export class SimUnit {
   auraDamage = 0;
   /** Hired Blade not paid this wave: no attacks. */
   sulking = false;
+  /**
+   * v2.4 Story 5: jailed by a law (no attacks until the count ends); the merge or summon law that flagged it;
+   * links left in a chain (0 = free) and the chain's size; a trial witness (lent to you for one count).
+   */
+  jailed = false;
+  flag: LawId | null = null;
+  chain = 0;
+  chainMax = 0;
+  witness = false;
   effectTimer = 0;
   // Viewer: when it last attacked.
   firedAt = -1;
@@ -711,6 +742,27 @@ export class Sim {
   private forgeBoss: SimMonster | null = null;
   private forgePayAt = 0;
   private forgeHintAt = 0;
+  /**
+   * v2.4 Story 5 state (shared/tribunal.ts). Read by the renderer: pleaPending / pleaWave (a plea is due), plea (this count's),
+   * law (the plea's) and decree (a boss's), bellRung, cells (chapter 2), fallen tiles (chapter 4), scaleL / scaleR (the pans'
+   * total ranks, chapter 3), sentence / sentenceMax (Argent's counter).
+   */
+  pleaPending = false;
+  pleaWave = 0;
+  plea: "guilty" | "not_guilty" | null = null;
+  law: LawId | null = null;
+  decree: { law: LawId; until: number } | null = null;
+  bellRung = false;
+  cells: CellState[] = [];
+  fallen = new Set<number>();
+  scaleL = 0;
+  scaleR = 0;
+  sentence = 0;
+  sentenceMax = 0;
+  private pleaDone = 0;
+  private lawsOn = false;
+  private witness: { unit: SimUnit; lent: SimUnit | null } | null = null;
+  private scaleAt = 0;
 
   // Results.
   kills = 0;
@@ -814,6 +866,7 @@ export class Sim {
       this.emit({ type: "summon", t: 0, uid: u.uid, id: u.def.id, rank: u.rank, slot: u.slot, x: u.x, y: u.y, awakened: u.awakened });
     }
     this.famTotal = (this.story?.mechanics?.evacuation?.perWave ?? []).reduce((a, b) => a + b, 0);
+    this.tribunalInit();
 
     const sc = setup.scenario;
     switch (sc.kind) {
@@ -1037,6 +1090,8 @@ export class Sim {
       this.harvest(n - 1);
     }
     this.payWages();
+    this.bellRung = true;
+    if (this.story?.mechanics?.collapse) this.collapseAt(n);
     if (this.story?.mechanics?.cage) this.cageRoar(n);
     if (scripted) return this.startScriptedWave(scripted, n);
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
@@ -1069,7 +1124,7 @@ export class Sim {
   /** A story wave: exactly the monsters its script lists (shuffled), the boss first. */
   private startScriptedWave(w: StoryChapter["waves"][number], n: number) {
     const e = ECONOMY;
-    this.waveHp = w.hp;
+    this.waveHp = this.plea === "guilty" ? w.hp * (this.story?.mechanics?.trial?.guiltyHp ?? 1) : w.hp;
     // v2.3 evacuation: this wave brings its dwarf families.
     const evac = this.story?.mechanics?.evacuation;
     if (evac) {
@@ -1106,7 +1161,8 @@ export class Sim {
 
   protected spawn(q: { def?: MonsterDef; boss?: BossDef }, at?: { path: Path; dist: number }, scale = 1, hpMult = 1) {
     // v2.3 evacuation: the monsters keep to path 0, the second route is for the families.
-    const path = at?.path ?? (this.story?.mechanics?.evacuation ? this.paths[0] : this.paths[this.rand() < 0.5 ? 0 : 1]);
+    // v2.4 the Great Scale: waves come down both sides in turn.
+    const path = at?.path ?? (this.story?.mechanics?.evacuation ? this.paths[0] : this.story?.mechanics?.scale ? this.paths[this.spawned & 1] : this.paths[this.rand() < 0.5 ? 0 : 1]);
     const n = this.wave;
     this.spawned++;
     let m: SimMonster;
@@ -1140,9 +1196,12 @@ export class Sim {
     const kind = this.setup.scenario.kind;
     if (kind === "dummies") return;
     if (this.waveState === "intro") {
+      // v2.4 trial: the count waits for the player's plea.
+      if (this.pleaPending) return;
       if (!this.tutorialHold) this.introTimer -= dt;
       if (this.introTimer <= 0) {
         if (kind === "run" && this.wave >= (this.setup.scenario as Extract<Scenario, { kind: "run" }>).to) return this.finish("cleared");
+        if (this.pleaDue()) return;
         this.startWave();
       }
     } else if (this.waveState === "spawning") {
@@ -1167,10 +1226,11 @@ export class Sim {
           this.wavesCleared = this.wave;
           this.finish("won");
         }
-      } else if (!bossAlive && (!alive || this.waveTimer > 20)) {
+      } else if (!bossAlive && (!alive || (this.waveTimer > 20 && !this.story?.mechanics?.trial))) {
         if (!alive) this.wavesCleared = this.wave;
         this.waveState = "intro";
         this.introTimer = alive ? 0.5 : 1.5;
+        if (this.story?.mechanics) this.recess();
       }
     }
   }
@@ -1226,6 +1286,8 @@ export class Sim {
     if (this.lanternBoss) this.tickLanterns();
     if (this.story?.mechanics?.evacuation) this.tickEvac();
     if (this.forgeBoss) this.tickForge();
+    if (this.lawsOn) this.lawTick();
+    if (this.story?.mechanics?.scale) this.tickScale();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
@@ -1407,6 +1469,7 @@ export class Sim {
     this.gainMana(m.mana, null, null, "kill");
     const p = m.pos;
     this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
+    if (this.cells.length) this.cellKill(p);
     if (m.boss) {
       this.counts.bossesKilled++;
       if (m === this.trackedBoss) {
@@ -1624,6 +1687,15 @@ export class Sim {
         case "absorb":
           this.absorb(m, n, k.amount ?? 0.04, m.skillUsed[i] === 1, say);
           break;
+        case "decree":
+          this.declareLaw(m, k.dur ?? 8, say);
+          break;
+        case "chain":
+          this.chainUnits(m, n, k.amount ?? 12, say);
+          break;
+        case "sentence":
+          this.sentenceTick(m, k.amount ?? 9, say);
+          break;
       }
     }
   }
@@ -1840,13 +1912,15 @@ export class Sim {
   setDragging(slot: number, on: boolean) {
     const u = this.units[slot];
     if (!u) return false;
+    // v2.4: a chained unit can't be picked up.
+    if (on && u.chain > 0) return false;
     u.dragging = on;
     return true;
   }
 
   /** Whether a summon would work now (mana and an empty tile). */
   get canSummon() {
-    return this.mana >= this.summonCost && this.units.some((u) => !u) && this.deck.length > 0;
+    return this.mana >= this.summonCost && this.units.some((u, i) => !u && !this.fallen.has(i)) && this.deck.length > 0;
   }
 
   /**
@@ -1855,7 +1929,7 @@ export class Sim {
    */
   summon(forced?: { id?: string; slot?: number }) {
     if (this.over) return false;
-    const empty = this.units.map((u, i) => (u ? -1 : i)).filter((i) => i >= 0);
+    const empty = this.units.map((u, i) => (u || this.fallen.has(i) ? -1 : i)).filter((i) => i >= 0);
     if (!empty.length || this.mana < this.summonCost) return false;
     const tp = this.tutorialPick && !this.units[this.tutorialPick.slot] ? this.tutorialPick : null;
     const f = forced ?? tp;
@@ -1867,6 +1941,7 @@ export class Sim {
     const slot = f?.slot !== undefined && !this.units[f.slot] ? f.slot : empty[Math.floor(this.rand() * empty.length)];
     const id = f?.id ?? this.deck[Math.floor(this.rand() * this.deck.length)];
     const u = this.place(id, 1, slot);
+    this.flagBorn(u, "no_summon");
     this.emit({ type: "summon", t: this.now, uid: u.uid, id, rank: 1, slot, x: u.x, y: u.y, awakened: u.awakened });
     return true;
   }
@@ -1875,7 +1950,7 @@ export class Sim {
   merge(from: number, to: number) {
     const x = this.units[from];
     const y = this.units[to];
-    if (this.over || !x || !y || from === to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= maxRank() || !this.deck.length) return false;
+    if (this.over || !x || !y || from === to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= maxRank() || !this.deck.length || x.chain > 0 || y.chain > 0) return false;
     this.units[from] = null;
     this.units[to] = null;
     // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
@@ -1883,6 +1958,7 @@ export class Sim {
     const keep = luck > 0 && this.rand() < luck;
     if (keep) this.counts.lucky++;
     const u = this.place(keep ? x.def.id : this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, to);
+    this.flagBorn(u, "no_merge");
     this.counts.merges++;
     if (u.awakened) this.counts.awakens++;
     this.emit({ type: "merge", t: this.now, uid: u.uid, gone: [x.uid, y.uid], id: u.def.id, rank: u.rank, slot: to, x: u.x, y: u.y, awakened: u.awakened, lucky: keep });
@@ -1894,7 +1970,7 @@ export class Sim {
   copy(from: number, to: number) {
     const x = this.units[from];
     const y = this.units[to];
-    if (this.over || !x || !y || from === to || !this.mimeReady(from) || !canBecome(x, y)) return false;
+    if (this.over || !x || !y || from === to || !this.mimeReady(from) || !canBecome(x, y) || x.chain > 0 || y.chain > 0) return false;
     const v = this.become(x, y.def.id, x.rank, "copy");
     this.counts.copies++;
     this.callout("copy", "COPY!", "#ff9ae6", v.x, v.y - 60, v.uid);
@@ -1905,7 +1981,7 @@ export class Sim {
   swap(from: number, to: number) {
     const x = this.units[from];
     const y = this.units[to];
-    if (this.over || !x || !y || from === to || !this.portalReady(from) || y.rank !== x.rank || y.def.id === x.def.id) return false;
+    if (this.over || !x || !y || from === to || !this.portalReady(from) || y.rank !== x.rank || y.def.id === x.def.id || x.chain > 0 || y.chain > 0) return false;
     x.moveTo(to, slotPos(this.arena, to));
     y.moveTo(from, slotPos(this.arena, from));
     x.dragging = y.dragging = false;
@@ -1923,7 +1999,7 @@ export class Sim {
   /** Portal Imp `from` jumps to the empty tile `to`. */
   hop(from: number, to: number) {
     const x = this.units[from];
-    if (this.over || !x || to < 0 || to >= 15 || this.units[to] || !this.portalReady(from)) return false;
+    if (this.over || !x || to < 0 || to >= 15 || this.units[to] || this.fallen.has(to) || !this.portalReady(from) || x.chain > 0) return false;
     x.moveTo(to, slotPos(this.arena, to));
     x.dragging = false;
     this.units[to] = x;
@@ -2338,6 +2414,317 @@ export class Sim {
     this.log(`${m.boss!.name} absorbs ${prey.length} iron (${m.stacks} stacks)`, "boss");
   }
 
+  // ---------------------------------------------------------------- v2.4 Story 5 "The Silver Tribunal" (shared/tribunal.ts)
+
+  private tribunalInit() {
+    const mech = this.story?.mechanics;
+    if (!mech) return;
+    this.lawsOn = !!mech.trial || this.story!.waves.some((wv) => wv.boss && BOSS_BY_ID[wv.boss]?.skills?.some((k) => k.kind === "decree"));
+    const c = mech.cells;
+    if (!c) return;
+    // The deck is confiscated: the first card stays in hand, the rest wait in cells along the path.
+    const locked = this.deck.splice(1);
+    this.cells = locked.map((card, i) => {
+      delete this.powerUps[card];
+      const path = this.paths[i % 2];
+      const pt = path.at(path.length * c.at[i % c.at.length]);
+      const hp = c.hp[i % c.hp.length];
+      return { card, x: pt.x, y: pt.y, hp, max: hp, broken: false };
+    });
+  }
+
+  /** The laws in force: the plea's and a boss's decree. */
+  activeLaws(): LawId[] {
+    const out: LawId[] = [];
+    if (this.law) out.push(this.law);
+    if (this.decree && this.decree.law !== this.law) out.push(this.decree.law);
+    return out;
+  }
+
+  /** Argent's mercy: she and the units beside her are never jailed, chained, crushed or condemned. */
+  private mercy(u: SimUnit) {
+    return u.def.role === TRIBUNAL.mercyRole || neighbours(u.slot).some((j) => this.units[j]?.def.role === TRIBUNAL.mercyRole);
+  }
+
+  /** A unit born after the bell under a merge or summon law is flagged: it is jailed until the count ends. */
+  private flagBorn(u: SimUnit, law: LawId) {
+    if (this.bellRung && this.activeLaws().includes(law)) u.flag = law;
+  }
+
+  /** The fighters allowed to strike under "Only four may strike": the highest ranks, then the hardest hitters. */
+  private strikers() {
+    const pool = this.units.filter((u): u is SimUnit => !!u && !u.witness && !noAttack(u.primary) && !this.mercy(u));
+    pool.sort((a, b) => b.rank - a.rank || b.stats.damage - a.stats.damage || a.slot - b.slot);
+    return new Set(pool.slice(0, TRIBUNAL.onlyFour));
+  }
+
+  /** Every step of a trial or a decree: jail the units that break a law in force, free those that no longer do. */
+  private lawTick() {
+    if (this.decree && this.now >= this.decree.until) {
+      this.decree = null;
+      this.emit({ type: "law", t: this.now, law: this.law, decree: null, until: null });
+    }
+    const laws = this.activeLaws();
+    const four = laws.includes("only_four") ? this.strikers() : null;
+    for (const u of this.units) {
+      if (!u) continue;
+      let jail: LawId | null = null;
+      if (!u.witness && !noAttack(u.primary) && !this.mercy(u)) {
+        if (laws.includes("no_fire") && u.def.element === "fire") jail = "no_fire";
+        else if (four && !four.has(u)) jail = "only_four";
+        else if (u.flag && laws.includes(u.flag)) jail = u.flag;
+      }
+      if (!!jail !== u.jailed) {
+        u.jailed = !!jail;
+        this.emit({ type: "jail", t: this.now, uid: u.uid, on: !!jail, law: jail, x: u.x, y: u.y });
+      }
+    }
+  }
+
+  /** The count that comes next has a charge and no plea yet: hold and ask (once per count). */
+  private pleaDue() {
+    const trial = this.story?.mechanics?.trial;
+    const n = this.wave + 1;
+    const ch = trial && this.setup.scenario.kind === "run" ? this.story!.waves[n - 1]?.charge : undefined;
+    if (!trial || !ch || this.pleaDone === n) return false;
+    this.pleaPending = true;
+    this.pleaWave = n;
+    this.emit({ type: "plea", t: this.now, wave: n, total: this.story!.waves.length, land: ch.land, title: ch.title, text: ch.text, witness: ch.witness, law: ch.law, guiltyHp: trial.guiltyHp });
+    return true;
+  }
+
+  /**
+   * The player's plea for the count at the bar. Guilty: the count's monsters have more HP, but the land's witness fights for
+   * you until it ends. Not guilty: the Prosecutor declares the charge's law. Either way the bell rings `trial.prep` seconds later.
+   */
+  plead(guilty: boolean) {
+    if (!this.pleaPending || this.over) return false;
+    const trial = this.story!.mechanics!.trial!;
+    const n = this.pleaWave;
+    const ch = this.story!.waves[n - 1].charge!;
+    this.pleaPending = false;
+    this.pleaDone = n;
+    this.plea = guilty ? "guilty" : "not_guilty";
+    this.introTimer = trial.prep;
+    if (guilty) this.placeWitness(ch.witness, trial.witnessRank);
+    else {
+      this.law = ch.law;
+      this.emit({ type: "law", t: this.now, law: ch.law, decree: this.decree?.law ?? null, until: this.decree?.until ?? null });
+    }
+    this.emit({ type: "pleaed", t: this.now, wave: n, guilty, law: guilty ? null : ch.law });
+    this.log(guilty ? `Count ${n}: guilty, ${UNIT_BY_ID[ch.witness]?.name ?? ch.witness} stands witness` : `Count ${n}: not guilty, law: ${LAWS[ch.law].name}`, "wave");
+    this.lawTick();
+    return true;
+  }
+
+  /** The witness joins the board for one count: on a free tile, else in place of the weakest unit (which comes back after). */
+  private placeWitness(id: string, rank: number) {
+    if (!UNIT_BY_ID[id]) return;
+    let slot = this.units.findIndex((u, i) => !u && !this.fallen.has(i));
+    let lent: SimUnit | null = null;
+    if (slot < 0) {
+      const weakest = this.units.filter((u): u is SimUnit => !!u && u.chain === 0).sort((a, b) => a.rank - b.rank || a.slot - b.slot)[0];
+      if (!weakest) return;
+      slot = weakest.slot;
+      lent = weakest;
+      this.units[slot] = null;
+      this.emit({ type: "unit_gone", t: this.now, uid: lent.uid, why: "lent", x: lent.x, y: lent.y, mana: 0 });
+    }
+    const u = this.place(id, rank, slot);
+    u.witness = true;
+    this.witness = { unit: u, lent };
+    this.emit({ type: "summon", t: this.now, uid: u.uid, id, rank, slot, x: u.x, y: u.y, awakened: u.awakened });
+  }
+
+  private removeWitness() {
+    const w = this.witness;
+    if (!w) return;
+    this.witness = null;
+    const u = w.unit;
+    if (this.units[u.slot] === u) this.units[u.slot] = null;
+    this.emit({ type: "unit_gone", t: this.now, uid: u.uid, why: "witness", x: u.x, y: u.y, mana: 0 });
+    const l = w.lent;
+    if (l && !this.units[l.slot]) {
+      this.units[l.slot] = l;
+      this.emit({ type: "summon", t: this.now, uid: l.uid, id: l.def.id, rank: l.rank, slot: l.slot, x: l.x, y: l.y, awakened: l.awakened });
+    }
+    this.recomputeBuffs();
+  }
+
+  /** A count is over (every monster gone): the law lapses, the witness leaves, jailed units go free, and a collapse next count is announced. */
+  private recess() {
+    this.bellRung = false;
+    const had = this.law || this.decree;
+    this.plea = null;
+    this.law = null;
+    this.decree = null;
+    for (const u of this.units) if (u) u.flag = null;
+    this.removeWitness();
+    if (this.lawsOn) {
+      if (had) this.emit({ type: "law", t: this.now, law: null, decree: null, until: null });
+      this.lawTick();
+    }
+    const cl = this.story?.mechanics?.collapse;
+    if (cl?.at.includes(this.wave + 1)) {
+      this.introTimer = Math.max(this.introTimer, cl.warn);
+      this.emit({ type: "collapse", t: this.now, warn: true, slots: cl.slots[cl.at.indexOf(this.wave + 1)], in: cl.warn });
+    }
+  }
+
+  /** A boss declares a law for `dur` seconds (one that would jail someone now, and isn't in force already). */
+  private declareLaw(m: SimMonster, dur: number, say: (text: string) => void) {
+    const fighters = this.units.filter((u): u is SimUnit => !!u && !u.witness && !noAttack(u.primary) && !this.mercy(u));
+    const now = this.activeLaws();
+    const options = LAW_IDS.filter((id) => {
+      if (now.includes(id)) return false;
+      if (id === "no_fire") return fighters.some((u) => u.def.element === "fire");
+      if (id === "only_four") return fighters.length > TRIBUNAL.onlyFour;
+      return true;
+    });
+    if (!options.length) return;
+    const law = options[Math.floor(this.rand() * options.length)];
+    this.decree = { law, until: this.now + dur };
+    say(`LAW: ${LAWS[law].name.toUpperCase()}`);
+    this.emit({ type: "law", t: this.now, law: this.law, decree: law, until: this.decree.until });
+    this.log(`${m.boss!.name} declares a law: ${LAWS[law].name}`, "boss");
+    this.lawTick();
+  }
+
+  /** The Bailiff chains units in place; each of their attacks (or a tap) wears the chain down a link. */
+  private chainUnits(m: SimMonster, n: number, links: number, say: (text: string) => void) {
+    const pool = this.someUnits(99).filter((u) => !u.chain && !u.witness && !this.mercy(u) && !noAttack(u.primary));
+    const hit = pool.slice(0, n);
+    if (!hit.length) return;
+    say("CHAINS");
+    for (const u of hit) {
+      u.chain = u.chainMax = links;
+      this.emit({ type: "shackle", t: this.now, uid: u.uid, on: true, hp: u.chain, max: u.chainMax, x: u.x, y: u.y });
+    }
+    this.log(`${m.boss!.name} chains ${hit.length} unit(s)`, "boss");
+  }
+
+  private chainLink(u: SimUnit, n: number) {
+    if (u.chain <= 0) return;
+    u.chain = Math.max(0, u.chain - n);
+    if (u.chain === 0) this.emit({ type: "shackle", t: this.now, uid: u.uid, on: false, hp: 0, max: u.chainMax, x: u.x, y: u.y });
+  }
+
+  /** The player taps a chained unit: it shakes the chain (TRIBUNAL.tapLinks links). False if the tile has no chained unit. */
+  shake(slot: number) {
+    const u = this.units[slot];
+    if (this.over || !u || u.chain <= 0) return false;
+    this.chainLink(u, TRIBUNAL.tapLinks);
+    return true;
+  }
+
+  /** Argent's sentence gains one; when it is full the strongest unit that mercy doesn't cover is condemned (removed, part of its worth refunded). */
+  private sentenceTick(m: SimMonster, amount: number, say: (text: string) => void) {
+    this.sentenceMax = amount;
+    this.sentence++;
+    const p = m.pos;
+    if (this.sentence < amount) return void this.emit({ type: "sentence", t: this.now, count: this.sentence, max: amount, uid: null, x: p.x, y: p.y });
+    this.sentence = 0;
+    const pool = this.units.filter((u): u is SimUnit => !!u && !u.witness && !this.mercy(u));
+    pool.sort((a, b) => b.rank - a.rank || b.stats.damage - a.stats.damage || a.slot - b.slot);
+    const u = pool[0];
+    if (!u) return void this.emit({ type: "sentence", t: this.now, count: 0, max: amount, uid: null, x: p.x, y: p.y });
+    say("CONDEMNED");
+    this.units[u.slot] = null;
+    const back = Math.round(this.summonCost * TRIBUNAL.refund * u.rank);
+    this.gainMana(back, u.x, u.y - 40, "other");
+    this.emit({ type: "unit_gone", t: this.now, uid: u.uid, why: "condemned", x: u.x, y: u.y, mana: back });
+    this.emit({ type: "sentence", t: this.now, count: 0, max: amount, uid: u.uid, x: u.x, y: u.y });
+    this.recomputeBuffs();
+    this.log(`${m.boss!.name} condemns ${u.def.name}`, "boss");
+  }
+
+  /** Chapter 2: a kill next to a cell wears it down; a broken cell returns its card to the hand. */
+  private cellKill(p: Pt) {
+    const reach = this.story!.mechanics!.cells!.reach;
+    let best = -1;
+    let bestD = reach;
+    this.cells.forEach((c, i) => {
+      const d = Math.hypot(p.x - c.x, p.y - c.y);
+      if (!c.broken && d <= bestD) [best, bestD] = [i, d];
+    });
+    if (best < 0) return;
+    const c = this.cells[best];
+    c.hp--;
+    if (c.hp > 0) return void this.emit({ type: "cell", t: this.now, index: best, card: c.card, hp: c.hp, max: c.max, broken: false, x: c.x, y: c.y });
+    c.broken = true;
+    this.deck.push(c.card);
+    this.powerUps[c.card] = 0;
+    this.emit({ type: "cell", t: this.now, index: best, card: c.card, hp: 0, max: c.max, broken: true, x: c.x, y: c.y });
+    this.log(`A cell breaks: ${UNIT_BY_ID[c.card]?.name ?? c.card} returns`, "unit");
+  }
+
+  /** Chapter 3: the pan with more total unit ranks crushes (stuns) units of its own. Only while monsters are on the board. */
+  private tickScale() {
+    const sc = this.story!.mechanics!.scale!;
+    let l = 0;
+    let r = 0;
+    for (const u of this.units) {
+      if (!u) continue;
+      const pan = panOf(u.slot);
+      if (pan === "left") l += u.rank;
+      else if (pan === "right") r += u.rank;
+    }
+    this.scaleL = l;
+    this.scaleR = r;
+    if (!this.monsters.some((m) => !m.gone)) {
+      this.scaleAt = this.now + sc.every;
+      return;
+    }
+    if (this.now < this.scaleAt) return;
+    this.scaleAt = this.now + sc.every;
+    const diff = l - r;
+    if (Math.abs(diff) < sc.gap) return;
+    const side = diff > 0 ? "left" : "right";
+    const heavy = this.units.filter((u): u is SimUnit => !!u && panOf(u.slot) === side && !u.dragging && !this.mercy(u));
+    for (let i = heavy.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rand() * (i + 1));
+      [heavy[i], heavy[j]] = [heavy[j], heavy[i]];
+    }
+    for (const u of heavy.slice(0, Math.min(3, 1 + Math.floor(Math.abs(diff) / (sc.gap * 2))))) {
+      u.status.shockedUntil = Math.max(u.status.shockedUntil, this.now + sc.stun);
+      this.callout("shellshock", "CRUSHED!", "#c0c8ff", u.x, u.y - 60, u.uid);
+      this.emit({ type: "crush", t: this.now, uid: u.uid, heavy: side, x: u.x, y: u.y });
+    }
+  }
+
+  /** Chapter 4: at the start of wave `n` the listed tiles fall. A unit on one is caught by the nearest free standing tile, else returned as mana. */
+  private collapseAt(n: number) {
+    const cl = this.story!.mechanics!.collapse!;
+    const i = cl.at.indexOf(n);
+    if (i < 0) return;
+    const falling = cl.slots[i];
+    for (const s of falling) this.fallen.add(s);
+    for (const s of falling) {
+      const u = this.units[s];
+      if (!u) continue;
+      let to = -1;
+      let best = 99;
+      this.units.forEach((v, j) => {
+        if (v || this.fallen.has(j)) return;
+        const d = Math.abs(Math.floor(j / 5) - Math.floor(s / 5)) + Math.abs((j % 5) - (s % 5));
+        if (d < best) [to, best] = [j, d];
+      });
+      this.units[s] = null;
+      if (to >= 0) {
+        u.moveTo(to, slotPos(this.arena, to));
+        this.units[to] = u;
+        this.emit({ type: "hooked", t: this.now, uid: u.uid, from: s, to, x: u.x, y: u.y });
+      } else {
+        const back = Math.round(this.summonCost * TRIBUNAL.refund * u.rank);
+        this.gainMana(back, u.x, u.y - 40, "other");
+        this.emit({ type: "unit_gone", t: this.now, uid: u.uid, why: "fell", x: u.x, y: u.y, mana: back });
+      }
+    }
+    this.recomputeBuffs();
+    this.emit({ type: "collapse", t: this.now, warn: false, slots: falling, in: 0 });
+    this.log(`Wave ${n}: ${falling.length} tiles fall`, "wave");
+  }
+
   // ---------------------------------------------------------------- Ondrath's shell (v2.2 Story 2 Ch 2)
 
   /** The shell boss lies still near the path's start, immune, while the first clusters grow. */
@@ -2584,6 +2971,8 @@ export class Sim {
     const now = this.now;
     // A dragged unit does nothing at all (no timers, no pulses, no attacks).
     if (u.dragging) return;
+    // v2.4: a jailed unit does nothing until the count ends.
+    if (u.jailed) return;
     if (now < u.frozenUntil || now < u.status.shockedUntil || now < u.status.entangledUntil) return;
     // v2.2: under water at high tide, or sung asleep: no attacks.
     if (now < u.status.submergedUntil || now < u.status.asleepUntil) return;
@@ -2636,6 +3025,8 @@ export class Sim {
     u.cooldown = 1 / rate;
     u.firedAt = now;
     this.fire(u, target);
+    // v2.4: every attack wears a chain down a link.
+    if (u.chain > 0) this.chainLink(u, 1);
   }
 
   /** Every attack-speed bonus on a unit right now: buffs and owls, hero, portal rush, war cry. */
