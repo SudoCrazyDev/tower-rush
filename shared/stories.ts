@@ -22,6 +22,8 @@ export interface StoryWave {
   boss?: string;
   /** Multiplier on this wave's monster HP (1 = the chapter's normal curve). */
   hp: number;
+  /** Extra multiplier on the HP of this wave's non-boss monsters, minions included (a boss chapter with a high hpScale). Default 1. */
+  minionHp?: number;
   /** A speech bubble when the wave starts. */
   bark?: StoryLine;
   /**
@@ -1068,7 +1070,7 @@ const THE_IRON_OATH: StoryDef = {
         panel("b2s4_p6_unanswered_horn", "In the ashes, Durgrim holds the unanswered horn and the torn oath scroll.", "\"An oath broken must be paid.\""),
         panel("b2s4_p7_walking_forge", "Today. A smith named Brakka stands before the mountain, hammer in hand.", "\"My father's grief built that thing. I know every bolt in it.\""),
       ],
-      waves: [w(`${IS} 6, ${IC} 4, ${IB} 2`, { boss: "walking_forge", hp: 1, bark: say("brakka", "Here it comes! Watch its parts. Break them one by one!") })],
+      waves: [w(`${IS} 6, ${IC} 4, ${IB} 2`, { boss: "walking_forge", hp: 1, minionHp: 0.1, bark: say("brakka", "Here it comes! Watch its parts. Break them one by one!") })],
       reward: reward(3000, 60, null, ["runecaller"]),
       replay: replay(500),
     }),

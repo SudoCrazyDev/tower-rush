@@ -666,6 +666,8 @@ export class Sim {
   tutorialPick: { id: string; slot: number } | null = null;
   /** HP multiplier of the current story wave. */
   waveHp = 1;
+  /** The current story wave's StoryWave.minionHp (non-boss monsters only). */
+  minionHp = 1;
   /** Chaos Taffy tethers this step: the taffy and the unit it holds (for drawing the chain). */
   tethers: { monster: SimMonster; unit: SimUnit }[] = [];
   /** Open brew bubbles (solo with the `bubbles` option). */
@@ -1125,6 +1127,7 @@ export class Sim {
   private startScriptedWave(w: StoryChapter["waves"][number], n: number) {
     const e = ECONOMY;
     this.waveHp = this.plea === "guilty" ? w.hp * (this.story?.mechanics?.trial?.guiltyHp ?? 1) : w.hp;
+    this.minionHp = w.minionHp ?? 1;
     // v2.3 evacuation: this wave brings its dwarf families.
     const evac = this.story?.mechanics?.evacuation;
     if (evac) {
@@ -1177,7 +1180,7 @@ export class Sim {
       if (q.boss.parts) this.partsInit(m, hp);
     } else {
       const def = q.def!;
-      const hp = this.baseHp(n) * def.hp * hpMult * this.waveHp;
+      const hp = this.baseHp(n) * def.hp * hpMult * this.waveHp * this.minionHp;
       m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     }
     this.monsters.push(m);

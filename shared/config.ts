@@ -54,7 +54,7 @@ export interface GameConfig {
  * own values over the defaults, so on load each hotfix it hasn't had copies the listed fields
  * from the defaults once (withHotfixes), and is recorded so later admin edits stick.
  */
-const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics)[]> }> = {
+const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics | "waves")[]> }> = {
   "1.2.1": {
     units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["kit"] },
     effects: { rally: ["time"], oath: ["perKnight"] },
@@ -65,6 +65,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.2.1": { units: {}, effects: { irritate: ["critChance"] } },
   // Iron Oath evacuation: whelps dived on families at the gate before any unit could reach them (huntFirst 3 -> 6).
   "2.4.1": { units: {}, effects: {}, chapters: { b2s4c1: ["evacuation"] } },
+  // Walking Forge: hpScale 12 made its iron minions ~1200 HP; the wave's minionHp 0.1 brings them to ~120.
+  "2.4.1-forge": { units: {}, effects: {}, chapters: { b2s4c2: ["waves"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
@@ -85,7 +87,11 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
     for (const [chapterId, keys] of Object.entries(fix.chapters ?? {})) {
       const c = books?.flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
       const d = [DEFAULT_BOOK, DEFAULT_BOOK2].flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
-      if (c && d?.mechanics) for (const k of keys) Object.assign((c.mechanics ??= {}), { [k]: structuredClone(d.mechanics[k]) });
+      if (!c || !d) continue;
+      for (const k of keys) {
+        if (k === "waves") c.waves = structuredClone(d.waves);
+        else if (d.mechanics) Object.assign((c.mechanics ??= {}), { [k]: structuredClone(d.mechanics[k]) });
+      }
     }
   }
   return { ...cfg, units, effects: effects as unknown as Effects, books: books ?? cfg.books, hotfixes: [...done] };
