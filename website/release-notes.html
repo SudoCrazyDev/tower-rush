@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://assets.crownnkeep.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2.2.0" />
+  <link rel="stylesheet" href="styles.css?v=2.4.1" />
 </head>
 <body>
   <!-- ============ NAV ============ -->
@@ -43,7 +43,7 @@
       <div class="section__head">
         <span class="eyebrow">Release notes</span>
         <h2>What's new in Crown &amp; Keep</h2>
-        <p>Recent releases, newest first, with every hotfix that followed.</p>
+        <p>The last five releases, newest first, with every hotfix that followed. Older ones are in the history.</p>
       </div>
       <nav class="notes__jump" aria-label="Jump to a release">
         <a href="#v2-4-0"><b>v2.4</b> The Silver Tribunal</a>
@@ -51,8 +51,7 @@
         <a href="#v2-2-0"><b>v2.2</b> Sand &amp; Sea</a>
         <a href="#v2-1-0"><b>v2.1</b> Chaos Corrupted</a>
         <a href="#v2-0-0"><b>v2.0</b> The Grand Revamp</a>
-        <a href="#v1-3-0"><b>v1.3</b> Branding Revamp</a>
-        <a href="#v1-2-0"><b>v1.2</b> Stories</a>
+        <a href="#history"><b>History</b> Older releases</a>
       </nav>
     </section>
 
@@ -202,6 +201,14 @@
         </div>
       </article>
 
+      <!-- ============ HISTORY: releases older than the latest five ============ -->
+      <details class="history" id="history">
+        <summary class="history__head">
+          <span class="eyebrow">History</span>
+          <span class="history__title">Older releases</span>
+          <span class="history__list"><b>v1.3</b> Branding Revamp &middot; <b>v1.2</b> Stories</span>
+        </summary>
+        <div class="history__body">
       <!-- v1.3.0 -->
       <article class="release" id="v1-3-0">
         <div class="release__bg release__bg--logo" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="" loading="lazy" /></div>
@@ -290,6 +297,8 @@
           </div>
         </div>
       </article>
+        </div>
+      </details>
     </section>
 
     <!-- ============ FINAL CTA ============ -->
@@ -302,6 +311,18 @@
       </div>
     </section>
   </main>
+  <script>
+    // Open the history panel when the address points into it (#history, #v1-3-0, ...).
+    (function () {
+      var h = document.getElementById("history");
+      function open() {
+        var t = location.hash && document.getElementById(location.hash.slice(1));
+        if (h && t && h.contains(t)) { h.open = true; t.scrollIntoView(); }
+      }
+      window.addEventListener("hashchange", open);
+      open();
+    })();
+  </script>
 
   <footer class="footer">
     <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" loading="lazy" />

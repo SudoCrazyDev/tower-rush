@@ -492,6 +492,16 @@ p { margin: 0; }
 .release__list li { position: relative; padding-left: 26px; color: var(--muted); }
 .release__list li::before { content: "\2694"; position: absolute; left: 0; color: var(--gold); }
 .release__list b { color: var(--text); }
+/* Releases older than the latest five, folded into one panel. */
+.history { scroll-margin-top: 90px; border-radius: 22px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.history__head { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 24px 40px; }
+.history__head::-webkit-details-marker { display: none; }
+.history__head::after { content: "+"; margin-left: auto; font: 900 28px/1 var(--body); color: var(--gold); }
+.history[open] .history__head::after { content: "2"; }
+.history__title { font: 400 26px/1 var(--display); color: var(--text); }
+.history__list { color: var(--muted); font-weight: 800; font-size: 14px; }
+.history__list b { color: var(--gold); }
+.history__body { display: flex; flex-direction: column; gap: 28px; padding: 0 16px 16px; }
 .hotfixes { margin-top: 10px; padding-top: 14px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 12px; }
 .hotfix { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; padding: 14px 16px; border-radius: 14px; background: rgba(0, 0, 0, .25); }
 .hotfix__ver { font: 900 13px/1 var(--body); padding: 6px 9px; border-radius: 8px; color: #ffc2cc; background: rgba(255, 59, 92, .18); box-shadow: inset 0 0 0 1px rgba(255, 59, 92, .5); white-space: nowrap; }
@@ -501,6 +511,8 @@ p { margin: 0; }
 @media (max-width: 700px) {
   .notes__intro { padding-top: 110px; }
   .release { padding: 24px 20px; }
+  .history__head { padding: 20px; }
+  .history__body { padding: 0 8px 8px; }
   .release__bg--split { flex-direction: column; }
   .release__bg--split img:first-child { -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent); mask-image: linear-gradient(180deg, #000 70%, transparent); margin: 0 0 -20%; }
   .release__bg--split img:last-child { -webkit-mask-image: linear-gradient(0deg, #000 70%, transparent); mask-image: linear-gradient(0deg, #000 70%, transparent); margin: -20% 0 0; }

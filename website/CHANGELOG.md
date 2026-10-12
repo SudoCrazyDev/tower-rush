@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.1.1
+- Release notes show only the latest five releases; older ones (v1.3, v1.2) sit in a collapsible History panel, which opens when a link points into it.
+
 ## 1.1.0
 - Release notes: v2.4.0 "The Silver Tribunal" with its 2.4.1 hotfix, and v2.3.0 "The Iron Oath". v2.4.0 is now the latest.
 - Latest news: posts for v2.4.0 / v2.4.1 and v2.3.0.
