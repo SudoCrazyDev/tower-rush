@@ -72,6 +72,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.4.1-forge-parts": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
   // Walking Forge walks slower: speed 12 -> 8 px/s.
   "2.4.1-forge-speed": { units: {}, effects: {}, bosses: { walking_forge: ["speed"] } },
+  // Stuck Forge was easy to wait out: broken legs now stoke the furnace x3.5 (every 2 s) instead of x2 (every 3.5 s).
+  "2.4.1-forge-haste": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
