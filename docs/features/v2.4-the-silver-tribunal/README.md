@@ -1,6 +1,6 @@
 # v2.4.0 "The Silver Tribunal"
 
-**Status:** Built on branch `v2.4-silver-tribunal`, not deployed · **Version:** `2.4.0` (API `1.1.0`, `MIN_CLIENT` `2.4.0`) · **Promo kit:** [PROMO.md](PROMO.md) ·
+**Status:** Live 2026-10-12 (tag `game-v2.4.0`; hotfix `game-v2.4.1`) · **Version:** `2.4.0` (API `1.1.0`, `MIN_CLIENT` `2.4.0`) · **Promo kit:** [PROMO.md](PROMO.md) ·
 **Story pitch:** [saga plan](../concepts/forsakens-saga.md) (section 5) · **Art prompts:** [ART_PROMPTS.md](ART_PROMPTS.md) (written by the art agent)
 
 Book 2 Story 5, the Book 2 finale. Aurelion is a floating city of clockwork law: a vanished artificer

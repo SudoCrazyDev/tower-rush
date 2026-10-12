@@ -1,6 +1,6 @@
 # v2.3.0 "The Iron Oath"
 
-**Status:** Built on branch `v2.3-iron-oath`, not deployed · **Version:** `2.3.0` · **Promo kit:** [PROMO.md](PROMO.md) ·
+**Status:** Live 2026-10-11 (tag `v2.3.0`; balance hotfixes in `game-v2.4.1`) · **Version:** `2.3.0` · **Promo kit:** [PROMO.md](PROMO.md) ·
 **Story pitch:** [saga plan](../concepts/forsakens-saga.md) (section 4)
 
 Book 2 Story 4. Three hundred years ago the human crown swore the Iron Oath to defend the dwarves of
