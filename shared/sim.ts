@@ -2242,8 +2242,9 @@ export class Sim {
       let prey: SimMonster | null = null;
       let best = OATH.diveRange;
       for (const f of this.monsters) {
-        if (!f.family || f.gone) continue;
-        const d = Math.abs(f.progress - m.progress);
+        // Only a family ahead of the hunter: one it has already passed is safe.
+        if (!f.family || f.gone || f.progress < m.progress) continue;
+        const d = f.progress - m.progress;
         if (d < best) [prey, best] = [f, d];
       }
       if (!prey) {

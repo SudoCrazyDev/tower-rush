@@ -1010,7 +1010,7 @@ const THE_IRON_OATH: StoryDef = {
           perWave: [2, 2, 2, 2, 2, 2, 2, 2, 2, 4],
           gap: 4,
           hunters: [DW, "frost_wyrm", "fire_dragon", "ashmaw"],
-          huntFirst: 3,
+          huntFirst: 6,
           huntEvery: 8,
           bossHuntEvery: 7,
           quiet: ["frost_wyrm", "fire_dragon"],

@@ -4,7 +4,7 @@
  */
 import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, PROJECTILES, STYLE_IDS, WEAPON_KEYS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, BOSS_SKILLS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
-import { DEFAULT_BOOK, DEFAULT_BOOK2, booksOf, booksProblems, setBooks, type BookDef } from "./stories.ts";
+import { DEFAULT_BOOK, DEFAULT_BOOK2, booksOf, booksProblems, setBooks, type BookDef, type ChapterMechanics } from "./stories.ts";
 import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts";
 import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type ChestDef } from "./economy.ts";
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
@@ -54,7 +54,7 @@ export interface GameConfig {
  * own values over the defaults, so on load each hotfix it hasn't had copies the listed fields
  * from the defaults once (withHotfixes), and is recorded so later admin edits stick.
  */
-const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]> }> = {
+const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics)[]> }> = {
   "1.2.1": {
     units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["kit"] },
     effects: { rally: ["time"], oath: ["perKnight"] },
@@ -63,6 +63,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "1.3.1": { units: {}, effects: { lucky: ["chance", "perRank", "max"] } },
   // Rogue Knight crit on 95% of blows (~2.9x damage), far above every other epic.
   "2.2.1": { units: {}, effects: { irritate: ["critChance"] } },
+  // Iron Oath evacuation: whelps dived on families at the gate before any unit could reach them (huntFirst 3 -> 6).
+  "2.4.1": { units: {}, effects: {}, chapters: { b2s4c1: ["evacuation"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
@@ -70,6 +72,7 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
   const units = cfg.units.map((u) => ({ ...u }));
   const effects = structuredClone(cfg.effects) as unknown as Record<string, Record<string, unknown>>;
   const defEffects = DEFAULT_EFFECTS as unknown as Record<string, Record<string, unknown>>;
+  const books = cfg.books ? structuredClone(cfg.books) : undefined;
   for (const [id, fix] of Object.entries(HOTFIXES)) {
     if (done.has(id)) continue;
     done.add(id);
@@ -79,8 +82,13 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
       if (u && d) for (const f of fields) u[f] = d[f];
     }
     for (const [block, fields] of Object.entries(fix.effects)) for (const f of fields) if (effects[block]) effects[block][f] = defEffects[block][f];
+    for (const [chapterId, keys] of Object.entries(fix.chapters ?? {})) {
+      const c = books?.flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
+      const d = [DEFAULT_BOOK, DEFAULT_BOOK2].flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
+      if (c && d?.mechanics) for (const k of keys) Object.assign((c.mechanics ??= {}), { [k]: structuredClone(d.mechanics[k]) });
+    }
   }
-  return { ...cfg, units, effects: effects as unknown as Effects, hotfixes: [...done] };
+  return { ...cfg, units, effects: effects as unknown as Effects, books: books ?? cfg.books, hotfixes: [...done] };
 }
 
 export function defaultConfig(): GameConfig {

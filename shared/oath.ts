@@ -6,8 +6,8 @@
 import type { Element } from "./units.ts";
 
 export const OATH = {
-  /** Evacuation: a hunter dives on a family whose place on the road is within this share of the path of its own. */
-  diveRange: 0.3,
+  /** Evacuation: a hunter dives on a family ahead of it on the road (one it is about to fly over) within this share of the path. */
+  diveRange: 0.15,
   /** The unit role that breaks a rune of any element (the Runecaller card). */
   breakerRole: "Runecaller",
   /** Walking Forge: share of damage its core takes while another part stands, when the boss def has no `coreArmor`. */
