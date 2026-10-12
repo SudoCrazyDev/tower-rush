@@ -31,13 +31,15 @@ export async function requireHuman(c: Ctx, token: unknown, action: TurnstileActi
       signal: AbortSignal.timeout(10_000),
       body: new URLSearchParams({ secret, response: token, remoteip: clientIp(c) }),
     });
-    if (!r.ok) throw new Error(`siteverify ${r.status}`);
+    // A rejected token or bad secret comes back as 400 with error-codes in the body, so read it either way.
     result = await r.json();
+    if (!r.ok && !result["error-codes"]?.length) throw new Error(`siteverify ${r.status}`);
   } catch (e) {
     console.error("turnstile siteverify failed", (e as Error).message);
     fail(403, "Security check failed, please try again", { turnstile: true });
   }
   if (!result.success || (!dev && (result.action !== action || !hostnames.has(result.hostname ?? "")))) {
+    console.warn("turnstile rejected", JSON.stringify({ want: action, action: result.action, hostname: result.hostname, errors: result["error-codes"] }));
     fail(403, "Security check failed, please try again", { turnstile: true });
   }
 }
