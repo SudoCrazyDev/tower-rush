@@ -76,6 +76,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.4.1-forge-haste": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
   // Stuck Forge was still easy: broken legs regrow over 30 s at 0.6 of their last max; cannons 0.5 -> 0.35, furnace 0.7 -> 0.5. Brakka's lines to match.
   "2.4.1-forge-repair": { units: {}, effects: {}, chapters: { b2s4c2: ["forge"] }, bosses: { walking_forge: ["parts"] } },
+  // Leg repair 30 s -> 55 s.
+  "2.4.1-forge-repair-55": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
