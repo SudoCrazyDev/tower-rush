@@ -8,7 +8,7 @@ import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, E
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
-import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultOf, ultText } from "../../../shared/awakened.ts";
+import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultText } from "../../../shared/awakened.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
@@ -762,7 +762,7 @@ export class DeckScene extends Phaser.Scene {
    * How the unit's numbers grow: permanent card levels, in-battle power-ups (mana) and
    * merge ranks. Every value comes from unitStats(), so it matches the battle.
    */
-  /** v2.7 card back: the awakened form's boosts (with its real numbers at max rank), its ultimate and how supports work with it. */
+  /** v2.7 card back: the awakened form's boosts (with its real numbers at max rank), and its ultimate. */
   private awakenedPanel(def: UnitDef, level: number, cx: number, top: number) {
     const c = this.add.container(0, 0);
     const DIM = "#9fb0e0";
@@ -790,7 +790,6 @@ export class DeckScene extends Phaser.Scene {
     });
 
     // The ultimate: label, name, a cadence tag, then what it does (the cadence prefix moves to the tag).
-    const ult = ultOf(def.id);
     const every = ultEvery(def.id);
     const ultY = tileY + 160;
     const body = ultText(def.id).replace(/^(Passive|Every [\d.]+s): /, "");
@@ -811,19 +810,7 @@ export class DeckScene extends Phaser.Scene {
     g.fillStyle(every > 0 ? 0xffd93b : 0x9ff0ff, 1).fillRoundedRect(cx - tag.width / 2 - 14, tag.y - 4, tag.width + 28, tag.displayHeight + 8, 12);
     c.add(items);
 
-    // How supports work with it.
-    const notes = [
-      every > 0 ? "Hourglass Owl: charges the ultimate faster" : "Hourglass Owl: faster attacks (a passive has no charge)",
-      every <= 0 ? "Echo Spirit: nothing to repeat (passive)" : ult?.id === "primal_roar" ? "Echo Spirit: can't repeat a roar" : "Echo Spirit: repeats the ultimate",
-      "Banner Herald: war cry when it awakens",
-    ];
     y += 26;
-    c.add(txt(this, cx, y, "WITH SUPPORTS", 18, DIM, [0.5, 0]));
-    y += 30;
-    for (const n of notes) {
-      c.add(txt(this, cx, y, n, 21, "#cfe0ff", [0.5, 0]));
-      y += 32;
-    }
     c.add(txt(this, cx, y + 4, "Tap the card to flip back", 18, DIM, [0.5, 0]));
     return c;
   }
