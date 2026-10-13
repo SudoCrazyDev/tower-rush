@@ -1081,6 +1081,11 @@ export class BattleScene extends Phaser.Scene {
           img.img.setTexture("vfx:bee_swarm");
           img.img.setScale(60 / Math.max(1, img.img.width));
         }
+        // Ultra Focused: an awakened Sand Monk throws spirit fists.
+        if (this.fistOf(s.unit.uid) && this.textures.exists("vfx:fist_strike")) {
+          img.img.setTexture("vfx:fist_strike").setVisible(true);
+          img.img.setScale(60 / Math.max(1, img.img.width));
+        }
         sfx("shoot", def.proj);
         this.shotImgs.set(s, img);
       }
@@ -1090,6 +1095,7 @@ export class BattleScene extends Phaser.Scene {
       const glide = Math.min(Math.max(0, d - 4), s.speed * ahead);
       img.move(s.x + (dx / d) * glide, s.y + (dy / d) * glide, Math.atan2(dy, dx));
       if (s.kind === "bee") img.img.setRotation(Math.sin(this.time.now / 60 + s.x) * 0.35);
+      else if (img.img.texture.key === "vfx:fist_strike") img.img.setRotation(0);
     }
   }
 
