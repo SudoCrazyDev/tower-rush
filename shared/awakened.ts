@@ -56,12 +56,12 @@ export const ULTIMATES: Record<UltId, UltDef> = {
   winter_storm: { id: "winter_storm", name: "Winter Storm", mode: "timer", every: 10, params: { slow: 0.5, slowTime: 4, freezes: 5, freeze: 3, bossFreeze: 1 } },
   bee_hives: { id: "bee_hives", name: "Bee Hives", mode: "field", every: 0, params: { hives: 2, damage: 45, speed: 1.8 } },
   iceborn: { id: "iceborn", name: "Iceborn Warmother", mode: "passive", every: 0, params: { boss: 1.5 } },
-  overheat: { id: "overheat", name: "Overheat", mode: "timer", every: 35, params: { duration: 10, baseSpeed: 2, jam: 2 } },
+  overheat: { id: "overheat", name: "Overheat", mode: "timer", every: 25, params: { duration: 10, baseSpeed: 2, jam: 2 } },
   ultra_focused: { id: "ultra_focused", name: "Ultra Focused", mode: "passive", every: 0, params: { crit: 0.65, critMult: 2.5 } },
-  mushroom_puff: { id: "mushroom_puff", name: "Mushroom Puff", mode: "field", every: 0, params: { max: 5, sprout: 2, grow: 3, life: 20, touch: 45, radius: 90, slow: 0.9, slowTime: 6 } },
-  rag_doll: { id: "rag_doll", name: "Rag Doll", mode: "timer", every: 45, params: { dolls: 4, duration: 15, radius: 50, slow: 0.6, dps: 1 } },
+  mushroom_puff: { id: "mushroom_puff", name: "Mushroom Puff", mode: "field", every: 0, params: { max: 5, sprout: 2, grow: 3, touch: 45, radius: 90, slow: 0.9, slowTime: 6 } },
+  rag_doll: { id: "rag_doll", name: "Rag Doll", mode: "timer", every: 35, params: { dolls: 4, duration: 15, radius: 50, slow: 0.6, dps: 1 } },
   mjolnir: { id: "mjolnir", name: "Grace of Mjolnir", mode: "passive", every: 0, params: { jumps: 5, damage: 0.6 } },
-  vineyard: { id: "vineyard", name: "Vineyard", mode: "field", every: 0, params: { patches: 3, length: 140, dps: 1 } },
+  vineyard: { id: "vineyard", name: "Vineyard", mode: "field", every: 0, params: { length: 140, dps: 1 } },
 };
 
 /** Ultimates an Echo Spirit can't repeat (a second copy would change nothing or stack oddly). */
@@ -94,7 +94,7 @@ export const AWAKENINGS: Record<string, Awakening> = {
   bee_keeper: { damage: 0, speed: 0, ult: "bee_hives" },
   bear_rider: { damage: 3, speed: 3, ult: "iceborn" },
   gear_engineer: { damage: 2, speed: 4, ult: "overheat" },
-  sand_monk: { damage: 1, speed: 5, ult: "ultra_focused" },
+  sand_monk: { damage: 1.5, speed: 5, ult: "ultra_focused" },
   spore_sage: { damage: 3, speed: 3, ult: "mushroom_puff" },
   storm_totem: { damage: 3, speed: 3, ult: "rag_doll" },
   thunder_dwarf: { damage: 3, speed: 3, ult: "mjolnir" },
@@ -162,7 +162,7 @@ export function ultText(id: string): string {
     case "mjolnir":
       return `Passive: every attack also chains lightning to up to ${p.jumps} more monsters for ${pct(p.damage)} of the hit.`;
     case "vineyard":
-      return `Passive: ${p.patches} stretches of the path are overgrown for good. Monsters in them take her hit every second. No blocking.`;
+      return `Passive: the whole path is overgrown for good. Monsters on it take her hit every second. No blocking.`;
   }
 }
 

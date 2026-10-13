@@ -78,12 +78,12 @@ Awakened rares (multipliers from `shared/awakened.ts`; "field" ultimates are alw
 | Frost Sorceress | ×3 | ×3 | Winter Storm | Timer, 10 s | Slows every monster 50% for 4 s and freezes 5 random monsters for 3 s (bosses 1 s). |
 | Bee Keeper | ×0 | ×0 | Bee Hives | Always on | Stops attacking. 2 hives fire swarms at any monster: base 45 damage, 1.8 attacks/s, scaled like a unit (rank, card level, power-ups). |
 | Bear Rider | ×3 | ×3 | Iceborn Warmother | Passive | +150% damage to bosses. |
-| Gear Engineer | ×2 | ×4 | Overheat | Timer, 35 s | Overheats for 10 s: base attack speed 2/s, shots lose their splash. Then jams for 2 s. |
-| Sand Monk | ×1 | ×5 | Ultra Focused | Passive | Stun becomes a 65% chance to crit for ×2.5. Adds Giant Slayer on top of True Strike. |
-| Spore Sage | ×3 | ×3 | Mushroom Puff | Always on | A mushroom sprouts every 2 s (max 5) and grows for 3 s. The first monster to touch it bursts it: 90 px, 90% slow for 6 s plus poison (bosses 45%). |
-| Storm Totem | ×3 | ×3 | Rag Doll | Timer, 45 s | 4 rag dolls stand along the path for 15 s, then 30 s without. Monsters within 50 px are slowed 60% and zapped for a hit per second. |
+| Gear Engineer | ×2 | ×4 | Overheat | Timer, 25 s | Overheats for 10 s: base attack speed 2/s, shots lose their splash. Then jams for 2 s. |
+| Sand Monk | ×1.5 | ×5 | Ultra Focused | Passive | Stun becomes a 65% chance to crit for ×2.5. Adds Giant Slayer on top of True Strike. |
+| Spore Sage | ×3 | ×3 | Mushroom Puff | Always on | A mushroom sprouts every 2 s (max 5) and grows for 3 s, then stays until the first monster to touch it bursts it: 90 px, 90% slow for 6 s plus poison (bosses 45%). |
+| Storm Totem | ×3 | ×3 | Rag Doll | Timer, 35 s | 4 rag dolls stand along the path for 15 s, then 20 s without. Monsters within 50 px are slowed 60% and zapped for a hit per second. |
 | Thunder Dwarf | ×3 | ×3 | Grace of Mjolnir | Passive | Every attack also chains lightning to up to 5 more monsters for 60% of the hit. |
-| Vine Druid | ×3 | ×1 | Vineyard | Always on | 3 stretches of each path stay overgrown. Monsters in them take her hit per second. Vines no longer block. |
+| Vine Druid | ×3 | ×1 | Vineyard | Always on | The whole path stays overgrown. Monsters on it take her hit per second. Vines no longer block. |
 
 ## 7. Design note
 - Awakened commons are intentionally stronger than the current mythics. Mythics are revamped later in 2.7.

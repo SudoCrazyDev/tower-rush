@@ -3340,7 +3340,7 @@ export class Sim {
 
   /** A monster is in a field's reach (a vineyard: along the path; the rest: around its foot point). */
   private inField(f: SimField, m: SimMonster) {
-    if (f.kind === "vineyard") return m.path === f.path && Math.abs(m.dist - f.dist) <= f.radius;
+    if (f.kind === "vineyard") return m.path === f.path && Math.abs(m.dist - f.dist) < f.radius;
     const p = m.foot;
     return Math.hypot(p.x - f.x, p.y - f.y) <= f.radius;
   }
@@ -3413,8 +3413,11 @@ export class Sim {
       }
       case "vineyard": {
         if (mine.some((f) => f.kind === "vineyard")) return;
+        // The whole path, laid as back-to-back stretches of about `length` px.
         for (const path of this.paths) {
-          for (let i = 0; i < p.patches; i++) this.addField("vineyard", u, path, (path.length * (i + 1)) / (p.patches + 1), { radius: p.length / 2, until: Infinity, dps: 0 });
+          const n = Math.max(1, Math.round(path.length / p.length));
+          const seg = path.length / n;
+          for (let i = 0; i < n; i++) this.addField("vineyard", u, path, seg * (i + 0.5), { radius: seg / 2, until: Infinity, dps: 0 });
         }
         return;
       }
@@ -3422,11 +3425,11 @@ export class Sim {
         if (mine.length >= p.max) return;
         u.timer += dt;
         if (u.timer < p.sprout) return;
-        // It sprouts somewhere along the first stretch of the path, where every monster still has to walk;
-        // one nobody touches withers after a while so a new one can sprout.
+        // It sprouts somewhere along the first stretch of the path, where every monster still has to walk,
+        // and stays until a monster bursts it.
         u.timer = 0;
         const path = this.paths[Math.floor(this.rand() * this.paths.length)];
-        this.addField("mushroom", u, path, path.length * (0.08 + this.rand() * 0.35), { radius: p.touch, until: this.now + p.grow + p.life, dps: 0, readyAt: this.now + p.grow });
+        this.addField("mushroom", u, path, path.length * (0.08 + this.rand() * 0.35), { radius: p.touch, until: Infinity, dps: 0, readyAt: this.now + p.grow });
         return;
       }
     }

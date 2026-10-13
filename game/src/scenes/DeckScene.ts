@@ -803,7 +803,7 @@ export class DeckScene extends Phaser.Scene {
     } else if (def.id === "vine_druid") {
       tiles = [
         ["stat:damage", `×${+awakenDamageMult(def.id).toFixed(2)}`, "VINE DMG/s", fmt(s.damage * awakenDamageMult(def.id))],
-        ["stat:attack_speed", `×${ULTIMATES.vineyard.params.patches}`, "VINES · ALWAYS", "on every path"],
+        ["stat:attack_speed", "ALL", "VINES · ALWAYS", "the whole path"],
       ];
     }
     const tileY = top + 90;
