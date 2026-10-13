@@ -9,11 +9,14 @@ import { BattleScene } from "./scenes/BattleScene";
 import { PvpMenuScene } from "./scenes/PvpMenuScene";
 import { PvpScene } from "./scenes/PvpScene";
 import { StoryScene } from "./scenes/StoryScene";
-import { W, H } from "./ui";
+import { W, H, WIDE, ARENA_W, setWidth } from "./ui";
 import { RES } from "./display";
 import { setOnBanned, setOnOutdated, setToken } from "./api";
 import { showBlocker } from "./authOverlay";
 import { BASE } from "./assets";
+import { initPwa } from "./pwa";
+
+initPwa();
 
 // Art from the R2 bucket loads with CORS. A browser that once fetched the same URL without
 // CORS (a plain <img>, or before the bucket always sent the header) keeps that copy for a
@@ -84,6 +87,20 @@ async function start() {
     fps: { target: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
     scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene, PvpMenuScene, PvpScene, StoryScene],
   });
+  if (!WIDE && W > ARENA_W) {
+    // Phones wider than the 752 layout: menus fill the screen's width, while battles keep the
+    // arena's own width (their HUD is laid out for it) and letterbox as before.
+    const menuW = W;
+    const fit = (s: Phaser.Scene) => {
+      const w = s.scene.key === "Battle" || s.scene.key === "Pvp" ? ARENA_W : menuW;
+      if (game.scale.width === w) return;
+      setWidth(w);
+      game.scale.setGameSize(w, H);
+    };
+    const watch = () => game.scene.scenes.forEach((s) => s.events.on(Phaser.Scenes.Events.START, () => fit(s)));
+    if (game.scene.isBooted) watch();
+    else game.events.once(Phaser.Core.Events.READY, watch);
+  }
   if (RES !== 1) {
     // The canvas is RES times the game size: every scene's camera zooms from the top-left
     // corner, so scenes keep working in W x H game coordinates (HUD objects included).

@@ -1,6 +1,7 @@
 /**
  * Two layouts, picked once at startup:
- * - portrait (phones): 752x1640, arena on top, HUD below.
+ * - portrait (phones): 1640 tall and as wide as the screen allows (752 to 1000), arena on top,
+ *   HUD below. Battles narrow it back to the arena's 752 (see main.ts).
  * - wide (desktop/landscape): arena-height canvas (1344) as wide as the window allows,
  *   arena in the middle and the HUD in side panels.
  * `?layout=wide|portrait` forces one (handy for testing).
@@ -11,7 +12,7 @@ function pickLayout() {
   const forced = params.get("layout");
   const aspect = innerWidth / Math.max(1, innerHeight);
   const wide = forced ? forced === "wide" : aspect > 1.2;
-  if (!wide) return { wide, w: 752, h: 1640 };
+  if (!wide) return { wide, w: Math.round(Math.min(1000, Math.max(752, 1640 * aspect))), h: 1640 };
   return { wide, w: Math.round(Math.min(2900, Math.max(1700, 1344 * aspect))), h: 1344 };
 }
 export const LAYOUT = pickLayout();

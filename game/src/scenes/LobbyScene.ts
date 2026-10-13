@@ -20,6 +20,7 @@ import { ambientVideo, coverFit } from "../backdrop";
 import { arenaInfo } from "./arenaInfo";
 import { avatarIds, avatarView } from "../avatars";
 import { whatsNew } from "./whatsNew";
+import { canInstall, install, isInstalled, isIos } from "../pwa";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, pressable, badge, onSwipe, toast, ornateFrame } from "../ui";
 import { sfx } from "../audio";
 
@@ -65,10 +66,13 @@ export function topBar(scene: Phaser.Scene) {
   const g = scene.add.graphics();
   g.fillStyle(NAVY, 0.6).fillRect(0, 0, W, 76);
   // Right-aligned on wide screens, spread across the top on phones.
-  const x0 = WIDE ? W - 820 : 0;
+  // Phones wider than 752 share the extra width out between the pills.
+  const extra = WIDE ? 0 : W - 752;
+  const x0 = WIDE ? W - 820 : extra / 6;
+  const step = 230 + extra / 3;
   const coins = resourcePill(scene, x0 + 120, 38, "item:coins", fmt(profile.coins), 200);
-  const gems = resourcePill(scene, x0 + 350, 38, "item:gems", fmt(profile.gems), 180);
-  resourcePill(scene, x0 + 580, 38, "item:trophy", fmt(profile.trophies), 190);
+  const gems = resourcePill(scene, x0 + 120 + step, 38, "item:gems", fmt(profile.gems), 180);
+  resourcePill(scene, x0 + 120 + 2 * step, 38, "item:trophy", fmt(profile.trophies), 190);
   // League badge in the corner; tap it for the leagues list.
   pressable(leagueBadge(scene, W - 46, 38, 66, leagueFor(profile.trophies)), () => leagueModal(scene));
   /** Re-read coins and gems after spending without rebuilding the scene. */
@@ -687,7 +691,16 @@ export class LobbyScene extends Phaser.Scene {
     m.add(txt(this, cx, cy - 280, account.name, 40, "#fff4c2"));
     m.add(txt(this, cx, cy - 230, account.isGuest ? "Guest account" : `Signed in as ${account.username}`, 24, "#c9d2ff"));
     m.add(audioButtons(this, cx, cy - 130));
-    m.add(txt(this, cx, cy - 40, "Drag matching units to merge.\nSPACE summons, H uses your hero,\nD shows the path overlay.", 22, "#ffffff"));
+    // Where the browser can install the game, that button takes the keyboard tips' place.
+    if (canInstall())
+      m.add(
+        button(this, cx, cy - 40, 400, 84, "INSTALL APP", "yellow", async () => {
+          m.close();
+          await install();
+        }, 30),
+      );
+    else if (isIos() && !isInstalled()) m.add(txt(this, cx, cy - 40, "Play full screen: tap Share,\nthen Add to Home Screen.", 24, "#ffffff"));
+    else m.add(txt(this, cx, cy - 40, "Drag matching units to merge.\nSPACE summons, H uses your hero,\nD shows the path overlay.", 22, "#ffffff"));
     if (account.isGuest) {
       m.add(txt(this, cx, cy + 50, "Create an account so you\ndon't lose your progress.", 24, "#ffd27a"));
       m.add(

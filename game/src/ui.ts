@@ -8,7 +8,9 @@ import { RACES, raceCss, raceLabel, type Race } from "../../shared/races.ts";
 
 
 export const WIDE = LAYOUT.wide;
-export const W = LAYOUT.w;
+export let W = LAYOUT.w;
+/** Phones: menus use the screen's width, battles the arena's (main.ts calls this on each scene start). */
+export const setWidth = (w: number) => (W = w);
 export const H = LAYOUT.h;
 /** The arena art's own size; battle world coordinates use it. */
 export const ARENA_W = 752;

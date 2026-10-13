@@ -120,6 +120,18 @@
         "website"
       ],
       "port": 5191
+    },
+    {
+      "name": "game-dist",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5184",
+        "--directory",
+        "game/dist"
+      ],
+      "port": 5184
     }
   ]
 }

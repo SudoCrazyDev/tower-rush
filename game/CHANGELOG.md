@@ -2,6 +2,11 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.6.0
+- Installable app (PWA). The game has a web manifest (fullscreen, portrait, Crown & Keep icons including a maskable one) and a service worker, so Android Chrome, Edge and Samsung Internet can install it to the home screen. Settings shows INSTALL APP where the browser offers it (in place of the keyboard tips); on iPhone and iPad Safari it says to use Share, then Add to Home Screen.
+- Service worker (`game/pwa/sw.js`, filled in by the `pwa()` plugin in `vite.config.ts` at build time; production builds only). The page is fetched from the network first, so a deploy reaches players on their next load; the cached copy answers only offline. The build's JS, CSS and icons are precached and swapped on every build. Art from `assets.crownnkeep.com` and Google Fonts is served from the cache and refreshed in the background, so re-uploaded art under the same file name shows one load later. The API, the asset index (`?t=`), videos and non-GET requests are never cached.
+- Phones: the menus now fill the screen's width. The portrait layout is as wide as the screen allows (752 to 1000, still 1640 tall) instead of a fixed 752 with bars at the sides. Battles and PvP narrow it back to the arena's 752 while they run. The lobby's coin, gem and trophy pills spread across the extra width.
+
 ## 2.5.3
 - Sign-in panels: the dark fill now comes from the panel art itself, so its square corners no longer show past the rounded frame.
 
