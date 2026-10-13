@@ -192,6 +192,7 @@ export class BattleScene extends Phaser.Scene {
       autoHero: this.autoCast,
       story: this.story?.chapter,
       startMana: this.lab ? 999999 : ECONOMY.startMana,
+      freeMove: !!this.lab,
       bubbles: true,
       timelineCap: 64,
       view: true,
@@ -288,6 +289,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.input.keyboard?.on("keydown-D", () => this.toggleDebug());
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
+    if (this.lab) this.input.on("pointerup", (p: Phaser.Input.Pointer) => this.labTap(p));
     this.input.keyboard?.on("keydown-H", () => this.castHero());
     music("battle");
     this.load.on(Phaser.Loader.Events.COMPLETE, this.onAwakenedArt, this);
@@ -427,7 +429,7 @@ export class BattleScene extends Phaser.Scene {
       const root = hud(this.add.container(x, y, [frame, portrait, pips, costBg, orb, cost]).setDepth(3010));
       root.setSize(104, 136).setScale(WIDE ? 1.25 : 1);
       if (this.lab) {
-        // Lab: tap summons this unit on a random tile, drag it onto any empty tile to place it there,
+        // Lab: tap picks this unit (then tap empty tiles to place it), drag it onto any empty tile to place it there,
         // hold (450ms) to power it up.
         let timer: Phaser.Time.TimerEvent | null = null;
         let held = false;
@@ -471,7 +473,7 @@ export class BattleScene extends Phaser.Scene {
           this.input.on("pointerup", drop);
         });
         root.on("pointerup", () => timer?.remove());
-        pressable(root, () => !held && !ghost && this.labSummon(id));
+        pressable(root, () => !held && !ghost && this.labArm(this.labArmed === id ? null : id));
       } else pressable(root, () => this.powerUp(id));
       this.deckCards.push({ root, cost, pips, id });
     });
@@ -490,8 +492,10 @@ export class BattleScene extends Phaser.Scene {
     this.summonBtn = hud(this.add.container(WIDE ? R : heroRow ? 424 : W / 2, WIDE ? 760 : H - 76, [sb, costBg, this.summonCostText]).setDepth(3010));
     this.summonBtn.setSize(124, 124).setScale(WIDE ? 1.8 : 1);
     pressable(this.summonBtn, () => this.summon());
+    // Lab: no summoning; units go where the player puts them.
+    if (this.lab) this.summonBtn.setVisible(false).disableInteractive();
     this.tweens.add({ targets: sb, angle: { from: -3, to: 3 }, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
-    if (WIDE) hud(txt(this, R, 920, "SUMMON  (Space)", 26, "#c9d2ff").setDepth(3000));
+    if (WIDE && !this.lab) hud(txt(this, R, 920, "SUMMON  (Space)", 26, "#c9d2ff").setDepth(3000));
     // Staging and dev builds only: a test button that takes every unit on the board to max rank (awakening it).
     if (import.meta.env.DEV || import.meta.env.MODE === "staging") {
       const t = button(this, WIDE ? R : W - 130, WIDE ? 1010 : H - 200, 220, 64, `TEST ★${maxRank()}`, "red", () => this.sim.testMaxRankAll());
@@ -499,7 +503,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (this.lab) {
-      hud(txt(this, WIDE ? L : 24, WIDE ? 255 : 66, "UNIT LAB  ·  tap card: summon · drag card: place on a tile · hold: power up", WIDE ? 24 : 20, "#7dff7a", WIDE ? [0.5, 0.5] : [0, 0.5]).setDepth(3000).setWordWrapWidth(WIDE ? ox - 30 : ARENA_W - 40));
+      hud(txt(this, WIDE ? L : 24, WIDE ? 255 : 66, "UNIT LAB  ·  tap a card, then tap empty tiles (or drag the card) · hold card: power up · drag units to move", WIDE ? 24 : 20, "#7dff7a", WIDE ? [0.5, 0.5] : [0, 0.5]).setDepth(3000).setWordWrapWidth(WIDE ? ox - 30 : ARENA_W - 40));
     }
 
     // Speed + pause.
@@ -681,7 +685,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   summon() {
-    if (this.over || this.paused) return;
+    if (this.over || this.paused || this.lab) return;
     if (!this.sim.summon()) {
       const x0 = this.summonBtn.getData("x0") ?? this.summonBtn.x;
       this.summonBtn.setData("x0", x0);
@@ -691,6 +695,26 @@ export class BattleScene extends Phaser.Scene {
     }
     this.pump();
     this.refreshHud();
+  }
+
+  /** Unit Lab: the deck card picked for placing (tap empty tiles to place it), highlighted. */
+  private labArmed: string | null = null;
+  private labArm(id: string | null) {
+    this.labArmed = id;
+    for (const c of this.deckCards) {
+      const on = c.id === id;
+      c.root.setScale((WIDE ? 1.25 : 1) * (on ? 1.15 : 1));
+      (c.root.list[0] as Phaser.GameObjects.Image).setTint(on ? 0x7dff7a : 0xffffff);
+    }
+  }
+
+  /** Unit Lab: tap an empty tile with a card picked to place that unit there. */
+  private labTap(p: Phaser.Input.Pointer) {
+    // A drag (moving a unit, dragging a card) is not a tap.
+    if (!this.labArmed || this.over || this.paused || p.getDistance() > 12) return;
+    const w = this.cameras.main.getWorldPoint(p.x, p.y);
+    const slot = this.emptySlotAt(w.x, w.y);
+    if (slot >= 0) this.labSummon(this.labArmed, slot);
   }
 
   /** Unit Lab: summon this specific unit onto `slot`, or a random empty tile. */

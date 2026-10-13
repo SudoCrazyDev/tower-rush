@@ -278,6 +278,8 @@ export interface SimOptions {
   story?: StoryChapter;
   /** Starting mana (default 0). */
   startMana?: number;
+  /** Any unit may move to an empty tile (the game's Unit Lab; story chapters use ChapterMechanics.freeMove). */
+  freeMove?: boolean;
   /** Brewer mana waits in a bubble to be tapped (+tapBonus) or pops by itself (solo only). Default false: instant. */
   bubbles?: boolean;
   /** Most timeline samples kept; past it the timeline is thinned (default 20000). */
@@ -2091,7 +2093,7 @@ export class Sim {
 
   /** Whether any unit may move to an empty tile (ChapterMechanics.freeMove). */
   get freeMove() {
-    return !!this.story?.mechanics?.freeMove;
+    return !!this.o.freeMove || !!this.story?.mechanics?.freeMove;
   }
 
   /** freeMove chapters: the unit on `from` walks to the empty tile `to` (no cooldown, no cost). */
