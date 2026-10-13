@@ -125,6 +125,7 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
 
 ## Known gaps
 - Battles are simulated in the browser; the server only caps the reported wave by elapsed time.
+  Plan to record runs and check flagged ones: [battle recording](docs/features/concepts/battle-recording.md).
 - Balance is a first pass, tuned with a quick bot. Real play data (the admin dashboard's
   "Arenas" table) should drive the next pass.
 - Arena grid/path positions were measured by eye; press `D` in battle to check one, then adjust
