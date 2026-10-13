@@ -5,6 +5,7 @@ import { ASSETS, asset } from "../api";
 import { ARENAS } from "../../../shared/arenas.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, WEAPON_KEYS, maxCardLevel, maxPowerUp, maxRank, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
+import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultText } from "../../../shared/awakened.ts";
 import { noAttack } from "../../../shared/support.ts";
 import { kitSummary, perkSummary } from "../../../shared/kit.ts";
 import { PERKS } from "../../../shared/perks.ts";
@@ -251,6 +252,8 @@ function UnitsBench() {
                 <div className="center"><Thumb src={asset("portraits_awakened", u.id)} size={96} /><div className="muted small">{canAwaken.has(u.id) ? "awakened" : "no awakened art"}</div></div>
               </div>
               <p className="muted small">Art is uploaded through the Art page. A unit awakens at rank {maxRank()} only when it has awakened art.</p>
+              <div className="small"><strong>Awakening:</strong> ×{awakenDamageMult(u.id)} damage, ×{awakenSpeedMult(u.id)} speed. <strong>{ultName(u.id)}</strong>{ultEvery(u.id) ? ` (every ${ultEvery(u.id)}s)` : " (passive)"}: {ultText(u.id)}</div>
+              <p className="muted small">Defined in code: shared/awakened.ts</p>
             </Section>
           </>
         }
@@ -331,22 +334,25 @@ function CardTab({ u, canAwaken }: { u: UnitDef; canAwaken: Set<string> }) {
           <div className="kitline">{kitSummary(u, 1, 1).map((l, i) => <div key={i}>{l}</div>)}</div>
 
           <div className="gold">CARD LEVEL</div>
-          <div className="note">+{pct(ECONOMY.levelBonus)} {attacks ? "damage" : "boost"} per upgrade · max level {max}</div>
+          <div className="note">+{pct(ECONOMY.levelBonus)} {attacks ? `damage, +${pct(ECONOMY.levelSpeedBonus)} speed` : "boost"} per upgrade · max level {max}</div>
           <table className="gtable">
             <thead><tr><th />{levels.map((l) => <th key={l} className={l === lv ? "hi" : ""}>{l === max ? "MAX" : `Lv ${l}`}</th>)}</tr></thead>
-            <tbody><tr><td>{icon("damage")}</td>{levels.map((l) => <td key={l} className={l === lv ? "hi" : ""}>{dmg(unitStats(u, 1, l, 0).damage)}</td>)}</tr></tbody>
+            <tbody>
+              <tr><td>{icon("damage")}</td>{levels.map((l) => <td key={l} className={l === lv ? "hi" : ""}>{dmg(unitStats(u, 1, l, 0).damage)}</td>)}</tr>
+              {attacks && <tr><td>{icon("attack_speed")}</td>{levels.map((l) => <td key={l} className={l === lv ? "hi" : ""}>{every(unitStats(u, 1, l, 0).speed)}</td>)}</tr>}
+            </tbody>
           </table>
 
           <div className="gold">MERGE RANK</div>
           <div className="note">
             {attacks ? `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster` : "Each merge: a stronger effect"}
-            {awakens ? ` · ★${maxRank()} awakens` : ""}
+            {awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(u.id)} dmg, ×${awakenSpeedMult(u.id)} speed)` : ""}
           </div>
           <table className="gtable">
             <thead><tr><th />{ranks.map((r) => <th key={r}>★{r}</th>)}</tr></thead>
             <tbody>
-              <tr><td>{icon("damage")}</td>{ranks.map((r) => <td key={r}>{dmg(unitStats(u, r, lv, 0).damage * boost(r, ECONOMY.awakenDamageMult))}</td>)}</tr>
-              <tr><td>{icon("attack_speed")}</td>{ranks.map((r) => <td key={r}>{every(unitStats(u, r, lv, 0).speed * boost(r, ECONOMY.awakenSpeedMult))}</td>)}</tr>
+              <tr><td>{icon("damage")}</td>{ranks.map((r) => <td key={r}>{dmg(unitStats(u, r, lv, 0).damage * boost(r, awakenDamageMult(u.id)))}</td>)}</tr>
+              <tr><td>{icon("attack_speed")}</td>{ranks.map((r) => <td key={r}>{every(unitStats(u, r, lv, 0).speed * boost(r, awakenSpeedMult(u.id)))}</td>)}</tr>
             </tbody>
           </table>
           <div className="note" style={{ marginTop: 0 }}>At card level {lv}. Times are seconds between attacks.</div>
@@ -716,7 +722,7 @@ function UnitsTable() {
           </tbody>
         </table>
       </div>
-      <p className="muted small">Units with an awakened portrait awaken when merged to the max rank (that and the numbers on the Economy page). Turning a unit off removes it from chests and decks; players keep their copies.</p>
+      <p className="muted small">Units with an awakened portrait awaken when merged to the max rank (per-unit multipliers and ultimates are in shared/awakened.ts; the Economy page holds the generic ones). Turning a unit off removes it from chests and decks; players keep their copies.</p>
     </>
   );
 }

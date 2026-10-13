@@ -165,7 +165,7 @@
       <div class="dlg__pane" data-pane="info">
         <div class="dlg__lines">
           <div class="dlg__rarity" id="dlgRarity">${u.rarity} · ${u.element}</div>
-          ${c.awakeText ? `<div class="dlg__awake" id="dlgAwake" hidden>${c.awakeText}</div>` : ""}
+          ${c.awakeText ? `<div class="dlg__awake" id="dlgAwake" hidden>${c.awakeText}<br><b>${c.ultName}</b>: ${c.ultText}</div>` : ""}
           <div class="dlg__role">${c.role}</div>
           ${c.effects.map((l) => `<div class="dlg__fx">${l}</div>`).join("")}
           ${c.perkLines.map((l) => `<div class="dlg__perk">${l}</div>`).join("")}
@@ -180,6 +180,7 @@
           ${c.styleLine ? `<div class="dlg__role">${c.styleLine}</div>` : ""}
           ${c.perkLines.map((l) => `<div class="dlg__perk">${l}</div>`).join("")}
         </div>
+        <div class="dlg__sec"><h4>Card level</h4><p>${c.levelNote}</p></div>
         <div class="dlg__sec"><h4>Merge rank</h4><p>${c.rankNote}</p></div>
         ${table(c.ranks)}
         <div class="dlg__sec"><h4>Power-ups in battle</h4><p>${c.upNote}</p></div>

@@ -47,6 +47,8 @@ import { LAWS, LAW_IDS, TRIBUNAL, panOf, type CellState, type LawId } from "./tr
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
+import { awakenDamageMult, awakenSpeedMult, ultEvery, ultOf, type UltId } from "./awakened.ts";
+import { castUltimate, ultimateAttack, type UltCtx } from "./ultimates.ts";
 import {
   brewMana,
   canBecome,
@@ -159,8 +161,12 @@ export type SimEvent =
   /** A debuff landed on a unit (shellshock and boss powers only; the rest is in the status). */
   | { type: "afflict"; t: number; uid: number; kind: "irritation" | "fatigue" | "shellshock" | "entangle"; x: number; y: number }
   | { type: "hero"; t: number; power: HeroDef["power"]; ability: string; auto: boolean }
-  | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana"; x: number; y: number; radius: number }
-  | { type: "encore"; t: number; x: number; y: number; radius: number; strike: boolean }
+  /**
+   * An ultimate fired. `strike` and `mana` are the generic ones; `special` is a unit's own (v2.7, shared/ultimates.ts):
+   * `ult` names it, `points` are where it lands (spear line, bombs, cannonballs) and `targets` the monsters it picked.
+   */
+  | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana" | "special"; ult?: UltId; x: number; y: number; radius: number; points?: Pt[]; targets?: number[] }
+  | { type: "encore"; t: number; x: number; y: number; radius: number; strike: boolean; ult?: UltId }
   | { type: "herald_cry"; t: number; uid: number | null }
   /** A shot arrived but its target was already gone (play an impact). */
   | { type: "shot_lost"; t: number; uid: number; x: number; y: number }
@@ -380,8 +386,8 @@ export function boardUnitStats(b: BoardUnit, cardLevel: number, powerUp: number)
   const def = UNIT_BY_ID[b.id];
   const s = unitStats(def, b.rank, cardLevel, powerUp);
   if (b.awakened) {
-    s.damage *= ECONOMY.awakenDamageMult;
-    s.speed *= ECONOMY.awakenSpeedMult;
+    s.damage *= awakenDamageMult(b.id);
+    s.speed *= awakenSpeedMult(b.id);
   }
   return s;
 }
@@ -494,6 +500,11 @@ export class SimMonster {
   hasteUntil = 0;
   shieldUntil = 0;
   curse = 0;
+  /** v2.7 Judgment Slam: extra damage taken (0.25 = +25%) until judgedUntil. */
+  judged = 0;
+  judgedUntil = 0;
+  /** v2.7 Primal Roar: ignores roars until then. */
+  roarImmuneUntil = 0;
   poison: { dps: number; until: number; src: Source }[] = [];
   burn: { dps: number; until: number; src: Source } = { dps: 0, until: 0, src: 0 };
   powerTimer = 0;
@@ -699,10 +710,12 @@ export class Sim {
   private trackedBoss: SimMonster | null = null;
   /** Banner Herald: damage multiplier for every attacking unit. */
   heraldMult = 1;
+  /** v2.7: what a unit's own ultimate may touch (shared/ultimates.ts). */
+  private readonly ultCtx: UltCtx = this.makeUltCtx();
   /** Banner Herald war cry: everyone attacks faster until then. */
   shoutUntil = 0;
   /** Echo Spirit encores waiting to go off. */
-  private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number }[] = [];
+  private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number; ult?: UltId; scale: number }[] = [];
   /** v2.2 Story 3 state (see shared/faceless.ts). Read by the renderer: brazierLit (per ChapterMechanics.faceless.braziers entry), cageHp (null without a cage), cageOpen. */
   brazierLit: boolean[] = [];
   private brazierReach: number[] = [];
@@ -978,13 +991,14 @@ export class Sim {
         for (const j of neighbours(i)) {
           const v = this.units[j];
           if (!v || noAttack(v.primary)) continue;
-          if (v.awakened) v.charge += owlCharge(u.rank, mult, u.fx);
+          // A passive ultimate has no charge: its owl speeds up the attacks instead.
+          if (v.awakened && ultEvery(v.def.id) > 0) v.charge += owlCharge(u.rank, mult, u.fx);
           else v.haste += owlSpeed(u.rank, mult, u.fx);
         }
         return;
       }
       if (u.primary !== "buff") return;
-      const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? ECONOMY.awakenDamageMult : 1);
+      const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? awakenDamageMult(u.def.id) : 1);
       const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult, u.fx);
       for (const j of neighbours(i)) {
         const v = this.units[j];
@@ -1441,7 +1455,7 @@ export class Sim {
       this.callout("dodge", "MISS", "#dddddd", m.pos.x, m.pos.y - 20);
       return false;
     }
-    let dmg = amount * (1 + m.curse) * perkMult(perks, m);
+    let dmg = amount * (1 + m.curse + (this.now < m.judgedUntil ? m.judged : 0)) * perkMult(perks, m);
     if (m.has("armored")) dmg *= armorMult(perks);
     // v2.3: a rune shield eats the damage of the units that break it; the rest barely scratches the monster.
     if (m.rune) {
@@ -3055,9 +3069,18 @@ export class Sim {
         this.gainMana(manaPerPulse(u.rank, u.fx), u.x, u.y - 50, "pulse");
       }
     }
-    if (u.awakened) {
+    const every = u.awakened ? ultEvery(u.def.id) : 0;
+    if (every > 0) {
       u.ult += dt * (1 + u.charge);
-      if (u.ult >= ECONOMY.ultimateCooldown) {
+      if (u.ult >= every && ultOf(u.def.id)) {
+        // v2.7: the unit's own ultimate (it keeps attacking alongside it).
+        const ult = ultOf(u.def.id)!.id;
+        if (castUltimate(this.ultCtx, u, 1)) {
+          u.ult = 0;
+          // An echoed roar would find every monster still immune: Echo Spirits skip it.
+          if (ult !== "primal_roar") this.queueEcho(u, u.x, u.y, 0, 0, ult);
+        } else u.ult = every;
+      } else if (u.ult >= every) {
         const target = u.primary === "mana" ? null : this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
         if (target || u.primary === "mana") {
           u.ult = 0;
@@ -3169,14 +3192,14 @@ export class Sim {
     for (const b of [...this.bubbles]) if (this.now >= b.expires) this.popBubble(b.id, false);
   }
 
-  /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). */
-  private queueEcho(u: SimUnit, x: number, y: number, damage: number, mana: number) {
+  /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). `ult`: a unit's own ultimate, recast at the echo's strength. */
+  private queueEcho(u: SimUnit, x: number, y: number, damage: number, mana: number, ult?: UltId) {
     let best = 0;
     for (const j of neighbours(u.slot)) {
       const v = this.units[j];
       if (v?.primary === "echo") best = Math.max(best, echoStrength(v.rank, this.supportMult(v), v.fx));
     }
-    if (best > 0) this.echoes.push({ at: this.now + u.fx.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best) });
+    if (best > 0) this.echoes.push({ at: this.now + u.fx.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best), ult, scale: best });
   }
 
   private updateEchoes() {
@@ -3185,6 +3208,13 @@ export class Sim {
     this.echoes = this.echoes.filter((e) => e.at > this.now);
     for (const e of due) {
       this.mark("text", e.x, e.y - 70, "#9ff0ff", { text: "ENCORE" });
+      if (e.ult) {
+        // The caster is gone: no encore.
+        if (this.units[e.unit.slot] !== e.unit) continue;
+        this.emit({ type: "encore", t: this.now, x: e.unit.x, y: e.unit.y, radius: 0, strike: true, ult: e.ult });
+        castUltimate(this.ultCtx, e.unit, e.scale);
+        continue;
+      }
       this.emit({ type: "encore", t: this.now, x: e.x, y: e.y, radius: ECONOMY.ultimateRadius, strike: e.damage > 0 });
       if (e.mana) this.gainMana(e.mana, e.x, e.y - 30, "echo");
       // The caster is gone (merged away, copied over, turned): no encore strike.
@@ -3192,6 +3222,40 @@ export class Sim {
       this.mark("ring", e.x, e.y, "#9ff0ff", { x2: ECONOMY.ultimateRadius });
       for (const m of this.nearby({ x: e.x, y: e.y }, ECONOMY.ultimateRadius)) this.applyHit(e.unit, e.damage, m);
     }
+  }
+
+  private makeUltCtx(): UltCtx {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const sim = this;
+    const targetable = (m: SimMonster) => !(m.gone || m.intro > 0 || m.dist < sim.targetFrom || m.masked || m.civilian || m.shelled || m.family);
+    return {
+      get now() {
+        return sim.now;
+      },
+      rand: () => sim.rand(),
+      targets: () => sim.monsters.filter(targetable),
+      pick: (mode) => sim.pickTarget(mode),
+      nearby: (center, radius, except) => sim.nearby(center, radius, except),
+      hitDamage: (u) => sim.statDamage(u) * sim.heroDamageMult * sim.heraldMult * (1 + u.auraDamage),
+      hurt: (u, m, amount, opts = {}) => {
+        const perks = opts.plunder ? u.perks.map((p) => (p.perk === "plunder" ? { ...p, value: p.value * opts.plunder! } : p)) : u.perks;
+        sim.view({ type: "hit", t: sim.now, uid: u.uid, target: m.uid, kind: "main", element: u.def.element, x: m.pos.x, y: m.pos.y, size: 90 });
+        sim.hurt(m, amount, u.slot, { perks, sure: true, crit: opts.crit });
+      },
+      shoot: (u, target, damage) => {
+        sim.shots.push({ unit: u, damage, target, x: u.x, y: u.y - 30, aim: target.pos, speed: 1100 });
+      },
+      applyHit: (u, damage, m) => sim.applyHit(u, damage, m),
+      chainOn: (first, skip, jumps) => sim.chainOn(first, skip, jumps, EFFECTS.chain.range),
+      burn: (u, m, dps, time) => {
+        const keep = m.burn.until > sim.now && m.burn.dps > dps;
+        m.burn = keep ? { ...m.burn, until: sim.now + time } : { dps, until: sim.now + time, src: u.slot };
+      },
+      emit: (e) => sim.emit(e),
+      view: (e) => sim.view(e),
+      text: (x, y, color, text) => sim.mark("text", x, y, color, { text }),
+      ring: (x, y, color, radius) => sim.mark("ring", x, y, color, { x2: radius }),
+    };
   }
 
   private ultimate(u: SimUnit, target: SimMonster | null) {
@@ -3235,6 +3299,8 @@ export class Sim {
     if (kitHas(u.def, "growth")) damage *= growthMult(u.alive, u.fx);
     if (now < u.status.glimmeredUntil) damage *= u.status.glimmer;
     const from = { x: u.x, y: u.y - 30 };
+    // v2.7: a passive ultimate (Multi-Shot, Tesla Coil) changes every attack.
+    if (u.awakened && ultimateAttack(this.ultCtx, u, target, damage)) return;
     if (u.primary === "chain") return this.chainLightning(u, target, damage, from);
     this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.primary === "sniper" ? u.fx.sniper.shotSpeed : 1100 });
   }

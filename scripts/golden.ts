@@ -1,5 +1,5 @@
 /**
- * Golden-master combat test: runs the headless Sim for every unit (ranks 1, 4, 7) plus a few
+ * Golden-master combat test: runs the headless Sim for every unit (ranks 1, 3, 5) plus a few
  * mixed decks on fixed seeds, with the DEFAULT config, and compares the numbers with
  * scripts/golden.json. Refactors must not change them.
  *   node scripts/golden.ts          compare, exit 1 on any difference
@@ -12,6 +12,7 @@ import type { ArchSlot, PerkSlot } from "../shared/kit.ts";
 import { ARENAS } from "../shared/arenas.ts";
 import { Sim, type BoardUnit, type SimSetup, type SimFx, type SimOptions, type SimResult } from "../shared/sim.ts";
 import { ECONOMY } from "../shared/economy.ts";
+import { AWAKENINGS } from "../shared/awakened.ts";
 import { findChapter } from "../shared/stories.ts";
 
 applyConfig(defaultConfig());
@@ -72,9 +73,11 @@ function summary(sim: GoldenSim, r: SimResult) {
 const out: Record<string, Record<string, unknown>> = {};
 
 for (const u of DEFAULT_UNITS) {
-  for (const rank of [1, 4, 7]) {
+  for (const rank of [1, 3, 5]) {
     out[`unit:${u.id}:r${rank}`] = run(Array.from({ length: 15 }, () => ({ id: u.id, rank })), null);
   }
+  // v2.7: a unit's own awakening and ultimate.
+  if (AWAKENINGS[u.id]) out[`unit:${u.id}:awake`] = run(Array.from({ length: 15 }, () => ({ id: u.id, rank: ECONOMY.maxRank, awakened: true })), null);
 }
 
 const decks: Record<string, string[]> = {
@@ -85,7 +88,7 @@ const decks: Record<string, string[]> = {
   supports: ["gear_engineer", "bee_keeper", "snowglobe_fairy", "frog_alchemist", "spore_sage", "witch_doctor", "bone_necromancer", "hourglass_owl", "anubis_priest"],
   mixed: ["banner_herald", "aegis_knight", "lance_knight", "princess_muse", "lute_bard", "valkyrie", "crystal_queen", "void_titan", "ember_witch", "dragon_egg"],
 };
-const ranks = [1, 3, 5, 2, 4, 6, 7];
+const ranks = [1, 3, 5, 2, 4, 5, 3];
 for (const [name, ids] of Object.entries(decks)) {
   for (const hero of [null, "young_king"]) {
     if (hero && name !== "mixed" && name !== "knights") continue;
@@ -172,7 +175,7 @@ for (const slot of [7, 8]) {
 {
   const deck = ["hooded_archer", "goblin_bomber", "penguin_wizard", "lucky_cat", "mime", "portal_imp", "gnome_brewer", "aegis_knight"];
   const setup: SimSetup = { arena: ARENAS[1].id, board: new Array(15).fill(null), cardLevel: 5, powerUp: 0, hero: "young_king", seed: SEED, maxTime: 600, scenario: { kind: "run", from: 1, to: Infinity } };
-  const sim = new GoldenSim(setup, { deck, levels, startMana: ECONOMY.startMana, autoHero: false, bubbles: true, awakens: (id) => id === "hooded_archer" });
+  const sim = new GoldenSim(setup, { deck, levels, startMana: ECONOMY.startMana, autoHero: false, bubbles: true, awakens: (id) => id in AWAKENINGS || id === "star_astronomer" });
   sim.tutorialPick = { id: "hooded_archer", slot: 6 };
   let tick = 0;
   out["actions:scripted"] = drive(sim, (s) => {

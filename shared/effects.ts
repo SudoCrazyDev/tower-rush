@@ -3,7 +3,7 @@
  * lightning jumps... One set per archetype, shared by every unit of that archetype (each
  * unit's own damage and attack speed are in its UnitDef). Editable on the admin Effects page.
  *
- * Most effects scale with the unit's merge rank (1-7) and rarity (common 0 ... mythic 4).
+ * Most effects scale with the unit's merge rank (1 to max rank, 5 since v2.7) and rarity (common 0 ... mythic 4).
  * Fractions are 0-1: 0.2 is 20%.
  */
 import type { Arch, UnitEffect } from "./units.ts";
@@ -94,14 +94,14 @@ export const EFFECT_FIELDS: { [A in EffectArch]: { [K in keyof Effects[A]]: Effe
   },
   chain: {
     jumps: F("Monsters hit at rank 1", 1, 20, true),
-    ranksPerJump: F("One more monster every N ranks", 1, 7, true, 1),
+    ranksPerJump: F("One more monster every N ranks", 1, 5, true, 1),
     legendaryJumps: F("Extra monsters for legendary and mythic", 1, 10, true),
     range: F("Jump range in pixels", 10, 600),
     falloff: PCT("Damage kept per jump (0.85 = −15% each)"),
   },
   pierce: {
     targets: F("Monsters behind hit at rank 1", 1, 20, true),
-    ranksPerTarget: F("One more every N ranks", 1, 7, true, 1),
+    ranksPerTarget: F("One more every N ranks", 1, 5, true, 1),
     range: F("Reach behind the target in pixels", 10, 600),
     damage: PCT("Damage to those behind (0.7 = 70%)", 2),
   },

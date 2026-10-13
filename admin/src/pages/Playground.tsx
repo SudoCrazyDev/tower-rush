@@ -31,6 +31,7 @@ import {
 import { applyConfig, type GameConfig } from "../../../shared/config.ts";
 import { ARENAS, ARENA_BY_ID } from "../../../shared/arenas.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
+import { awakenDamageMult, ultName, ultOf, ultText } from "../../../shared/awakened.ts";
 import { kitSummary, perkSummary } from "../../../shared/kit.ts";
 import { primaryArch, kitLine } from "../kitEditor";
 import { HEROES, HERO_BY_ID, HERO_POWERS, heroAbilityText, type HeroDef } from "../../../shared/heroes.ts";
@@ -269,17 +270,23 @@ function UnitsTab({ s, set, cfg }: { s: PlaySettings; set: Setter; cfg: GameConf
               <tr><td>Damage per hit</td><td>{noAttack(primaryArch(def)) ? "—" : f1(stats.damage)}</td></tr>
               <tr><td>Attacks per second</td><td>{noAttack(primaryArch(def)) ? "—" : stats.speed.toFixed(2)}</td></tr>
               <tr><td>Damage per second (on paper)</td><td><strong>{noAttack(primaryArch(def)) ? "—" : f1(stats.damage * stats.speed)}</strong></td></tr>
-              <tr><td>Effect</td><td>{kitSummary(def, s.rank, boostMult(level, powerUp) * (awakened ? ECONOMY.awakenDamageMult : 1)).map((l, i) => <div key={i}>{l}</div>)}{kitSummary(def, s.rank).length === 0 && "—"}</td></tr>
+              <tr><td>Effect</td><td>{kitSummary(def, s.rank, boostMult(level, powerUp) * (awakened ? awakenDamageMult(def.id) : 1)).map((l, i) => <div key={i}>{l}</div>)}{kitSummary(def, s.rank).length === 0 && "—"}</td></tr>
               <tr><td>Style</td><td>{noAttack(primaryArch(def)) ? "—" : `${STYLES[def.style].label} — ${STYLES[def.style].text}`}</td></tr>
               <tr><td>Perks</td><td>{def.perks.length === 0 ? "—" : perkSummary(def).map((l, i) => <div key={i}>{noAttack(primaryArch(def)) ? "Neighbours get " : ""}{l}</div>)}</td></tr>
               {awakened && (
                 <tr>
                   <td>Ultimate</td>
                   <td>
-                    {primaryArch(def) === "mana"
-                      ? `+${f0(cfg.effects.mana.ultimateBase + cfg.effects.mana.ultimatePerWave * s.wave)} mana`
-                      : `${f0(stats.damage * ECONOMY.ultimateDamageMult)} in ${ECONOMY.ultimateRadius}px`}{" "}
-                    every {ECONOMY.ultimateCooldown}s
+                    {ultOf(def.id) ? (
+                      <><strong>{ultName(def.id)}</strong>: {ultText(def.id)}</>
+                    ) : (
+                      <>
+                        {primaryArch(def) === "mana"
+                          ? `+${f0(cfg.effects.mana.ultimateBase + cfg.effects.mana.ultimatePerWave * s.wave)} mana`
+                          : `${f0(stats.damage * ECONOMY.ultimateDamageMult)} in ${ECONOMY.ultimateRadius}px`}{" "}
+                        every {ECONOMY.ultimateCooldown}s
+                      </>
+                    )}
                   </td>
                 </tr>
               )}

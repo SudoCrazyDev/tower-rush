@@ -36,7 +36,7 @@ export function EffectsPage() {
     <>
       <PageHead
         title="Effects"
-        desc="What each archetype's special effect does, shared by every unit with that archetype. Each unit's own damage and attack speed are on the Units page. Ranks go 1-7 (merges); rarity steps go common 0 to mythic 4."
+        desc="What each archetype's special effect does, shared by every unit with that archetype. Each unit's own damage and attack speed are on the Units page. Ranks go 1 to the max rank (merges, Economy); rarity steps go common 0 to mythic 4."
       />
       <div className="two-col">
         {EFFECT_ARCHS.map((a) => {

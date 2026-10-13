@@ -1172,7 +1172,7 @@ const THE_SILVER_TRIBUNAL: StoryDef = {
       art: "arena_aurelion_court",
       corruption: 0,
       hpScale: 3.8,
-      mechanics: { trial: { guiltyHp: 1.2, witnessRank: 5, witnessLevel: 8, prep: 8 } },
+      mechanics: { trial: { guiltyHp: 1.2, witnessRank: 4, witnessLevel: 8, prep: 8 } },
       intro: [
         panel("b2s5_p1_silver_light", "A silver light falls on the Keeper's camp. It does not burn. It lifts.", "The ground shrinks away beneath them."),
         panel("b2s5_p2_aurelion", "Above the clouds hangs a city of brass and glass, ticking like a clock: Aurelion.", "A thousand years of law, built by hands that vanished."),

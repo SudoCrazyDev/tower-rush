@@ -14,6 +14,7 @@ export interface Economy {
   // awakening (a unit merged to max rank with awakened art)
   /** Highest merge rank; reaching it awakens a unit. Each rank doubles the summons needed. */
   maxRank: number;
+  /** Fallback awaken boosts and generic ultimate, for units without an entry in AWAKENINGS (shared/awakened.ts). */
   awakenDamageMult: number;
   awakenSpeedMult: number;
   ultimateCooldown: number;
@@ -33,6 +34,8 @@ export interface Economy {
   bossHpMult: number;
   // cards
   levelBonus: number;
+  /** v2.7: attack speed per card level (0.03 = +3%). */
+  levelSpeedBonus: number;
   upgradeCopies: number[];
   upgradeCoins: number[];
   rarityCopyDiscount: number;
@@ -74,7 +77,7 @@ export const DEFAULT_ECONOMY: Economy = {
   powerUpBonus: 0.15,
   rankDamageStep: 1,
   rankSpeedStep: 0.08,
-  maxRank: 7,
+  maxRank: 5,
   awakenDamageMult: 1.5,
   awakenSpeedMult: 1.2,
   ultimateCooldown: 10,
@@ -94,6 +97,7 @@ export const DEFAULT_ECONOMY: Economy = {
   bossHpMult: 45,
 
   levelBonus: 0.08,
+  levelSpeedBonus: 0.03,
   upgradeCopies: [2, 4, 10, 20, 50, 100, 200, 400, 800, 1000, 2000, 3000, 4000, 5000],
   upgradeCoins: [20, 50, 150, 400, 1000, 2000, 4000, 8000, 15000, 25000, 40000, 60000, 80000, 100000],
   rarityCopyDiscount: 1.5,

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { asset } from "./api";
 import { Sim, SIM_DT, type SimSetup } from "../../shared/sim.ts";
-import { ELEMENT_COLOR } from "../../shared/units.ts";
+import { ELEMENT_COLOR, maxRank } from "../../shared/units.ts";
 
 const AW = 752;
 const AH = 1344;
@@ -178,7 +178,7 @@ function draw(c: HTMLCanvasElement | null, s: Sim, width: number, height: number
       ctx.beginPath();
       ctx.arc(x0 + i * gap, u.y + 38, 6.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = u.rank === 7 ? "#ffd93b" : hex(ELEMENT_COLOR[u.def.element]);
+      ctx.fillStyle = u.rank >= maxRank() ? "#ffd93b" : hex(ELEMENT_COLOR[u.def.element]);
       ctx.beginPath();
       ctx.arc(x0 + i * gap, u.y + 38, 4.5, 0, Math.PI * 2);
       ctx.fill();

@@ -8,6 +8,7 @@ import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, E
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
+import { awakenBoostText, awakenDamageMult, awakenSpeedMult, ultName, ultText } from "../../../shared/awakened.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
@@ -577,16 +578,23 @@ export class DeckScene extends Phaser.Scene {
       m.add(thumb);
       const label = txt(this, cx + 196, cardY + 28, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
       m.add(label);
-      const awakeText = txt(this, cx, cy - 120, `AWAKENED: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ULTIMATE every ${ECONOMY.ultimateCooldown}s`, 22, "#ffd93b");
+      // Per-unit boost, then the unit's ultimate. Top-anchored and wrapped; the other info rows hide while flipped.
+      const awakeText = txt(this, cx, cy - 135, `AWAKENED: ${awakenBoostText(id)}\n${ultName(id).toUpperCase()}: ${ultText(id)}`, 20, "#ffd93b", [0.5, 0])
+        .setWordWrapWidth(540).setAlign("center");
       info.add(awakeText.setVisible(false));
+      // Rows hidden on purpose stay hidden when flipping back (visibility is remembered, not forced on).
+      const shown = new Map<Phaser.GameObjects.GameObject, boolean>();
       const flip = () => {
         const showAwake = !awake.visible;
+        const rows = (info.list as Phaser.GameObjects.GameObject[]).filter((o) => o !== awakeText && o !== rarityLine) as Phaser.GameObjects.Text[];
+        if (showAwake) for (const o of rows) shown.set(o, o.visible);
         awake.setVisible(showAwake);
         card.setVisible(!showAwake);
         thumb.setVisible(!showAwake);
         label.setVisible(!showAwake);
         rarityLine.setVisible(!showAwake);
         awakeText.setVisible(showAwake);
+        for (const o of rows) o.setVisible(showAwake ? false : (shown.get(o) ?? true));
       };
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
@@ -814,13 +822,14 @@ export class DeckScene extends Phaser.Scene {
     const first = Math.max(1, Math.min(level, max - 4));
     const levels = Array.from({ length: Math.min(5, max) }, (_, i) => first + i);
     const what = noAttack ? "boost" : "damage";
-    section("CARD LEVEL", `+${pct(ECONOMY.levelBonus)} ${what} per upgrade · max level ${max}`);
+    section("CARD LEVEL", noAttack ? `+${pct(ECONOMY.levelBonus)} boost per upgrade · max level ${max}` : `+${pct(ECONOMY.levelBonus)} damage, +${pct(ECONOMY.levelSpeedBonus)} speed per upgrade · max level ${max}`);
     table(
       levels.map((l) => (l === max ? "MAX" : `Lv ${l}`)),
       [
         noAttack
           ? { icon: buffIcon, cells: levels.map((l) => buff(1, l, 0)) }
           : { icon: "stat:damage", cells: levels.map((l) => dmg(unitStats(def, 1, l, 0).damage)) },
+        ...(noAttack ? [] : [{ icon: "stat:attack_speed", cells: levels.map((l) => every(unitStats(def, 1, l, 0).speed)) }]),
       ],
       levels.indexOf(level),
     );
@@ -846,14 +855,14 @@ export class DeckScene extends Phaser.Scene {
     const mergeNote = support
       ? "Each merge: a stronger effect · support units never awaken"
       : noAttack
-      ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★7 awakens (×${ECONOMY.awakenDamageMult})` : ""}`
-      : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? " · ★7 awakens" : ""}`;
+      ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(def.id)})` : ""}`
+      : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(def.id)} dmg, ×${awakenSpeedMult(def.id)} speed)` : ""}`;
     section("MERGE RANK", mergeNote);
     table(
       ranks.map((r) => `★${r}`),
-      noAttack ? [{ icon: buffIcon, cells: ranks.map((r) => buff(r, level, 0, boost(r, ECONOMY.awakenDamageMult))) }] : [
-        { icon: "stat:damage", cells: ranks.map((r) => dmg(unitStats(def, r, level, 0).damage * boost(r, ECONOMY.awakenDamageMult))) },
-        { icon: "stat:attack_speed", cells: ranks.map((r) => every(unitStats(def, r, level, 0).speed * boost(r, ECONOMY.awakenSpeedMult))) },
+      noAttack ? [{ icon: buffIcon, cells: ranks.map((r) => buff(r, level, 0, boost(r, awakenDamageMult(def.id)))) }] : [
+        { icon: "stat:damage", cells: ranks.map((r) => dmg(unitStats(def, r, level, 0).damage * boost(r, awakenDamageMult(def.id)))) },
+        { icon: "stat:attack_speed", cells: ranks.map((r) => every(unitStats(def, r, level, 0).speed * boost(r, awakenSpeedMult(def.id)))) },
       ],
       0,
     );

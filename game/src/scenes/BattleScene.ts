@@ -34,6 +34,7 @@ import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
 import { TribunalView } from "../battle/tribunalView";
+import { playUltimate } from "../battle/ultFx";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
 
@@ -1346,6 +1347,10 @@ export class BattleScene extends Phaser.Scene {
       case "ultimate": {
         const u = this.units.get(e.uid);
         u?.playOnce("skill");
+        if (e.kind === "special") {
+          playUltimate(this, e, u?.sprite);
+          break;
+        }
         sfx("ultimate");
         const from = { x: u?.sprite.x ?? e.x, y: (u?.sprite.y ?? e.y) - 30 };
         if (e.kind === "mana") {
@@ -1366,6 +1371,11 @@ export class BattleScene extends Phaser.Scene {
       }
       case "encore": {
         for (const u of this.units.values()) if (kitPrimary(u.def) === "echo") u.playOnce("attack");
+        if (e.ult) {
+          // The recast emits its own "ultimate" event (drawn there); only mark it as an encore.
+          this.floater(e.x, e.y - 110, "ENCORE!", "#9ff0ff", 24);
+          break;
+        }
         this.floater(e.x, e.y - 70, "ENCORE!", "#9ff0ff", 28);
         if (!e.strike) break;
         const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);

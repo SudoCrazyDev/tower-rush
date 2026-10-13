@@ -3,6 +3,7 @@ import { animKey, hasAnim, sheetScale, unitArt } from "../assets";
 import { fxKey, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
+import { ultEvery } from "../../../shared/awakened.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
 import type { SimUnit } from "../../../shared/sim.ts";
@@ -38,6 +39,8 @@ export class Unit {
   private supportRing: Phaser.GameObjects.Graphics | null = null;
   private supportDrawn = "";
   private aura: Phaser.GameObjects.Graphics | null = null;
+  private ultRing: Phaser.GameObjects.Graphics | null = null;
+  private ultDrawn = -1;
   /** v2 art: the element aura ring under an awakened unit (drawn when aura_<element> is built). */
   private auraRing: Phaser.GameObjects.Image | null = null;
   /** Shown while a neighbouring buff unit speeds this one up: icon and the bonus. */
@@ -111,6 +114,7 @@ export class Unit {
     this.sprite.setPosition(p.x, p.y).setDepth(100 + p.y);
     this.aura?.setPosition(p.x, p.y + 30).setDepth(99 + p.y);
     this.auraRing?.setPosition(p.x, p.y + 30).setDepth(99 + p.y);
+    this.ultRing?.setPosition(p.x, p.y + 30).setDepth(98 + p.y);
     this.buffRing?.setPosition(p.x, p.y + 32).setDepth(98 + p.y);
     this.buffBadge?.setPosition(p.x + 36, p.y - 44).setDepth(160 + p.y);
     this.supportRing?.setPosition(p.x, p.y + 34).setDepth(97 + p.y);
@@ -303,6 +307,35 @@ export class Unit {
     });
   }
 
+  /** Thin gold arc at the feet of an awakened unit: its ultimate charge (timer ultimates only). */
+  private drawUltRing() {
+    if (!this.awakened) return;
+    const every = ultEvery(this.def.id);
+    if (every <= 0) return;
+    const f = Math.min(1, Math.max(0, this.sim.ult / every));
+    if (this.ultRing && Math.abs(f - this.ultDrawn) < 0.02) return;
+    this.ultDrawn = f;
+    if (!this.ultRing) {
+      const p = this.scene.slotPos(this.slot);
+      this.ultRing = this.scene.add.graphics().setPosition(p.x, p.y + 30).setDepth(98 + p.y);
+    }
+    const g = this.ultRing;
+    g.clear();
+    g.lineStyle(4, 0x16213e, 0.45).strokeEllipse(0, 0, 100, 40);
+    if (f > 0) {
+      g.lineStyle(4, f >= 1 ? 0xffffff : 0xffd93b, 0.95).beginPath();
+      const steps = Math.max(2, Math.ceil(36 * f));
+      for (let i = 0; i <= steps; i++) {
+        const a = -Math.PI / 2 + Math.PI * 2 * f * (i / steps);
+        const x = Math.cos(a) * 50;
+        const y = Math.sin(a) * 20;
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      }
+      g.strokePath();
+    }
+  }
+
   /** Every frame: dress the sprite for what the Sim says this unit is doing. */
   update(dt: number) {
     if (this.dragging) return;
@@ -311,6 +344,7 @@ export class Unit {
     const now = scene.sim.now;
     if (s.slot !== this.slotSeen) this.place(s.slot);
     this.drawStatus(now);
+    this.drawUltRing();
 
     // Buff badge and Muse's heart follow the Sim's haste, charge and aura numbers.
     const buff = `${s.haste.toFixed(3)}:${s.charge.toFixed(3)}:${s.auraSpeed > 0 || s.auraDamage > 0}`;
@@ -411,6 +445,7 @@ export class Unit {
     this.heart?.destroy();
     this.statusIcons?.destroy();
     this.aura?.destroy();
+    this.ultRing?.destroy();
     this.auraRing?.destroy();
     this.buffBadge?.destroy();
     this.buffRing?.destroy();

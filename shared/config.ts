@@ -54,7 +54,7 @@ export interface GameConfig {
  * own values over the defaults, so on load each hotfix it hasn't had copies the listed fields
  * from the defaults once (withHotfixes), and is recorded so later admin edits stick.
  */
-const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics | "waves")[]>; bosses?: Record<string, (keyof BossDef)[]> }> = {
+const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics | "waves")[]>; bosses?: Record<string, (keyof BossDef)[]>; economy?: (keyof Economy)[] }> = {
   "1.2.1": {
     units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["kit"] },
     effects: { rally: ["time"], oath: ["perKnight"] },
@@ -80,6 +80,10 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.4.1-forge-repair-55": { units: {}, effects: {}, bosses: { walking_forge: ["parts"] } },
   // Chaos-Iron Colossus grows more per iron monster eaten: absorb amount 0.04 -> 0.05 (4% -> 5% HP each).
   "2.4.1-colossus": { units: {}, effects: {}, bosses: { chaos_colossus: ["skills"] } },
+  // v2.7 unit revamp: max merge rank 7 -> 5 (awakening comes sooner; awakened units are far stronger, see shared/awakened.ts).
+  "2.7.0-max-rank": { units: {}, effects: {}, economy: ["maxRank"] },
+  // The Trial's witness was rank 5 of 7; at max rank 5 it would awaken. Rank 4 keeps it a helper.
+  "2.7.0-witness-rank": { units: {}, effects: {}, chapters: { b2s5c1: ["trial"] } },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
@@ -89,9 +93,11 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
   const defEffects = DEFAULT_EFFECTS as unknown as Record<string, Record<string, unknown>>;
   const books = cfg.books ? structuredClone(cfg.books) : undefined;
   const bosses = cfg.bosses?.map((b) => ({ ...b }));
+  const economy = { ...cfg.economy } as Record<string, unknown>;
   for (const [id, fix] of Object.entries(HOTFIXES)) {
     if (done.has(id)) continue;
     done.add(id);
+    for (const f of fix.economy ?? []) economy[f] = structuredClone(DEFAULT_ECONOMY[f]);
     for (const [unitId, fields] of Object.entries(fix.units)) {
       const u = units.find((x) => x.id === unitId) as Record<string, unknown> | undefined;
       const d = DEFAULT_UNITS.find((x) => x.id === unitId) as Record<string, unknown> | undefined;
@@ -113,7 +119,7 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
       }
     }
   }
-  return { ...cfg, units, effects: effects as unknown as Effects, books: books ?? cfg.books, bosses: bosses ?? cfg.bosses, hotfixes: [...done] };
+  return { ...cfg, units, effects: effects as unknown as Effects, books: books ?? cfg.books, bosses: bosses ?? cfg.bosses, economy: economy as unknown as Economy, hotfixes: [...done] };
 }
 
 export function defaultConfig(): GameConfig {

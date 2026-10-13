@@ -496,6 +496,8 @@ export const maxPowerUp = () => ECONOMY.powerUpCosts.length;
 
 /** Permanent card level bonus. */
 export const levelMult = (level: number) => 1 + (level - 1) * ECONOMY.levelBonus;
+/** v2.7: permanent card level attack speed bonus. */
+export const levelSpeedMult = (level: number) => 1 + (level - 1) * (ECONOMY.levelSpeedBonus ?? 0);
 /** In-battle power-up bonus. */
 export const powerUpMult = (lvl: number) => 1 + lvl * ECONOMY.powerUpBonus;
 /** Merge rank 1..maxRank multiplies damage. */
@@ -518,6 +520,6 @@ export function upgradeCost(level: number, rarity: Rarity) {
 
 export function unitStats(def: UnitDef, rank: number, level: number, powerUp: number) {
   const damage = def.damage * rankMult(rank) * levelMult(level) * powerUpMult(powerUp);
-  const speed = def.speed * (1 + (rank - 1) * ECONOMY.rankSpeedStep);
+  const speed = def.speed * (1 + (rank - 1) * ECONOMY.rankSpeedStep) * levelSpeedMult(level);
   return { damage, speed };
 }

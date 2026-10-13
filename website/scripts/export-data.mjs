@@ -16,6 +16,7 @@ import {
   SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
 } from "../../shared/support.ts";
 import { storyUnlocking } from "../../shared/stories.ts";
+import { awakenBoostText, awakenDamageMult, awakenSpeedMult, ultName, ultText } from "../../shared/awakened.ts";
 
 // Which art exists (awakened portraits, arena videos) comes from the live asset index on R2.
 const index = await (await fetch("https://assets.crownnkeep.com/index.json")).json();
@@ -91,15 +92,16 @@ function cardInfo(u) {
     rankNote: support
       ? "Each merge: a stronger effect · support units never awaken"
       : silent
-      ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${ECONOMY.awakenDamageMult})` : ""}`
-      : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? ` · ★${maxRank()} awakens` : ""}`,
+      ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(u.id)})` : ""}`
+      : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(u.id)} dmg, ×${awakenSpeedMult(u.id)} speed)` : ""}`,
+    levelNote: silent ? `+${pct(ECONOMY.levelBonus)} boost per card level` : `+${pct(ECONOMY.levelBonus)} damage, +${pct(ECONOMY.levelSpeedBonus)} attack speed per card level`,
     ranks: {
       heads: ranks.map((r) => `★${r}`),
       rows: silent
-        ? [{ icon: buffIcon, cells: ranks.map((r) => buff(r, 0, boost(r, ECONOMY.awakenDamageMult))) }]
+        ? [{ icon: buffIcon, cells: ranks.map((r) => buff(r, 0, boost(r, awakenDamageMult(u.id)))) }]
         : [
-            { icon: "stats/damage", cells: ranks.map((r) => dmg(unitStats(u, r, 1, 0).damage * boost(r, ECONOMY.awakenDamageMult))) },
-            { icon: "stats/attack_speed", cells: ranks.map((r) => every(unitStats(u, r, 1, 0).speed * boost(r, ECONOMY.awakenSpeedMult))) },
+            { icon: "stats/damage", cells: ranks.map((r) => dmg(unitStats(u, r, 1, 0).damage * boost(r, awakenDamageMult(u.id)))) },
+            { icon: "stats/attack_speed", cells: ranks.map((r) => every(unitStats(u, r, 1, 0).speed * boost(r, awakenSpeedMult(u.id)))) },
           ],
     },
     upNote: `Spend mana: +${pct(ECONOMY.powerUpBonus)} ${what} each, for that battle`,
@@ -117,7 +119,9 @@ function cardInfo(u) {
       : silent
       ? `Its four neighbours attack this much faster (max +${pct(EFFECTS.buff.max)}).`
       : "At card level 1. Times are seconds between attacks.",
-    awakeText: awakens ? `Awakened: ×${ECONOMY.awakenDamageMult} dmg · ×${ECONOMY.awakenSpeedMult} speed · ultimate every ${ECONOMY.ultimateCooldown}s` : null,
+    awakeText: awakens ? `Awakened: ${awakenBoostText(u.id)}` : null,
+    ultName: awakens ? ultName(u.id) : null,
+    ultText: awakens ? ultText(u.id) : null,
     unlock: (() => {
       const s = storyUnlocking(u.id);
       return s ? `Unlock it in Story ${s.number}: ${s.story.title}` : "Find this card in chests";
