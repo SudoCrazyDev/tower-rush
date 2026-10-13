@@ -193,6 +193,7 @@ STATIC = [
     ("story/allies", "story/allies", 256),
 ]
 jobs.append(lambda: fit(f"{SRC}/story/story_background.png", f"{OUT}/story/story_background.webp", 1344))
+jobs.append(lambda: fit(f"{SRC}/story/lab_poster.png", f"{OUT}/story/lab_poster.webp", 1344))
 # Reward VFX are drawn large (rays 500-900 px, bursts 300-450 px), so they build bigger than the other vfx.
 BIG_VFX = {"level_up_arrow", "light_rays", "star_burst", "chest_glow", "merge_flash", "rarity_glow_legendary", "rarity_glow_epic", "rarity_glow_rare"}
 for folder, out, size in STATIC:

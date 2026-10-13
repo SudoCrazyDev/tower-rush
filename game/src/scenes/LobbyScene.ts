@@ -32,9 +32,10 @@ let installOffered = false;
 /** Day we last re-fetched the profile for (quests roll over at UTC midnight). */
 let refreshedFor = "";
 
-/** The lobby carousel's pages: the arenas, then the story books. */
-type Mode = "arena" | "story";
-const MODES: Mode[] = ["arena", "story"];
+/** The lobby carousel's pages: the arenas, the story books, then (staging and dev builds only) the Unit Lab. */
+type Mode = "arena" | "story" | "lab";
+const MODES: Mode[] = ["arena", "story", "lab"];
+const LAB_ON = !!(import.meta.env.DEV || import.meta.env.MODE === "staging");
 let mode: Mode = "arena";
 /** Whether the mode card is open (its arenas or books showing) rather than the ARENA / STORIES cards. */
 let opened = false;
@@ -46,6 +47,8 @@ let bookIdx = -1;
 let bookTab = 0;
 const curBook = () => BOOKS[bookTab] ?? BOOK;
 const hasStories = () => BOOKS.some((b) => b.stories.length > 0);
+/** The mode cards this build shows, in carousel order. */
+const activeModes = () => MODES.filter((m) => (m !== "story" || hasStories()) && (m !== "lab" || LAB_ON));
 
 /** The story to show first: the first one not finished yet (or the last one). */
 function currentStory() {
@@ -140,7 +143,7 @@ export class LobbyScene extends Phaser.Scene {
     const chosen = profile.arena ? ARENA_BY_ID[profile.arena] : null;
     this.arena = chosen && chosen.trophies <= profile.trophies ? chosen : unlocked;
     this.card = undefined;
-    if (!hasStories()) mode = "arena";
+    if (!activeModes().includes(mode)) mode = "arena";
     // New players go straight to the first arena's BATTLE.
     if (tutorialDue("battle")) [mode, opened] = ["arena", true];
     if (bookTab >= BOOKS.length) bookTab = 0;
@@ -170,7 +173,7 @@ export class LobbyScene extends Phaser.Scene {
     this.drawCard();
     // Swipe the card: the other mode card, or (once one is open) the next arena or book.
     onSwipe(this, new Phaser.Geom.Rectangle(W / 2 - 330, CARD_Y - 340, 660, 740), () => this.card, (d) => {
-      if (!opened) this.setMode(MODES.indexOf(mode) + d, d);
+      if (!opened) this.setMode(activeModes().indexOf(mode) + d, d);
       else if (mode === "arena") this.stepArena(d);
       else this.stepBook(d);
     });
@@ -195,11 +198,6 @@ export class LobbyScene extends Phaser.Scene {
       button(this, W / 2 - 240, 1530, 220, 110, "DECK", "blue", () => this.scene.start("Deck"), 40);
       button(this, W / 2, 1530, 220, 110, "PVP", "red", () => this.scene.start("PvpMenu"), 40);
       button(this, W / 2 + 240, 1530, 220, 110, "SHOP", "green", () => this.scene.start("Shop"), 40);
-    }
-    // Staging and dev builds only: the Unit Lab (test units on the meadow).
-    if (import.meta.env.DEV || import.meta.env.MODE === "staging") {
-      if (WIDE) button(this, deckX, 1090, 340, 80, "UNIT LAB", "yellow", () => this.scene.start("Lab"), 34);
-      else button(this, 100, 1180, 170, 64, "UNIT LAB", "yellow", () => this.scene.start("Lab"), 26);
     }
     // The install pill shares the event strip's spot, so a live event wins it.
     if (!eventStrip(this)) installStrip(this);
@@ -294,9 +292,8 @@ export class LobbyScene extends Phaser.Scene {
 
   /** Show the other mode card (ARENA / STORIES), sliding it in from that side. */
   private setMode(i: number, dir: number) {
-    const next = MODES[i];
+    const next = activeModes()[i];
     if (!next || next === mode) return;
-    if (next === "story" && !hasStories()) return;
     mode = next;
     this.drawCard({ slide: dir * 420 });
   }
@@ -344,7 +341,8 @@ export class LobbyScene extends Phaser.Scene {
    */
   private modeCard(group: Phaser.GameObjects.Container) {
     this.cardFrame(group, false);
-    const i = MODES.indexOf(mode);
+    const modes = activeModes();
+    const i = modes.indexOf(mode);
     this.artFade(group);
     if (mode === "arena") {
       const a = this.arena;
@@ -354,6 +352,10 @@ export class LobbyScene extends Phaser.Scene {
         { icon: "ui:wave_horn", text: `Best wave ${profile.arenaBest?.[a.id] ?? 0}` },
       ]);
       this.namePlate(group, "ARENA", "ui:icon_pvp");
+    } else if (mode === "lab") {
+      this.labArt(group);
+      this.chips(group, [{ text: "Test any unit" }, { text: "Royal Meadow", color: "#7dff7a" }]);
+      this.namePlate(group, "UNIT LAB", "ui:icon_quests");
     } else {
       this.storiesArt(group);
       const all = BOOKS.flatMap((b) => b.stories);
@@ -363,11 +365,12 @@ export class LobbyScene extends Phaser.Scene {
       this.namePlate(group, "STORIES", "ui:icon_story");
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
-    const cta = button(this, 0, 272, 340, 92, mode === "arena" ? "PICK ARENA" : "OPEN BOOKS", "green", () => this.open(true), 40);
+    // The lab has no page of its own: it opens its own scene.
+    const go = () => (mode === "lab" ? this.scene.start("Lab") : this.open(true));
+    const cta = button(this, 0, 272, 340, 92, mode === "arena" ? "PICK ARENA" : mode === "lab" ? "OPEN LAB" : "OPEN BOOKS", "green", go, 40);
     group.add(cta);
     this.tweens.add({ targets: cta, scale: 1.05, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     // Page dots under the card.
-    const modes = hasStories() ? MODES : (["arena"] as Mode[]);
     if (modes.length > 1) {
       const dots = this.add.graphics();
       modes.forEach((_, j) => dots.fillStyle(0xfff4c2, j === i ? 1 : 0.4).fillCircle((j - (modes.length - 1) / 2) * 36, 368, j === i ? 12 : 8));
@@ -376,7 +379,20 @@ export class LobbyScene extends Phaser.Scene {
       if (i < modes.length - 1) group.add(iconButton(this, 250, -60, "back", 76, () => this.setMode(i + 1, 1)).setFlipX(true));
     }
     group.setSize(600, 660);
-    pressable(group, () => this.open(true));
+    pressable(group, go);
+  }
+
+  /** The UNIT LAB card's art: its poster. */
+  private labArt(group: Phaser.GameObjects.Container) {
+    loadStoryImages(this, ["lab_poster"], () => {
+      if (!group.active) return;
+      const bg = this.add.image(0, 0, "story:lab_poster");
+      const s = Math.max(540 / bg.width, 470 / bg.height);
+      const cw = 540 / s;
+      const ch = 470 / s;
+      bg.setScale(s).setCrop((bg.width - cw) / 2, (bg.height - ch) / 2, cw, ch).setY(-85);
+      group.addAt(bg, 1);
+    });
   }
 
   /** The STORIES card's art: the story background with the book covers fanned out on it. */
