@@ -105,8 +105,6 @@ export class BattleScene extends Phaser.Scene {
 
   /** Sprites of the Sim's units and monsters, by uid. */
   private units = new Map<number, Unit>();
-  /** Where the last big hit landed (a crit callout follows it, for Ultra Focused's fist). */
-  private lastBig: Pt | null = null;
   /** Iceborn frost bursts, at most one per unit every 0.25 s. */
   private iceAt = new Map<number, number>();
   private monsters = new Map<number, Monster>();
@@ -1115,7 +1113,8 @@ export class BattleScene extends Phaser.Scene {
     this.clipped.clear();
     for (const e of events) if (e.type === "boss_stage" || e.type === "boss_power") this.clipped.add(e.uid);
     for (const e of events) {
-      fxEvent(this, e);
+      // Ultra Focused draws its own fist instead of the crit star.
+      if (!(e.type === "bighit" && this.fistOf(e.uid))) fxEvent(this, e);
       this.handle(e);
     }
   }
@@ -1443,11 +1442,7 @@ export class BattleScene extends Phaser.Scene {
       case "callout": {
         if (e.kind === "block" || e.kind === "dodge") this.floater(e.x, e.y, e.text, e.color, 20);
         else if (e.kind === "miss") this.floater(e.x, e.y, e.text, e.color, 22);
-        else if (e.uid !== null) {
-          const u = this.units.get(e.uid);
-          u?.callout(e.text, e.color);
-          if (e.kind === "crit" && u?.awakened && u.sim.def.id === "sand_monk" && this.lastBig) fistStrike(this, this.lastBig.x, this.lastBig.y);
-        }
+        else if (e.uid !== null) this.units.get(e.uid)?.callout(e.text, e.color);
         break;
       }
       case "afflict":
@@ -1530,8 +1525,8 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case "bighit":
-        this.lastBig = { x: e.x, y: e.y };
         this.monsters.get(e.target)?.flash();
+        if (this.fistOf(e.uid)) fistStrike(this, e.x, e.y + 14);
         this.critFloater(e.x, e.y, fmt(e.dmg) + "!", e.color);
         break;
       case "proc":
@@ -1640,6 +1635,12 @@ export class BattleScene extends Phaser.Scene {
     s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () =>
       this.tweens.add({ targets: s, alpha: 0, scale: 0, duration: 200, onComplete: () => s.destroy() }),
     );
+  }
+
+  /** Whether a big hit came from an awakened Sand Monk (Ultra Focused). */
+  private fistOf(uid?: number) {
+    const u = uid === undefined ? undefined : this.units.get(uid);
+    return !!u?.awakened && u.sim.def.id === "sand_monk";
   }
 
   private zigzag(g: Phaser.GameObjects.Graphics, a: Pt, b: Pt, color: number) {

@@ -247,7 +247,7 @@ export type SimEvent =
   /** A hit landed on `target`: main hit of a shot or ultimate, a pierce or chain extra, or a Lance Knight's bane chain. */
   | { type: "hit"; t: number; uid: number; target: number; kind: "main" | "pierce" | "chain" | "bane"; element: Element; x: number; y: number; size: number }
   /** A big damage number over a monster (crit, boss execute, sniper, hero meteor). */
-  | { type: "bighit"; t: number; target: number; x: number; y: number; dmg: number; color: string }
+  | { type: "bighit"; t: number; target: number; x: number; y: number; dmg: number; color: string; uid?: number }
   /** A proc on a monster: frozen, stunned, executed. */
   | { type: "proc"; t: number; kind: "frozen" | "stun" | "execute"; x: number; y: number }
   /** A lightning bolt segment: chain n (0 first), a Lance Knight's bane chain, or a hero storm bolt. */
@@ -1522,7 +1522,10 @@ export class Sim {
       dmg = this.runeHit(m, dmg, src);
       if (dmg <= 0) return false;
     }
-    if (opts.crit && !opts.quiet) this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b" });
+    if (opts.crit && !opts.quiet) {
+      const uid = typeof src === "number" ? this.units[src]?.uid : undefined;
+      this.view({ type: "bighit", t: this.now, target: m.uid, x: m.pos.x, y: m.pos.y - 24, dmg, color: opts.color ?? "#ffd93b", uid });
+    }
     if (m.parts.length) return this.hitParts(m, dmg, src, perks);
     if (m.chainTotal > 0) return this.hitChain(m, dmg, src, perks);
     const dealt = Math.min(Math.max(0, m.hp), dmg);
