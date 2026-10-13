@@ -427,17 +427,51 @@ export class BattleScene extends Phaser.Scene {
       const root = hud(this.add.container(x, y, [frame, portrait, pips, costBg, orb, cost]).setDepth(3010));
       root.setSize(104, 136).setScale(WIDE ? 1.25 : 1);
       if (this.lab) {
-        // Lab: tap summons this unit; hold (450ms) powers it up.
+        // Lab: tap summons this unit on a random tile, drag it onto any empty tile to place it there,
+        // hold (450ms) to power it up.
         let timer: Phaser.Time.TimerEvent | null = null;
         let held = false;
-        root.on("pointerdown", () => {
+        let ghost: Phaser.GameObjects.Image | null = null;
+        let start: { x: number; y: number } | null = null;
+        const stop = () => {
+          this.input.off("pointermove", move);
+          this.input.off("pointerup", drop);
+          ghost?.destroy();
+          ghost = null;
+          start = null;
+        };
+        const move = (p: Phaser.Input.Pointer) => {
+          if (!start) return;
+          if (!ghost && Math.hypot(p.x - start.x, p.y - start.y) > 16) {
+            timer?.remove();
+            ghost = hud(this.add.image(p.x, p.y, `portrait:${id}`).setDisplaySize(96, 96).setAlpha(0.85).setDepth(4000));
+          }
+          ghost?.setPosition(p.x, p.y);
+        };
+        const drop = (p: Phaser.Input.Pointer) => {
+          const dragged = !!ghost;
+          stop();
+          if (!dragged) return;
+          const w = this.cameras.main.getWorldPoint(p.x, p.y);
+          let best = -1;
+          let bestD = 90;
+          for (let slot = 0; slot < 15; slot++) {
+            const t = this.slotPos(slot);
+            const d = Math.hypot(t.x - w.x, t.y - w.y);
+            if (d < bestD && !this.sim.units[slot]) [best, bestD] = [slot, d];
+          }
+          if (best < 0) return void sfx("error");
+          this.labSummon(id, best);
+        };
+        root.on("pointerdown", (p: Phaser.Input.Pointer) => {
           held = false;
+          start = { x: p.x, y: p.y };
           timer = this.time.delayedCall(450, () => ((held = true), this.powerUp(id)));
+          this.input.on("pointermove", move);
+          this.input.on("pointerup", drop);
         });
-        const cancel = () => timer?.remove();
-        root.on("pointerout", cancel);
-        root.on("pointerup", cancel);
-        pressable(root, () => !held && this.labSummon(id));
+        root.on("pointerup", () => timer?.remove());
+        pressable(root, () => !held && !ghost && this.labSummon(id));
       } else pressable(root, () => this.powerUp(id));
       this.deckCards.push({ root, cost, pips, id });
     });
@@ -465,7 +499,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (this.lab) {
-      hud(txt(this, WIDE ? L : 24, WIDE ? 255 : 66, "UNIT LAB  ·  tap card: summon, hold: power up", WIDE ? 24 : 20, "#7dff7a", WIDE ? [0.5, 0.5] : [0, 0.5]).setDepth(3000).setWordWrapWidth(WIDE ? ox - 30 : ARENA_W - 40));
+      hud(txt(this, WIDE ? L : 24, WIDE ? 255 : 66, "UNIT LAB  ·  tap card: summon · drag card: place on a tile · hold: power up", WIDE ? 24 : 20, "#7dff7a", WIDE ? [0.5, 0.5] : [0, 0.5]).setDepth(3000).setWordWrapWidth(WIDE ? ox - 30 : ARENA_W - 40));
     }
 
     // Speed + pause.
@@ -659,10 +693,10 @@ export class BattleScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  /** Unit Lab: summon this specific unit onto a random empty tile. */
-  private labSummon(id: string) {
+  /** Unit Lab: summon this specific unit onto `slot`, or a random empty tile. */
+  private labSummon(id: string, slot?: number) {
     if (this.over || this.paused) return;
-    if (!this.sim.summon({ id })) return void sfx("error");
+    if (!this.sim.summon({ id, slot })) return void sfx("error");
     this.pump();
     this.refreshHud();
   }
