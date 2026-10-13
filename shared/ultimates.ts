@@ -8,6 +8,9 @@ import type { Path, Pt } from "./path.ts";
 import type { SimField, SimMonster, SimUnit, SimEvent } from "./sim.ts";
 import { ultOf, type UltDef, type UltId } from "./awakened.ts";
 
+/** Grace of Mjolnir's chain colour: the client draws these zaps as hammer bolts. */
+export const MJOLNIR_COLOR = "#fff6b0";
+
 export interface UltCtx {
   readonly now: number;
   rand(): number;
@@ -199,7 +202,7 @@ export function ultimateAttack(ctx: UltCtx, u: SimUnit, target: SimMonster, dama
     case "mjolnir": {
       let from: Pt = target.pos;
       ctx.chainOn(target, [target], p.jumps).forEach((m, n) => {
-        ctx.view({ type: "zap", t: ctx.now, kind: "chain", n, x: from.x, y: from.y, x2: m.pos.x, y2: m.pos.y, color: "#fff27a" });
+        ctx.view({ type: "zap", t: ctx.now, kind: "chain", n, x: from.x, y: from.y, x2: m.pos.x, y2: m.pos.y, color: MJOLNIR_COLOR });
         from = m.pos;
         ctx.applyHit(u, damage * p.damage, m);
       });

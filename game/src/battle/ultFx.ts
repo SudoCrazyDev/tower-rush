@@ -70,6 +70,47 @@ export function steam(scene: Phaser.Scene, x: number, y: number, color = 0xddddd
   scene.tweens.add({ targets: c, y: y - 36, scale: 2, alpha: 0, duration: 650, onComplete: () => c.destroy() });
 }
 
+/** Ultra Focused (Sand Monk): a golden spirit fist punches through a crit. */
+export function fistStrike(scene: BattleScene, x: number, y: number) {
+  if (hasFx(scene, "fist_strike")) {
+    const img = scene.add.image(x, y - 10, fxKey("fist_strike")).setDepth(2110);
+    const end = 120 / Math.max(1, img.width);
+    img.setScale(end * 0.3).setAlpha(0.95);
+    scene.tweens.add({ targets: img, scale: end * 1.15, duration: 110, ease: "Back.Out" });
+    scene.tweens.add({ targets: img, scale: end * 1.35, alpha: 0, delay: 170, duration: 220, onComplete: () => img.destroy() });
+  } else {
+    const c = scene.add.circle(x, y - 10, 26, GOLD, 0.9).setDepth(2110);
+    scene.tweens.add({ targets: c, scale: 2.2, alpha: 0, duration: 300, onComplete: () => c.destroy() });
+  }
+  ring(scene, x, y - 10, 70, 0xf2c14e, 320, 6);
+  for (let i = 0; i < 4; i++) steam(scene, x + (Math.random() - 0.5) * 50, y + 5, 0xe8c27a);
+}
+
+/** Iceborn Warmother (Bear Rider): frost shatters off a boss she hits. */
+export function icebornHit(scene: BattleScene, x: number, y: number) {
+  ring(scene, x, y, 55, 0x9fe6ff, 300, 5);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + Math.random() * 0.6;
+    const s = scene.add.rectangle(x, y, 6, 16, 0xdff6ff).setDepth(2105).setRotation(a + Math.PI / 2).setStrokeStyle(2, 0x5fb8e8);
+    scene.tweens.add({ targets: s, x: x + Math.cos(a) * 55, y: y + Math.sin(a) * 55, alpha: 0, duration: 340, ease: "Cubic.Out", onComplete: () => s.destroy() });
+  }
+}
+
+/** Grace of Mjolnir (Thunder Dwarf): the first link of the chain falls from the sky as a hammer bolt. */
+export function mjolnirBolt(scene: BattleScene, x: number, y: number) {
+  const g = scene.add.graphics().setDepth(2052);
+  const pts: Pt[] = [{ x: x + (Math.random() - 0.5) * 40, y: y - 280 }];
+  for (let i = 1; i < 7; i++) pts.push({ x: x + (Math.random() - 0.5) * 34, y: y - 280 + i * 40 });
+  pts.push({ x, y });
+  g.lineStyle(16, 0xfff27a, 0.35).strokePoints(pts);
+  g.lineStyle(7, 0xfff6b0, 1).strokePoints(pts);
+  g.lineStyle(3, 0xffffff, 1).strokePoints(pts);
+  scene.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
+  ring(scene, x, y, 60, 0xfff27a, 280, 6);
+  const flash = scene.add.circle(x, y, 30, 0xffffff, 0.8).setDepth(2053);
+  scene.tweens.add({ targets: flash, scale: 1.8, alpha: 0, duration: 220, onComplete: () => flash.destroy() });
+}
+
 type Play = (scene: BattleScene, e: UltEvent, from: Pt) => void;
 
 const PLAY: Partial<Record<UltId, Play>> = {

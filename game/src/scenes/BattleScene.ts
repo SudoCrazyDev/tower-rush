@@ -34,7 +34,8 @@ import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
 import { TribunalView } from "../battle/tribunalView";
-import { playUltimate } from "../battle/ultFx";
+import { playUltimate, fistStrike, icebornHit, mjolnirBolt } from "../battle/ultFx";
+import { MJOLNIR_COLOR } from "../../../shared/ultimates.ts";
 import { FieldLayer } from "../battle/fields";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
@@ -104,6 +105,10 @@ export class BattleScene extends Phaser.Scene {
 
   /** Sprites of the Sim's units and monsters, by uid. */
   private units = new Map<number, Unit>();
+  /** Where the last big hit landed (a crit callout follows it, for Ultra Focused's fist). */
+  private lastBig: Pt | null = null;
+  /** Iceborn frost bursts, at most one per unit every 0.25 s. */
+  private iceAt = new Map<number, number>();
   private monsters = new Map<number, Monster>();
   private shotImgs = new Map<SimShot, ShotView>();
   private fieldLayer: FieldLayer | null = null;
@@ -1438,7 +1443,11 @@ export class BattleScene extends Phaser.Scene {
       case "callout": {
         if (e.kind === "block" || e.kind === "dodge") this.floater(e.x, e.y, e.text, e.color, 20);
         else if (e.kind === "miss") this.floater(e.x, e.y, e.text, e.color, 22);
-        else if (e.uid !== null) this.units.get(e.uid)?.callout(e.text, e.color);
+        else if (e.uid !== null) {
+          const u = this.units.get(e.uid);
+          u?.callout(e.text, e.color);
+          if (e.kind === "crit" && u?.awakened && u.sim.def.id === "sand_monk" && this.lastBig) fistStrike(this, this.lastBig.x, this.lastBig.y);
+        }
         break;
       }
       case "afflict":
@@ -1506,6 +1515,10 @@ export class BattleScene extends Phaser.Scene {
       }
       case "hit": {
         this.monsters.get(e.target)?.flash();
+        if (e.kind === "main" && this.units.get(e.uid)?.sim.bossBonus && this.monsters.get(e.target)?.sim.boss && (this.iceAt.get(e.uid) ?? 0) <= this.time.now) {
+          this.iceAt.set(e.uid, this.time.now + 250);
+          icebornHit(this, e.x, e.y);
+        }
         if (e.kind === "main") {
           if (!fxHit(this, e)) this.vfx(HIT_VFX[e.element], e.x, e.y, e.size);
           sfx("hit", e.element);
@@ -1517,6 +1530,7 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case "bighit":
+        this.lastBig = { x: e.x, y: e.y };
         this.monsters.get(e.target)?.flash();
         this.critFloater(e.x, e.y, fmt(e.dmg) + "!", e.color);
         break;
@@ -1537,6 +1551,10 @@ export class BattleScene extends Phaser.Scene {
         } else {
           this.zigzag(g, { x: e.x, y: e.y }, { x: e.x2, y: e.y2 }, color);
           if (e.kind === "chain" && e.n === 0) sfx("zap");
+          if (e.color === MJOLNIR_COLOR) {
+            if (e.n === 0) mjolnirBolt(this, e.x, e.y);
+            this.vfx("lightning_strike", e.x2, e.y2, 90);
+          }
         }
         this.tweens.add({ targets: g, alpha: 0, duration: e.kind === "storm" ? 200 : 220, onComplete: () => g.destroy() });
         break;
