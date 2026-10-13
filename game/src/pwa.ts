@@ -6,6 +6,16 @@ interface InstallPromptEvent extends Event {
 }
 
 let deferred: InstallPromptEvent | null = null;
+const listeners = new Set<() => void>();
+
+/** Calls `cb` when the browser offers to install the game later on; returns the unsubscribe. */
+export function onInstallable(cb: () => void) {
+  listeners.add(cb);
+  return () => void listeners.delete(cb);
+}
+
+/** Opened from an "Install app" link (`?install`, e.g. on crownnkeep.com): offer the install once in. */
+export const installAsked = () => new URLSearchParams(location.search).has("install");
 
 /** Running as an installed app (home screen / app window) rather than in a browser tab. */
 export const isInstalled = () =>
@@ -31,6 +41,7 @@ export function initPwa() {
     // Keep it for the Settings button instead of the browser's own banner over the game.
     e.preventDefault();
     deferred = e as InstallPromptEvent;
+    listeners.forEach((cb) => cb());
   });
   addEventListener("appinstalled", () => (deferred = null));
   if (import.meta.env.PROD && "serviceWorker" in navigator) {

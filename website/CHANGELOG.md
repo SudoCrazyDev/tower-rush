@@ -1,5 +1,10 @@
 # Website changelog
 
+## 1.2.1
+- Install app buttons in the hero and the closing call to action. They open `game.crownnkeep.com/?install`, where the game offers the install (a page can only install its own site).
+- Hero pill says v2.6 Install & Play is live (it still said v2.1); the note under the buttons mentions installing.
+- Release notes: v2.6.1 hotfix block for the install buttons. Cache query `?v=2.6.1`.
+
 ## 1.2.0
 - Release notes: v2.6.0 "Install & Play" (installable app, faster loading, full-width menus on phones) is now the latest. v2.0 "The Grand Revamp" moves into the History panel, so the page keeps the latest five.
 - Latest news: v2.6.0 is the featured post; the v2.4 post joins the regular ones and the v2.0 post is dropped to keep five.

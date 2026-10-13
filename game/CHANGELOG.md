@@ -2,6 +2,11 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.6.1
+- Lobby: an INSTALL THE APP pill (ADD TO HOME SCREEN on iPhone/iPad) in the event strip's spot, above the buttons on phones and in the top bar on wide screens. It shows only where the game can be installed and isn't yet, gives way to a live event, and its close button hides it for a week. It appears late if the browser offers the install after the lobby is up.
+- Install dialog (`scenes/installApp.ts`): the logo, what the app gives, and INSTALL (the browser's own prompt), or the Share steps on iPhone/iPad, or the browser-menu steps elsewhere (switching to INSTALL if the browser offers it meanwhile).
+- `?install` (the website's Install app buttons) opens that dialog once the lobby is up, even for new players mid-tutorial; that visit skips the What's New popup.
+
 ## 2.6.0
 - Installable app (PWA). The game has a web manifest (fullscreen, portrait, Crown & Keep icons including a maskable one) and a service worker, so Android Chrome, Edge and Samsung Internet can install it to the home screen. Settings shows INSTALL APP where the browser offers it (in place of the keyboard tips); on iPhone and iPad Safari it says to use Share, then Add to Home Screen.
 - Service worker (`game/pwa/sw.js`, filled in by the `pwa()` plugin in `vite.config.ts` at build time; production builds only). The page is fetched from the network first, so a deploy reaches players on their next load; the cached copy answers only offline. The build's JS, CSS and icons are precached and swapped on every build. Art from `assets.crownnkeep.com` and Google Fonts is served from the cache and refreshed in the background, so re-uploaded art under the same file name shows one load later. The API, the asset index (`?t=`), videos and non-GET requests are never cached.

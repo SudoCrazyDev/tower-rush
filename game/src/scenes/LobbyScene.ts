@@ -20,12 +20,15 @@ import { ambientVideo, coverFit } from "../backdrop";
 import { arenaInfo } from "./arenaInfo";
 import { avatarIds, avatarView } from "../avatars";
 import { whatsNew } from "./whatsNew";
-import { canInstall, install, isInstalled, isIos } from "../pwa";
+import { canInstall, install, installAsked, isInstalled, isIos } from "../pwa";
+import { installModal, installStrip } from "./installApp";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, pressable, badge, onSwipe, toast, ornateFrame } from "../ui";
 import { sfx } from "../audio";
 
 /** The login reward pops up by itself once per session. */
 let loginShown = false;
+/** The `?install` offer was shown this session. */
+let installOffered = false;
 /** Day we last re-fetched the profile for (quests roll over at UTC midnight). */
 let refreshedFor = "";
 
@@ -82,7 +85,7 @@ export function topBar(scene: Phaser.Scene) {
 /** The running event (soonest to end), as a pill in the top bar (wide) or above the shop button (phone). Tap for the shop. */
 function eventStrip(scene: Phaser.Scene) {
   const live = activeEvents(serverNow()).sort((a, b) => timeOf(a.endsAt) - timeOf(b.endsAt));
-  if (!live.length) return;
+  if (!live.length) return false;
   const e = live[0];
   const w = WIDE ? Math.min(640, W - 900) : 470;
   const h = 58;
@@ -105,6 +108,7 @@ function eventStrip(scene: Phaser.Scene) {
   tick();
   scene.time.addEvent({ delay: 15_000, loop: true, callback: tick });
   pressable(c, () => scene.scene.start("Shop"));
+  return true;
 }
 
 export class LobbyScene extends Phaser.Scene {
@@ -192,14 +196,21 @@ export class LobbyScene extends Phaser.Scene {
       button(this, W / 2, 1530, 220, 110, "PVP", "red", () => this.scene.start("PvpMenu"), 40);
       button(this, W / 2 + 240, 1530, 220, 110, "SHOP", "green", () => this.scene.start("Shop"), 40);
     }
-    eventStrip(this);
+    // The install pill shares the event strip's spot, so a live event wins it.
+    if (!eventStrip(this)) installStrip(this);
     // Static shapes become cached images (see bake.ts).
     bakeAll(this);
+    // Came from an "Install app" link (most likely a new player): offer the install, once.
+    const offerInstall = installAsked() && !installOffered;
+    if (offerInstall) {
+      installOffered = true;
+      this.time.delayedCall(700, () => this.sys.isActive() && installModal(this, () => this.scene.restart()));
+    }
     // New players: point at the first battle, then at the deck once it's done.
     if (tutorialDue("battle")) pointAt(this, { x: W / 2, y: CARD_Y + 330 }, "down", "START HERE!", 80);
     else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: W / 2 - 240, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
-    // After an update: the release popup, once (not for brand-new players mid-tutorial).
-    else this.time.delayedCall(700, () => this.sys.isActive() && whatsNew(this));
+    // After an update: the release popup, once (not for brand-new players mid-tutorial, nor over the install offer).
+    else if (!offerInstall) this.time.delayedCall(700, () => this.sys.isActive() && whatsNew(this));
   }
 
   /** The player's avatar in its ring; tap to pick another. */

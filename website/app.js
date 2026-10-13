@@ -24,6 +24,9 @@
 
   // ---------------------------------------------------------------- play links
   $$("[data-play]").forEach((a) => { a.href = GAME_URL; a.target = "_blank"; a.rel = "noopener"; });
+  // The app installs from the game's own site (a page can only install itself): ?install has the
+  // game offer it as soon as the lobby is up.
+  $$("[data-install]").forEach((a) => { a.href = GAME_URL + "?install"; a.target = "_blank"; a.rel = "noopener"; });
 
   // ---------------------------------------------------------------- nav
   const nav = $("#nav");
