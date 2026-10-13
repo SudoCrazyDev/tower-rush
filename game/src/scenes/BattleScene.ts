@@ -503,7 +503,13 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (this.lab) {
-      hud(txt(this, WIDE ? L : 24, WIDE ? 255 : 66, "UNIT LAB  ·  tap a card, then tap empty tiles (or drag the card) · hold card: power up · drag units to move", WIDE ? 24 : 20, "#7dff7a", WIDE ? [0.5, 0.5] : [0, 0.5]).setDepth(3000).setWordWrapWidth(WIDE ? ox - 30 : ARENA_W - 40));
+      // A title and short how-to lines: under the hearts on wide screens, one line under the wave on phones.
+      if (WIDE) {
+        hud(txt(this, L, 392, "UNIT LAB", 34, "#7dff7a").setDepth(3000));
+        ["Tap a card, then tap tiles", "Hold a card: power up", "Drag units to move them"].forEach((line, i) =>
+          hud(txt(this, L, 432 + i * 30, line, 22, "#c9f5c0").setDepth(3000)),
+        );
+      } else hud(txt(this, 24, 66, "LAB · tap card + tile · hold: power up · drag to move", 18, "#7dff7a", [0, 0.5]).setDepth(3000));
     }
 
     // Speed + pause.
