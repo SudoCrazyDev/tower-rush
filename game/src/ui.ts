@@ -48,14 +48,26 @@ export function pressable<T extends Phaser.GameObjects.GameObject & Phaser.GameO
   const scene = obj.scene;
   // The scale to return to, read on press: callers often setScale() after making it pressable.
   let base: { x: number; y: number } | null = null;
+  // Last scale released to; a press during that release tween snaps back to it first, so
+  // rapid taps don't read a half-shrunk scale as the base and shrink a little more each time.
+  let rest: { x: number; y: number } | null = null;
+  let tw: Phaser.Tweens.Tween | null = null;
+  const to = (x: number, y: number, duration: number) => {
+    tw?.stop();
+    tw = scene.tweens.add({ targets: obj, scaleX: x, scaleY: y, duration });
+  };
   const release = () => {
-    if (base) scene.tweens.add({ targets: obj, scaleX: base.x, scaleY: base.y, duration: 80 });
+    if (base) to(base.x, base.y, 80);
+    rest = base;
     base = null;
   };
   obj.setInteractive({ useHandCursor: true });
   obj.on("pointerdown", () => {
-    base ??= { x: obj.scaleX, y: obj.scaleY };
-    scene.tweens.add({ targets: obj, scaleX: base.x * 0.92, scaleY: base.y * 0.92, duration: 60 });
+    if (!base) {
+      if (rest && tw?.isPlaying()) obj.setScale(rest.x, rest.y);
+      base = { x: obj.scaleX, y: obj.scaleY };
+    }
+    to(base.x * 0.92, base.y * 0.92, 60);
   });
   obj.on("pointerout", release);
   obj.on("pointerup", (p: Phaser.Input.Pointer) => {

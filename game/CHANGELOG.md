@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.6.2
+- Buttons no longer shrink a little more with each quick tap (seen on PvP send buttons). The press animation read the button's scale mid bounce-back as its normal size; a press during that bounce-back now snaps back to the full size first.
+
 ## 2.6.1
 - Lobby: an INSTALL THE APP pill (ADD TO HOME SCREEN on iPhone/iPad) in the event strip's spot, above the buttons on phones and in the top bar on wide screens. It shows only where the game can be installed and isn't yet, gives way to a live event, and its close button hides it for a week. It appears late if the browser offers the install after the lobby is up.
 - Install dialog (`scenes/installApp.ts`): the logo, what the app gives, and INSTALL (the browser's own prompt), or the Share steps on iPhone/iPad, or the browser-menu steps elsewhere (switching to INSTALL if the browser offers it meanwhile).
