@@ -833,12 +833,13 @@ export class DeckScene extends Phaser.Scene {
     };
     add(txt(this, cx, 0, "ULTIMATE", 18, DIM, [0.5, 0]), 6);
     add(txt(this, cx, 0, ultName(def.id).toUpperCase(), 36, GOLD, [0.5, 0]), 12);
-    const tag = txt(this, cx, 0, every > 0 ? `EVERY ${every}s` : field ? "ALWAYS ON" : "PASSIVE", 22, "#1a0c04", [0.5, 0]);
-    add(tag, 16);
+    // Dark text on the bright pill: no navy outline (it smears small dark text).
+    const tag = txt(this, cx, 0, every > 0 ? `EVERY ${every}s` : field ? "ALWAYS ON" : "PASSIVE", 24, "#1a0c04", [0.5, 0]).setStroke("#1a0c04", 0).setShadow(0, 0, "#000000", 0);
+    add(tag, 18);
     add(txt(this, cx, 0, body.charAt(0).toUpperCase() + body.slice(1), 24, "#ffffff", [0.5, 0]).setWordWrapWidth(500).setAlign("center"), 18);
     g.fillStyle(0x000000, 0.3).fillRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
     g.lineStyle(3, 0xffd93b, 0.55).strokeRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
-    g.fillStyle(every > 0 ? 0xffd93b : 0x9ff0ff, 1).fillRoundedRect(cx - tag.width / 2 - 14, tag.y - 4, tag.width + 28, tag.displayHeight + 8, 12);
+    g.fillStyle(every > 0 ? 0xffd93b : 0x9ff0ff, 1).fillRoundedRect(cx - tag.width / 2 - 18, tag.y - 6, tag.width + 36, tag.displayHeight + 12, 14);
     c.add(items);
 
     y += 26;
