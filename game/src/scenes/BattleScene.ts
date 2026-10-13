@@ -440,6 +440,11 @@ export class BattleScene extends Phaser.Scene {
     pressable(this.summonBtn, () => this.summon());
     this.tweens.add({ targets: sb, angle: { from: -3, to: 3 }, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
     if (WIDE) hud(txt(this, R, 920, "SUMMON  (Space)", 26, "#c9d2ff").setDepth(3000));
+    // Staging and dev builds only: a test button that takes every unit on the board to max rank (awakening it).
+    if (import.meta.env.DEV || import.meta.env.MODE === "staging") {
+      const t = button(this, WIDE ? R : W - 130, WIDE ? 1010 : H - 200, 220, 64, `TEST ★${maxRank()}`, "red", () => this.sim.testMaxRankAll());
+      hud(t.setDepth(3010));
+    }
 
     // Speed + pause.
     const speed = this.add.image(0, 0, "ui:speed_toggle").setDisplaySize(96, 96);

@@ -1051,6 +1051,11 @@ export class Sim {
     return v;
   }
 
+  /** Test builds only (staging, dev; see BattleScene): every unit on the board jumps to max rank and awakens where it can. */
+  testMaxRankAll() {
+    for (const u of [...this.units]) if (u && !u.dragging && !u.jailed && u.rank < maxRank()) this.become(u, u.def.id, maxRank(), "copy");
+  }
+
   /** Gnome Brewers pay their harvest when wave `ended` is over. */
   protected harvest(ended: number) {
     for (const u of this.units) {
