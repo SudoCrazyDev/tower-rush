@@ -8,7 +8,7 @@ import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, E
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
-import { awakenBoostText, awakenDamageMult, awakenSpeedMult, ultName, ultText } from "../../../shared/awakened.ts";
+import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultOf, ultText } from "../../../shared/awakened.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
@@ -578,9 +578,8 @@ export class DeckScene extends Phaser.Scene {
       m.add(thumb);
       const label = txt(this, cx + 196, cardY + 28, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
       m.add(label);
-      // Per-unit boost, then the unit's ultimate. Top-anchored and wrapped; the other info rows hide while flipped.
-      const awakeText = txt(this, cx, cy - 135, `AWAKENED: ${awakenBoostText(id)}\n${ultName(id).toUpperCase()}: ${ultText(id)}`, 20, "#ffd93b", [0.5, 0])
-        .setWordWrapWidth(540).setAlign("center");
+      // The awakened form's own panel (boosts, ultimate, supports); the other info rows hide while flipped.
+      const awakeText = this.awakenedPanel(def, level, cx, cy - 150);
       info.add(awakeText.setVisible(false));
       // Rows hidden on purpose stay hidden when flipping back (visibility is remembered, not forced on).
       const shown = new Map<Phaser.GameObjects.GameObject, boolean>();
@@ -763,6 +762,72 @@ export class DeckScene extends Phaser.Scene {
    * How the unit's numbers grow: permanent card levels, in-battle power-ups (mana) and
    * merge ranks. Every value comes from unitStats(), so it matches the battle.
    */
+  /** v2.7 card back: the awakened form's boosts (with its real numbers at max rank), its ultimate and how supports work with it. */
+  private awakenedPanel(def: UnitDef, level: number, cx: number, top: number) {
+    const c = this.add.container(0, 0);
+    const DIM = "#9fb0e0";
+    const GOLD = "#ffd93b";
+    c.add(txt(this, cx, top, "AWAKENED FORM", 34, GOLD, [0.5, 0]));
+    c.add(txt(this, cx, top + 44, `Merge to ★${maxRank()} to awaken · permanent boost`, 20, DIM, [0.5, 0]));
+
+    // Two boost tiles: multiplier, then the stat it gives at max rank and this card level.
+    const s = unitStats(def, maxRank(), level, 0);
+    const tiles: [string, string, string, string][] = [
+      ["stat:damage", `×${+awakenDamageMult(def.id).toFixed(2)}`, "DAMAGE", fmt(s.damage * awakenDamageMult(def.id))],
+      ["stat:attack_speed", `×${+awakenSpeedMult(def.id).toFixed(2)}`, "ATTACK SPEED", `${+(1 / (s.speed * awakenSpeedMult(def.id))).toFixed(2)}s`],
+    ];
+    const tileY = top + 90;
+    const g = this.add.graphics();
+    c.add(g);
+    tiles.forEach(([icon, mult, name, value], i) => {
+      const x = cx + (i ? 140 : -140);
+      g.fillStyle(0x000000, 0.3).fillRoundedRect(x - 128, tileY, 256, 128, 18);
+      g.lineStyle(3, 0xffd93b, 0.55).strokeRoundedRect(x - 128, tileY, 256, 128, 18);
+      c.add(this.add.image(x - 70, tileY + 46, icon).setDisplaySize(56, 56));
+      c.add(txt(this, x - 34, tileY + 46, mult, 44, GOLD, [0, 0.5]));
+      c.add(txt(this, x, tileY + 92, name, 18, DIM, [0.5, 0.5]));
+      c.add(txt(this, x, tileY + 114, `★${maxRank()}: ${value}`, 18, "#ffffff", [0.5, 0.5]));
+    });
+
+    // The ultimate: label, name, a cadence tag, then what it does (the cadence prefix moves to the tag).
+    const ult = ultOf(def.id);
+    const every = ultEvery(def.id);
+    const ultY = tileY + 160;
+    const body = ultText(def.id).replace(/^(Passive|Every [\d.]+s): /, "");
+    const items: Phaser.GameObjects.Text[] = [];
+    let y = ultY + 22;
+    const add = (t: Phaser.GameObjects.Text, gap: number) => {
+      t.setY(y);
+      items.push(t);
+      y += t.displayHeight + gap;
+    };
+    add(txt(this, cx, 0, "ULTIMATE", 18, DIM, [0.5, 0]), 6);
+    add(txt(this, cx, 0, ultName(def.id).toUpperCase(), 36, GOLD, [0.5, 0]), 12);
+    const tag = txt(this, cx, 0, every > 0 ? `EVERY ${every}s` : "PASSIVE · EVERY ATTACK", 22, "#1a0c04", [0.5, 0]);
+    add(tag, 16);
+    add(txt(this, cx, 0, body.charAt(0).toUpperCase() + body.slice(1), 24, "#ffffff", [0.5, 0]).setWordWrapWidth(500).setAlign("center"), 18);
+    g.fillStyle(0x000000, 0.3).fillRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
+    g.lineStyle(3, 0xffd93b, 0.55).strokeRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
+    g.fillStyle(every > 0 ? 0xffd93b : 0x9ff0ff, 1).fillRoundedRect(cx - tag.width / 2 - 14, tag.y - 4, tag.width + 28, tag.displayHeight + 8, 12);
+    c.add(items);
+
+    // How supports work with it.
+    const notes = [
+      every > 0 ? "Hourglass Owl: charges the ultimate faster" : "Hourglass Owl: faster attacks (a passive has no charge)",
+      every <= 0 ? "Echo Spirit: nothing to repeat (passive)" : ult?.id === "primal_roar" ? "Echo Spirit: can't repeat a roar" : "Echo Spirit: repeats the ultimate",
+      "Banner Herald: war cry when it awakens",
+    ];
+    y += 26;
+    c.add(txt(this, cx, y, "WITH SUPPORTS", 18, DIM, [0.5, 0]));
+    y += 30;
+    for (const n of notes) {
+      c.add(txt(this, cx, y, n, 21, "#cfe0ff", [0.5, 0]));
+      y += 32;
+    }
+    c.add(txt(this, cx, y + 4, "Tap the card to flip back", 18, DIM, [0.5, 0]));
+    return c;
+  }
+
   private statsTab(def: UnitDef, level: number, cx: number, top: number) {
     const box = this.add.container(0, 0);
     const arch = primaryOf(def);
