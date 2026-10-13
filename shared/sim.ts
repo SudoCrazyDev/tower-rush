@@ -47,8 +47,9 @@ import { LAWS, LAW_IDS, TRIBUNAL, panOf, type CellState, type LawId } from "./tr
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
-import { awakenDamageMult, awakenSpeedMult, ultEvery, ultOf, type UltId } from "./awakened.ts";
+import { NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type UltId } from "./awakened.ts";
 import { castUltimate, ultimateAttack, type UltCtx } from "./ultimates.ts";
+import { REWORKS, liveDef, noOwnAttack, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
   brewMana,
   canBecome,
@@ -385,7 +386,7 @@ export function arenaGeometry(arena: ArenaDef) {
 export function boardUnitStats(b: BoardUnit, cardLevel: number, powerUp: number) {
   const def = UNIT_BY_ID[b.id];
   const s = unitStats(def, b.rank, cardLevel, powerUp);
-  if (b.awakened) {
+  if (b.awakened && mayAwaken(b.id)) {
     s.damage *= awakenDamageMult(b.id);
     s.speed *= awakenSpeedMult(b.id);
   }
@@ -450,15 +451,28 @@ export class SimUnit {
   effectTimer = 0;
   // Viewer: when it last attacked.
   firedAt = -1;
+  /** Card level and in-battle power-up it was built with (power-ups update it). */
+  readonly level: number;
+  powerUp: number;
+  /** v2.7 Overheat (Gear Engineer): faster and splash-free until overheatUntil, then no attacks until jamUntil. */
+  overheatUntil = 0;
+  jamUntil = 0;
+  /** v2.7 Iceborn Warmother: extra damage to bosses (1.5 = +150%). */
+  readonly bossBonus: number;
 
   constructor(b: BoardUnit, slot: number, pos: Pt, cardLevel: number, powerUp: number, cooldown: number, alive: number) {
-    this.def = UNIT_BY_ID[b.id];
+    const base = UNIT_BY_ID[b.id];
+    this.awakened = !!b.awakened && !isSupport(kitPrimary(base)) && mayAwaken(b.id);
+    // v2.7: code-defined kit changes (shared/reworks.ts).
+    this.def = liveDef(base, this.awakened);
     this.primary = kitPrimary(this.def);
     this.fx = unitEffects(this.def);
     this.ownPerks = this.def.perks.map((s) => ({ perk: s.perk, ...perkValue(s) }));
     this.rank = b.rank;
     this.slot = slot;
-    this.awakened = !!b.awakened && !isSupport(this.primary);
+    this.level = cardLevel;
+    this.powerUp = powerUp;
+    this.bossBonus = this.awakened && ultOf(b.id)?.id === "iceborn" ? ULTIMATES.iceborn.params.boss : 0;
     this.x = pos.x;
     this.y = pos.y;
     this.stats = boardUnitStats(b, cardLevel, powerUp);
@@ -605,6 +619,35 @@ export interface SimShot {
   y: number;
   aim: Pt;
   speed: number;
+  /** v2.7: a bee swarm from a hive, or a Frog Alchemist flask that leaves a puddle where it lands. */
+  kind?: "bee" | "puddle";
+}
+
+/**
+ * v2.7 things units leave on the path (read by the renderer: draw by `id`, gone when it leaves `fields`).
+ * puddle (Frog Alchemist), mushroom (Spore Sage, `readyAt` = grown), doll (Storm Totem's Rag Doll),
+ * vine (Vine Druid: holds monsters from `held` on), vineyard (awakened Vine Druid), hive (awakened Bee Keeper).
+ */
+export interface SimField {
+  id: number;
+  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive";
+  unit: SimUnit;
+  path: Path;
+  /** Centre along the path, and its foot point. */
+  dist: number;
+  x: number;
+  y: number;
+  /** Reach in px (vineyard: half its length along the path). */
+  radius: number;
+  born: number;
+  until: number;
+  readyAt: number;
+  /** Damage per second to monsters in reach. */
+  dps: number;
+  /** Hive: next swarm; doll: next zap. */
+  next: number;
+  /** Vine: when it started holding monsters (0 = not yet). */
+  held: number;
 }
 
 /** Short-lived marks for the Playground's arena view. */
@@ -714,6 +757,11 @@ export class Sim {
   private readonly ultCtx: UltCtx = this.makeUltCtx();
   /** Banner Herald war cry: everyone attacks faster until then. */
   shoutUntil = 0;
+  /** v2.7: puddles, mushrooms, dolls, vines, hives (see SimField). */
+  fields: SimField[] = [];
+  private fieldId = 0;
+  /** v2.7 Scorched Earth: every monster burns at `dps` until `until`. Read by the renderer. */
+  scorch: { until: number; dps: number; src: Source } | null = null;
   /** Echo Spirit encores waiting to go off. */
   private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number; ult?: UltId; scale: number }[] = [];
   /** v2.2 Story 3 state (see shared/faceless.ts). Read by the renderer: brazierLit (per ChapterMechanics.faceless.braziers entry), cageHp (null without a cage), cageOpen. */
@@ -1028,7 +1076,7 @@ export class Sim {
 
   /** Whether a unit of this id and rank awakens (max rank, not a support, and the game has the art). */
   private awakensAt(id: string, rank: number) {
-    return rank >= maxRank() && !isSupport(unitPrimary(id)) && !!this.o.awakens?.(id);
+    return rank >= maxRank() && !isSupport(unitPrimary(id)) && mayAwaken(id) && !!this.o.awakens?.(id);
   }
 
   /** Put a new unit on a tile (summon, merge, become): fresh uid, buffs, awaken events. */
@@ -1311,6 +1359,7 @@ export class Sim {
     if (this.lawsOn) this.lawTick();
     if (this.story?.mechanics?.scale) this.tickScale();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
+    if (this.fields.length || this.scorch) this.updateFields(dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
     this.updateShots(dt);
@@ -1426,7 +1475,11 @@ export class Sim {
     const now = this.now;
     if (m.intro > 0) m.intro -= dt;
     else if (m.pinned !== null) m.dist = m.pinned;
-    else m.dist += m.speed(now) * dt;
+    else {
+      const was = m.dist;
+      m.dist += m.speed(now) * dt;
+      if (this.fields.length) this.holdAtVines(m, was);
+    }
 
     m.poison = m.poison.filter((p) => p.until > now);
     for (const p of m.poison) if (!m.dead) this.hurt(m, p.dps * dt, p.src, { sure: true, quiet: true });
@@ -2061,7 +2114,10 @@ export class Sim {
     this.mana -= powerUpCost(lvl);
     this.powerUps[id] = lvl + 1;
     for (const u of this.units) {
-      if (u?.def.id === id) Object.assign(u.stats, boardUnitStats({ id: u.def.id, rank: u.rank, awakened: u.awakened }, this.levelOf(id), lvl + 1));
+      if (u?.def.id === id) {
+        Object.assign(u.stats, boardUnitStats({ id: u.def.id, rank: u.rank, awakened: u.awakened }, this.levelOf(id), lvl + 1));
+        u.powerUp = lvl + 1;
+      }
     }
     if (noAttack(unitPrimary(id))) this.recomputeBuffs();
     this.emit({ type: "powerup", t: this.now, id, level: lvl + 1 });
@@ -3067,13 +3123,24 @@ export class Sim {
     }
     if (u.primary === "buff" || u.primary === "aura" || u.primary === "aegis") return;
     if (isSupport(u.primary)) return this.updateSupport(u, dt);
-    if (u.primary === "mana") {
+    if (u.def.id === "raccoon_thief") {
+      // v2.7: Raccoon Thief's own pulse (shared/reworks.ts).
+      u.pulse += dt;
+      if (u.pulse >= raccoonEvery(u.level)) {
+        u.pulse = 0;
+        this.gainMana(raccoonMana(u.rank, u.powerUp), u.x, u.y - 50, "pulse");
+      }
+    } else if (u.primary === "mana") {
       u.pulse += dt;
       if (u.pulse >= u.fx.mana.every) {
         u.pulse = 0;
         this.gainMana(manaPerPulse(u.rank, u.fx), u.x, u.y - 50, "pulse");
       }
     }
+    // v2.7: units that keep things on the path (vines, hives, mushrooms).
+    if (u.def.id === "vine_druid") this.tendVines(u, dt);
+    if (u.awakened && ultOf(u.def.id)?.mode === "field") this.tendField(u, dt);
+    if (noOwnAttack(u.def.id, u.awakened)) return;
     const every = u.awakened ? ultEvery(u.def.id) : 0;
     if (every > 0) {
       u.ult += dt * (1 + u.charge);
@@ -3082,8 +3149,8 @@ export class Sim {
         const ult = ultOf(u.def.id)!.id;
         if (castUltimate(this.ultCtx, u, 1)) {
           u.ult = 0;
-          // An echoed roar would find every monster still immune: Echo Spirits skip it.
-          if (ult !== "primal_roar") this.queueEcho(u, u.x, u.y, 0, 0, ult);
+          // Some ultimates can't be echoed (an echoed roar would find every monster still immune).
+          if (!NO_ECHO.has(ult)) this.queueEcho(u, u.x, u.y, 0, 0, ult);
         } else u.ult = every;
       } else if (u.ult >= every) {
         const target = u.primary === "mana" ? null : this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
@@ -3095,7 +3162,10 @@ export class Sim {
         }
       }
     }
-    const rate = u.stats.speed * (1 + this.hasteOf(u)) * (now < u.status.fatiguedUntil ? 1 - u.fx.fatigue.slow : 1);
+    let rate = u.stats.speed * (1 + this.hasteOf(u)) * (now < u.status.fatiguedUntil ? 1 - u.fx.fatigue.slow : 1);
+    // v2.7 Overheat: the base attack speed rises while it lasts; then the unit cools down without attacking.
+    if (now < u.overheatUntil) rate *= Math.max(1, ULTIMATES.overheat.params.baseSpeed / Math.max(0.01, u.def.speed));
+    else if (now < u.jamUntil) return;
     u.cooldown -= dt;
     if (u.cooldown > 0 || u.sulking) return;
     const target = this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
@@ -3229,6 +3299,190 @@ export class Sim {
     }
   }
 
+  // ---------------------------------------------------------------- v2.7 fields (shared/reworks.ts, shared/ultimates.ts)
+
+  /** A unit's hit right now (as fire() computes it, without growth or glimmer). */
+  private hitOf(u: SimUnit) {
+    return this.statDamage(u) * this.heroDamageMult * this.heraldMult * (1 + u.auraDamage);
+  }
+
+  /** Whether the unit is still on its tile (not merged away, copied over or turned). */
+  private onBoard(u: SimUnit) {
+    return this.units[u.slot] === u;
+  }
+
+  private addField(kind: SimField["kind"], unit: SimUnit, path: Path, dist: number, o: { radius: number; until: number; dps: number; readyAt?: number }) {
+    const d = Math.max(0, Math.min(path.length, dist));
+    const at = path.at(d);
+    const f: SimField = { id: ++this.fieldId, kind, unit, path, dist: d, x: at.x, y: at.y, radius: o.radius, born: this.now, until: o.until, readyAt: o.readyAt ?? this.now, dps: o.dps, next: this.now, held: 0 };
+    this.fields.push(f);
+    return f;
+  }
+
+  /** A monster is in a field's reach (a vineyard: along the path; the rest: around its foot point). */
+  private inField(f: SimField, m: SimMonster) {
+    if (f.kind === "vineyard") return m.path === f.path && Math.abs(m.dist - f.dist) <= f.radius;
+    const p = m.foot;
+    return Math.hypot(p.x - f.x, p.y - f.y) <= f.radius;
+  }
+
+  /** Frog Alchemist's flask lands: a puddle where its target stood. */
+  private dropPuddle(s: SimShot) {
+    const u = s.unit;
+    const p = REWORKS.frog_alchemist.puddle;
+    this.addField("puddle", u, s.target.path, s.target.dist, { radius: p.radius, until: this.now + puddleTime(u.level, u.powerUp), dps: s.damage * p.dps });
+  }
+
+  /** A vine holds back every monster that reaches it (bosses only briefly). */
+  private holdAtVines(m: SimMonster, was: number) {
+    const now = this.now;
+    for (const f of this.fields) {
+      if (f.kind !== "vine" || f.path !== m.path || now >= f.until) continue;
+      const at = f.dist - f.radius / 2;
+      if (was > at || m.dist < at) continue;
+      const v = REWORKS.vine_druid.vine;
+      if (!f.held) {
+        f.held = now;
+        f.until = now + v.hold;
+      }
+      if (m.boss && now >= f.held + v.bossHold) continue;
+      m.dist = at;
+    }
+  }
+
+  /** Vine Druid: one prickly vine at a time, grown just ahead of the front monster. Awakened, she also keeps her vineyard. */
+  private tendVines(u: SimUnit, dt: number) {
+    const v = REWORKS.vine_druid.vine;
+    if (this.fields.some((f) => f.kind === "vine" && f.unit === u)) return;
+    u.timer += dt * (1 + this.hasteOf(u));
+    if (u.timer < v.regrow) return;
+    const front = this.ultCtx.targets().sort((a, b) => b.progress - a.progress)[0];
+    if (!front) return;
+    u.timer = 0;
+    u.firedAt = this.now;
+    const f = this.addField("vine", u, front.path, Math.min(front.path.length * 0.95, front.dist + v.ahead + v.radius), { radius: v.radius, until: this.now + v.life, dps: this.hitOf(u) * v.dps });
+    this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "special", ult: "vineyard", x: f.x, y: f.y, radius: 0, points: [{ x: f.x, y: f.y }] });
+  }
+
+  /** Field ultimates: an awakened unit's hives, mushrooms or vineyard. */
+  private tendField(u: SimUnit, dt: number) {
+    const ult = ultOf(u.def.id)!;
+    const p = ult.params;
+    const mine = this.fields.filter((f) => f.unit === u);
+    switch (ult.id) {
+      case "bee_hives": {
+        if (!mine.length) {
+          for (let i = 0; i < p.hives; i++) {
+            const path = this.paths[i % this.paths.length];
+            this.addField("hive", u, path, (path.length * (i + 1)) / (p.hives + 1), { radius: 0, until: Infinity, dps: 0 });
+          }
+          return;
+        }
+        // A swarm grows like a unit with these base stats (rank, card level, power-ups).
+        const swarm = unitStats({ ...u.def, damage: p.damage, speed: p.speed }, u.rank, u.level, u.powerUp);
+        const rate = swarm.speed * (1 + this.hasteOf(u));
+        const damage = swarm.damage * this.heroDamageMult * this.heraldMult;
+        for (const f of mine) {
+          if (this.now < f.next) continue;
+          const target = this.pickTarget("first");
+          if (!target) continue;
+          f.next = this.now + 1 / rate;
+          u.firedAt = this.now;
+          this.shots.push({ unit: u, damage, target, x: f.x, y: f.y - 40, aim: target.pos, speed: 700, kind: "bee" });
+        }
+        return;
+      }
+      case "vineyard": {
+        if (mine.some((f) => f.kind === "vineyard")) return;
+        for (const path of this.paths) {
+          for (let i = 0; i < p.patches; i++) this.addField("vineyard", u, path, (path.length * (i + 1)) / (p.patches + 1), { radius: p.length / 2, until: Infinity, dps: 0 });
+        }
+        return;
+      }
+      case "mushroom_puff": {
+        if (mine.length >= p.max) return;
+        u.timer += dt;
+        if (u.timer < p.sprout) return;
+        // It sprouts somewhere along the first stretch of the path, where every monster still has to walk;
+        // one nobody touches withers after a while so a new one can sprout.
+        u.timer = 0;
+        const path = this.paths[Math.floor(this.rand() * this.paths.length)];
+        this.addField("mushroom", u, path, path.length * (0.08 + this.rand() * 0.35), { radius: p.touch, until: this.now + p.grow + p.life, dps: 0, readyAt: this.now + p.grow });
+        return;
+      }
+    }
+  }
+
+  /** Tick every field: damage, slows, bursts, expiry. Then Scorched Earth. */
+  private updateFields(dt: number) {
+    const now = this.now;
+    const live = this.monsters.filter((m) => !m.gone && !m.dead && m.intro <= 0 && !m.masked && !m.civilian && !m.shelled && !m.family);
+    // Puddles don't stack: each monster takes its strongest puddle only.
+    const puddled = new Map<SimMonster, SimField>();
+    for (const f of this.fields) {
+      if (now >= f.until) continue;
+      // Hives, mushrooms, vines and vineyards leave with their unit.
+      if (f.kind !== "puddle" && f.kind !== "doll" && !this.onBoard(f.unit)) {
+        f.until = now;
+        continue;
+      }
+      switch (f.kind) {
+        case "puddle":
+          for (const m of live) if (this.inField(f, m) && (puddled.get(m)?.dps ?? -1) < f.dps) puddled.set(m, f);
+          break;
+        case "vine":
+        case "vineyard": {
+          const dps = f.kind === "vineyard" ? this.hitOf(f.unit) * ULTIMATES.vineyard.params.dps : f.dps;
+          for (const m of live) if (this.inField(f, m)) this.hurt(m, dps * dt, f.unit.slot, { sure: true, quiet: true, perks: f.unit.perks });
+          break;
+        }
+        case "doll": {
+          const p = ULTIMATES.rag_doll.params;
+          const inside = live.filter((m) => this.inField(f, m));
+          for (const m of inside) {
+            m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, p.slow);
+            m.slowUntil = Math.max(m.slowUntil, now + 0.2);
+            this.hurt(m, f.dps * dt, f.unit.slot, { sure: true, quiet: true, perks: f.unit.perks });
+          }
+          if (inside.length && now >= f.next) {
+            f.next = now + 0.5;
+            const m = inside[Math.floor(this.rand() * inside.length)];
+            this.view({ type: "zap", t: now, kind: "storm", n: 0, x: f.x, y: f.y - 60, x2: m.pos.x, y2: m.pos.y, color: "#fff27a" });
+          }
+          break;
+        }
+        case "mushroom": {
+          if (now < f.readyAt) break;
+          const touched = live.find((m) => this.inField(f, m));
+          if (!touched) break;
+          const p = ULTIMATES.mushroom_puff.params;
+          const u = f.unit;
+          f.until = now;
+          const poison = this.hitOf(u) * u.fx.poison.dps;
+          this.emit({ type: "ultimate", t: now, uid: u.uid, kind: "special", ult: "mushroom_puff", x: f.x, y: f.y - 20, radius: p.radius, points: [{ x: f.x, y: f.y }] });
+          for (const m of this.nearby({ x: f.x, y: f.y - 20 }, p.radius)) {
+            m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, m.boss ? p.slow / 2 : p.slow);
+            m.slowUntil = now + p.slowTime;
+            m.poison.push({ dps: poison, until: now + u.fx.poison.duration, src: u.slot });
+            while (m.poison.length > u.fx.poison.maxStacks) m.poison.shift();
+          }
+          break;
+        }
+      }
+    }
+    for (const [m, f] of puddled) this.hurt(m, f.dps * dt, f.unit.slot, { sure: true, quiet: true, perks: f.unit.perks });
+    this.fields = this.fields.filter((f) => now < f.until);
+    const sc = this.scorch;
+    if (sc) {
+      if (now >= sc.until) this.scorch = null;
+      else
+        for (const m of live) {
+          if (m.burn.until > now + 0.1 && m.burn.dps >= sc.dps) continue;
+          m.burn = { dps: sc.dps, until: now + 0.5, src: sc.src };
+        }
+    }
+  }
+
   private makeUltCtx(): UltCtx {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const sim = this;
@@ -3238,6 +3492,9 @@ export class Sim {
         return sim.now;
       },
       rand: () => sim.rand(),
+      get paths() {
+        return sim.paths;
+      },
       targets: () => sim.monsters.filter(targetable),
       pick: (mode) => sim.pickTarget(mode),
       nearby: (center, radius, except) => sim.nearby(center, radius, except),
@@ -3258,6 +3515,10 @@ export class Sim {
       },
       emit: (e) => sim.emit(e),
       view: (e) => sim.view(e),
+      field: (kind, u, path, dist, o) => void sim.addField(kind, u, path, dist, o),
+      scorch: (u, dps, time) => {
+        sim.scorch = { until: sim.now + time, dps: Math.max(dps, sim.scorch && sim.now < sim.scorch.until ? sim.scorch.dps : 0), src: u.slot };
+      },
       text: (x, y, color, text) => sim.mark("text", x, y, color, { text }),
       ring: (x, y, color, radius) => sim.mark("ring", x, y, color, { x2: radius }),
     };
@@ -3307,6 +3568,8 @@ export class Sim {
     // v2.7: a passive ultimate (Multi-Shot, Tesla Coil) changes every attack.
     if (u.awakened && ultimateAttack(this.ultCtx, u, target, damage)) return;
     if (u.primary === "chain") return this.chainLightning(u, target, damage, from);
+    // v2.7 Frog Alchemist: the flask leaves a puddle where it lands.
+    if (u.def.id === "frog_alchemist") return void this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: 900, kind: "puddle" });
     this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.primary === "sniper" ? u.fx.sniper.shotSpeed : 1100 });
   }
 
@@ -3372,7 +3635,8 @@ export class Sim {
       const step = s.speed * dt;
       if (d <= step + 4) {
         s.speed = -1;
-        if (!s.target.gone) this.applyHit(s.unit, s.damage, s.target);
+        if (s.kind === "puddle") this.dropPuddle(s);
+        else if (!s.target.gone) this.applyHit(s.unit, s.damage, s.target);
         else this.emit({ type: "shot_lost", t: this.now, uid: s.unit.uid, x: s.aim.x, y: s.aim.y });
       } else {
         s.x += (dx / d) * step;
@@ -3406,7 +3670,8 @@ export class Sim {
     const now = this.now;
     const rarityIdx = rarityIndex(def.rarity);
     const chained = !!chain && u.primary === "chain";
-    const bane = (o: SimMonster) => (kitHas(def, "bane") && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage);
+    const bane = (o: SimMonster) =>
+      (kitHas(def, "bane") && o.boss?.corrupted ? baseDamage * (1 + e.bane.bossBonus) : baseDamage) * (u.bossBonus && o.boss ? 1 + u.bossBonus : 1);
     // Rogue Knight: nearly every blow crits.
     const rogue = kitHas(def, "irritate") && this.rand() < e.irritate.critChance;
     let damage = bane(m) * (rogue ? e.irritate.critMult : 1);
@@ -3458,6 +3723,11 @@ export class Sim {
     };
     switch (u.primary) {
       case "splash": {
+        // v2.7 Overheat: no splash while it lasts.
+        if (now < u.overheatUntil) {
+          mainHit();
+          break;
+        }
         const radius = splashRadius(rank, e);
         const around = this.nearby(pos, radius, m);
         mainHit();

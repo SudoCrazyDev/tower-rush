@@ -378,7 +378,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("gear_engineer", "Gear Engineer", "rare", "lightning", "splash", "cannonball", "Twin gear cannons shred armor.", "gnome", "rapid", "armor_breaker"),
   U("imp_hunter", "Imp Hunter", "rare", "fire", "crit", "fireball", "Hunts down the quick little things.", "demon", "balanced", "hunter"),
   U("lute_bard", "Lute Bard", "rare", "arcane", "buff", "arcane_orb", "Plays fast. Neighbours chase the quick.", "elf", "balanced", "hunter"),
-  U("raccoon_thief", "Raccoon Thief", "rare", "nature", "mana", "spark", "Picks the pockets of every fallen foe.", "beast", "rapid", "plunder"),
+  { ...U("raccoon_thief", "Raccoon Thief", "rare", "nature", "mana", "spark", "Picks the pockets of every fallen foe.", "beast", "rapid", "plunder"), damage: 10 },
   { ...U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "A palm strike no one can dodge.", "human", "rapid", "true_strike"), weapon: "palm_wave" },
   U("snowglobe_fairy", "Snowglobe Fairy", "rare", "ice", "freeze", "ice_shard", "Her snow freezes even the yetis.", "fae", "balanced", "frostbite"),
   U("spore_sage", "Spore Sage", "rare", "poison", "poison", "poison", "Big spores for big monsters.", "sylvan", "heavy", "giant_slayer"),

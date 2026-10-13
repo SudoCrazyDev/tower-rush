@@ -84,6 +84,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.7.0-max-rank": { units: {}, effects: {}, economy: ["maxRank"] },
   // The Trial's witness was rank 5 of 7; at max rank 5 it would awaken. Rank 4 keeps it a helper.
   "2.7.0-witness-rank": { units: {}, effects: {}, chapters: { b2s5c1: ["trial"] } },
+  // v2.7 rares: Raccoon Thief hits a little harder (its mana pulse lives in shared/reworks.ts).
+  "2.7.0-raccoon": { units: { raccoon_thief: ["damage"] }, effects: {} },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

@@ -4,13 +4,15 @@
  * The Sim hands every ultimate a small UltCtx instead of its private state. Ultimates must draw
  * randomness from ctx.rand() only (seeded: PvP lockstep and the golden tests replay exactly).
  */
-import type { Pt } from "./path.ts";
-import type { SimMonster, SimUnit, SimEvent } from "./sim.ts";
+import type { Path, Pt } from "./path.ts";
+import type { SimField, SimMonster, SimUnit, SimEvent } from "./sim.ts";
 import { ultOf, type UltDef, type UltId } from "./awakened.ts";
 
 export interface UltCtx {
   readonly now: number;
   rand(): number;
+  /** The board's monster paths. */
+  readonly paths: Path[];
   /** Monsters units may target right now (as Sim.pickTarget), in board order. */
   targets(): SimMonster[];
   pick(mode: "first" | "strongest"): SimMonster | null;
@@ -31,6 +33,10 @@ export interface UltCtx {
   view(e: SimEvent): void;
   text(x: number, y: number, color: string, text: string): void;
   ring(x: number, y: number, color: string, radius: number): void;
+  /** Leave something on the path (see SimField). */
+  field(kind: SimField["kind"], u: SimUnit, path: Path, dist: number, o: { radius: number; until: number; dps: number; readyAt?: number }): void;
+  /** Scorched Earth: every monster burns at `dps` for `time` seconds (new ones too). */
+  scorch(u: SimUnit, dps: number, time: number): void;
 }
 
 /** Ultimate event for the renderer. */
@@ -118,6 +124,43 @@ export function castUltimate(ctx: UltCtx, u: SimUnit, scale: number): boolean {
       }
       return true;
     }
+    case "scorched_earth": {
+      cast(ctx, u, ult, u.x, u.y, 0, { targets: ids(all) });
+      ctx.scorch(u, hit * p.burnDps, p.duration);
+      return true;
+    }
+    case "winter_storm": {
+      const now = ctx.now;
+      const frozen = sample(ctx, all, p.freezes);
+      cast(ctx, u, ult, u.x, u.y, 0, { targets: ids(frozen), points: frozen.map((m) => m.pos) });
+      for (const m of all) {
+        m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, p.slow);
+        m.slowUntil = Math.max(m.slowUntil, now + p.slowTime);
+      }
+      for (const m of frozen) {
+        m.frozenUntil = Math.max(m.frozenUntil, now + (m.boss ? p.bossFreeze : p.freeze));
+        ctx.view({ type: "proc", t: now, kind: "frozen", x: m.pos.x, y: m.pos.y - 30 });
+      }
+      return true;
+    }
+    case "overheat": {
+      cast(ctx, u, ult, u.x, u.y, 0);
+      u.overheatUntil = ctx.now + p.duration;
+      u.jamUntil = ctx.now + p.duration + p.jam;
+      return true;
+    }
+    case "rag_doll": {
+      const points: Pt[] = [];
+      const per = Math.ceil(p.dolls / ctx.paths.length);
+      for (let i = 0; i < p.dolls; i++) {
+        const path = ctx.paths[i % ctx.paths.length];
+        const dist = (path.length * (Math.floor(i / ctx.paths.length) + 1)) / (per + 1);
+        ctx.field("doll", u, path, dist, { radius: p.radius, until: ctx.now + p.duration, dps: hit * p.dps });
+        points.push(path.at(dist));
+      }
+      cast(ctx, u, ult, points[0].x, points[0].y, p.radius, { points });
+      return true;
+    }
     case "judgment_slam": {
       const target = [...all].sort((a, b) => b.hp - a.hp)[0];
       const c = target.pos;
@@ -152,6 +195,15 @@ export function ultimateAttack(ctx: UltCtx, u: SimUnit, target: SimMonster, dama
         .slice(0, p.arrows - 1);
       for (const m of [target, ...others]) ctx.shoot(u, m, damage * p.damage);
       return true;
+    }
+    case "mjolnir": {
+      let from: Pt = target.pos;
+      ctx.chainOn(target, [target], p.jumps).forEach((m, n) => {
+        ctx.view({ type: "zap", t: ctx.now, kind: "chain", n, x: from.x, y: from.y, x2: m.pos.x, y2: m.pos.y, color: "#fff27a" });
+        from = m.pos;
+        ctx.applyHit(u, damage * p.damage, m);
+      });
+      return false;
     }
     case "tesla_coil": {
       const all = ctx.targets();
