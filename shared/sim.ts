@@ -48,7 +48,7 @@ import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
 import { NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type UltId } from "./awakened.ts";
-import { castUltimate, ultimateAttack, type UltCtx } from "./ultimates.ts";
+import { castUltimate, hatchReborn, ultimateAttack, type UltCtx } from "./ultimates.ts";
 import { REWORKS, liveDef, noOwnAttack, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
   brewMana,
@@ -459,6 +459,14 @@ export class SimUnit {
   /** v2.7 Overheat (Gear Engineer): faster and splash-free until overheatUntil, then no attacks until jamUntil. */
   overheatUntil = 0;
   jamUntil = 0;
+  /** v2.7 Reborn (Phoenix Chick): an egg until then (no attacks), then it hatches. */
+  eggUntil = 0;
+  /** v2.7 Shadow Clones (Shadow Ninja): clones copy its attacks until then. */
+  clonesUntil = 0;
+  /** v2.7 Luna's Blessing (Moon Oracle): when each blessing on this unit ends (they stack). */
+  blessings: number[] = [];
+  /** v2.7: monsters this unit has killed (Black Plague throws more puddles with more kills). */
+  kills = 0;
   /** v2.7 Iceborn Warmother: extra damage to bosses (1.5 = +150%). */
   readonly bossBonus: number;
 
@@ -521,6 +529,8 @@ export class SimMonster {
   judgedUntil = 0;
   /** v2.7 Primal Roar: ignores roars until then. */
   roarImmuneUntil = 0;
+  /** v2.7 Raise Dead: the awakened Bone Necromancer whose curse is on it (it rises if it dies). */
+  raiseBy: SimUnit | null = null;
   poison: { dps: number; until: number; src: Source }[] = [];
   burn: { dps: number; until: number; src: Source } = { dps: 0, until: 0, src: 0 };
   powerTimer = 0;
@@ -632,7 +642,7 @@ export interface SimShot {
  */
 export interface SimField {
   id: number;
-  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive";
+  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive" | "plague" | "skeleton";
   unit: SimUnit;
   path: Path;
   /** Centre along the path, and its foot point. */
@@ -1560,6 +1570,9 @@ export class Sim {
     m.dead = m.gone = true;
     this.kills++;
     if (src !== "hero") this.killsBySlot[src]++;
+    const killer = typeof src === "number" ? this.units[src] : null;
+    if (killer) killer.kills++;
+    if (m.raiseBy) this.raiseDead(m);
     this.gainMana(m.mana, null, null, "kill");
     const p = m.pos;
     this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
@@ -2193,7 +2206,22 @@ export class Sim {
 
   /** A unit's attack damage: its own, or the equal-ground one while that lasts. */
   private statDamage(u: SimUnit) {
-    return this.equal && this.now < this.equal.until ? (this.equal.dmg.get(u) ?? u.stats.damage) : u.stats.damage;
+    const base = this.equal && this.now < this.equal.until ? (this.equal.dmg.get(u) ?? u.stats.damage) : u.stats.damage;
+    // v2.7 Luna's Blessing: each one on the unit adds damage.
+    return u.blessings.length ? base * (1 + ULTIMATES.moonshine.params.damage * this.blessed(u)) : base;
+  }
+
+  /** v2.7 Luna's Blessings on a unit right now (expired ones are dropped). */
+  private blessed(u: SimUnit) {
+    if (!u.blessings.length) return 0;
+    const now = this.now;
+    if (u.blessings.some((t) => t <= now)) u.blessings = u.blessings.filter((t) => t > now);
+    return u.blessings.length;
+  }
+
+  /** v2.7 Blade Dance (Fox Samurai): every hit crits while a boss is on the board. */
+  private bladeDance(u: SimUnit) {
+    return u.awakened && ultOf(u.def.id)?.id === "blade_dance" && this.monsters.some((m) => m.boss && !m.gone);
   }
 
   /** A Faceless spawns masked (a civilian is flagged); a roar in progress stuns whatever spawns. */
@@ -3117,6 +3145,12 @@ export class Sim {
     if (u.dragging) return;
     // v2.4: a jailed unit does nothing until the count ends.
     if (u.jailed) return;
+    // v2.7 Reborn: an egg does nothing until it hatches (freezes don't stop the clock).
+    if (u.eggUntil) {
+      if (now < u.eggUntil) return;
+      u.eggUntil = 0;
+      hatchReborn(this.ultCtx, u);
+    }
     if (now < u.frozenUntil || now < u.status.shockedUntil || now < u.status.entangledUntil) return;
     // v2.2: under water at high tide, or sung asleep: no attacks.
     if (now < u.status.submergedUntil || now < u.status.asleepUntil) return;
@@ -3185,6 +3219,7 @@ export class Sim {
     // v2.7 Overheat: the base attack speed rises while it lasts; then the unit cools down without attacking.
     if (now < u.overheatUntil) rate *= Math.max(1, ULTIMATES.overheat.params.baseSpeed / Math.max(0.01, u.def.speed));
     else if (now < u.jamUntil) return;
+    if (u.blessings.length) rate *= 1 + ULTIMATES.moonshine.params.speed * this.blessed(u);
     u.cooldown -= dt;
     if (u.cooldown > 0 || u.sulking) return;
     const target = this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
@@ -3345,6 +3380,14 @@ export class Sim {
     return Math.hypot(p.x - f.x, p.y - f.y) <= f.radius;
   }
 
+  /** Raise Dead: a monster that died under an awakened Bone Necromancer's curse rises as a skeleton. */
+  private raiseDead(m: SimMonster) {
+    const u = m.raiseBy!;
+    const p = ULTIMATES.raise_dead.params;
+    if (!this.onBoard(u) || this.fields.filter((f) => f.kind === "skeleton" && f.unit === u && this.now < f.until).length >= p.max) return;
+    this.addField("skeleton", u, m.path, m.dist, { radius: p.touch, until: this.now + p.life, dps: 0 });
+  }
+
   /** Frog Alchemist's flask lands: a puddle where its target stood. */
   private dropPuddle(s: SimShot) {
     const u = s.unit;
@@ -3444,7 +3487,7 @@ export class Sim {
     for (const f of this.fields) {
       if (now >= f.until) continue;
       // Hives, mushrooms, vines and vineyards leave with their unit.
-      if (f.kind !== "puddle" && f.kind !== "doll" && !this.onBoard(f.unit)) {
+      if (f.kind !== "puddle" && f.kind !== "doll" && f.kind !== "plague" && f.kind !== "skeleton" && !this.onBoard(f.unit)) {
         f.until = now;
         continue;
       }
@@ -3471,6 +3514,36 @@ export class Sim {
             const m = inside[Math.floor(this.rand() * inside.length)];
             this.view({ type: "zap", t: now, kind: "storm", n: 0, x: f.x, y: f.y - 60, x2: m.pos.x, y2: m.pos.y, color: "#fff27a" });
           }
+          break;
+        }
+        case "plague": {
+          // Black Plague: slows hard (bosses half) and hurts. Black puddles stack.
+          const p = ULTIMATES.black_plague.params;
+          for (const m of live) {
+            if (!this.inField(f, m)) continue;
+            m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, m.boss ? p.slow / 2 : p.slow);
+            m.slowUntil = Math.max(m.slowUntil, now + 0.2);
+            this.hurt(m, f.dps * dt, f.unit.slot, { sure: true, quiet: true, perks: f.unit.perks });
+          }
+          break;
+        }
+        case "skeleton": {
+          // Raise Dead: walks back up the path and bursts on the first monster it meets.
+          const p = ULTIMATES.raise_dead.params;
+          f.dist = Math.max(0, f.dist - p.speed * dt);
+          const at = f.path.at(f.dist);
+          f.x = at.x;
+          f.y = at.y;
+          const met = live.find((m) => Math.hypot(m.foot.x - f.x, m.foot.y - f.y) <= p.touch);
+          if (!met) {
+            if (f.dist <= 0) f.until = now;
+            break;
+          }
+          f.until = now;
+          const c = { x: f.x, y: f.y - 20 };
+          this.emit({ type: "ultimate", t: now, uid: f.unit.uid, kind: "special", ult: "raise_dead", x: c.x, y: c.y, radius: p.radius, points: [c] });
+          const dmg = this.hitOf(f.unit) * p.damage;
+          for (const m of this.nearby(c, p.radius)) this.hurt(m, dmg, f.unit.slot, { sure: true, perks: f.unit.perks });
           break;
         }
         case "mushroom": {
@@ -3542,6 +3615,7 @@ export class Sim {
         sim.scorch = { until: sim.now + time, dps: Math.max(dps, sim.scorch && sim.now < sim.scorch.until ? sim.scorch.dps : 0), src: u.slot };
       },
       text: (x, y, color, text) => sim.mark("text", x, y, color, { text }),
+      units: () => sim.units.filter((v): v is SimUnit => !!v && !v.dragging && !noAttack(v.primary) && !noOwnAttack(v.def.id, v.awakened)),
       ring: (x, y, color, radius) => sim.mark("ring", x, y, color, { x2: radius }),
     };
   }
@@ -3587,6 +3661,17 @@ export class Sim {
     if (kitHas(u.def, "growth")) damage *= growthMult(u.alive, u.fx);
     if (now < u.status.glimmeredUntil) damage *= u.status.glimmer;
     const from = { x: u.x, y: u.y - 30 };
+    // v2.7 Luna's Blessing: every attack earns mana.
+    const blessings = this.blessed(u);
+    if (blessings) this.gainMana(ULTIMATES.moonshine.params.mana * blessings, null, null, "other");
+    // v2.7 Shadow Clones: the clones copy the attack at reduced damage (crits still roll when it lands).
+    if (now < u.clonesUntil) {
+      const cp = ULTIMATES.shadow_clones.params;
+      for (let i = 0; i < cp.clones; i++) {
+        const side = i % 2 ? 1 : -1;
+        this.shots.push({ unit: u, damage: damage * cp.damage, target, x: u.x + side * cp.gap, y: u.y - 30, aim: target.pos, speed: 1100 });
+      }
+    }
     // v2.7: a passive ultimate (Multi-Shot, Tesla Coil) changes every attack.
     if (u.awakened && ultimateAttack(this.ultCtx, u, target, damage)) return;
     if (u.primary === "chain") return this.chainLightning(u, target, damage, from);
@@ -3712,7 +3797,7 @@ export class Sim {
     let critHit = false;
     let exec = false;
     for (const s of def.kit) {
-      if (s.arch === "crit" && this.rand() < critChance(rank, e)) {
+      if (s.arch === "crit" && this.rand() < (this.bladeDance(u) ? ULTIMATES.blade_dance.params.bossCrit : critChance(rank, e))) {
         critHit = true;
         cm = critMult(rank, e);
         damage *= cm;
@@ -3838,6 +3923,8 @@ export class Sim {
         }
         case "curse":
           for (const o of hits) o.curse = Math.min(e.curse.max, o.curse + curseStep(rank, rarityIdx, e));
+          // v2.7 Raise Dead: an awakened Bone Necromancer's cursed rise as skeletons when they die.
+          if (u.awakened && ultOf(def.id)?.id === "raise_dead") for (const o of hits) o.raiseBy = u;
           break;
         case "crit":
           if (critHit) {

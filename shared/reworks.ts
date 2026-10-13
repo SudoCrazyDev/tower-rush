@@ -49,5 +49,13 @@ export function liveDef(def: UnitDef, awakened = false): UnitDef {
     const perks = def.perks.some((s) => s.perk === "giant_slayer") ? def.perks : [...def.perks, { perk: "giant_slayer" as const }];
     return { ...def, kit, perks };
   }
+  if (awakened && AWAKENINGS[def.id]?.ult === "blade_dance") {
+    // Fox Samurai: a fixed 70% / ×3.5 crit (Blade Dance makes it 100% while a boss is out; the Sim rolls that).
+    const p = ULTIMATES.blade_dance.params;
+    const kit = def.kit.map((s) => (s.arch === "crit" ? { arch: "crit" as const, tune: { chance: p.crit, perRank: 0, mult: p.critMult, multPerRank: 0 } } : s));
+    const perks = [...def.perks];
+    for (const perk of ["true_strike", "giant_slayer"] as const) if (!perks.some((s) => s.perk === perk)) perks.push({ perk });
+    return { ...def, kit, perks };
+  }
   return def;
 }

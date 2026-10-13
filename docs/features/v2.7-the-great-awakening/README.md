@@ -85,11 +85,29 @@ Awakened rares (multipliers from `shared/awakened.ts`; "field" ultimates are alw
 | Thunder Dwarf | ×3 | ×3 | Grace of Mjolnir | Passive | Every attack also chains lightning to up to 5 more monsters for 60% of the hit. |
 | Vine Druid | ×3 | ×1 | Vineyard | Always on | The whole path stays overgrown. Monsters on it take her hit per second. Vines no longer block. |
 
+## 6b. Epics
+Crystal Golem through Plague Alchemist are the user's designs. Shadow Ninja, Storm Whelp, Treant Guardian, Bone Necromancer and Tide Mermaid were suggested by Claude and accepted. The other seven epics have no awakened art and keep the generic awakening for now.
+
+| Unit | Damage | Speed | Ultimate | Type | What it does |
+|---|---|---|---|---|---|
+| Crystal Golem | ×6 | ×0.2 | Crystal Throw | Timer, 10 s | Hurls a giant crystal at the thickest crowd: ×2 damage within 180 px. |
+| Fox Samurai | ×3 | ×3 | Blade Dance | Passive | Crit is a fixed 70% for ×3.5; 100% while a boss is on the board. Adds True Strike and Giant Slayer. |
+| Moon Oracle | ×3 | ×2 | Moonshine | Timer, 15 s | Luna's Blessing on 4 random attacking units (itself included) for 10 s: +50% damage, +50% attack speed, +5 mana per attack. Blessings stack. |
+| Phoenix Chick | ×3 | ×4 | Reborn | Timer, 30 s | Waits until a monster is 85% down the path. Egg for 5 s (no attacks) while every monster burns (65% of a hit per second), then hatches: every monster stunned 10 s (bosses 5 s). |
+| Plague Alchemist | ×1 | ×1 | Black Plague | Passive | Every throw lands a black puddle on a random spot of the stretch the monsters walk: 90 px, 10 s, 75% slow (bosses half), a hit per second; puddles stack. +1 puddle per throw per 25 kills (max 4). Kill tally over his head. |
+| Shadow Ninja | ×3 | ×4 | Shadow Clones | Timer, 12 s | 2 clones for 8 s copy every attack at 50% damage (crits roll). |
+| Storm Whelp | ×2 | ×4 | Hunting Storm | Timer, 8 s | Bolts hit the 6 fastest monsters for ×3; Shocked: +30% damage taken for 4 s (shares the Judgment Slam curse). |
+| Treant Guardian | ×2 | ×3 | Forest Grasp | Timer, 10 s | Roots grab the 5 strongest monsters for ×2 and hold them 3 s (bosses 1 s). |
+| Bone Necromancer | ×4 | ×2 | Raise Dead | Passive | Monsters that die under his curse rise as skeletons (max 5, 20 s) walking back up the path; the first monster they meet sets them off for ×3 within 100 px. |
+| Tide Mermaid | ×3 | ×3 | Tidal Wave | Timer, 12 s | Washes every monster 120 px back (bosses 40 px) for ×1.5 and slows 40% for 3 s. |
+
+Echo Spirits don't repeat Moonshine, Reborn, Shadow Clones or Tidal Wave. New art: Crystal Golem and Plague Alchemist awakened forms. Tide Mermaid's awakened sheets are procedural, because Higgsfield's filter blocked her clips. VFX added: crystal_boulder, crystal_shatter, phoenix_egg, black_puddle, plague_skull, tidal_wave, root_grasp, and bone_skeleton (a copy of the skeleton_soldier monster art).
+
 ## 7. Design note
 - Awakened commons are intentionally stronger than the current mythics. Mythics are revamped later in 2.7.
 
 ## 8. Placeholders (TBD)
-- **Epics:** TBD
+- **Epics without awakened art:** Cyclops Smith, Lava Golem, Magnet Robot, Minotaur Gladiator, Lantern Ghost, Sand Worm, Card Jester (TBD)
 - **Legendaries:** TBD
 - **Mythics:** TBD (revamp follows the commons)
 - **Event units:** TBD

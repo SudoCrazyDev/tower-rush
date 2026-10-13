@@ -6,7 +6,7 @@
  */
 import type { Path, Pt } from "./path.ts";
 import type { SimField, SimMonster, SimUnit, SimEvent } from "./sim.ts";
-import { ultOf, type UltDef, type UltId } from "./awakened.ts";
+import { ULTIMATES, ultOf, type UltDef, type UltId } from "./awakened.ts";
 
 /** Grace of Mjolnir's chain colour: the client draws these zaps as hammer bolts. */
 export const MJOLNIR_COLOR = "#fff6b0";
@@ -40,6 +40,8 @@ export interface UltCtx {
   field(kind: SimField["kind"], u: SimUnit, path: Path, dist: number, o: { radius: number; until: number; dps: number; readyAt?: number }): void;
   /** Scorched Earth: every monster burns at `dps` for `time` seconds (new ones too). */
   scorch(u: SimUnit, dps: number, time: number): void;
+  /** Units on the board that attack (no supports, buffers or units that never attack themselves). */
+  units(): SimUnit[];
 }
 
 /** Ultimate event for the renderer. */
@@ -51,9 +53,9 @@ function cast(ctx: UltCtx, u: SimUnit, ult: UltDef, x: number, y: number, radius
 const ids = (ms: SimMonster[]) => ms.map((m) => m.uid);
 
 /** `n` distinct monsters picked at random from `list`. */
-function sample(ctx: UltCtx, list: SimMonster[], n: number) {
+function sample<T>(ctx: UltCtx, list: T[], n: number): T[] {
   const pool = [...list];
-  const out: SimMonster[] = [];
+  const out: T[] = [];
   while (out.length < n && pool.length) out.push(pool.splice(Math.floor(ctx.rand() * pool.length), 1)[0]);
   return out;
 }
@@ -177,8 +179,92 @@ export function castUltimate(ctx: UltCtx, u: SimUnit, scale: number): boolean {
       ctx.hurt(u, target, hit * p.damage, { crit: true });
       return true;
     }
+    case "crystal_throw": {
+      // The crystal lands on the monster with the most company around it.
+      let best = all[0];
+      let most = -1;
+      for (const m of all) {
+        const n = ctx.nearby(m.pos, p.radius).length;
+        if (n > most) [best, most] = [m, n];
+      }
+      const c = best.pos;
+      const hits = ctx.nearby(c, p.radius);
+      cast(ctx, u, ult, c.x, c.y, p.radius, { points: [c], targets: ids(hits) });
+      ctx.ring(c.x, c.y, "#b58cff", p.radius);
+      for (const m of hits) ctx.hurt(u, m, hit * p.damage);
+      return true;
+    }
+    case "moonshine": {
+      const now = ctx.now;
+      const blessed = sample(ctx, ctx.units(), p.targets);
+      if (!blessed.length) return false;
+      cast(ctx, u, ult, u.x, u.y, 0, { points: blessed.map((v) => ({ x: v.x, y: v.y })), targets: blessed.map((v) => v.uid) });
+      for (const v of blessed) v.blessings.push(now + p.duration);
+      return true;
+    }
+    case "reborn": {
+      // It waits (fully charged) until a monster gets deep into the path.
+      if (!all.some((m) => m.progress >= p.at)) return false;
+      cast(ctx, u, ult, u.x, u.y, 0);
+      u.eggUntil = ctx.now + p.egg;
+      ctx.scorch(u, hit * p.burnDps, p.egg);
+      return true;
+    }
+    case "shadow_clones": {
+      cast(ctx, u, ult, u.x, u.y, 0);
+      u.clonesUntil = ctx.now + p.duration;
+      return true;
+    }
+    case "hunting_storm": {
+      const now = ctx.now;
+      const fast = [...all].sort((a, b) => b.baseSpeed - a.baseSpeed || b.progress - a.progress).slice(0, p.bolts);
+      cast(ctx, u, ult, fast[0].pos.x, fast[0].pos.y, 0, { points: fast.map((m) => m.pos), targets: ids(fast) });
+      for (const m of fast) {
+        // Shock shares the Judgment Slam curse (the stronger one wins).
+        m.judged = Math.max(m.judgedUntil > now ? m.judged : 0, p.shock);
+        m.judgedUntil = Math.max(m.judgedUntil, now + p.shockTime);
+        ctx.hurt(u, m, hit * p.damage);
+      }
+      return true;
+    }
+    case "forest_grasp": {
+      const now = ctx.now;
+      const big = [...all].sort((a, b) => b.hp - a.hp).slice(0, p.targets);
+      cast(ctx, u, ult, big[0].pos.x, big[0].pos.y, 0, { points: big.map((m) => m.pos), targets: ids(big) });
+      for (const m of big) {
+        m.stunUntil = Math.max(m.stunUntil, now + (m.boss ? p.bossHold : p.hold));
+        ctx.view({ type: "proc", t: now, kind: "stun", x: m.pos.x, y: m.pos.y - 30 });
+        ctx.hurt(u, m, hit * p.damage);
+      }
+      return true;
+    }
+    case "tidal_wave": {
+      const now = ctx.now;
+      cast(ctx, u, ult, u.x, u.y, 0, { targets: ids(all) });
+      for (const m of all) {
+        if (m.pinned === null) m.dist = Math.max(0, m.dist - (m.boss ? p.bossPush : p.push));
+        m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, p.slow);
+        m.slowUntil = Math.max(m.slowUntil, now + p.slowTime);
+        ctx.hurt(u, m, hit * p.damage);
+      }
+      return true;
+    }
   }
   return false;
+}
+
+/** Reborn (Phoenix Chick): the egg hatches and stuns every monster. */
+export function hatchReborn(ctx: UltCtx, u: SimUnit) {
+  const ult = ULTIMATES.reborn;
+  const p = ult.params;
+  const now = ctx.now;
+  const all = ctx.targets();
+  ctx.emit({ type: "ultimate", t: now, uid: u.uid, kind: "special", ult: "reborn", x: u.x, y: u.y, radius: 1, targets: ids(all) });
+  ctx.text(u.x, u.y - 70, "#ffb35c", "REBORN!");
+  for (const m of all) {
+    m.stunUntil = Math.max(m.stunUntil, now + (m.boss ? p.bossStun : p.stun));
+    ctx.view({ type: "proc", t: now, kind: "stun", x: m.pos.x, y: m.pos.y - 30 });
+  }
 }
 
 /**
@@ -207,6 +293,24 @@ export function ultimateAttack(ctx: UltCtx, u: SimUnit, target: SimMonster, dama
         ctx.applyHit(u, damage * p.damage, m);
       });
       return false;
+    }
+    case "black_plague": {
+      // The flask never aims at a monster: each one lands on a random spot of the stretch of path
+      // the monsters are walking (from the last one to just ahead of the first).
+      const n = Math.min(p.max, 1 + Math.floor(u.kills / p.per));
+      const points: Pt[] = [];
+      const walkers = ctx.targets();
+      for (let i = 0; i < n; i++) {
+        const path = walkers.length ? walkers[Math.floor(ctx.rand() * walkers.length)].path : ctx.paths[0];
+        const on = walkers.filter((m) => m.path === path).map((m) => m.dist);
+        const lo = on.length ? Math.max(0, Math.min(...on) - p.radius) : 0;
+        const hi = on.length ? Math.min(path.length, Math.max(...on) + p.radius) : path.length;
+        const dist = lo + ctx.rand() * (hi - lo);
+        ctx.field("plague", u, path, dist, { radius: p.radius, until: ctx.now + p.duration, dps: damage * p.dps });
+        points.push(path.at(dist));
+      }
+      ctx.emit({ type: "ultimate", t: ctx.now, uid: u.uid, kind: "special", ult: "black_plague", x: points[0].x, y: points[0].y, radius: p.radius, points });
+      return true;
     }
     case "tesla_coil": {
       const all = ctx.targets();

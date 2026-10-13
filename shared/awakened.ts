@@ -30,7 +30,17 @@ export type UltId =
   | "mushroom_puff"
   | "rag_doll"
   | "mjolnir"
-  | "vineyard";
+  | "vineyard"
+  | "crystal_throw"
+  | "blade_dance"
+  | "moonshine"
+  | "reborn"
+  | "black_plague"
+  | "shadow_clones"
+  | "hunting_storm"
+  | "forest_grasp"
+  | "raise_dead"
+  | "tidal_wave";
 
 export interface UltDef {
   id: UltId;
@@ -62,10 +72,24 @@ export const ULTIMATES: Record<UltId, UltDef> = {
   rag_doll: { id: "rag_doll", name: "Rag Doll", mode: "timer", every: 35, params: { dolls: 4, duration: 15, radius: 50, slow: 0.6, dps: 1 } },
   mjolnir: { id: "mjolnir", name: "Grace of Mjolnir", mode: "passive", every: 0, params: { jumps: 5, damage: 0.6 } },
   vineyard: { id: "vineyard", name: "Vineyard", mode: "field", every: 0, params: { length: 140, dps: 1 } },
+  // epic
+  crystal_throw: { id: "crystal_throw", name: "Crystal Throw", mode: "timer", every: 10, params: { damage: 2, radius: 180 } },
+  blade_dance: { id: "blade_dance", name: "Blade Dance", mode: "passive", every: 0, params: { crit: 0.7, critMult: 3.5, bossCrit: 1 } },
+  // Luna's Blessing: each blessing on a unit adds `damage` and `speed` (they stack) and `mana` per attack.
+  moonshine: { id: "moonshine", name: "Moonshine", mode: "timer", every: 15, params: { targets: 4, duration: 10, damage: 0.5, speed: 0.5, mana: 5 } },
+  // Reborn waits, fully charged, until a monster is `at` of the way down the path.
+  reborn: { id: "reborn", name: "Reborn", mode: "timer", every: 30, params: { at: 0.85, egg: 5, burnDps: 0.65, stun: 10, bossStun: 5 } },
+  // One puddle per throw, plus one per `per` kills (up to `max`).
+  black_plague: { id: "black_plague", name: "Black Plague", mode: "passive", every: 0, params: { radius: 90, duration: 10, slow: 0.75, dps: 1, per: 25, max: 4 } },
+  shadow_clones: { id: "shadow_clones", name: "Shadow Clones", mode: "timer", every: 12, params: { clones: 2, duration: 8, damage: 0.5, gap: 48 } },
+  hunting_storm: { id: "hunting_storm", name: "Hunting Storm", mode: "timer", every: 8, params: { bolts: 6, damage: 3, shock: 0.3, shockTime: 4 } },
+  forest_grasp: { id: "forest_grasp", name: "Forest Grasp", mode: "timer", every: 10, params: { targets: 5, hold: 3, bossHold: 1, damage: 2 } },
+  raise_dead: { id: "raise_dead", name: "Raise Dead", mode: "passive", every: 0, params: { max: 5, damage: 3, radius: 100, speed: 110, life: 20, touch: 45 } },
+  tidal_wave: { id: "tidal_wave", name: "Tidal Wave", mode: "timer", every: 12, params: { push: 120, bossPush: 40, damage: 1.5, slow: 0.4, slowTime: 3 } },
 };
 
 /** Ultimates an Echo Spirit can't repeat (a second copy would change nothing or stack oddly). */
-export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll"]);
+export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll", "moonshine", "reborn", "shadow_clones", "tidal_wave"]);
 
 /** Units that never awaken (even with awakened art). */
 export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller"]);
@@ -100,6 +124,17 @@ export const AWAKENINGS: Record<string, Awakening> = {
   thunder_dwarf: { damage: 3, speed: 3, ult: "mjolnir" },
   // Vine Druid never attacks (see shared/reworks.ts): the multipliers scale her vines.
   vine_druid: { damage: 3, speed: 1, ult: "vineyard" },
+  // epic
+  crystal_golem: { damage: 6, speed: 0.2, ult: "crystal_throw" },
+  fox_samurai: { damage: 3, speed: 3, ult: "blade_dance" },
+  moon_oracle: { damage: 3, speed: 2, ult: "moonshine" },
+  phoenix_chick: { damage: 3, speed: 4, ult: "reborn" },
+  plague_alchemist: { damage: 1, speed: 1, ult: "black_plague" },
+  shadow_ninja: { damage: 3, speed: 4, ult: "shadow_clones" },
+  storm_whelp: { damage: 2, speed: 4, ult: "hunting_storm" },
+  treant_guardian: { damage: 2, speed: 3, ult: "forest_grasp" },
+  bone_necromancer: { damage: 4, speed: 2, ult: "raise_dead" },
+  tide_mermaid: { damage: 3, speed: 3, ult: "tidal_wave" },
 };
 
 /** Awakened damage and speed multipliers for a unit id (its own, or the generic ones). */
@@ -163,6 +198,26 @@ export function ultText(id: string): string {
       return `Passive: every attack also chains lightning to up to ${p.jumps} more monsters for ${pct(p.damage)} of the hit.`;
     case "vineyard":
       return `Passive: the whole path is overgrown for good. Monsters on it take her hit every second. No blocking.`;
+    case "crystal_throw":
+      return `Every ${u.every}s: hurls a giant crystal into the thickest crowd. It shatters for ${x(p.damage)} damage to everything within ${p.radius}px.`;
+    case "blade_dance":
+      return `Passive: ${pct(p.crit)} chance to crit for ${x(p.critMult)}. While a boss is on the board, every hit crits. Adds True Strike and Giant Slayer.`;
+    case "moonshine":
+      return `Every ${u.every}s: Luna's Blessing falls on ${p.targets} random units for ${p.duration}s: +${pct(p.damage)} damage, +${pct(p.speed)} attack speed and +${p.mana} mana per attack. Blessings stack.`;
+    case "reborn":
+      return `When a monster is ${pct(p.at)} of the way down the path (every ${u.every}s at most): turns into an egg for ${p.egg}s while every monster burns (${pct(p.burnDps)} of a hit per second). Then hatches and stuns every monster for ${p.stun}s (bosses ${p.bossStun}s).`;
+    case "black_plague":
+      return `Passive: every throw lands a black puddle on a random spot of the path where monsters walk (${p.radius}px, ${p.duration}s). Monsters in it are slowed ${pct(p.slow)} (bosses half) and take a hit every second; puddles stack. One more puddle per throw for every ${p.per} kills (up to ${p.max}).`;
+    case "shadow_clones":
+      return `Every ${u.every}s: ${p.clones} shadow clones join him for ${p.duration}s, copying every attack at ${pct(p.damage)} damage (crits included).`;
+    case "hunting_storm":
+      return `Every ${u.every}s: lightning hunts the ${p.bolts} fastest monsters for ${x(p.damage)} damage. Shocked monsters take +${pct(p.shock)} damage for ${p.shockTime}s.`;
+    case "forest_grasp":
+      return `Every ${u.every}s: roots grab the ${p.targets} strongest monsters for ${x(p.damage)} damage and hold them ${p.hold}s (bosses ${p.bossHold}s).`;
+    case "raise_dead":
+      return `Passive: monsters that die under his curse rise as skeletons (up to ${p.max}) and walk back up the path. The first monster they meet sets them off for ${x(p.damage)} damage within ${p.radius}px.`;
+    case "tidal_wave":
+      return `Every ${u.every}s: a wave washes every monster ${p.push}px back up the path (bosses ${p.bossPush}px) for ${x(p.damage)} damage and slows them ${pct(p.slow)} for ${p.slowTime}s.`;
   }
 }
 

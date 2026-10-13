@@ -121,6 +121,22 @@ export class FieldLayer {
         else obj = sc.add.ellipse(f.x, f.y, f.radius * 2, 60, 0x4aa832, 0.45).setRotation(ang).setDepth(GROUND_DEPTH + 2);
         break;
       }
+      case "plague": {
+        const img = this.image("black_puddle", f.x, f.y);
+        if (img) obj = fitW(img, f.radius * 2).setDepth(GROUND_DEPTH);
+        else obj = sc.add.ellipse(f.x, f.y, f.radius * 2, f.radius * 1.2, 0x1d2a14, 0.75).setDepth(GROUND_DEPTH);
+        // Splashes open where the flask lands.
+        const [sx, sy] = [obj.scaleX, obj.scaleY];
+        obj.setScale(sx * 0.2, sy * 0.2);
+        sc.tweens.add({ targets: obj, scaleX: sx, scaleY: sy, duration: 220, ease: "Back.Out" });
+        break;
+      }
+      case "skeleton": {
+        const img = this.image("bone_skeleton", f.x, f.y);
+        if (img) obj = fitH(img.setOrigin(0.5, 0.92), 64).setDepth(prop);
+        else obj = sc.add.ellipse(f.x, f.y - 24, 26, 48, 0xe8e2cf, 1).setStrokeStyle(3, 0x6a5a8a).setDepth(prop);
+        break;
+      }
       default: {
         // hive
         const img = this.image("beehive", f.x, f.y);
@@ -134,7 +150,7 @@ export class FieldLayer {
     // Pop in.
     const to = obj.scaleX;
     const toY = obj.scaleY;
-    if (f.kind !== "puddle" && f.kind !== "mushroom") {
+    if (f.kind !== "puddle" && f.kind !== "mushroom" && f.kind !== "plague") {
       obj.setScale(to * 0.3, toY * 0.3);
       sc.tweens.add({ targets: obj, scaleX: to, scaleY: toY, duration: 260, ease: "Back.Out" });
     }
@@ -144,8 +160,12 @@ export class FieldLayer {
   private tick(e: Entry, now: number) {
     const f = e.f;
     const o = e.obj;
-    if (f.kind === "puddle") {
+    if (f.kind === "puddle" || f.kind === "plague") {
       o.setAlpha(Math.max(0, Math.min(1, (f.until - now) / 1)) * 0.9);
+    } else if (f.kind === "skeleton") {
+      // It walks back up the path: follow the Sim, face the way it walks, and bob.
+      if (o instanceof Phaser.GameObjects.Image) o.setFlipX(f.x > o.x ? false : f.x < o.x ? true : o.flipX);
+      o.setPosition(f.x, f.y - Math.abs(Math.sin(now * 9)) * 6).setDepth(100 + f.y);
     } else if (f.kind === "mushroom") {
       const span = Math.max(0.01, f.readyAt - f.born);
       if (now < f.readyAt) {

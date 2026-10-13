@@ -4,7 +4,7 @@ import { fxKey, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
 import { steam } from "./ultFx";
-import { mayAwaken, ultEvery } from "../../../shared/awakened.ts";
+import { mayAwaken, ultEvery, ultOf } from "../../../shared/awakened.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
 import type { SimUnit } from "../../../shared/sim.ts";
@@ -60,6 +60,12 @@ export class Unit {
   private wasReady = false;
   /** Idle show-off timer of buff and support units that have no real action to animate. */
   private showOff = 0;
+  /** v2.7 epic looks: the Phoenix egg, Shadow clones, Luna's Blessing halo, the Black Plague kill tally. */
+  private egg: Phaser.GameObjects.Image | Phaser.GameObjects.Ellipse | null = null;
+  private clones: Phaser.GameObjects.Sprite[] = [];
+  private halo: Phaser.GameObjects.Ellipse | null = null;
+  private tally: Phaser.GameObjects.Container | null = null;
+  private tallySeen = -1;
 
   constructor(scene: BattleScene, sim: SimUnit) {
     this.scene = scene;
@@ -347,6 +353,7 @@ export class Unit {
     if (s.slot !== this.slotSeen) this.place(s.slot);
     this.drawStatus(now);
     this.drawUltRing();
+    this.epicLook(now);
 
     // Buff badge and Muse's heart follow the Sim's haste, charge and aura numbers.
     const buff = `${s.haste.toFixed(3)}:${s.charge.toFixed(3)}:${s.auraSpeed > 0 || s.auraDamage > 0}`;
@@ -450,7 +457,81 @@ export class Unit {
     }
   }
 
+  /** v2.7 epic ultimates that change how the unit itself looks. */
+  private epicLook(now: number) {
+    const s = this.sim;
+    const sc = this.scene;
+    const { x, y } = this.sprite;
+    const depth = this.sprite.depth;
+    // Reborn: the Phoenix Chick sits as a rocking egg until it hatches.
+    const egg = now < s.eggUntil;
+    if (egg && !this.egg) {
+      const img = hasFx(sc, "phoenix_egg") ? sc.add.image(x, y + 24, fxKey("phoenix_egg")).setOrigin(0.5, 0.85) : null;
+      this.egg = img ? img.setScale(96 / Math.max(1, img.height)) : sc.add.ellipse(x, y - 10, 56, 72, 0xff9a3b, 1).setStrokeStyle(4, 0xffe08a);
+      this.egg.setDepth(depth + 1);
+      sc.tweens.add({ targets: this.egg, angle: { from: -7, to: 7 }, yoyo: true, repeat: -1, duration: 170, ease: "Sine.InOut" });
+      this.sprite.setVisible(false);
+    } else if (!egg && this.egg) {
+      sc.tweens.killTweensOf(this.egg);
+      this.egg.destroy();
+      this.egg = null;
+      this.sprite.setVisible(true);
+    }
+    if (this.egg && sc.time.now > this.steamAt) {
+      this.steamAt = sc.time.now + 160;
+      steam(sc, x + (Math.random() - 0.5) * 44, y - 30, Math.random() < 0.5 ? 0xffb35c : 0xff6a2a);
+    }
+    // Shadow Clones: two dark copies mirror every frame of the ninja.
+    const cloned = now < s.clonesUntil;
+    if (cloned && !this.clones.length) {
+      for (const side of [-1, 1]) {
+        const c = sc.add.sprite(x + side * 48, y, this.sprite.texture.key, this.sprite.frame.name).setOrigin(0.5, 0.62);
+        c.setScale(this.sprite.scaleX * 0.92, this.sprite.scaleY * 0.92).setTint(0x2a1f45).setAlpha(0).setDepth(depth - 1);
+        sc.tweens.add({ targets: c, alpha: 0.7, duration: 200 });
+        sc.vfx("shadow_smoke", c.x, y - 10, 110);
+        this.clones.push(c);
+      }
+    } else if (!cloned && this.clones.length) {
+      for (const c of this.clones) sc.tweens.add({ targets: c, alpha: 0, duration: 250, onComplete: () => c.destroy() });
+      this.clones = [];
+    }
+    for (const [i, c] of this.clones.entries()) {
+      c.setTexture(this.sprite.texture.key, this.sprite.frame.name).setFlipX(this.sprite.flipX);
+      c.setPosition(x + (i ? 48 : -48), y + Math.sin(now * 3 + i) * 3);
+    }
+    // Luna's Blessing: a pale moon halo over the head while any blessing lasts.
+    const blessed = s.blessings.some((t) => t > now);
+    if (blessed && !this.halo) {
+      this.halo = sc.add.ellipse(x, y, 62, 18).setStrokeStyle(5, 0xdfe8ff, 0.95).setDepth(depth + 2);
+      sc.tweens.add({ targets: this.halo, alpha: { from: 1, to: 0.5 }, yoyo: true, repeat: -1, duration: 500 });
+    } else if (!blessed && this.halo) {
+      sc.tweens.killTweensOf(this.halo);
+      this.halo.destroy();
+      this.halo = null;
+    }
+    this.halo?.setPosition(x, y - this.px * 0.72);
+    // Black Plague: a skull and the kill count (each kill brings more puddles).
+    if (this.awakened && ultOf(this.def.id)?.id === "black_plague") {
+      if (!this.tally) {
+        const icon = hasFx(sc, "plague_skull") ? sc.add.image(-16, 0, fxKey("plague_skull")) : null;
+        if (icon) icon.setScale(30 / Math.max(1, icon.height));
+        const label = txt(sc, 4, 0, "0", 22, "#b6ff7a", [0, 0.5]);
+        this.tally = sc.add.container(0, 0, icon ? [icon, label] : [sc.add.circle(-16, 0, 11, 0x2f4a1a).setStrokeStyle(2, 0xb6ff7a), label]);
+      }
+      this.tally.setPosition(x + 30, y - this.px * 0.62).setDepth(depth + 2);
+      if (s.kills !== this.tallySeen) {
+        this.tallySeen = s.kills;
+        (this.tally.list[1] as Phaser.GameObjects.Text).setText(String(s.kills));
+        sc.tweens.add({ targets: this.tally, scale: { from: 1.35, to: 1 }, duration: 200 });
+      }
+    }
+  }
+
   destroy() {
+    this.egg?.destroy();
+    this.clones.forEach((c) => c.destroy());
+    this.halo?.destroy();
+    this.tally?.destroy();
     this.heart?.destroy();
     this.statusIcons?.destroy();
     this.aura?.destroy();
