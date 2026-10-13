@@ -168,6 +168,7 @@
           ${c.awakeText ? `<div class="dlg__awake" id="dlgAwake" hidden>${c.awakeText}<br><b>${c.ultName}</b>: ${c.ultText}</div>` : ""}
           <div class="dlg__role">${c.role}</div>
           ${c.effects.map((l) => `<div class="dlg__fx">${l}</div>`).join("")}
+          ${c.rework ? `<div class="dlg__fx dlg__rework">${c.rework}</div>` : ""}
           ${c.perkLines.map((l) => `<div class="dlg__perk">${l}</div>`).join("")}
           <div class="dlg__blurb">"${u.blurb}"</div>
         </div>

@@ -8,7 +8,8 @@ import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, E
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
-import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultText } from "../../../shared/awakened.ts";
+import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultOf, ultText, ULTIMATES } from "../../../shared/awakened.ts";
+import { liveDef, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../../shared/reworks.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
@@ -622,8 +623,23 @@ export class DeckScene extends Phaser.Scene {
     if (def.role) row("ROLE", [value(def.role, 22, "#ffffff")]);
     else if (!supportish) row("STYLE", [value(STYLES[def.style].label, 22, "#ffffff")]);
     // Attack archetype, with the slot-0 numbers stacked under it in the same row.
-    const slotLines = def.kit.map((s) => kitSummary({ ...def, kit: [s] }, 1, levelMult(owned?.level ?? 1))[0] ?? "");
-    const archName = isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label;
+    const lv = owned?.level ?? 1;
+    const live = liveDef(def);
+    let slotLines = live.kit.map((s) => kitSummary({ ...live, kit: [s] }, 1, levelMult(lv))[0] ?? "");
+    let archName = isSupport(arch) ? SUPPORT_TEXT[arch] : ARCHETYPES[arch].label;
+    // v2.7 reworks: the attack itself changed, so the kit lines are replaced by what it does now.
+    if (id === "frog_alchemist") {
+      const p = REWORKS.frog_alchemist.puddle;
+      archName = "Poison flask";
+      slotLines = [`Every flask leaves a puddle (${p.radius}px) that deals his hit each second for ${+puddleTime(lv, 0).toFixed(1)}s. Puddles don't stack.`];
+    } else if (id === "raccoon_thief") {
+      archName = "Mana pulse";
+      slotLines = [`Every ${raccoonEvery(lv)}s a pulse pays ${raccoonMana(1, 0)} mana (+${REWORKS.raccoon_thief.mana.perRank} per rank).`];
+    } else if (id === "vine_druid") {
+      const v = REWORKS.vine_druid.vine;
+      archName = "Prickly vine";
+      slotLines = [`Never attacks. Grows a vine ahead of the front monster: holds it ${v.hold}s (bosses ${v.bossHold}s) and deals her hit each second. Regrows ${v.regrow}s after it withers.`];
+    }
     row(supportish ? "SUPPORT" : "ATTACK", [value(archName, 22, "#ffffff"), ...(slotLines[0] ? [value(slotLines[0], 18, "#7fffd4")] : [])]);
     // One ability row per extra kit slot, then one perk row per perk.
     slotLines.forEach((line, i) => {
@@ -651,7 +667,7 @@ export class DeckScene extends Phaser.Scene {
         ? ([["stat:attack_speed", "never attacks"]] as [string, string][])
         : ([
             ["stat:damage", fmt(now.damage)],
-            ["stat:attack_speed", `${+(1 / now.speed).toFixed(2)}s`],
+            ["stat:attack_speed", id === "vine_druid" ? "—" : `${+(1 / now.speed).toFixed(2)}s`],
           ] as [string, string][])),
     ];
     // Lay the icon+value pairs out by their real widths and centre the row.
@@ -772,10 +788,24 @@ export class DeckScene extends Phaser.Scene {
 
     // Two boost tiles: multiplier, then the stat it gives at max rank and this card level.
     const s = unitStats(def, maxRank(), level, 0);
-    const tiles: [string, string, string, string][] = [
+    let tiles: [string, string, string, string][] = [
       ["stat:damage", `×${+awakenDamageMult(def.id).toFixed(2)}`, "DAMAGE", fmt(s.damage * awakenDamageMult(def.id))],
       ["stat:attack_speed", `×${+awakenSpeedMult(def.id).toFixed(2)}`, "ATTACK SPEED", `${+(1 / (s.speed * awakenSpeedMult(def.id))).toFixed(2)}s`],
     ];
+    if (def.id === "bee_keeper") {
+      // She stops attacking: the tiles show the hives' swarm, scaled like a unit.
+      const bp = ULTIMATES.bee_hives.params;
+      const sw = unitStats({ ...def, damage: bp.damage, speed: bp.speed }, maxRank(), level, 0);
+      tiles = [
+        ["stat:damage", fmt(bp.damage), "SWARM DMG", fmt(sw.damage)],
+        ["stat:attack_speed", `${bp.speed}/s`, "SWARM SPEED", `${+sw.speed.toFixed(2)}/s`],
+      ];
+    } else if (def.id === "vine_druid") {
+      tiles = [
+        ["stat:damage", `×${+awakenDamageMult(def.id).toFixed(2)}`, "VINE DMG/s", fmt(s.damage * awakenDamageMult(def.id))],
+        ["stat:attack_speed", `×${ULTIMATES.vineyard.params.patches}`, "VINES · ALWAYS", "on every path"],
+      ];
+    }
     const tileY = top + 90;
     const g = this.add.graphics();
     c.add(g);
@@ -791,6 +821,7 @@ export class DeckScene extends Phaser.Scene {
 
     // The ultimate: label, name, a cadence tag, then what it does (the cadence prefix moves to the tag).
     const every = ultEvery(def.id);
+    const field = ultOf(def.id)?.mode === "field";
     const ultY = tileY + 160;
     const body = ultText(def.id).replace(/^(Passive|Every [\d.]+s): /, "");
     const items: Phaser.GameObjects.Text[] = [];
@@ -802,7 +833,7 @@ export class DeckScene extends Phaser.Scene {
     };
     add(txt(this, cx, 0, "ULTIMATE", 18, DIM, [0.5, 0]), 6);
     add(txt(this, cx, 0, ultName(def.id).toUpperCase(), 36, GOLD, [0.5, 0]), 12);
-    const tag = txt(this, cx, 0, every > 0 ? `EVERY ${every}s` : "PASSIVE · EVERY ATTACK", 22, "#1a0c04", [0.5, 0]);
+    const tag = txt(this, cx, 0, every > 0 ? `EVERY ${every}s` : field ? "ALWAYS ON" : "PASSIVE", 22, "#1a0c04", [0.5, 0]);
     add(tag, 16);
     add(txt(this, cx, 0, body.charAt(0).toUpperCase() + body.slice(1), 24, "#ffffff", [0.5, 0]).setWordWrapWidth(500).setAlign("center"), 18);
     g.fillStyle(0x000000, 0.3).fillRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
@@ -820,8 +851,9 @@ export class DeckScene extends Phaser.Scene {
     const arch = primaryOf(def);
     const support = isSupport(arch) ? arch : null;
     const noAttack = arch === "buff" || arch === "aura" || arch === "aegis" || !!support;
-    const dmg = (v: number) => (noAttack ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
-    const every = (s: number) => (noAttack ? "—" : `${+(1 / s).toFixed(2)}s`);
+    const dmg = (v: number) => (noAttack || !v ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
+    const vine = def.id === "vine_druid";
+    const every = (s: number) => (noAttack || vine || !s ? "—" : `${+(1 / s).toFixed(2)}s`);
     const pct = (v: number) => `${Math.round(v * 100)}%`;
     // Buff units: the attack speed they give their neighbours, in place of damage.
     const rarityIdx = rarityIndex(def.rarity);
@@ -874,7 +906,9 @@ export class DeckScene extends Phaser.Scene {
     const first = Math.max(1, Math.min(level, max - 4));
     const levels = Array.from({ length: Math.min(5, max) }, (_, i) => first + i);
     const what = noAttack ? "boost" : "damage";
-    section("CARD LEVEL", noAttack ? `+${pct(ECONOMY.levelBonus)} boost per upgrade · max level ${max}` : `+${pct(ECONOMY.levelBonus)} damage, +${pct(ECONOMY.levelSpeedBonus)} speed per upgrade · max level ${max}`);
+    const levelExtra = def.id === "frog_alchemist" ? "Bottom row: puddle lasts (+0.2s per level)" : def.id === "raccoon_thief" ? "Bottom row: mana pulse every (-0.1s per level)" : "";
+    section("CARD LEVEL", levelExtra ? `+${pct(ECONOMY.levelBonus)} dmg, +${pct(ECONOMY.levelSpeedBonus)} speed per upgrade · max ${max}` : noAttack ? `+${pct(ECONOMY.levelBonus)} boost per upgrade · max level ${max}` : `+${pct(ECONOMY.levelBonus)} damage, +${pct(ECONOMY.levelSpeedBonus)} speed per upgrade · max level ${max}`);
+    if (levelExtra) { box.add(txt(this, cx, y - 8, levelExtra, 17, "#7fffd4")); y += 14; }
     table(
       levels.map((l) => (l === max ? "MAX" : `Lv ${l}`)),
       [
@@ -882,13 +916,16 @@ export class DeckScene extends Phaser.Scene {
           ? { icon: buffIcon, cells: levels.map((l) => buff(1, l, 0)) }
           : { icon: "stat:damage", cells: levels.map((l) => dmg(unitStats(def, 1, l, 0).damage)) },
         ...(noAttack ? [] : [{ icon: "stat:attack_speed", cells: levels.map((l) => every(unitStats(def, 1, l, 0).speed)) }]),
+        ...(def.id === "frog_alchemist" ? [{ icon: "stat:attack_speed", cells: levels.map((l) => `${+puddleTime(l, 0).toFixed(1)}s`) }] : []),
+        ...(def.id === "raccoon_thief" ? [{ icon: "item:mana_orb", cells: levels.map((l) => `${raccoonEvery(l)}s`) }] : []),
       ],
       levels.indexOf(level),
     );
 
     // Power-ups are bought with mana during a battle and last until it ends.
     const ups = Array.from({ length: maxPowerUp() + 1 }, (_, i) => i);
-    section("POWER-UPS IN BATTLE", `Spend mana: +${pct(ECONOMY.powerUpBonus)} ${what} each, for that battle`);
+    const upNote = def.id === "frog_alchemist" ? " · puddle +0.5s" : def.id === "raccoon_thief" ? " · pulse +3 mana" : "";
+    section("POWER-UPS IN BATTLE", `Spend mana: +${pct(ECONOMY.powerUpBonus)} ${what} each${upNote || ", for that battle"}`);
     table(
       ups.map((p) => (p ? `+${p}` : "Base")),
       [
@@ -909,12 +946,14 @@ export class DeckScene extends Phaser.Scene {
       : noAttack
       ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(def.id)})` : ""}`
       : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(def.id)} dmg, ×${awakenSpeedMult(def.id)} speed)` : ""}`;
-    section("MERGE RANK", mergeNote);
+    const mergeExtra = def.id === "frog_alchemist" ? " · damage row = puddle dmg/s" : vine ? " · damage row = vine dmg/s" : "";
+    section("MERGE RANK", mergeNote + mergeExtra);
     table(
       ranks.map((r) => `★${r}`),
       noAttack ? [{ icon: buffIcon, cells: ranks.map((r) => buff(r, level, 0, boost(r, awakenDamageMult(def.id)))) }] : [
         { icon: "stat:damage", cells: ranks.map((r) => dmg(unitStats(def, r, level, 0).damage * boost(r, awakenDamageMult(def.id)))) },
         { icon: "stat:attack_speed", cells: ranks.map((r) => every(unitStats(def, r, level, 0).speed * boost(r, awakenSpeedMult(def.id)))) },
+        ...(def.id === "raccoon_thief" ? [{ icon: "item:mana_orb", cells: ranks.map((r) => String(raccoonMana(r, 0))) }] : []),
       ],
       0,
     );
@@ -922,6 +961,12 @@ export class DeckScene extends Phaser.Scene {
       ? `${SUPPORT_STAT[support][1]} (Lv ${level}). ${SUPPORT_TEXT[support]}; it never attacks.`
       : noAttack
       ? `Its four neighbours attack this much faster (Lv ${level}, max +${pct(EFFECTS.buff.max)}).`
+      : def.id === "frog_alchemist"
+      ? `Puddle lasts ${+puddleTime(level, 0).toFixed(1)}s at Lv ${level}, +0.5s per power-up. Overlapping puddles don't stack.`
+      : def.id === "raccoon_thief"
+      ? `Mana pulse every ${raccoonEvery(level)}s at Lv ${level}; bottom row is mana per pulse, +3 per power-up.`
+      : vine
+      ? `Vine holds ${REWORKS.vine_druid.vine.hold}s (bosses ${REWORKS.vine_druid.vine.bossHold}s), regrows ${REWORKS.vine_druid.vine.regrow}s after it withers. Lv ${level}.`
       : `At your card level (Lv ${level}). Times are seconds between attacks.`;
     box.add(txt(this, cx, y - 6, foot, 18, "#9fb0e0").setWordWrapWidth(540));
     return box;

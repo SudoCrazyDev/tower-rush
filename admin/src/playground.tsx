@@ -2,6 +2,7 @@
  * Shared pieces of the Playground page: remembered settings, the board editor, the
  * awakened-art lookup and a debounced simulation hook.
  */
+import { mayAwaken } from "../../shared/awakened.ts";
 import { useEffect, useState } from "react";
 import { Modal, Select, Thumb } from "./components";
 import { ASSETS, asset } from "./api";
@@ -117,7 +118,7 @@ export function useAwakenable() {
       .then((r) => r.json())
       .then((idx: { anims?: Record<string, string[]>; hazy?: string[] }) => {
         const hazy = new Set(idx.hazy ?? []);
-        const ids = (idx.anims?.units_awakened ?? []).filter((n) => n.endsWith("_idle") && !hazy.has(`units_awakened/${n}`)).map((n) => n.slice(0, -5));
+        const ids = (idx.anims?.units_awakened ?? []).filter((n) => n.endsWith("_idle") && !hazy.has(`units_awakened/${n}`)).map((n) => n.slice(0, -5)).filter(mayAwaken);
         return (awakenable = new Set(ids));
       })
       .catch(() => new Set<string>());

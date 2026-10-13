@@ -529,6 +529,7 @@ p { margin: 0; }
 .dlg__role { font-size: 19px; color: #fff; }
 .dlg__fx { color: #7fffd4; }
 .dlg__perk { color: #ffd27a; }
+.dlg__rework { color: #ffd93b; font-size: 0.95em; }
 .dlg__blurb { color: #c9d2ff; font-family: var(--body); font-style: italic; font-weight: 700; }
 .dlg__quick { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 34px; margin: 14px 0 6px; font: 400 24px/1 var(--display); text-shadow: 0 2px 0 #000; }
 .dlg__quick span { display: inline-flex; align-items: center; gap: 10px; }

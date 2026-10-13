@@ -56,17 +56,45 @@ Damage and speed are the awakened multipliers on the unit's base stats. Numbers 
 
 **No awakened art, so they never awaken:** Penguin Wizard, Tesla Gnome, Cactus Gunslinger, Wind Sylph.
 
-## 6. Design note
+## 6. Rares
+
+Rule changes (numbers live in `shared/reworks.ts`; `liveDef()` applies kit changes so the Sim, card back and website agree):
+
+- **Frog Alchemist:** never awakens. Each attack drops a poison puddle (radius 70 px) that deals his hit per second.
+  - Lasts 5 s, +0.2 s per card level above 1, +0.5 s per in-battle power-up.
+  - Damage rises with rank (it is his hit). Overlapping puddles don't stack.
+- **Raccoon Thief:** base damage 10. A mana pulse comes every 6 s (0.1 s faster per card level above 1, min 3 s).
+  - Pays 5 mana, +2 per rank above 1, +3 per power-up.
+- **Vine Druid:** never attacks. Grows one prickly vine ahead of the front monster.
+  - Holds monsters for 3 s (bosses 1 s) and deals her hit per second to monsters in it. Regrows 6 s after it withers.
+- **Snowglobe Fairy:** base freeze chance 20% (was 12%); it still rises with rank.
+- **No awakening:** Imp Hunter, Frog Alchemist, Witch Doctor, Pumpkin Scarecrow, Ogre Chef, Emberhold Gunner, Runecaller.
+
+Awakened rares (multipliers from `shared/awakened.ts`; "field" ultimates are always on, with no charge and no echo):
+
+| Unit | Damage | Speed | Ultimate | Type | What it does |
+|---|---|---|---|---|---|
+| Ember Witch | ×3 | ×3 | Scorched Earth | Timer, 45 s | Scorches the whole path for 25 s. Every monster on it burns (50% of a hit per second), new waves too. |
+| Frost Sorceress | ×3 | ×3 | Winter Storm | Timer, 10 s | Slows every monster 50% for 4 s and freezes 5 random monsters for 3 s (bosses 1 s). |
+| Bee Keeper | ×0 | ×0 | Bee Hives | Always on | Stops attacking. 2 hives fire swarms at any monster: base 45 damage, 1.8 attacks/s, scaled like a unit (rank, card level, power-ups). |
+| Bear Rider | ×3 | ×3 | Iceborn Warmother | Passive | +150% damage to bosses. |
+| Gear Engineer | ×2 | ×4 | Overheat | Timer, 35 s | Overheats for 10 s: base attack speed 2/s, shots lose their splash. Then jams for 2 s. |
+| Sand Monk | ×1 | ×5 | Ultra Focused | Passive | Stun becomes a 65% chance to crit for ×2.5. Adds Giant Slayer on top of True Strike. |
+| Spore Sage | ×3 | ×3 | Mushroom Puff | Always on | A mushroom sprouts every 2 s (max 5) and grows for 3 s. The first monster to touch it bursts it: 90 px, 90% slow for 6 s plus poison (bosses 45%). |
+| Storm Totem | ×3 | ×3 | Rag Doll | Timer, 45 s | 4 rag dolls stand along the path for 15 s, then 30 s without. Monsters within 50 px are slowed 60% and zapped for a hit per second. |
+| Thunder Dwarf | ×3 | ×3 | Grace of Mjolnir | Passive | Every attack also chains lightning to up to 5 more monsters for 60% of the hit. |
+| Vine Druid | ×3 | ×1 | Vineyard | Always on | 3 stretches of each path stay overgrown. Monsters in them take her hit per second. Vines no longer block. |
+
+## 7. Design note
 - Awakened commons are intentionally stronger than the current mythics. Mythics are revamped later in 2.7.
 
-## 7. Placeholders (TBD)
-- **Rares:** TBD
+## 8. Placeholders (TBD)
 - **Epics:** TBD
 - **Legendaries:** TBD
 - **Mythics:** TBD (revamp follows the commons)
 - **Event units:** TBD
 
-## 8. Release checklist
+## 9. Release checklist
 - [ ] HOTFIXES entry `2.7.0-max-rank` in `shared/config.ts` (economy: `maxRank`).
 - [ ] `MIN_CLIENT` bumped to `2.7.0`.
 - [ ] Golden rewrite: `node scripts/golden.ts --write`.

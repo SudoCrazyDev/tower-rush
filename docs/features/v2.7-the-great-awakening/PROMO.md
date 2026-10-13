@@ -11,6 +11,10 @@
 Crown & Keep 2.7: The Great Awakening. Every unit gets a revamp, starting with the commons. Level up
 for faster attacks, merge to max rank sooner, and watch awakened units unleash their own ultimates.
 
+## Rares blurb (draft)
+Rares wake up too: the Frog Alchemist leaves poison puddles, the Raccoon Thief pulses mana, the Vine Druid grows
+prickly vines, and awakened rares bring Bee Hives, Winter Storm, Mushroom Puff, Rag Dolls and more.
+
 ## Graphics to make (in `promo/`)
 One per ultimate, Remotion compositions in `roadmap-video/src/promo/` (not written yet):
 1. Multi-Shot (Hooded Archer)

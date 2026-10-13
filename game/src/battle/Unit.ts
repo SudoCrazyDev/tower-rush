@@ -3,7 +3,8 @@ import { animKey, hasAnim, sheetScale, unitArt } from "../assets";
 import { fxKey, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
-import { ultEvery } from "../../../shared/awakened.ts";
+import { steam } from "./ultFx";
+import { mayAwaken, ultEvery } from "../../../shared/awakened.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
 import type { SimUnit } from "../../../shared/sim.ts";
@@ -15,7 +16,7 @@ export const UNIT_PX = 116;
 export const AWAKENED_PX = 132;
 
 /** Whether a unit has awakened art (and so awakens at max rank). */
-export const canAwaken = (id: string, arch?: string) => (!arch || !isSupport(arch as never)) && hasAnim("units_awakened", `${id}_idle`);
+export const canAwaken = (id: string, arch?: string) => (!arch || !isSupport(arch as never)) && mayAwaken(id) && hasAnim("units_awakened", `${id}_idle`);
 
 /**
  * A defender standing on one of the 15 board tiles: the sprite and badges for a SimUnit.
@@ -41,6 +42,7 @@ export class Unit {
   private aura: Phaser.GameObjects.Graphics | null = null;
   private ultRing: Phaser.GameObjects.Graphics | null = null;
   private ultDrawn = -1;
+  private steamAt = 0;
   /** v2 art: the element aura ring under an awakened unit (drawn when aura_<element> is built). */
   private auraRing: Phaser.GameObjects.Image | null = null;
   /** Shown while a neighbouring buff unit speeds this one up: icon and the bonus. */
@@ -366,7 +368,14 @@ export class Unit {
       this.envShown = true;
       return;
     }
-    const env = under ? 0x6fa8ff : now < s.status.glimmeredUntil ? 0xfff3b0 : now < scene.equalUntil ? 0xa8ffe8 : null;
+    // v2.7 Gear Engineer: Overheat glows orange-red, then the jam goes grey and steams.
+    const hot = this.awakened && now < s.overheatUntil;
+    const jam = this.awakened && !hot && now < s.jamUntil;
+    if (jam && this.scene.time.now > this.steamAt) {
+      this.steamAt = this.scene.time.now + 350;
+      steam(this.scene, this.sprite.x + (Math.random() - 0.5) * 30, this.sprite.y - 50);
+    }
+    const env = hot ? (Math.sin(now * 12) > 0 ? 0xff7a4a : 0xff4a2a) : jam ? 0x8a8f9a : under ? 0x6fa8ff : now < s.status.glimmeredUntil ? 0xfff3b0 : now < scene.equalUntil ? 0xa8ffe8 : null;
     if (env !== null) {
       this.sprite.setTint(env);
       this.sprite.setAlpha(under ? 0.55 + Math.sin(now * 4 + this.slot) * 0.08 : 1);

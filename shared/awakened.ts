@@ -162,7 +162,7 @@ export function ultText(id: string): string {
     case "mjolnir":
       return `Passive: every attack also chains lightning to up to ${p.jumps} more monsters for ${pct(p.damage)} of the hit.`;
     case "vineyard":
-      return `Passive: ${p.patches} stretches of the path are overgrown for good. Monsters in them take ${x(p.dps)} her hit per second. No blocking.`;
+      return `Passive: ${p.patches} stretches of the path are overgrown for good. Monsters in them take her hit every second. No blocking.`;
   }
 }
 

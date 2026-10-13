@@ -5,7 +5,7 @@ import { ASSETS, asset } from "../api";
 import { ARENAS } from "../../../shared/arenas.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, WEAPON_KEYS, maxCardLevel, maxPowerUp, maxRank, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
-import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultText } from "../../../shared/awakened.ts";
+import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultText, mayAwaken } from "../../../shared/awakened.ts";
 import { noAttack } from "../../../shared/support.ts";
 import { kitSummary, perkSummary } from "../../../shared/kit.ts";
 import { PERKS } from "../../../shared/perks.ts";
@@ -252,7 +252,7 @@ function UnitsBench() {
                 <div className="center"><Thumb src={asset("portraits_awakened", u.id)} size={96} /><div className="muted small">{canAwaken.has(u.id) ? "awakened" : "no awakened art"}</div></div>
               </div>
               <p className="muted small">Art is uploaded through the Art page. A unit awakens at rank {maxRank()} only when it has awakened art.</p>
-              <div className="small"><strong>Awakening:</strong> ×{awakenDamageMult(u.id)} damage, ×{awakenSpeedMult(u.id)} speed. <strong>{ultName(u.id)}</strong>{ultEvery(u.id) ? ` (every ${ultEvery(u.id)}s)` : " (passive)"}: {ultText(u.id)}</div>
+              {mayAwaken(u.id) ? <div className="small"><strong>Awakening:</strong> ×{awakenDamageMult(u.id)} damage, ×{awakenSpeedMult(u.id)} speed. <strong>{ultName(u.id)}</strong>{ultEvery(u.id) ? ` (every ${ultEvery(u.id)}s)` : " (passive)"}: {ultText(u.id)}</div> : <div className="small"><strong>Awakening:</strong> none (never awakens)</div>}
               <p className="muted small">Defined in code: shared/awakened.ts</p>
             </Section>
           </>

@@ -16,7 +16,8 @@ import {
   SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
 } from "../../shared/support.ts";
 import { storyUnlocking } from "../../shared/stories.ts";
-import { awakenBoostText, awakenDamageMult, awakenSpeedMult, ultName, ultText } from "../../shared/awakened.ts";
+import { awakenBoostText, awakenDamageMult, awakenSpeedMult, mayAwaken, ultName, ultText } from "../../shared/awakened.ts";
+import { liveDef, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../shared/reworks.ts";
 
 // Which art exists (awakened portraits, arena videos) comes from the live asset index on R2.
 const index = await (await fetch("https://assets.crownnkeep.com/index.json")).json();
@@ -55,22 +56,30 @@ function cardInfo(u) {
   const support = isSupport(arch) ? arch : null;
   const silent = noAttack(arch);
   const ri = rarityIndex(u.rarity);
-  const awakens = !support && awakenArt.has(u.id);
+  const awakens = !support && mayAwaken(u.id) && awakenArt.has(u.id);
   const st = STYLES[u.style];
 
   // Details tab.
   const role = (u.role ? `${u.role} · ` : "") + (arch === "buff" || (silent && u.role) ? "" : support ? "Support · " : `${st.label} · `);
-  const effects = kitSummary(u, 1, 1);
+  const effects = kitSummary(liveDef(u), 1, 1);
+  // v2.7 reworks: a short note on what changed about the attack (shown under the effect lines).
+  const rework = u.id === "frog_alchemist"
+    ? `Every flask leaves a poison puddle (${REWORKS.frog_alchemist.puddle.radius}px) that deals his hit each second for ${REWORKS.frog_alchemist.puddle.duration}s, +${REWORKS.frog_alchemist.puddle.perLevel}s per card level and +${REWORKS.frog_alchemist.puddle.perPowerUp}s per power-up. Puddles don't stack. He never awakens.`
+    : u.id === "raccoon_thief"
+    ? `A mana pulse every ${REWORKS.raccoon_thief.mana.every}s (${REWORKS.raccoon_thief.mana.perLevel}s faster per card level, min ${REWORKS.raccoon_thief.mana.minEvery}s) pays ${raccoonMana(1, 0)} mana, +${REWORKS.raccoon_thief.mana.perRank} per rank and +${REWORKS.raccoon_thief.mana.perPowerUp} per power-up.`
+    : u.id === "vine_druid"
+    ? `Never attacks. Grows a prickly vine ahead of the front monster: it holds monsters ${REWORKS.vine_druid.vine.hold}s (bosses ${REWORKS.vine_druid.vine.bossHold}s) and deals her hit each second. Regrows ${REWORKS.vine_druid.vine.regrow}s after it withers.`
+    : null;
   const perkLines = perkSummary(u).map((l) => `${arch === "buff" ? "Neighbours get " : ""}${l}`);
   const now = unitStats(u, 1, 1, 0);
   const quick = support || arch === "aegis" ? [["stats/attack_speed", "never attacks"]]
     : arch === "buff" ? [["stats/attack_speed", `neighbours +${pct(buffBonus(1, ri, 1))} faster`]]
     : arch === "aura" ? [["stats/attack_speed", `3×3 +${pct(auraBonus(1, 1).speed)} speed, +${pct(auraBonus(1, 1).damage)} dmg`]]
-    : [["stats/damage", fmt(now.damage)], ["stats/attack_speed", `every ${+(1 / now.speed).toFixed(2)}s`]];
+    : [["stats/damage", fmt(now.damage)], ["stats/attack_speed", u.id === "vine_druid" ? "never attacks" : `every ${+(1 / now.speed).toFixed(2)}s`]];
 
   // Stats tab: merge ranks and in-battle power-ups.
   const dmg = (v) => (silent ? "—" : v < 100 ? String(+v.toFixed(1)) : fmt(v));
-  const every = (s) => (silent ? "—" : `${+(1 / s).toFixed(2)}s`);
+  const every = (s) => (silent || u.id === "vine_druid" ? "—" : `${+(1 / s).toFixed(2)}s`);
   const buff = (rank, up, mult = 1) => {
     const m = (1 + up * ECONOMY.powerUpBonus) * mult;
     return support ? supportCell(support, rank, m) : arch === "aura" ? `+${pct(auraBonus(rank, m).speed)}` : arch === "aegis" ? "—" : `+${pct(buffBonus(rank, ri, m))}`;
@@ -85,7 +94,8 @@ function cardInfo(u) {
     raceColor: hex(RACES[u.race]?.color ?? 0xffffff),
     awakens,
     role: role + (support ? SUPPORT_TEXT[support] : ARCHETYPES[arch].label),
-    effects,
+    effects: rework && u.id !== "raccoon_thief" ? [] : effects,
+    rework,
     perkLines,
     quick,
     styleLine: silent ? null : `${st.label}: ${st.text}${u.style === "balanced" ? "" : ` · ×${+st.dmg.toFixed(2)} damage, ×${st.speed} speed`}`,
@@ -94,7 +104,7 @@ function cardInfo(u) {
       : silent
       ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(u.id)})` : ""}`
       : `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(u.id)} dmg, ×${awakenSpeedMult(u.id)} speed)` : ""}`,
-    levelNote: silent ? `+${pct(ECONOMY.levelBonus)} boost per card level` : `+${pct(ECONOMY.levelBonus)} damage, +${pct(ECONOMY.levelSpeedBonus)} attack speed per card level`,
+    levelNote: silent ? `+${pct(ECONOMY.levelBonus)} boost per card level` : `+${pct(ECONOMY.levelBonus)} damage, +${pct(ECONOMY.levelSpeedBonus)} attack speed per card level${u.id === "frog_alchemist" ? `; puddles last +${REWORKS.frog_alchemist.puddle.perLevel}s longer (${+puddleTime(1, 0).toFixed(1)}s at level 1)` : u.id === "raccoon_thief" ? `; the mana pulse comes ${REWORKS.raccoon_thief.mana.perLevel}s faster (${raccoonEvery(1)}s at level 1, min ${REWORKS.raccoon_thief.mana.minEvery}s)` : ""}`,
     ranks: {
       heads: ranks.map((r) => `★${r}`),
       rows: silent

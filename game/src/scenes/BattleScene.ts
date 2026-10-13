@@ -35,6 +35,7 @@ import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
 import { TribunalView } from "../battle/tribunalView";
 import { playUltimate } from "../battle/ultFx";
+import { FieldLayer } from "../battle/fields";
 import { arenaPaths, slotPos, type Path, type Pt } from "../battle/path";
 
 
@@ -103,6 +104,7 @@ export class BattleScene extends Phaser.Scene {
   private units = new Map<number, Unit>();
   private monsters = new Map<number, Monster>();
   private shotImgs = new Map<SimShot, ShotView>();
+  private fieldLayer: FieldLayer | null = null;
   private bubbleImgs = new Map<number, Phaser.GameObjects.Image>();
   /** Boss uids that had a stage or a power event in the batch being handled (they play their own clip). */
   private clipped = new Set<number>();
@@ -161,6 +163,7 @@ export class BattleScene extends Phaser.Scene {
     this.units = new Map();
     this.monsters = new Map();
     this.shotImgs = new Map();
+    this.fieldLayer = null;
     this.bubbleImgs = new Map();
     this.hearts = [];
     this.deckCards = [];
@@ -957,6 +960,7 @@ export class BattleScene extends Phaser.Scene {
       else m.update(ahead);
     }
     this.updateShots(ahead);
+    (this.fieldLayer ??= new FieldLayer(this)).update();
     this.updateTethers();
     this.refreshHeroButton();
     this.updateBossBar();
@@ -979,6 +983,10 @@ export class BattleScene extends Phaser.Scene {
       if (!img) {
         const def = s.unit.def;
         img = new ShotView(this, def, s.x, s.y);
+        if (s.kind === "bee" && this.textures.exists("vfx:bee_swarm")) {
+          img.img.setTexture("vfx:bee_swarm");
+          img.img.setScale(60 / Math.max(1, img.img.width));
+        }
         sfx("shoot", def.proj);
         this.shotImgs.set(s, img);
       }
@@ -987,6 +995,7 @@ export class BattleScene extends Phaser.Scene {
       const d = Math.hypot(dx, dy) || 1;
       const glide = Math.min(Math.max(0, d - 4), s.speed * ahead);
       img.move(s.x + (dx / d) * glide, s.y + (dy / d) * glide, Math.atan2(dy, dx));
+      if (s.kind === "bee") img.img.setRotation(Math.sin(this.time.now / 60 + s.x) * 0.35);
     }
   }
 
