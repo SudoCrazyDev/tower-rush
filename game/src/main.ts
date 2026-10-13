@@ -9,6 +9,7 @@ import { BattleScene } from "./scenes/BattleScene";
 import { PvpMenuScene } from "./scenes/PvpMenuScene";
 import { PvpScene } from "./scenes/PvpScene";
 import { StoryScene } from "./scenes/StoryScene";
+import { LabScene } from "./scenes/LabScene";
 import { W, H, WIDE, ARENA_W, setWidth } from "./ui";
 import { RES } from "./display";
 import { setOnBanned, setOnOutdated, setToken } from "./api";
@@ -85,7 +86,7 @@ async function start() {
     render: { antialias: true, roundPixels: false },
     // ?timer drives the loop with setTimeout, for testing in background tabs.
     fps: { target: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
-    scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene, PvpMenuScene, PvpScene, StoryScene],
+    scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene, PvpMenuScene, PvpScene, StoryScene, LabScene],
   });
   if (!WIDE && W > ARENA_W) {
     // Phones wider than the 752 layout: menus fill the screen's width, while battles keep the

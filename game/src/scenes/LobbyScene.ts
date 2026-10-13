@@ -196,6 +196,11 @@ export class LobbyScene extends Phaser.Scene {
       button(this, W / 2, 1530, 220, 110, "PVP", "red", () => this.scene.start("PvpMenu"), 40);
       button(this, W / 2 + 240, 1530, 220, 110, "SHOP", "green", () => this.scene.start("Shop"), 40);
     }
+    // Staging and dev builds only: the Unit Lab (test units on the meadow).
+    if (import.meta.env.DEV || import.meta.env.MODE === "staging") {
+      if (WIDE) button(this, deckX, 1090, 340, 80, "UNIT LAB", "yellow", () => this.scene.start("Lab"), 34);
+      else button(this, 100, 1180, 170, 64, "UNIT LAB", "yellow", () => this.scene.start("Lab"), 26);
+    }
     // The install pill shares the event strip's spot, so a live event wins it.
     if (!eventStrip(this)) installStrip(this);
     // Static shapes become cached images (see bake.ts).

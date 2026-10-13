@@ -99,6 +99,8 @@ export class BattleScene extends Phaser.Scene {
   private battleId: Promise<number | null> = Promise.resolve(null);
   private pauseMenu: ReturnType<typeof modal> | null = null;
   deck: string[] = [];
+  /** Unit Lab (staging / dev only): a battle with picked units, lots of mana, and no server or profile effects. */
+  private lab: { deck: string[]; level: number } | null = null;
 
   /** Sprites of the Sim's units and monsters, by uid. */
   private units = new Map<number, Unit>();
@@ -149,11 +151,12 @@ export class BattleScene extends Phaser.Scene {
     super("Battle");
   }
 
-  init(data: { arena?: string; story?: { chapter: string; start: StoryStart } }) {
+  init(data: { arena?: string; story?: { chapter: string; start: StoryStart }; lab?: { deck: string[]; level: number } }) {
+    this.lab = (import.meta.env.DEV || import.meta.env.MODE === "staging") && data.lab && !data.story ? data.lab : null;
     const f = data.story ? findChapter(data.story.chapter) : null;
     this.story = f && data.story ? { def: f.story, chapter: f.chapter, start: data.story.start } : null;
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
-    this.deck = this.story ? [...this.story.start.deck] : [...profile.deck];
+    this.deck = this.lab ? this.lab.deck.filter((id) => UNIT_BY_ID[id]) : this.story ? [...this.story.start.deck] : [...profile.deck];
     this.tethers = null;
     this.tideView = this.faceless = this.oath = this.tribunal = null;
     this.equalUntil = 0;
@@ -188,7 +191,7 @@ export class BattleScene extends Phaser.Scene {
       bossIntro: (id) => hasAnim("bosses", `${id}_intro`),
       autoHero: this.autoCast,
       story: this.story?.chapter,
-      startMana: ECONOMY.startMana,
+      startMana: this.lab ? 999999 : ECONOMY.startMana,
       bubbles: true,
       timelineCap: 64,
       view: true,
@@ -255,7 +258,7 @@ export class BattleScene extends Phaser.Scene {
 
     const a = this.arena;
     // A story chapter was started on the server before the scene (the server chose its deck).
-    this.battleId = this.story ? Promise.resolve(this.story.start.battleId) : startBattle(a.id).catch(() => null);
+    this.battleId = this.lab ? Promise.resolve(null) : this.story ? Promise.resolve(this.story.start.battleId) : startBattle(a.id).catch(() => null);
     this.paths = arenaPaths(a);
     const tint = this.story?.chapter.tint ? Phaser.Display.Color.HexStringToColor(this.story.chapter.tint).color : null;
     const bg = this.add.image(0, 0, this.artKey).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
@@ -305,7 +308,7 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.timeScale = 1;
     });
     this.refreshHud();
-    if (tutorialDue("battle")) this.runTutorial();
+    if (!this.lab && tutorialDue("battle")) this.runTutorial();
   }
 
   private makeAnims() {
@@ -330,7 +333,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   cardLevel(id: string) {
-    return this.story?.start.levels[id] ?? cardLevel(id);
+    return this.lab?.level ?? this.story?.start.levels[id] ?? cardLevel(id);
   }
 
   /** Background art: the arena's, or the story chapter's. */
@@ -423,7 +426,19 @@ export class BattleScene extends Phaser.Scene {
       const cost = txt(this, 10, 67, "100", 22);
       const root = hud(this.add.container(x, y, [frame, portrait, pips, costBg, orb, cost]).setDepth(3010));
       root.setSize(104, 136).setScale(WIDE ? 1.25 : 1);
-      pressable(root, () => this.powerUp(id));
+      if (this.lab) {
+        // Lab: tap summons this unit; hold (450ms) powers it up.
+        let timer: Phaser.Time.TimerEvent | null = null;
+        let held = false;
+        root.on("pointerdown", () => {
+          held = false;
+          timer = this.time.delayedCall(450, () => ((held = true), this.powerUp(id)));
+        });
+        const cancel = () => timer?.remove();
+        root.on("pointerout", cancel);
+        root.on("pointerup", cancel);
+        pressable(root, () => !held && this.labSummon(id));
+      } else pressable(root, () => this.powerUp(id));
       this.deckCards.push({ root, cost, pips, id });
     });
 
@@ -447,6 +462,10 @@ export class BattleScene extends Phaser.Scene {
     if (import.meta.env.DEV || import.meta.env.MODE === "staging") {
       const t = button(this, WIDE ? R : W - 130, WIDE ? 1010 : H - 200, 220, 64, `TEST ★${maxRank()}`, "red", () => this.sim.testMaxRankAll());
       hud(t.setDepth(3010));
+    }
+
+    if (this.lab) {
+      hud(txt(this, WIDE ? L : 24, WIDE ? 255 : 66, "UNIT LAB  ·  tap card: summon, hold: power up", WIDE ? 24 : 20, "#7dff7a", WIDE ? [0.5, 0.5] : [0, 0.5]).setDepth(3000).setWordWrapWidth(WIDE ? ox - 30 : ARENA_W - 40));
     }
 
     // Speed + pause.
@@ -636,6 +655,14 @@ export class BattleScene extends Phaser.Scene {
       sfx("error");
       return;
     }
+    this.pump();
+    this.refreshHud();
+  }
+
+  /** Unit Lab: summon this specific unit onto a random empty tile. */
+  private labSummon(id: string) {
+    if (this.over || this.paused) return;
+    if (!this.sim.summon({ id })) return void sfx("error");
     this.pump();
     this.refreshHud();
   }
@@ -1726,7 +1753,7 @@ export class BattleScene extends Phaser.Scene {
     releasePlay();
     const sim = this.sim;
     // Left mid-tutorial (surrendered): it still only runs once.
-    if (sim.tutorialHold) setTutorialDone("battle");
+    if (sim.tutorialHold && !this.lab) setTutorialDone("battle");
     music(null);
     const c = sim.counts;
     const stats = {
@@ -1757,6 +1784,17 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(won ? 1200 : 500, () =>
         storyResult(this, { story: story.def, chapter: story.chapter, won, why, stars: won ? sim.stars ?? 0 : 0, wave: stats.wave, result, objectives }),
       );
+      return;
+    }
+    if (this.lab) {
+      this.time.delayedCall(500, () => {
+        const m = modal(this, 600, 520, "");
+        m.add(txt(this, m.cx, m.cy - 150, "LAB OVER", 44, "#ffd27a"));
+        m.add(txt(this, m.cx, m.cy - 80, `Wave ${stats.wave}  ·  ${stats.kills} kills`, 32, "#fff4c2"));
+        if (why) m.add(txt(this, m.cx, m.cy - 30, why, 24, "#c9d2ff"));
+        m.add(button(this, m.cx, m.cy + 70, 360, 96, "AGAIN", "green", () => this.scene.restart()));
+        m.add(button(this, m.cx, m.cy + 190, 360, 96, "BACK TO LAB", "blue", () => this.scene.start("Lab")));
+      });
       return;
     }
     const doneBefore = new Set(profile.daily.quests.filter(questDone).map((q) => q.id));
