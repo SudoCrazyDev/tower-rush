@@ -1101,6 +1101,16 @@ export class Sim {
     return v;
   }
 
+  /** Unit Lab: the number the next wave starts as (see labWave). */
+  private labNext: number | null = null;
+
+  /** Unit Lab only: the next wave to start is `n` (its monsters and boss scale to it). Between waves it starts at once. */
+  labWave(n: number) {
+    if (this.over || !this.o.freeMove) return;
+    this.labNext = Math.max(1, Math.floor(n));
+    if (this.waveState === "intro") this.introTimer = Math.min(this.introTimer, 0.3);
+  }
+
   /** Test builds only (staging, dev; see BattleScene): every unit on the board jumps to max rank and awakens where it can. */
   testMaxRankAll() {
     for (const u of [...this.units]) if (u && !u.dragging && !u.jailed && u.rank < maxRank()) this.become(u, u.def.id, maxRank(), "copy");
@@ -1151,6 +1161,10 @@ export class Sim {
   }
 
   private startWave(forceBoss?: BossDef, escort = true) {
+    if (this.labNext !== null) {
+      this.wave = this.labNext - 1;
+      this.labNext = null;
+    }
     this.wave++;
     const n = this.wave;
     const e = ECONOMY;

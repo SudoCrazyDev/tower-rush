@@ -513,6 +513,7 @@ export class BattleScene extends Phaser.Scene {
           hud(txt(this, L, 432 + i * 30, line, 22, "#c9f5c0").setDepth(3000)),
         );
       } else hud(txt(this, 24, 66, "LAB · tap card + tile · hold: power up · drag to move", 18, "#7dff7a", [0, 0.5]).setDepth(3000));
+      this.labWavePicker(hud, WIDE ? R : W - 150, WIDE ? 760 : H - 600);
     }
 
     // Speed + pause.
@@ -707,6 +708,27 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Unit Lab: the deck card picked for placing (tap empty tiles to place it), highlighted. */
+  /** Unit Lab: pick the next wave's number (−10/−1/+1/+10), then GO. */
+  private labWavePicker(hud: <T extends Phaser.GameObjects.GameObject & { setScrollFactor(x: number): T }>(o: T) => T, x: number, y: number) {
+    let n = 10;
+    const s = WIDE ? 1 : 0.8;
+    hud(txt(this, x, y, "NEXT WAVE", Math.round(26 * s), "#7dff7a").setDepth(3000));
+    const value = hud(txt(this, x, y + 50 * s, String(n), Math.round(34 * s), "#ffffff").setDepth(3010));
+    const go = hud(button(this, x, y + 112 * s, 240 * s, 60 * s, `GO TO WAVE ${n}`, "blue", () => {
+      this.sim.labWave(n);
+      this.floater(ARENA_W / 2, 300, `WAVE ${n} IS NEXT`, "#7dff7a", 34);
+    }).setDepth(3010));
+    const bump = (d: number) => {
+      n = Math.max(1, Math.min(999, n + d));
+      value.setText(String(n));
+      go.label.setText(`GO TO WAVE ${n}`);
+    };
+    [-10, -1, 1, 10].forEach((d, i) => {
+      const bx = x + [-150, -82, 82, 150][i] * s;
+      hud(button(this, bx, y + 50 * s, 60 * s, 52 * s, d > 0 ? `+${d}` : `${d}`, d > 0 ? "green" : "red", () => bump(d), Math.round(20 * s)).setDepth(3010));
+    });
+  }
+
   private labArmed: string | null = null;
   private labArm(id: string | null) {
     this.labArmed = id;
