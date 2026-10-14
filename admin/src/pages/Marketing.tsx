@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "../api";
 import { PageHead, Stat, toast } from "../components";
+import type { ArtRow } from "../../../shared/art-requests.ts";
 import {
   CREDITS_BUFFER,
   CREDITS_LEFT,
@@ -21,6 +23,23 @@ const copy = async (text: string, what: string) => {
 
 export function MarketingPage() {
   const [week, setWeek] = useState(0);
+  // Still links and finished clips reuse the art_requests table under mkt:w<week>d<day> ids.
+  const [rows, setRows] = useState<Record<string, ArtRow>>({});
+  useEffect(() => {
+    api<ArtRow[]>("GET", "/art")
+      .then((list) => setRows(Object.fromEntries(list.filter((r) => r.id.startsWith("mkt:")).map((r) => [r.id, r]))))
+      .catch((e) => toast(e.message, "err"));
+  }, []);
+  const save = async (id: string, url: string) => {
+    const cur = rows[id];
+    try {
+      const saved = await api<ArtRow>("PUT", `/art/${encodeURIComponent(id)}`, { url, status: cur?.status ?? "todo", notes: cur?.notes ?? "" });
+      setRows((r) => ({ ...r, [id]: saved }));
+    } catch (e) {
+      toast((e as Error).message, "err");
+    }
+  };
+  const stillsIn = Object.values(rows).filter((r) => r.url).length;
   const total = Math.round(PLAN.reduce((s, w) => s + weekCost(w), 0) * 100) / 100;
   const paidDays = PLAN.flatMap((w) => w.days).filter((d) => THEMES[d.theme].paid).length;
   const w = PLAN[week];
@@ -35,6 +54,7 @@ export function MarketingPage() {
         <Stat label="Credits left" value={CREDITS_LEFT} sub="Higgsfield, 2026-10-14" />
         <Stat label="Planned spend" value={total} sub={`${paidDays} paid days × ${PAID_DAY_COST}`} />
         <Stat label="Buffer" value={Math.round((CREDITS_LEFT - total) * 100) / 100} sub={`Target ${CREDITS_BUFFER} for retries and a trailer shot`} />
+        <Stat label="Stills in" value={`${stillsIn} / ${paidDays}`} sub="Paste each still's Higgsfield link below" />
         <Stat label="Schedule" value={`${planDate(0, 0)} → ${planDate(PLAN.length - 1, 6)}`} sub={`${PLAN.length} weeks, ${PLAN.length * 7} posts`} />
       </div>
 
@@ -68,7 +88,13 @@ export function MarketingPage() {
           </thead>
           <tbody>
             {w.days.map((d, i) => (
-              <DayRow key={`${week}-${i}`} day={d} date={`${WEEKDAYS[i]} ${planDate(week, i)}`} />
+              <DayRow
+                key={`${week}-${i}`}
+                day={d}
+                date={`${WEEKDAYS[i]} ${planDate(week, i)}`}
+                row={rows[`mkt:w${week + 1}d${i + 1}`]}
+                onSave={(url) => save(`mkt:w${week + 1}d${i + 1}`, url)}
+              />
             ))}
           </tbody>
         </table>
@@ -77,9 +103,13 @@ export function MarketingPage() {
   );
 }
 
-function DayRow({ day, date }: { day: PlanDay; date: string }) {
+function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: ArtRow; onSave: (url: string) => void }) {
   const t = THEMES[day.theme];
   const posts = platformCopy(day);
+  const [url, setUrl] = useState(row?.url ?? "");
+  useEffect(() => setUrl(row?.url ?? ""), [row?.url]);
+  // Finished clip links, one per line, written into notes when the videos are generated.
+  const clips = (row?.notes ?? "").split(/\s+/).filter((l) => l.startsWith("https://"));
   return (
     <tr>
       <td>
@@ -100,9 +130,23 @@ function DayRow({ day, date }: { day: PlanDay; date: string }) {
           <strong>{t.paid ? "Still (website, 0 credits):" : "Record:"}</strong> {day.still}
         </div>
         {t.paid && (
-          <button className="btn small" onClick={() => copy(day.still, "the still prompt")}>
-            Copy still prompt
-          </button>
+          <div className="art-link">
+            <button className="btn small" onClick={() => copy(day.still, "the still prompt")}>
+              Copy still prompt
+            </button>
+            <input
+              placeholder="Paste the still's Higgsfield link"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onBlur={() => url !== (row?.url ?? "") && onSave(url)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+            />
+            {row?.url && (
+              <a href={row.url} target="_blank" rel="noreferrer">
+                <img className="thumb" src={row.url} width={72} height={128} alt="" loading="lazy" />
+              </a>
+            )}
+          </div>
         )}
         {day.clips.length > 0 && (
           <ol className="small">
@@ -126,6 +170,16 @@ function DayRow({ day, date }: { day: PlanDay; date: string }) {
           ))}
         </div>
         <div className="muted small">{day.caption}</div>
+        {clips.length > 0 && (
+          <div className="small">
+            Clips:{" "}
+            {clips.map((c, i) => (
+              <a key={c} href={c} target="_blank" rel="noreferrer">
+                {i + 1}{" "}
+              </a>
+            ))}
+          </div>
+        )}
       </td>
     </tr>
   );
