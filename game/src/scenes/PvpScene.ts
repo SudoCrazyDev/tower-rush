@@ -29,6 +29,7 @@ import { tierBadge } from "./ranked";
 import { PVP, matchModeName, tierFor, type BoardSnap, type MatchResult, type MatchSetup, type SendDef, type ServerMsg } from "../../../shared/pvp.ts";
 import { PvpBoard, SIM_DT } from "../../../shared/pvpsim.ts";
 import { ShotView } from "../battle/vfx";
+import { BoardPortal } from "../battle/portalView";
 import { PvpBot, botSkill } from "../../../shared/pvpbot.ts";
 import type { SimFx, SimMonster, SimShot, SimUnit } from "../../../shared/sim.ts";
 import type { Promotion } from "../../../shared/profile.ts";
@@ -113,6 +114,8 @@ export class PvpScene extends Phaser.Scene {
   private versus: Phaser.GameObjects.Container | null = null;
   private dragging = -1;
   private highlights: Phaser.GameObjects.Image[] = [];
+  /** v2.7.1: opens under my locked board; a unit dropped in leaves for part of its worth. */
+  private portal: BoardPortal | null = null;
 
   // HUD
   private waveText!: Phaser.GameObjects.Text;
@@ -256,6 +259,7 @@ export class PvpScene extends Phaser.Scene {
     if (this.duel) this.favor = new CrowdFavor(this, this.board, ARENA_W / 2, ARENA_H - 24, (o) => this.hud(o), (t) => this.crowdText(t));
     this.miniFrame();
     this.setupDrag();
+    this.portal = new BoardPortal(this, this.arena);
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
     this.input.keyboard?.on("keydown-H", () => this.castHero());
     this.showVersus();
@@ -649,6 +653,7 @@ export class PvpScene extends Phaser.Scene {
     }
     const frac = Math.max(0, Math.min(1, (t - b.ticks * SIM_DT) / SIM_DT));
     this.drawUnits();
+    this.portal?.update(b);
     this.drawMonsters(this.done ? 0 : frac);
     this.drawShots();
     this.drawFx();
@@ -1090,6 +1095,7 @@ export class PvpScene extends Phaser.Scene {
       if (!u || this.done) return;
       this.dragging = slot!;
       obj.setDepth(2500);
+      if (this.board.locked && this.board.canBanish(slot!)) this.portal?.setHot(true);
       const mime = this.board.mimeReady(slot!);
       const portal = this.board.portalReady(slot!);
       this.board.units.forEach((o, i) => {
@@ -1110,6 +1116,25 @@ export class PvpScene extends Phaser.Scene {
       const from = obj.getData("slot") as number;
       if (from !== this.dragging) return;
       this.dragging = -1;
+      this.portal?.setHot(false);
+      // Into the open portal: the unit leaves (awakened units stay).
+      if (this.portal?.hit(obj.x, obj.y)) {
+        const gone = this.board.units[from];
+        const before = this.board.mana;
+        if (gone && this.board.apply({ t: "banish", slot: from })) {
+          const back = Math.round(this.board.mana - before);
+          this.vfx("arcane_vortex", this.portal.x, this.portal.y, 190);
+          floatText(this, this.portal.x, this.portal.y - 80, `+${back}`, "#c9a8ff", 30);
+          this.portal.swallow();
+          sfx("summon");
+          return;
+        }
+        const p = slotPos(this.arena, from);
+        obj.setPosition(p.x, p.y).setDepth(100 + p.y);
+        sfx("error");
+        floatText(this, p.x, p.y - 80, gone?.awakened ? "Awakened units stay" : "Can't go through", "#ffb0b0", 24);
+        return;
+      }
       // Nearest tile: a merge or Mime copy on a unit, a Portal Imp swap or hop.
       let to = -1;
       let best = 60;

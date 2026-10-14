@@ -20,6 +20,7 @@ const GROUPS: { title: string; desc?: string; fields: [NumKey | ListKey, string,
       ["powerUpBonus", "Damage bonus per power-up level (0.15 = +15%)", 0.01],
       ["rankDamageStep", "Damage per merge rank (1 = rank 5 does 5×)", 0.1],
       ["rankSpeedStep", "Attack speed per merge rank (0.08 = +8%)", 0.01],
+      ["portalRefund", "Portal refund: share of summon cost x rank returned (0.4 = 40%)", 0.05],
     ],
   },
   {

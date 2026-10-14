@@ -23,6 +23,8 @@ export type PvpAction =
   | { t: "swap"; from: number; to: number }
   /** Portal Imp `from` jumps to the empty tile `to`. */
   | { t: "hop"; from: number; to: number }
+  /** Locked board: the unit on `slot` goes through the portal (v2.7.1). */
+  | { t: "banish"; slot: number }
   | { t: "power"; id: string }
   | { t: "hero" }
   | { t: "autohero"; on: boolean }
@@ -260,6 +262,8 @@ export class PvpBoard extends Sim {
         return this.swap(a.from, a.to);
       case "hop":
         return this.hop(a.from, a.to);
+      case "banish":
+        return this.banish(a.slot);
       case "power":
         return this.powerUp(a.id);
       case "hero":

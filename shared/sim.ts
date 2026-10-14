@@ -231,8 +231,8 @@ export type SimEvent =
   | { type: "law"; t: number; law: LawId | null; decree: LawId | null; until: number | null }
   /** A unit was jailed (disabled) by a law, or freed. */
   | { type: "jail"; t: number; uid: number; on: boolean; law: LawId | null; x: number; y: number }
-  /** A unit left the board: the witness (or the unit it replaced, `lent`) at the end of a count, a condemned unit, a tile that fell. `mana` was refunded. */
-  | { type: "unit_gone"; t: number; uid: number; why: "witness" | "lent" | "condemned" | "fell"; x: number; y: number; mana: number }
+  /** A unit left the board: the witness (or the unit it replaced, `lent`) at the end of a count, a condemned unit, a tile that fell, a unit sent through the portal. `mana` was refunded. */
+  | { type: "unit_gone"; t: number; uid: number; why: "witness" | "lent" | "condemned" | "fell" | "portal"; x: number; y: number; mana: number }
   /** A unit was chained in place (`on`, `hp` links of `max`), or its chain broke. */
   | { type: "shackle"; t: number; uid: number; on: boolean; hp: number; max: number; x: number; y: number }
   /** A cell took a hit, or broke (`broken`) and returned `card` to the hand. */
@@ -2168,6 +2168,38 @@ export class Sim {
     this.units[from] = null;
     this.recomputeBuffs();
     this.emit({ type: "swap", t: this.now, uid: x.uid, other: null, from, to });
+    return true;
+  }
+
+  /** v2.7.1: the board is stuck: no free tile to summon onto and no two units that could merge. The portal opens. */
+  get locked() {
+    if (this.over || this.units.some((u, i) => !u && !this.fallen.has(i))) return false;
+    if (!this.deck.length) return true;
+    const seen = new Set<string>();
+    for (const u of this.units) {
+      if (!u || u.rank >= maxRank()) continue;
+      const k = `${u.def.id}:${u.rank}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+    }
+    return true;
+  }
+
+  /** Whether the unit on `slot` may go through the portal: a deck unit, not awakened, not a witness. */
+  canBanish(slot: number) {
+    const u = this.units[slot];
+    return !!u && !u.awakened && !u.witness && this.deck.includes(u.def.id);
+  }
+
+  /** v2.7.1: on a locked board, the unit on `slot` goes through the portal; part of its worth comes back as mana. */
+  banish(slot: number) {
+    const u = this.units[slot];
+    if (!u || !this.locked || !this.canBanish(slot)) return false;
+    this.units[slot] = null;
+    const back = Math.round(this.summonCost * ECONOMY.portalRefund * u.rank);
+    this.gainMana(back, u.x, u.y - 40, "other");
+    this.recomputeBuffs();
+    this.emit({ type: "unit_gone", t: this.now, uid: u.uid, why: "portal", x: u.x, y: u.y, mana: back });
     return true;
   }
 

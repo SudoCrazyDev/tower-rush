@@ -34,6 +34,7 @@ import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
 import { TribunalView } from "../battle/tribunalView";
+import { BoardPortal } from "../battle/portalView";
 import { playUltimate, fistStrike, icebornHit, mjolnirBolt } from "../battle/ultFx";
 import { MJOLNIR_COLOR } from "../../../shared/ultimates.ts";
 import { FieldLayer } from "../battle/fields";
@@ -123,6 +124,8 @@ export class BattleScene extends Phaser.Scene {
   private oath: OathView | null = null;
   /** v2.4 The Silver Tribunal visuals (pleas, laws, jail, cells, pans, falling city, sentence). */
   private tribunal: TribunalView | null = null;
+  /** v2.7.1: opens under a locked board; a unit dropped in leaves for part of its worth. */
+  private portal: BoardPortal | null = null;
   /** Equal ground: units wear the balance tint until this sim time. */
   equalUntil = 0;
   /** Chaos Taffy tethers, redrawn every frame. */
@@ -283,6 +286,8 @@ export class BattleScene extends Phaser.Scene {
 
     this.buildHud();
     this.setupDrag();
+    // Lab boards are built by hand, so no portal there.
+    if (!this.lab) this.portal = new BoardPortal(this, this.arena);
     if (this.story) {
       this.tideView = new TideView(this, this.story.chapter.mechanics);
       if (this.textures.exists(`${this.artKey}_high`)) this.tideView.highArt(`${this.artKey}_high`, tint);
@@ -896,6 +901,7 @@ export class BattleScene extends Phaser.Scene {
           this.highlights.push(this.add.image(p.x, p.y + 6, "ui:tile_highlight_valid").setDisplaySize(104, 104).setDepth(94).setTint(0xff8fd8).setAlpha(0.55));
         }
       }
+      if (this.sim.locked && this.sim.canBanish(u.slot)) this.portal?.setHot(true);
       const mime = kitPrimary(u.def) === "mime" && this.sim.mimeReady(u.slot);
       const portal = kitPrimary(u.def) === "portal" && this.sim.portalReady(u.slot);
       this.sim.units.forEach((other, slot) => {
@@ -915,6 +921,7 @@ export class BattleScene extends Phaser.Scene {
       const u = obj.unit;
       this.highlights.forEach((h) => h.destroy());
       this.highlights = [];
+      this.portal?.setHot(false);
       if (u && u === shaker) {
         shaker = null;
         if (!this.over && !this.paused && this.sim.shake(u.slot)) {
@@ -948,7 +955,10 @@ export class BattleScene extends Phaser.Scene {
         this.pump();
         this.refreshHud();
       };
-      if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank()) {
+      if (this.portal?.hit(obj.x, obj.y)) {
+        if (!sim.canBanish(from)) this.refuse(u, u.awakened ? "Awakened units stay" : "Can't go through");
+        else done(sim.banish(from));
+      } else if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank()) {
         done(sim.merge(from, target.slot));
       } else if (target && target !== u && kitPrimary(u.def) === "mime") {
         if (!sim.mimeReady(from)) this.refuse(u, `Ready in ${Math.ceil(mimePrep(this.supportMult(u)) - u.sim.timer)}s`);
@@ -1084,6 +1094,7 @@ export class BattleScene extends Phaser.Scene {
     this.tideView?.update(delta / 1000);
     this.oath?.update();
     this.tribunal?.update();
+    this.portal?.update(sim);
   }
 
   /** Sim shots become projectile sprites: one per shot, gliding on between steps. */
@@ -1426,9 +1437,19 @@ export class BattleScene extends Phaser.Scene {
       case "cell":
       case "crush":
       case "collapse":
-      case "unit_gone":
       case "sentence":
         this.tribunal?.handle(e);
+        break;
+      case "unit_gone":
+        if (e.why !== "portal") {
+          this.tribunal?.handle(e);
+          break;
+        }
+        this.removeUnit(e.uid);
+        this.vfx("arcane_vortex", this.portal?.x ?? e.x, this.portal?.y ?? e.y, 190);
+        this.floater(this.portal?.x ?? e.x, (this.portal?.y ?? e.y) - 80, `+${e.mana}`, "#c9a8ff", 30);
+        this.portal?.swallow();
+        sfx("summon");
         break;
       case "family":
       case "dive":

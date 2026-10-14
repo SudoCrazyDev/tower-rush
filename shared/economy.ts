@@ -11,6 +11,8 @@ export interface Economy {
   powerUpBonus: number;
   rankDamageStep: number;
   rankSpeedStep: number;
+  /** v2.7.1: share of a unit's worth (summon cost x rank) refunded when it is sent through the portal of a locked board. */
+  portalRefund: number;
   // awakening (a unit merged to max rank with awakened art)
   /** Highest merge rank; reaching it awakens a unit. Each rank doubles the summons needed. */
   maxRank: number;
@@ -77,6 +79,7 @@ export const DEFAULT_ECONOMY: Economy = {
   powerUpBonus: 0.15,
   rankDamageStep: 1,
   rankSpeedStep: 0.08,
+  portalRefund: 0.4,
   maxRank: 5,
   awakenDamageMult: 1.5,
   awakenSpeedMult: 1.2,

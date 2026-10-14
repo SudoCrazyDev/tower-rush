@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.7.1
+- Portal: when the board is locked (every tile taken and no two units can merge), a portal opens under the board. Drag a unit into it and it leaves the board, refunding 40% of its worth (summon cost x rank, `ECONOMY.portalRefund`) as mana. Awakened units, chapter heroes and witnesses can't go through. The portal closes as soon as a tile is free or a merge is possible. Solo battles and PvP (new `banish` action); not in the Unit Lab. Art: `ui/board_portal` (a ring of rune stones around a violet vortex, GPT Image 2.5), with the arcane vortex spinning on top; a drawn rim stands in if the art is missing.
+
 ## 2.7.0 "The Great Awakening"
 Full design: `docs/features/v2.7-the-great-awakening/README.md`.
 - Max merge rank 7 to 5 (HOTFIXES `2.7.0-max-rank`): awakening needs 15 summons instead of 63. The Trial's witness drops to rank 4 (`2.7.0-witness-rank`).
