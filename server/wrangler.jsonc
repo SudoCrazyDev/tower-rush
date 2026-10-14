@@ -42,7 +42,7 @@
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ALLOWED_ORIGINS": "https://game.crownnkeep.com,https://manage.crownnkeep.com",
-    "MIN_CLIENT": "2.5.0",
+    "MIN_CLIENT": "2.7.0",
     "GAME_URL": "https://game.crownnkeep.com/",
     "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
     "TURNSTILE_HOSTNAMES": "game.crownnkeep.com"

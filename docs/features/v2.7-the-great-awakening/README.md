@@ -1,6 +1,6 @@
 # v2.7.0 "The Great Awakening" (working title)
 
-**Status:** in progress · **Version:** game `2.7.0` + API · **MIN_CLIENT:** `2.7.0` · **Promo kit:** [PROMO.md](PROMO.md)
+**Status:** live 2026-10-14 · **Version:** game `2.7.0` + API · **MIN_CLIENT:** `2.7.0` · **Promo kit:** [PROMO.md](PROMO.md)
 
 A revamp of every unit, done rarity by rarity. Commons come first and are fully specified below.
 Rares, Epics, Legendaries, Mythics and event units are placeholders until their pass is designed.
@@ -129,13 +129,13 @@ The user's designs. Void Titan and Chrono Mage are mythics, done with this pass.
 - **Event units:** TBD
 
 ## 9. Release checklist
-- [ ] HOTFIXES entry `2.7.0-max-rank` in `shared/config.ts` (economy: `maxRank`).
-- [ ] `MIN_CLIENT` bumped to `2.7.0`.
-- [ ] Golden rewrite: `node scripts/golden.ts --write`.
-- [ ] Website export.
-- [ ] `whatsNew` entry.
-- [ ] CHANGELOGs (game and API).
-- [ ] Game and API deployed together.
+- [x] HOTFIXES entry `2.7.0-max-rank` in `shared/config.ts` (economy: `maxRank`).
+- [x] `MIN_CLIENT` bumped to `2.7.0`.
+- [x] Golden rewrite: `node scripts/golden.ts --write`.
+- [x] Website export.
+- [x] `whatsNew` entry.
+- [x] CHANGELOGs (game and API).
+- [x] Game and API deployed together.
 
 ## 10. Retired supports
 Mirror Slime, Banner Herald and Mime are off (`enabled: false` in `shared/units.ts`; live configs get it through the HOTFIXES entry `2.7.0-retired-supports`).

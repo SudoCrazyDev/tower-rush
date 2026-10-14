@@ -2,6 +2,17 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.7.0 "The Great Awakening"
+Full design: `docs/features/v2.7-the-great-awakening/README.md`.
+- Max merge rank 7 to 5 (HOTFIXES `2.7.0-max-rank`): awakening needs 15 summons instead of 63. The Trial's witness drops to rank 4 (`2.7.0-witness-rank`).
+- Card levels add attack speed: +3% per level (`ECONOMY.levelSpeedBonus`), on top of +8% damage.
+- Awakenings defined in code (`shared/awakened.ts`, behaviour in `shared/ultimates.ts`): each awakened unit has its own damage and speed multipliers and its own ultimate (timer, passive or always-on field). Commons (8), rares (10), epics (10), legendaries (4) and mythics Void Titan and Chrono Mage. Units without an entry keep the generic awakening.
+- Rare reworks (`shared/reworks.ts`): Frog Alchemist poison puddles, Raccoon Thief mana pulse, Vine Druid prickly vine, Snowglobe Fairy 20% freeze. Vampire Countess: Vampire's Kiss on every hit (2 mana plus Plunder when the monster dies).
+- Retired: Mirror Slime, Banner Herald and Mime (`enabled: false`, HOTFIXES `2.7.0-retired-supports`); the daily copies quest is no longer picked.
+- Unit Lab: a lobby mode to place any units anywhere on the meadow and pick the next wave.
+- Awakened card back panel (boosts, ultimate, readable cooldown pill); ultimate VFX, fields (puddles, mushrooms, dolls, vines, hives, black holes, skeletons), frost and scorch overlays; new awakened art for Crystal Golem (no legs) and Plague Alchemist, procedural Tide Mermaid sheets.
+- What's New popup: 2.7.0.
+
 ## 2.6.2
 - Buttons no longer shrink a little more with each quick tap (seen on PvP send buttons). The press animation read the button's scale mid bounce-back as its normal size; a press during that bounce-back now snaps back to the full size first.
 

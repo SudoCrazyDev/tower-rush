@@ -1,5 +1,10 @@
 # API changelog
 
+## 1.3.0
+- Ships with game 2.7.0 "The Great Awakening": the shared battle rules (awakenings, ultimates, max rank 5, level speed, retired supports) used by PvP and story checks.
+- `MIN_CLIENT` 2.7.0: older game tabs must reload (their battle rules no longer match).
+- HOTFIXES `2.7.0-max-rank`, `2.7.0-witness-rank`, `2.7.0-raccoon`, `2.7.0-retired-supports` apply to the saved live config. Saved decks drop retired cards on load.
+
 ## 1.2.1
 - Turnstile: siteverify's 400 answers are read rather than thrown away, and every rejection logs its error codes, action and hostname.
 
