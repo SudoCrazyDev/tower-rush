@@ -2,13 +2,13 @@
  * The 9-week social plan that spends the remaining Higgsfield credits (468.55 on 2026-10-14).
  * One piece of content a day, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord.
  * Paid days: one still (GPT Image 2.5 medium, 0.5) animated into two 4s Seedance 1.5 Pro 720p clips
- * (4.8 each, silent) for an 8s looping reel. Prices checked 2026-10-14. Free days: gameplay recordings.
+ * (2.4 each as charged, silent) for an 8s looping reel. Prices from the 2026-10-14 run. Free days: gameplay recordings.
  */
 
 export const CREDITS_LEFT = 468.55;
 export const STILL_COST = 0.5;
-export const CLIP_COST = 4.8;
-/** Credits for one paid day: a still and two clips (no retry margin left in the budget). */
+export const CLIP_COST = 2.4;
+/** Credits for one paid day: a still and two clips. */
 export const PAID_DAY_COST = STILL_COST + 2 * CLIP_COST;
 /** Monday of week 1. */
 export const PLAN_START = "2026-10-19";
