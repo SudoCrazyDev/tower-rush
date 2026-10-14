@@ -1,15 +1,15 @@
 /**
  * The 9-week social plan that spends the remaining Higgsfield credits (468.55 on 2026-10-14).
  * One piece of content a day, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord.
- * Paid days: one still (GPT Image 2.5 medium, 0.5) animated into two 4s Seedance 1.5 Pro 720p clips
- * (2.4 each as charged, silent) for an 8s looping reel. Prices from the 2026-10-14 run. Free days: gameplay recordings.
+ * Paid days: one still (GPT Image 2.5 medium, 0.5) animated into three 4s Seedance 1.5 Pro 720p clips
+ * (2.4 each as charged, silent) for a 12s reel; the third clip starts and ends on the still so it loops. Prices from the 2026-10-14 run. Free days: gameplay recordings.
  */
 
 export const CREDITS_LEFT = 468.55;
 export const STILL_COST = 0.5;
 export const CLIP_COST = 2.4;
-/** Credits for one paid day: a still and two clips. */
-export const PAID_DAY_COST = STILL_COST + 2 * CLIP_COST;
+/** Credits for one paid day: a still and three clips. */
+export const PAID_DAY_COST = STILL_COST + 3 * CLIP_COST;
 /** Monday of week 1. */
 export const PLAN_START = "2026-10-19";
 export const CTA = "Play free at crownnkeep.com";
@@ -33,7 +33,7 @@ export type PlanDay = {
   hook: string;
   /** Paid days: the still prompt. Free days: what to record. */
   still: string;
-  /** Paid days: the two Seedance beats, each animated from the still. */
+  /** Paid days: the three Seedance beats, each animated from the still. */
   clips: string[];
   caption: string;
   /** Discord conversation starter. */
@@ -41,6 +41,10 @@ export type PlanDay = {
 };
 
 export type PlanWeek = { phase: string; focus: string; days: PlanDay[] };
+
+/** Third clip of every paid day: animated from the still back to the still, a clean frame for the hook and CTA. */
+const CLOSING_BEAT =
+  "Closing beat: the scene settles back into this exact poster frame, the featured characters hold a confident pose with gentle idle motion and drifting sparkles, camera slowly drifts.";
 
 const STYLE =
   "Flat 2D vector cartoon game art matching the Crown & Keep style reference, thick dark navy outlines, simple two-tone cel shading, chunky rounded proportions, bright saturated colors, vertical 9:16 poster composition, top 20% left clear for text, no text, no watermark";
@@ -50,7 +54,7 @@ const awaken = (unit: string, ult: string, hook: string, beats: [string, string,
   title: `${unit}: ${ult}`,
   hook,
   still: `${unit} in their awakened form, mid-cast of ${ult}, on a castle wall at dusk. ${STYLE}.`,
-  clips: beats.slice(1).map((b) => `${beats[0]} ${b} Slow push-in.`),
+  clips: [...beats.slice(1).map((b) => `${beats[0]} ${b} Slow push-in.`), CLOSING_BEAT],
   caption,
   question,
 });
@@ -63,6 +67,7 @@ const boss = (name: string, hook: string, scene: string, caption: string, questi
   clips: [
     `${name} steps forward, the ground cracks and towers shake.`,
     `Close-up roar at the camera, then cut to black.`,
+    CLOSING_BEAT,
   ],
   caption,
   question,
@@ -76,6 +81,7 @@ const story = (chapter: string, hook: string, scene: string, caption: string, qu
   clips: [
     `The panel comes alive: ${scene}. Gentle parallax.`,
     `Camera pulls back to reveal the keep and the road ahead.`,
+    CLOSING_BEAT,
   ],
   caption,
   question,
@@ -89,6 +95,7 @@ const pvp = (title: string, hook: string, scene: string, caption: string, questi
   clips: [
     `Waves of monsters cross the middle; spells clash.`,
     `One keep's crown topples; VICTORY banner unfurls.`,
+    CLOSING_BEAT,
   ],
   caption,
   question,
@@ -102,6 +109,7 @@ const social = (title: string, hook: string, scene: string, caption: string, que
   clips: [
     `The twist lands, characters react comically.`,
     `Camera pushes in on the punchline moment with a small comic shake.`,
+    CLOSING_BEAT,
   ],
   caption,
   question,

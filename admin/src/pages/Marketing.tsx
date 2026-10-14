@@ -47,7 +47,7 @@ export function MarketingPage() {
     <>
       <PageHead
         title="Marketing plan"
-        desc="One post a day for 9 weeks, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord. Each paid day is one GPT Image 2.5 still animated into two 4s Seedance 1.5 Pro 720p clips (an 8s reel); the reel, still and clips are linked on each day. Gameplay and recap days are free screen recordings."
+        desc="One post a day for 9 weeks, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord. Each paid day is one GPT Image 2.5 still animated into three 4s Seedance 1.5 Pro 720p clips (a 12s reel); the reel, still and clips are linked on each day. Gameplay and recap days are free screen recordings."
       />
       <div className="stats tight">
         <Stat label="Credits left" value={CREDITS_LEFT} sub="Higgsfield, 2026-10-14" />
@@ -108,7 +108,7 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
   const posts = platformCopy(day);
   const [url, setUrl] = useState(row?.url ?? "");
   useEffect(() => setUrl(row?.url ?? ""), [row?.url]);
-  // Notes hold the finished links: the joined 8s reel first, then the two raw Seedance clips.
+  // Notes hold the finished links: the joined 12s reel first, then the raw Seedance clips.
   const [reel, ...clips] = (row?.notes ?? "").split(/\s+/).filter((l) => l.startsWith("https://"));
   return (
     <tr>
