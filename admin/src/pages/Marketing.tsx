@@ -3,7 +3,6 @@ import { api } from "../api";
 import { PageHead, Stat, toast } from "../components";
 import type { ArtRow } from "../../../shared/art-requests.ts";
 import {
-  CREDITS_BUFFER,
   CREDITS_LEFT,
   PAID_DAY_COST,
   PLAN,
@@ -39,7 +38,7 @@ export function MarketingPage() {
       toast((e as Error).message, "err");
     }
   };
-  const stillsIn = Object.values(rows).filter((r) => r.url).length;
+  const reelsReady = Object.values(rows).filter((r) => r.notes.includes("/reels/")).length;
   const total = Math.round(PLAN.reduce((s, w) => s + weekCost(w), 0) * 100) / 100;
   const paidDays = PLAN.flatMap((w) => w.days).filter((d) => THEMES[d.theme].paid).length;
   const w = PLAN[week];
@@ -48,13 +47,13 @@ export function MarketingPage() {
     <>
       <PageHead
         title="Marketing plan"
-        desc="One post a day for 9 weeks, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord. Make the still on Higgsfield's website (unlimited, 0 credits), animate it into three 5s Seedance 1.5 Pro 720p clips, then post with the copy below. Gameplay and recap days are free screen recordings."
+        desc="One post a day for 9 weeks, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord. Each paid day is one GPT Image 2.5 still animated into two 4s Seedance 1.5 Pro 720p clips (an 8s reel); the reel, still and clips are linked on each day. Gameplay and recap days are free screen recordings."
       />
       <div className="stats tight">
         <Stat label="Credits left" value={CREDITS_LEFT} sub="Higgsfield, 2026-10-14" />
         <Stat label="Planned spend" value={total} sub={`${paidDays} paid days × ${PAID_DAY_COST}`} />
-        <Stat label="Buffer" value={Math.round((CREDITS_LEFT - total) * 100) / 100} sub={`Target ${CREDITS_BUFFER} for retries and a trailer shot`} />
-        <Stat label="Stills in" value={`${stillsIn} / ${paidDays}`} sub="Paste each still's Higgsfield link below" />
+        <Stat label="Buffer" value={Math.round((CREDITS_LEFT - total) * 100) / 100} sub="Left for retries" />
+        <Stat label="Reels ready" value={`${reelsReady} / ${paidDays}`} sub="Reels generated" />
         <Stat label="Schedule" value={`${planDate(0, 0)} → ${planDate(PLAN.length - 1, 6)}`} sub={`${PLAN.length} weeks, ${PLAN.length * 7} posts`} />
       </div>
 
@@ -83,6 +82,7 @@ export function MarketingPage() {
               <th>Day</th>
               <th>Post</th>
               <th>Make</th>
+              <th>Media</th>
               <th>Copy</th>
             </tr>
           </thead>
@@ -108,8 +108,8 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
   const posts = platformCopy(day);
   const [url, setUrl] = useState(row?.url ?? "");
   useEffect(() => setUrl(row?.url ?? ""), [row?.url]);
-  // Finished clip links, one per line, written into notes when the videos are generated.
-  const clips = (row?.notes ?? "").split(/\s+/).filter((l) => l.startsWith("https://"));
+  // Notes hold the finished links: the joined 8s reel first, then the two raw Seedance clips.
+  const [reel, ...clips] = (row?.notes ?? "").split(/\s+/).filter((l) => l.startsWith("https://"));
   return (
     <tr>
       <td>
@@ -127,7 +127,7 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
       </td>
       <td className="art-prompt">
         <div className="small">
-          <strong>{t.paid ? "Still (website, 0 credits):" : "Record:"}</strong> {day.still}
+          <strong>{t.paid ? "Still:" : "Record:"}</strong> {day.still}
         </div>
         {t.paid && (
           <div className="art-link">
@@ -141,11 +141,6 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
               onBlur={() => url !== (row?.url ?? "") && onSave(url)}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             />
-            {row?.url && (
-              <a href={row.url} target="_blank" rel="noreferrer">
-                <img className="thumb" src={row.url} width={72} height={128} alt="" loading="lazy" />
-              </a>
-            )}
           </div>
         )}
         {day.clips.length > 0 && (
@@ -162,6 +157,33 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
         )}
       </td>
       <td>
+        {reel && <video src={reel} crossOrigin="anonymous" controls loop muted playsInline preload="none" poster={row?.url} width={135} height={240} />}
+        {!reel && row?.url && (
+          <a href={row.url} target="_blank" rel="noreferrer">
+            <img className="thumb" crossOrigin="anonymous" src={row.url} width={72} height={128} alt="" loading="lazy" />
+          </a>
+        )}
+        {(reel || row?.url) && (
+          <div className="small">
+            {reel && (
+              <a href={reel} download target="_blank" rel="noreferrer">
+                Reel
+              </a>
+            )}{" "}
+            {row?.url && (
+              <a href={row.url} download target="_blank" rel="noreferrer">
+                Still
+              </a>
+            )}{" "}
+            {clips.map((c, i) => (
+              <a key={c} href={c} target="_blank" rel="noreferrer">
+                Clip {i + 1}{" "}
+              </a>
+            ))}
+          </div>
+        )}
+      </td>
+      <td>
         <div className="art-refs">
           {Object.entries(posts).map(([platform, text]) => (
             <button key={platform} className="btn small" title={text} onClick={() => copy(text, `the ${platform} post`)}>
@@ -170,16 +192,6 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
           ))}
         </div>
         <div className="muted small">{day.caption}</div>
-        {clips.length > 0 && (
-          <div className="small">
-            Clips:{" "}
-            {clips.map((c, i) => (
-              <a key={c} href={c} target="_blank" rel="noreferrer">
-                {i + 1}{" "}
-              </a>
-            ))}
-          </div>
-        )}
       </td>
     </tr>
   );

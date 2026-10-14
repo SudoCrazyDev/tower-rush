@@ -1,16 +1,15 @@
 /**
  * The 9-week social plan that spends the remaining Higgsfield credits (468.55 on 2026-10-14).
  * One piece of content a day, cut once and posted to TikTok, FB Reels, X, the FB feed and Discord.
- * Paid days: one still (Nano Banana Pro on the Higgsfield website, unlimited, 0 credits) animated into
- * three 5s Seedance 1.5 Pro 720p clips (2.4 each, +30% retries). Free days: gameplay screen recordings.
+ * Paid days: one still (GPT Image 2.5 medium, 0.5) animated into two 4s Seedance 1.5 Pro 720p clips
+ * (4.8 each, silent) for an 8s looping reel. Prices checked 2026-10-14. Free days: gameplay recordings.
  */
 
 export const CREDITS_LEFT = 468.55;
-export const CREDITS_BUFFER = 40;
-export const CLIP_COST = 2.4;
-export const RETRY_MARGIN = 1.3;
-/** Credits for one paid day: three clips plus retries. */
-export const PAID_DAY_COST = Math.round(3 * CLIP_COST * RETRY_MARGIN * 100) / 100;
+export const STILL_COST = 0.5;
+export const CLIP_COST = 4.8;
+/** Credits for one paid day: a still and two clips (no retry margin left in the budget). */
+export const PAID_DAY_COST = STILL_COST + 2 * CLIP_COST;
 /** Monday of week 1. */
 export const PLAN_START = "2026-10-19";
 export const CTA = "Play free at crownnkeep.com";
@@ -32,9 +31,9 @@ export type PlanDay = {
   title: string;
   /** On-screen text for the first 2 seconds. */
   hook: string;
-  /** Paid days: the still to make on the website. Free days: what to record. */
+  /** Paid days: the still prompt. Free days: what to record. */
   still: string;
-  /** Paid days: the three Seedance beats, animated from the still. */
+  /** Paid days: the two Seedance beats, each animated from the still. */
   clips: string[];
   caption: string;
   /** Discord conversation starter. */
@@ -43,14 +42,15 @@ export type PlanDay = {
 
 export type PlanWeek = { phase: string; focus: string; days: PlanDay[] };
 
-const STYLE = "Crown & Keep painterly fantasy style, vertical 9:16, dramatic rim light, leave the top 20% clear for text";
+const STYLE =
+  "Flat 2D vector cartoon game art matching the Crown & Keep style reference, thick dark navy outlines, simple two-tone cel shading, chunky rounded proportions, bright saturated colors, vertical 9:16 poster composition, top 20% left clear for text, no text, no watermark";
 
 const awaken = (unit: string, ult: string, hook: string, beats: [string, string, string], caption: string, question: string): PlanDay => ({
   theme: "awaken",
   title: `${unit}: ${ult}`,
   hook,
   still: `${unit} in their awakened form, mid-cast of ${ult}, on a castle wall at dusk. ${STYLE}.`,
-  clips: beats.map((b) => `${b} Slow push-in, 5s, 720p.`),
+  clips: beats.slice(1).map((b) => `${beats[0]} ${b} Slow push-in.`),
   caption,
   question,
 });
@@ -61,9 +61,8 @@ const boss = (name: string, hook: string, scene: string, caption: string, questi
   hook,
   still: `${name}, ${scene}, towering over a tiny defended keep, low camera angle. ${STYLE}.`,
   clips: [
-    `${name} is a silhouette in fog; eyes light up. 5s, 720p.`,
-    `${name} steps forward, the ground cracks and towers shake. 5s, 720p.`,
-    `Close-up roar at the camera, then cut to black. 5s, 720p.`,
+    `${name} steps forward, the ground cracks and towers shake.`,
+    `Close-up roar at the camera, then cut to black.`,
   ],
   caption,
   question,
@@ -75,9 +74,8 @@ const story = (chapter: string, hook: string, scene: string, caption: string, qu
   hook,
   still: `Storybook panel of ${scene}. ${STYLE}.`,
   clips: [
-    `Pages of an old book turn and settle on the panel. 5s, 720p.`,
-    `The panel comes alive: ${scene}. Gentle parallax. 5s, 720p.`,
-    `Camera pulls back to reveal the keep and the road ahead. 5s, 720p.`,
+    `The panel comes alive: ${scene}. Gentle parallax.`,
+    `Camera pulls back to reveal the keep and the road ahead.`,
   ],
   caption,
   question,
@@ -89,9 +87,8 @@ const pvp = (title: string, hook: string, scene: string, caption: string, questi
   hook,
   still: `Split-screen duel: two rival keeps facing each other, ${scene}. ${STYLE}.`,
   clips: [
-    `Both keeps power up, banners snap in the wind. 5s, 720p.`,
-    `Waves of monsters cross the middle; spells clash. 5s, 720p.`,
-    `One keep's crown topples; VICTORY banner unfurls. 5s, 720p.`,
+    `Waves of monsters cross the middle; spells clash.`,
+    `One keep's crown topples; VICTORY banner unfurls.`,
   ],
   caption,
   question,
@@ -103,9 +100,8 @@ const social = (title: string, hook: string, scene: string, caption: string, que
   hook,
   still: `${scene}. ${STYLE}, playful tone.`,
   clips: [
-    `Setup beat: ${scene}. 5s, 720p.`,
-    `The twist lands, characters react comically. 5s, 720p.`,
-    `Freeze frame for the punchline text. 5s, 720p.`,
+    `The twist lands, characters react comically.`,
+    `Camera pushes in on the punchline moment with a small comic shake.`,
   ],
   caption,
   question,
