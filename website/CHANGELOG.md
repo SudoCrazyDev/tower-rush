@@ -1,5 +1,11 @@
 # Website changelog
 
+## 1.3.0
+- New page `v2-7.html`: the full v2.7.0 "The Great Awakening" list. Every awakened unit (commons, rares, epics, legendaries and mythics) with its damage and speed multipliers, ultimate, type and effect; the four rare reworks; card levels (+3% attack speed), max rank 5; the Unit Lab; and the retired supports.
+- Release notes: v2.7.0 is the latest (with a button to the new page). v2.1 "Chaos Corrupted" moves into the History panel, so the page keeps the latest five.
+- Latest news: v2.7.0 is the featured post; the v2.6 post joins the regular ones and the v2.1 post is dropped to keep five. Hero pill says v2.7 The Great Awakening is live.
+- Unit data re-exported from `shared/` (awakened numbers, reworks, retired supports). Cache query on `styles.css`, `app.js` and `data/game.js` bumped to `?v=2.7.0`.
+
 ## 1.2.1
 - Install app buttons in the hero and the closing call to action. They open `game.crownnkeep.com/?install`, where the game offers the install (a page can only install its own site).
 - Hero pill says v2.6 Install & Play is live (it still said v2.1); the note under the buttons mentions installing.

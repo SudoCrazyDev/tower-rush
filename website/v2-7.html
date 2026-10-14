@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>v2.7 The Great Awakening | Crown &amp; Keep: Tower Defense</title>
+  <meta name="description" content="Release 2.7.0 of Crown &amp; Keep: every unit awakens with its own damage, speed and ultimate. Card levels add attack speed, max rank is 5, and the Unit Lab arrives." />
+  <meta name="theme-color" content="#0a0f2c" />
+  <meta property="og:title" content="v2.7 The Great Awakening | Crown &amp; Keep: Tower Defense" />
+  <meta property="og:description" content="Every unit awakens with its own ultimate. Full list of awakenings, the Unit Lab and more." />
+  <meta property="og:image" content="https://assets.crownnkeep.com/brand/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="brand/favicon-64.png" />
+  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://assets.crownnkeep.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=2.7.0" />
+  <style>
+    .v27 .section { padding-top: 56px; padding-bottom: 24px; }
+    .v27 .v27__hero { padding-top: 140px; padding-bottom: 24px; }
+    .v27__hero .release__meta { justify-content: center; margin-bottom: 14px; }
+    .v27__hero .section__head { margin-bottom: 20px; }
+    .v27__back { text-align: center; margin: 0 0 18px; }
+    .v27__back a { color: var(--gold); font-weight: 800; text-decoration: none; }
+    .v27__nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+    .v27__nav a { padding: 9px 16px; border-radius: 999px; text-decoration: none; font-weight: 800; font-size: 14px; color: var(--muted); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 1px var(--line); }
+    .v27__nav a:hover { color: var(--text); box-shadow: inset 0 0 0 2px var(--gold); }
+    .v27__box { background: var(--panel); border-radius: 22px; padding: 28px 32px; box-shadow: inset 0 0 0 1px var(--line); max-width: 920px; margin: 0 auto; }
+    .v27__box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; color: var(--muted); }
+    .v27__box li { position: relative; padding-left: 26px; }
+    .v27__box li::before { content: "\2694"; position: absolute; left: 0; color: var(--gold); }
+    .v27__box b { color: var(--text); }
+    .v27__box p { color: var(--muted); margin: 0 0 12px; }
+    .v27__note { max-width: 920px; margin: 18px auto 0; color: var(--muted); font-size: 15px; }
+    .v27__note b { color: var(--text); }
+    .wk__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 1040px; margin: 0 auto; }
+    .wk { display: flex; gap: 14px; align-items: flex-start; min-width: 0; padding: 16px; border-radius: 18px; background: var(--panel); box-shadow: inset 0 0 0 2px var(--rc, var(--line)); }
+    .wk--common { --rc: var(--r-common); } .wk--rare { --rc: var(--r-rare); } .wk--epic { --rc: var(--r-epic); } .wk--legendary { --rc: var(--r-legendary); } .wk--retired { --rc: var(--line); opacity: .8; }
+    .wk__art { flex: 0 0 96px; width: 96px; }
+    .wk__art img { display: block; width: 100%; height: auto; border-radius: 12px; box-shadow: 0 6px 14px rgba(0, 0, 0, .45); }
+    .wk--retired .wk__art img { filter: grayscale(1); }
+    .wk__main { min-width: 0; flex: 1; }
+    .wk h4 { margin: 0 0 6px; font: 400 22px/1.1 var(--display); color: var(--text); }
+    .wk p { margin: 6px 0 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+    .wk__stats { display: flex; flex-wrap: wrap; gap: 6px; }
+    .wk__stats span { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; color: var(--muted); background: rgba(10, 15, 44, .6); box-shadow: inset 0 0 0 1px var(--line); }
+    .wk__stats b { color: var(--gold); }
+    .wk__type--passive { color: #bff3bc !important; box-shadow: inset 0 0 0 1px rgba(94, 224, 90, .55) !important; }
+    .wk__type--timer { color: #ffe7a6 !important; box-shadow: inset 0 0 0 1px rgba(255, 201, 60, .5) !important; }
+    .wk__type--field { color: #cfe3ff !important; box-shadow: inset 0 0 0 1px rgba(58, 160, 255, .6) !important; }
+    .wk .wk__ult { margin-top: 10px; font: 400 18px/1.1 var(--display); color: var(--gold); }
+    .wk .wk__ult + p { margin-top: 4px; }
+    .v27__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; max-width: 920px; margin: 0 auto; }
+    .v27__steps div { background: var(--panel); border-radius: 18px; padding: 18px; box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); }
+    .v27__steps b { display: block; font: 400 30px/1 var(--display); color: var(--gold); margin-bottom: 6px; }
+    @media (max-width: 760px) {
+      .v27__box { padding: 20px 18px; }
+      .wk__grid, .v27__steps { grid-template-columns: 1fr; }
+      .wk__art { flex-basis: 76px; width: 76px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ============ NAV ============ -->
+  <header class="nav is-solid" id="nav">
+    <a class="nav__brand" href="index.html" aria-label="Crown &amp; Keep home">
+      <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" />
+    </a>
+    <nav class="nav__links" id="navLinks">
+      <a href="index.html#how">How to play</a>
+      <a href="index.html#codex">Units</a>
+      <a href="index.html#arenas">Arenas</a>
+      <a href="index.html#modes">Modes</a>
+      <a href="index.html#pvp">PvP</a>
+      <a href="index.html#news">News</a>
+      <a href="release-notes.html" class="is-active" aria-current="page">Release notes</a>
+    </nav>
+    <a class="btn btn--play btn--sm" data-play href="#">Play free</a>
+    <button class="nav__burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+
+  <main id="top" class="v27">
+    <section class="section v27__hero">
+      <div class="section__head">
+        <div class="release__meta"><span class="release__ver">v2.7.0</span><time datetime="2026-10-14">Oct 14, 2026</time><span class="pill pill--live"><i></i> Latest</span></div>
+        <span class="eyebrow">Release 2.7.0</span>
+        <h2>The Great Awakening</h2>
+        <p>Every unit gets a revamp, rarity by rarity. Awakened units now have their own damage, speed and a signature ultimate. Awakening is also easier to reach: the top merge rank drops from 7 to 5.</p>
+      </div>
+      <p class="v27__back"><a href="release-notes.html#v2-7-0">&larr; Back to the release notes</a></p>
+      <nav class="v27__nav" aria-label="Jump to a section">
+        <a href="#basics"><b>The basics</b></a>
+        <a href="#commons">Commons</a>
+        <a href="#rares">Rares</a>
+        <a href="#epics">Epics</a>
+        <a href="#legendaries">Legendaries &amp; Mythics</a>
+        <a href="#reworks">Rare reworks</a>
+        <a href="#lab">Unit Lab</a>
+        <a href="#retired">Retired supports</a>
+      </nav>
+    </section>
+
+    <section class="section" id="basics">
+      <div class="section__head">
+        <span class="eyebrow">What changed</span>
+        <h2>The basics</h2>
+      </div>
+      <div class="v27__steps">
+        <div><b>+3%</b>Attack speed per card level (damage still +8%). Level 15 gives &times;1.42 speed.</div>
+        <div><b>Rank 5</b>Max merge rank drops from 7 to 5. Awakening needs 15 summons instead of 63.</div>
+        <div><b>Own ultimate</b>Each awakened unit has its own damage and speed boost and its own ultimate.</div>
+      </div>
+      <div class="v27__box" style="margin-top:18px">
+        <ul>
+          <li><b>Card levels.</b> Damage still rises +8% per level. Attack speed now rises +3% per level too.</li>
+          <li><b>Max rank is 5.</b> Peak rank damage is &times;5 instead of &times;7. The faster road to awakening is worth more than the lost ceiling.</li>
+          <li><b>Timer ultimates</b> fire every set number of seconds. Hourglass Owls charge them faster, and Echo Spirits repeat them at echo strength.</li>
+          <li><b>Passive ultimates</b> change every attack. They have no charge and can't be echoed (Hourglass Owls give attack speed instead).</li>
+          <li><b>Always on</b> ultimates work all battle long, with no charge and no echo.</li>
+          <li><b>Units without awakened art</b> keep the old awakening: &times;1.5 damage, &times;1.2 speed and a radius strike every 10 s for &times;4 damage.</li>
+          <li><b>Awakened card backs.</b> Flip an awakened card to see a panel with its damage and speed boosts and its ultimate, with a cooldown pill (EVERY 15s, PASSIVE or ALWAYS ON).</li>
+          <li><b>New visuals.</b> Every awakened unit has a new ultimate effect. Crystal Golem and Plague Alchemist have new awakened art, and Tide Mermaid has new awakened animations.</li>
+        </ul>
+      </div>
+      <p class="v27__note">In the lists below, Damage and Speed are the awakened multipliers on the unit's base stats.</p>
+    </section>
+
+    <section class="section v27__sec" id="commons">
+      <div class="section__head">
+        <span class="eyebrow">Awakened commons</span>
+        <h2>Commons</h2>
+        <p>8 awakened commons.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/hooded_archer.webp" alt="Hooded Archer awakened" /></div>
+          <div class="wk__main">
+            <h4>Hooded Archer</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Multi-Shot</p>
+            <p>Every attack fires 3 arrows at 3 different monsters, each at full damage.</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/fox_spearman.webp" alt="Fox Spearman awakened" /></div>
+          <div class="wk__main">
+            <h4>Fox Spearman</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 5s</span></div>
+            <p class="wk__ult">Burning Spear</p>
+            <p>A spear pierces the 5 leading monsters for &times;3 damage and sets them burning (50% of a hit per second, 3 s).</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/goblin_bomber.webp" alt="Goblin Bomber awakened" /></div>
+          <div class="wk__main">
+            <h4>Goblin Bomber</h4>
+            <div class="wk__stats"><span>Damage <b>&times;5</b></span><span>Speed <b>&times;1</b></span><span class="wk__type wk__type--timer">Every 6s</span></div>
+            <p class="wk__ult">Bomberman Mode</p>
+            <p>Throws 4 bombs onto the path (spread 90 px), each blasting &times;2 damage in a 90 px radius.</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/flame_adept.webp" alt="Flame Adept awakened" /></div>
+          <div class="wk__main">
+            <h4>Flame Adept</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 3s</span></div>
+            <p class="wk__ult">Fire-o'-Wisp</p>
+            <p>A wisp sets 3 random monsters burning (60% of a hit per second, 4 s).</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/clockwork_turret.webp" alt="Clockwork Turret awakened" /></div>
+          <div class="wk__main">
+            <h4>Clockwork Turret</h4>
+            <div class="wk__stats"><span>Damage <b>&times;2</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Tesla Coil</p>
+            <p>Every attack also zaps a random monster, chaining to 2 more for 50% of a hit.</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/wolf_hunter.webp" alt="Wolf Hunter awakened" /></div>
+          <div class="wk__main">
+            <h4>Wolf Hunter</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 10s</span></div>
+            <p class="wk__ult">Primal Roar</p>
+            <p>Stuns every monster for 2 s (bosses 1 s). Stunned monsters ignore the next roar for 4 s.</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/pirate_gunner.webp" alt="Pirate Gunner awakened" /></div>
+          <div class="wk__main">
+            <h4>Pirate Gunner</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;2</b></span><span class="wk__type wk__type--timer">Every 8s</span></div>
+            <p class="wk__ult">Broadside</p>
+            <p>5 cannonballs pound the path from the front (spacing 70 px), each blasting &times;2 damage in a 90 px radius. Kills pay &times;2 plunder.</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/shield_knight.webp" alt="Shield Knight awakened" /></div>
+          <div class="wk__main">
+            <h4>Shield Knight</h4>
+            <div class="wk__stats"><span>Damage <b>&times;4</b></span><span>Speed <b>&times;2</b></span><span class="wk__type wk__type--timer">Every 8s</span></div>
+            <p class="wk__ult">Judgment Slam</p>
+            <p>Slams the strongest monster for &times;8 damage and curses everything within 170 px: +25% damage taken for 5 s.</p>
+          </div>
+        </article>
+      </div>
+      <p class="v27__note"><b>Never awaken (no awakened art):</b> Penguin Wizard, Tesla Gnome, Cactus Gunslinger and Wind Sylph.</p>
+    </section>
+
+    <section class="section v27__sec" id="rares">
+      <div class="section__head">
+        <span class="eyebrow">Awakened rares</span>
+        <h2>Rares</h2>
+        <p>10 awakened rares.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/ember_witch.webp" alt="Ember Witch awakened" /></div>
+          <div class="wk__main">
+            <h4>Ember Witch</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 45s</span></div>
+            <p class="wk__ult">Scorched Earth</p>
+            <p>Scorches the whole path for 25 s. Every monster on it burns (50% of a hit per second), new waves too.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/frost_sorceress.webp" alt="Frost Sorceress awakened" /></div>
+          <div class="wk__main">
+            <h4>Frost Sorceress</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 10s</span></div>
+            <p class="wk__ult">Winter Storm</p>
+            <p>Slows every monster 50% for 4 s and freezes 5 random monsters for 3 s (bosses 1 s).</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/bee_keeper.webp" alt="Bee Keeper awakened" /></div>
+          <div class="wk__main">
+            <h4>Bee Keeper</h4>
+            <div class="wk__stats"><span>Damage <b>&times;0</b></span><span>Speed <b>&times;0</b></span><span class="wk__type wk__type--field">Always on</span></div>
+            <p class="wk__ult">Bee Hives</p>
+            <p>Stops attacking. 2 hives fire swarms at any monster: base 45 damage, 1.8 attacks per second, scaled like a unit (rank, card level, power-ups).</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/bear_rider.webp" alt="Bear Rider awakened" /></div>
+          <div class="wk__main">
+            <h4>Bear Rider</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Iceborn Warmother</p>
+            <p>+150% damage to bosses.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/gear_engineer.webp" alt="Gear Engineer awakened" /></div>
+          <div class="wk__main">
+            <h4>Gear Engineer</h4>
+            <div class="wk__stats"><span>Damage <b>&times;2</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--timer">Every 25s</span></div>
+            <p class="wk__ult">Overheat</p>
+            <p>Overheats for 10 s: base attack speed 2 per second, but shots lose their splash. Then jams for 2 s.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/sand_monk.webp" alt="Sand Monk awakened" /></div>
+          <div class="wk__main">
+            <h4>Sand Monk</h4>
+            <div class="wk__stats"><span>Damage <b>&times;1.5</b></span><span>Speed <b>&times;5</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Ultra Focused</p>
+            <p>Stun becomes a 65% chance to crit for &times;2.5. Adds Giant Slayer on top of True Strike.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/spore_sage.webp" alt="Spore Sage awakened" /></div>
+          <div class="wk__main">
+            <h4>Spore Sage</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--field">Always on</span></div>
+            <p class="wk__ult">Mushroom Puff</p>
+            <p>A mushroom sprouts every 2 s (max 5) and grows for 3 s, then stays until the first monster to touch it bursts it: 90 px, 90% slow for 6 s plus poison (bosses 45%).</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/storm_totem.webp" alt="Storm Totem awakened" /></div>
+          <div class="wk__main">
+            <h4>Storm Totem</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 35s</span></div>
+            <p class="wk__ult">Rag Doll</p>
+            <p>4 rag dolls stand along the path for 15 s, then 20 s without. Monsters within 50 px are slowed 60% and zapped for a hit per second.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/thunder_dwarf.webp" alt="Thunder Dwarf awakened" /></div>
+          <div class="wk__main">
+            <h4>Thunder Dwarf</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Grace of Mjolnir</p>
+            <p>Every attack also chains lightning to up to 5 more monsters for 60% of the hit.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/vine_druid.webp" alt="Vine Druid awakened" /></div>
+          <div class="wk__main">
+            <h4>Vine Druid</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;1</b></span><span class="wk__type wk__type--field">Always on</span></div>
+            <p class="wk__ult">Vineyard</p>
+            <p>The whole path stays overgrown. Monsters on it take her hit per second. Vines no longer block.</p>
+          </div>
+        </article>
+      </div>
+      <p class="v27__note"><b>Never awaken:</b> Imp Hunter, Frog Alchemist, Witch Doctor, Pumpkin Scarecrow, Ogre Chef, Emberhold Gunner and Runecaller. "Always on" ultimates have no charge and can't be echoed.</p>
+    </section>
+
+    <section class="section v27__sec" id="epics">
+      <div class="section__head">
+        <span class="eyebrow">Awakened epics</span>
+        <h2>Epics</h2>
+        <p>10 awakened epics.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/crystal_golem.webp" alt="Crystal Golem awakened" /></div>
+          <div class="wk__main">
+            <h4>Crystal Golem</h4>
+            <div class="wk__stats"><span>Damage <b>&times;6</b></span><span>Speed <b>&times;0.2</b></span><span class="wk__type wk__type--timer">Every 10s</span></div>
+            <p class="wk__ult">Crystal Throw</p>
+            <p>Hurls a giant crystal at the thickest crowd: &times;2 damage within 180 px.</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/fox_samurai.webp" alt="Fox Samurai awakened" /></div>
+          <div class="wk__main">
+            <h4>Fox Samurai</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Blade Dance</p>
+            <p>Crit is a fixed 70% for &times;3.5, and 100% while a boss is on the board. Adds True Strike and Giant Slayer.</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/moon_oracle.webp" alt="Moon Oracle awakened" /></div>
+          <div class="wk__main">
+            <h4>Moon Oracle</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;2</b></span><span class="wk__type wk__type--timer">Every 15s</span></div>
+            <p class="wk__ult">Moonshine</p>
+            <p>Luna's Blessing on 4 random attacking units (itself included) for 10 s: +50% damage, +50% attack speed, +5 mana per attack. Blessings stack.</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/phoenix_chick.webp" alt="Phoenix Chick awakened" /></div>
+          <div class="wk__main">
+            <h4>Phoenix Chick</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--timer">Every 30s</span></div>
+            <p class="wk__ult">Reborn</p>
+            <p>Waits until a monster is 85% down the path. Egg for 5 s (no attacks) while every monster burns (65% of a hit per second), then hatches: every monster stunned 10 s (bosses 5 s).</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/plague_alchemist.webp" alt="Plague Alchemist awakened" /></div>
+          <div class="wk__main">
+            <h4>Plague Alchemist</h4>
+            <div class="wk__stats"><span>Damage <b>&times;1</b></span><span>Speed <b>&times;1</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Black Plague</p>
+            <p>Every throw lands a black puddle on a random spot of the stretch the monsters walk: 90 px, 10 s, 75% slow (bosses half), a hit per second. Puddles stack. +1 puddle per throw per 25 kills (max 4). Kill tally over his head.</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/shadow_ninja.webp" alt="Shadow Ninja awakened" /></div>
+          <div class="wk__main">
+            <h4>Shadow Ninja</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--timer">Every 12s</span></div>
+            <p class="wk__ult">Shadow Clones</p>
+            <p>2 clones for 8 s copy every attack at 50% damage (crits roll).</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/storm_whelp.webp" alt="Storm Whelp awakened" /></div>
+          <div class="wk__main">
+            <h4>Storm Whelp</h4>
+            <div class="wk__stats"><span>Damage <b>&times;2</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--timer">Every 8s</span></div>
+            <p class="wk__ult">Hunting Storm</p>
+            <p>Bolts hit the 6 fastest monsters for &times;3. Shocked: +30% damage taken for 4 s (shares the Judgment Slam curse).</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/treant_guardian.webp" alt="Treant Guardian awakened" /></div>
+          <div class="wk__main">
+            <h4>Treant Guardian</h4>
+            <div class="wk__stats"><span>Damage <b>&times;2</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 10s</span></div>
+            <p class="wk__ult">Forest Grasp</p>
+            <p>Roots grab the 5 strongest monsters for &times;2 and hold them 3 s (bosses 1 s).</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/bone_necromancer.webp" alt="Bone Necromancer awakened" /></div>
+          <div class="wk__main">
+            <h4>Bone Necromancer</h4>
+            <div class="wk__stats"><span>Damage <b>&times;4</b></span><span>Speed <b>&times;2</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Raise Dead</p>
+            <p>Monsters that die under his curse rise as skeletons (max 5, 20 s) walking back up the path. The first monster they meet sets them off for &times;3 within 100 px.</p>
+          </div>
+        </article>
+        <article class="wk wk--epic">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/tide_mermaid.webp" alt="Tide Mermaid" /></div>
+          <div class="wk__main">
+            <h4>Tide Mermaid</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 12s</span></div>
+            <p class="wk__ult">Tidal Wave</p>
+            <p>Washes every monster 120 px back (bosses 40 px) for &times;1.5 and slows 40% for 3 s.</p>
+          </div>
+        </article>
+      </div>
+      <p class="v27__note">Echo Spirits don't repeat Moonshine, Reborn, Shadow Clones or Tidal Wave. The other seven epics have no awakened art yet and keep the old awakening for now.</p>
+    </section>
+
+    <section class="section v27__sec" id="legendaries">
+      <div class="section__head">
+        <span class="eyebrow">Awakened legendaries &amp; mythics</span>
+        <h2>Legendaries &amp; Mythics</h2>
+        <p>4 legendaries and 2 mythics.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--legendary">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/vampire_countess.webp" alt="Vampire Countess awakened" /></div>
+          <div class="wk__main">
+            <h4>Vampire Countess</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Queen's Gambit</p>
+            <p>Every monster spawns kissed. Her kisses pay 3 mana (not 2) plus her Plunder when it dies.</p>
+          </div>
+        </article>
+        <article class="wk wk--legendary">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/sun_priestess.webp" alt="Sun Priestess awakened" /></div>
+          <div class="wk__main">
+            <h4>Sun Priestess</h4>
+            <div class="wk__stats"><span>Damage <b>&times;1</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Retribution</p>
+            <p>Still never attacks. Her buff &times;3 &times; 2.4 (cap +300% attack speed). Neighbours get +30% damage, True Strike, Giant Slayer and a 25% stun per hit. A neighbouring Shield Knight awakens at any rank.</p>
+          </div>
+        </article>
+        <article class="wk wk--legendary">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/star_astronomer.webp" alt="Star Astronomer awakened" /></div>
+          <div class="wk__main">
+            <h4>Star Astronomer</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Star Merger</p>
+            <p>Every other Star Astronomer on the board, and every new one, merges into her: +20% damage and +10% attack speed per absorbed rank. Star counter over her head.</p>
+          </div>
+        </article>
+        <article class="wk wk--legendary">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/crystal_queen.webp" alt="Crystal Queen awakened" /></div>
+          <div class="wk__main">
+            <h4>Crystal Queen</h4>
+            <div class="wk__stats"><span>Damage <b>&times;2</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--timer">Every 55s</span></div>
+            <p class="wk__ult">Frozen Fields</p>
+            <p>Freezes every monster 10 s (bosses 5 s). The path is iced 40 s (75% slow). She can't attack during the ice, and the cooldown runs from the cast. Freeze chance 45%.</p>
+          </div>
+        </article>
+        <article class="wk wk--legendary">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/void_titan.webp" alt="Void Titan awakened" /></div>
+          <div class="wk__main">
+            <h4>Void Titan</h4>
+            <div class="wk__stats"><span>Damage <b>&times;3</b></span><span>Speed <b>&times;3</b></span><span class="wk__type wk__type--timer">Every 35s</span></div>
+            <p class="wk__ult">Black Hole</p>
+            <p>2 black holes (120 px, 25 s) on the thickest crowds. Monsters caught can't move and are pulled to the centre (bosses too). No damage. Execute chance 10%. (Mythic)</p>
+          </div>
+        </article>
+        <article class="wk wk--legendary">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits_awakened/chrono_mage.webp" alt="Chrono Mage awakened" /></div>
+          <div class="wk__main">
+            <h4>Chrono Mage</h4>
+            <div class="wk__stats"><span>Damage <b>&times;1</b></span><span>Speed <b>&times;4</b></span><span class="wk__type wk__type--timer">Every 45s</span></div>
+            <p class="wk__ult">Big Ben</p>
+            <p>4 random attacking units get &times;1.8 attack speed for 12 s, then rank +1 (units that reach max rank with awakened art awaken). (Mythic)</p>
+          </div>
+        </article>
+      </div>
+      <p class="v27__note"><b>Vampire's Kiss</b> (awakened or not): every hit kisses the monster. A kissed monster that dies (anyone's kill) pays 2 mana plus her Plunder. Echo Spirits don't repeat Frozen Fields, Black Hole or Big Ben. Black holes and the frost tint are drawn in code, so these units use their normal portraits.</p>
+    </section>
+
+    <section class="section" id="reworks">
+      <div class="section__head">
+        <span class="eyebrow">New rules</span>
+        <h2>Rare reworks</h2>
+        <p>Four rares change how they work. The numbers on their cards match.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/frog_alchemist.webp" alt="Frog Alchemist" /></div>
+          <div class="wk__main"><h4>Frog Alchemist</h4><p>Never awakens. Each attack drops a poison puddle (radius 70 px) that deals his hit per second. It lasts 5 s, +0.2 s per card level above 1, +0.5 s per in-battle power-up. Damage rises with rank (it is his hit). Overlapping puddles don't stack.</p></div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/raccoon_thief.webp" alt="Raccoon Thief" /></div>
+          <div class="wk__main"><h4>Raccoon Thief</h4><p>Base damage 10. A mana pulse comes every 6 s (0.1 s faster per card level above 1, min 3 s). It pays 5 mana, +2 per rank above 1, +3 per power-up.</p></div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/vine_druid.webp" alt="Vine Druid" /></div>
+          <div class="wk__main"><h4>Vine Druid</h4><p>Never attacks. Grows one prickly vine ahead of the front monster. It holds monsters for 3 s (bosses 1 s) and deals her hit per second to monsters in it. Regrows 6 s after it withers.</p></div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/snowglobe_fairy.webp" alt="Snowglobe Fairy" /></div>
+          <div class="wk__main"><h4>Snowglobe Fairy</h4><p>Base freeze chance is 20% (was 12%). It still rises with rank.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="lab">
+      <div class="section__head">
+        <span class="eyebrow">New lobby mode</span>
+        <h2>Unit Lab</h2>
+        <p>A third lobby card next to Arena and Stories: pick any units and test them on the meadow.</p>
+      </div>
+      <div class="v27__box">
+        <ul>
+          <li><b>Pick any units</b> you like, then try them out with no stakes.</li>
+          <li><b>Tap to place</b> units on any tile, and move them around freely.</li>
+          <li><b>Next-wave picker.</b> Jump around with -10, -1, +1 and +10, then press GO TO WAVE N.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="retired">
+      <div class="section__head">
+        <span class="eyebrow">Retired</span>
+        <h2>Retired supports</h2>
+        <p>Mirror Slime, Banner Herald and Mime are retired.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--retired">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/mirror_slime.webp" alt="Mirror Slime" /></div>
+          <div class="wk__main"><h4>Mirror Slime</h4><p>Retired.</p></div>
+        </article>
+        <article class="wk wk--retired">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/banner_herald.webp" alt="Banner Herald" /></div>
+          <div class="wk__main"><h4>Banner Herald</h4><p>Retired.</p></div>
+        </article>
+        <article class="wk wk--retired">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/mime.webp" alt="Mime" /></div>
+          <div class="wk__main"><h4>Mime</h4><p>Retired.</p></div>
+        </article>
+      </div>
+      <p class="v27__note">They no longer drop, can't be used in decks, and are gone from the Unit Lab and PvP bots. Owners still see the card in their collection, marked "Currently unavailable". A saved deck that held one of them refills automatically from your other cards. The Mime daily quest is no longer picked.</p>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section class="cta">
+      <img class="cta__bg" crossorigin="anonymous" src="https://assets.crownnkeep.com/locations/lobby_landscape.webp" alt="" loading="lazy" />
+      <div class="cta__body">
+        <h2>Wake them up.</h2>
+        <p>Every update is already live. Jump in free, right in your browser.</p>
+        <a class="btn btn--play btn--xl" data-play href="#"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play Crown &amp; Keep</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" loading="lazy" />
+    <nav>
+      <a href="index.html#codex">Units</a><a href="index.html#arenas">Arenas</a><a href="index.html#modes">Modes</a><a href="index.html#pvp">PvP</a><a href="index.html#news">News</a><a href="release-notes.html">Release notes</a><a data-play href="#">Play</a>
+    </nav>
+    <p>&copy; 2026 Crown &amp; Keep. All rights reserved.</p>
+  </footer>
+
+  <script>
+    (() => {
+      const GAME_URL = "https://game.crownnkeep.com/";
+      document.querySelectorAll("[data-play]").forEach((a) => { a.href = GAME_URL; a.target = "_blank"; a.rel = "noopener"; });
+      const burger = document.getElementById("burger"), links = document.getElementById("navLinks");
+      burger.addEventListener("click", () => burger.setAttribute("aria-expanded", links.classList.toggle("is-open")));
+    })();
+  </script>
+</body>
+</html>
