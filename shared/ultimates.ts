@@ -78,7 +78,8 @@ export function castUltimate(ctx: UltCtx, u: SimUnit, scale: number): boolean {
   const p = ult.params;
   const hit = ctx.hitDamage(u) * scale;
   const all = ctx.targets();
-  if (!all.length) return false;
+  // Big Ben needs no monsters: it goes off between waves too.
+  if (!all.length && ult.id !== "big_ben") return false;
   switch (ult.id as UltId) {
     case "burning_spear": {
       const front = [...all].sort((a, b) => b.progress - a.progress).slice(0, p.targets);
