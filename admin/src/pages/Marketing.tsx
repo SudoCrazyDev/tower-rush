@@ -108,8 +108,8 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
   const posts = platformCopy(day);
   const [url, setUrl] = useState(row?.url ?? "");
   useEffect(() => setUrl(row?.url ?? ""), [row?.url]);
-  // Notes hold the finished links: the joined 12s reel first, then the raw Seedance clips.
-  const [reel, ...clips] = (row?.notes ?? "").split(/\s+/).filter((l) => l.startsWith("https://"));
+  // Notes hold the finished links: the 12s reel with hook and CTA text, the same reel without text, then the raw Seedance clips.
+  const [reel, clean, ...clips] = (row?.notes ?? "").split(/\s+/).filter((l) => l.startsWith("https://"));
   return (
     <tr>
       <td>
@@ -168,6 +168,11 @@ function DayRow({ day, date, row, onSave }: { day: PlanDay; date: string; row?: 
             {reel && (
               <a href={reel} download target="_blank" rel="noreferrer">
                 Reel
+              </a>
+            )}{" "}
+            {clean && (
+              <a href={clean} download target="_blank" rel="noreferrer">
+                No-text reel
               </a>
             )}{" "}
             {row?.url && (

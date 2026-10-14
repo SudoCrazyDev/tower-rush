@@ -1,7 +1,7 @@
 # Admin changelog
 
 ## 1.3.0
-- Marketing plan page: the 9-week social calendar (2026-10-19 to 2026-12-20) for the remaining Higgsfield credits, with still and clip prompts, copy buttons for TikTok, FB Reels, X, the FB feed and Discord. Each paid day shows its 12s reel (player plus download), still and raw clips, stored as `mkt:` art rows (process-art skips them); all 45 reels are generated and hosted under assets `marketing/`.
+- Marketing plan page: the 9-week social calendar (2026-10-19 to 2026-12-20) for the remaining Higgsfield credits, with still and clip prompts, copy buttons for TikTok, FB Reels, X, the FB feed and Discord. Each paid day shows its 12s reel with the hook and a PLAY FREE NOW end card (player plus download), a no-text copy, still and raw clips, stored as `mkt:` art rows (process-art skips them); all 45 reels are generated and hosted under assets `marketing/`.
 
 ## 1.2.0
 - v2.7 rules: Units shows each unit's awakening (multipliers, ultimate and its text) and the level speed row; Playground and arena view use the max rank from Economy (5) and show the unit's own ultimate; Economy gains `levelSpeedBonus` and labels the generic awakening values. Needs API 1.3.0.
