@@ -1,6 +1,7 @@
 /**
  * v2.7 field layer: draws what units leave on the path (Sim.fields: puddles, mushrooms, rag dolls,
- * prickly vines, vineyards, hives) one sprite per field id, plus the Scorched Earth glow (Sim.scorch).
+ * prickly vines, vineyards, hives, black holes) one sprite per field id, plus the Scorched Earth glow
+ * (Sim.scorch) and the Frozen Fields ice (Sim.frost).
  * Every texture use is guarded; a missing vfx falls back to a plain shape.
  */
 import Phaser from "phaser";
@@ -31,6 +32,8 @@ export class FieldLayer {
   private entries = new Map<number, Entry>();
   private scorchG: Phaser.GameObjects.Rectangle | null = null;
   private emberAt = 0;
+  private frostG: Phaser.GameObjects.Rectangle | null = null;
+  private snowAt = 0;
 
   constructor(private scene: Scene) {}
 
@@ -55,6 +58,7 @@ export class FieldLayer {
       this.remove(e);
     }
     this.scorch(now);
+    this.frost(now);
   }
 
   destroy() {
@@ -66,6 +70,8 @@ export class FieldLayer {
     this.entries.clear();
     this.scorchG?.destroy();
     this.scorchG = null;
+    this.frostG?.destroy();
+    this.frostG = null;
   }
 
   private image(key: string, x: number, y: number) {
@@ -137,6 +143,27 @@ export class FieldLayer {
         else obj = sc.add.ellipse(f.x, f.y - 24, 26, 48, 0xe8e2cf, 1).setStrokeStyle(3, 0x6a5a8a).setDepth(prop);
         break;
       }
+      case "blackhole": {
+        // A dark core with a slowly turning purple swirl around it.
+        obj = sc.add.ellipse(f.x, f.y, f.radius * 1.1, f.radius * 0.66, 0x07000f, 0.92).setStrokeStyle(5, 0xb06bff, 0.9).setDepth(GROUND_DEPTH + 3);
+        const swirl = sc.add.graphics().setPosition(f.x, f.y).setDepth(GROUND_DEPTH + 2);
+        for (let k = 0; k < 3; k++) {
+          swirl.lineStyle(6 - k, k === 1 ? 0xff7ad9 : 0x8a4dff, 0.6 - k * 0.12);
+          swirl.beginPath();
+          for (let a = 0; a <= Math.PI * 1.4; a += 0.12) {
+            const r = f.radius * (0.35 + (a / (Math.PI * 1.4)) * 0.65);
+            const t = a + (k * Math.PI * 2) / 3;
+            if (a === 0) swirl.moveTo(Math.cos(t) * r, Math.sin(t) * r);
+            else swirl.lineTo(Math.cos(t) * r, Math.sin(t) * r);
+          }
+          swirl.strokePath();
+        }
+        swirl.setScale(1, 0.6);
+        extra.push(swirl);
+        sc.tweens.add({ targets: swirl, angle: -360, duration: 2200, repeat: -1 });
+        sc.tweens.add({ targets: obj, scaleX: { from: 0.94, to: 1.06 }, scaleY: { from: 0.94, to: 1.06 }, duration: 600, yoyo: true, repeat: -1, ease: "Sine.InOut" });
+        break;
+      }
       default: {
         // hive
         const img = this.image("beehive", f.x, f.y);
@@ -184,6 +211,11 @@ export class FieldLayer {
       }
     } else if (f.kind === "vine") {
       o.setAngle(f.held > 0 ? Math.sin(now * 40) * 4 : 0);
+    } else if (f.kind === "blackhole" && Math.random() < 0.25) {
+      // Motes spiral into the hole.
+      const a = Math.random() * Math.PI * 2;
+      const mote = this.scene.add.circle(f.x + Math.cos(a) * f.radius, f.y + Math.sin(a) * f.radius * 0.6, 3 + Math.random() * 3, 0xd9b3ff, 0.9).setDepth(GROUND_DEPTH + 4);
+      this.scene.tweens.add({ targets: mote, x: f.x, y: f.y, scale: 0.2, alpha: 0.2, duration: 520, ease: "Cubic.In", onComplete: () => mote.destroy() });
     }
   }
 
@@ -199,6 +231,30 @@ export class FieldLayer {
       duration: e.f.kind === "puddle" ? 120 : 220,
       onComplete: () => all.forEach((x) => x.destroy()),
     });
+  }
+
+  /** Frozen Fields: an icy tint over the arena with falling snow. */
+  private frost(now: number) {
+    const fr = this.scene.sim.frost;
+    const on = !!fr && now < fr.until;
+    if (!on) {
+      if (this.frostG) {
+        const g = this.frostG;
+        this.frostG = null;
+        this.scene.tweens.add({ targets: g, alpha: 0, duration: 500, onComplete: () => g.destroy() });
+      }
+      return;
+    }
+    if (!this.frostG) this.frostG = this.scene.add.rectangle(ARENA_W / 2, ARENA_H / 2, ARENA_W, ARENA_H, 0x9fe0ff, 0.01).setDepth(GROUND_DEPTH + 5);
+    this.frostG.setFillStyle(0x9fe0ff, 0.2 + Math.sin(now * 2) * 0.03);
+    const t = this.scene.time.now;
+    if (t >= this.snowAt) {
+      this.snowAt = t + 70;
+      const x = Math.random() * ARENA_W;
+      const y = 200 + Math.random() * (ARENA_H - 500);
+      const fl = this.scene.add.circle(x, y, 2 + Math.random() * 3, 0xffffff, 0.95).setDepth(1500);
+      this.scene.tweens.add({ targets: fl, y: y + 120 + Math.random() * 80, x: x + (Math.random() - 0.5) * 50, alpha: 0, duration: 1300, onComplete: () => fl.destroy() });
+    }
   }
 
   /** Scorched Earth: a red glow over the arena with drifting embers. */

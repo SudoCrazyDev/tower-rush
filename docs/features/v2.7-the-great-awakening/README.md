@@ -103,13 +103,29 @@ Crystal Golem through Plague Alchemist are the user's designs. Shadow Ninja, Sto
 
 Echo Spirits don't repeat Moonshine, Reborn, Shadow Clones or Tidal Wave. New art: Crystal Golem and Plague Alchemist awakened forms. Tide Mermaid's awakened sheets are procedural, because Higgsfield's filter blocked her clips. VFX added: crystal_boulder, crystal_shatter, phoenix_egg, black_puddle, plague_skull, tidal_wave, root_grasp, and bone_skeleton (a copy of the skeleton_soldier monster art).
 
+## 6c. Legendaries (and two mythics)
+The user's designs. Void Titan and Chrono Mage are mythics, done with this pass.
+
+| Unit | Damage | Speed | Ultimate | Type | What it does |
+|---|---|---|---|---|---|
+| Vampire Countess | ×3 | ×3 | Queen's Gambit | Passive | Every monster spawns kissed; her kisses pay 3 mana (not 2) plus her Plunder when it dies. |
+| Sun Priestess | ×1 | ×3 | Retribution | Passive | Still never attacks. Her buff ×3 × 2.4 (cap +300% attack speed); neighbours +30% damage, True Strike, Giant Slayer, 25% stun per hit. A neighbouring Shield Knight awakens (any rank). |
+| Star Astronomer | ×3 | ×3 | Star Merger | Passive | Every other Star Astronomer on the board, and every new one, merges into her: +20% damage, +10% attack speed per absorbed rank. Star counter over her head. |
+| Crystal Queen | ×2 | ×4 | Frozen Fields | Timer, 55 s | Freezes every monster 10 s (bosses 5 s); the path is iced 40 s (75% slow). She can't attack during the ice; the cooldown runs from the cast. Freeze chance 45%. |
+| Void Titan | ×3 | ×3 | Black Hole | Timer, 35 s | 2 black holes (120 px, 25 s) on the thickest crowds. Monsters caught can't move and are pulled to the centre (bosses too). No damage. Execute chance 10%. |
+| Chrono Mage | ×1 | ×4 | Big Ben | Timer, 45 s | 4 random attacking units ×1.8 attack speed for 12 s, then rank +1 (reaching max rank with art, they awaken). |
+
+- **Vampire's Kiss (awakened or not):** every hit kisses the monster. A kissed monster that dies (anyone's kill) pays 2 mana plus her Plunder (`REWORKS.vampire_countess`).
+- Echo Spirits don't repeat Frozen Fields, Black Hole or Big Ben.
+- No new art. Black holes and the frost tint are drawn in code (`game/src/battle/fields.ts`).
+
 ## 7. Design note
 - Awakened commons are intentionally stronger than the current mythics. Mythics are revamped later in 2.7.
 
 ## 8. Placeholders (TBD)
 - **Epics without awakened art:** Cyclops Smith, Lava Golem, Magnet Robot, Minotaur Gladiator, Lantern Ghost, Sand Worm, Card Jester (TBD)
-- **Legendaries:** TBD
-- **Mythics:** TBD (revamp follows the commons)
+- **Legendaries without awakened art:** Anubis Priest, Lion Paladin, Spider Queen, Unicorn Knight, Valkyrie (TBD)
+- **Mythics without awakened art:** Dragon Egg, Monkey King (TBD)
 - **Event units:** TBD
 
 ## 9. Release checklist

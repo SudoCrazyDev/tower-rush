@@ -65,6 +65,9 @@ export class Unit {
   private clones: Phaser.GameObjects.Sprite[] = [];
   private halo: Phaser.GameObjects.Ellipse | null = null;
   private tally: Phaser.GameObjects.Container | null = null;
+  /** v2.7 Big Ben clock ring and Frozen Fields ice aura. */
+  private benRing: Phaser.GameObjects.Ellipse | null = null;
+  private iceAura: Phaser.GameObjects.Ellipse | null = null;
   private tallySeen = -1;
 
   constructor(scene: BattleScene, sim: SimUnit) {
@@ -510,7 +513,44 @@ export class Unit {
       this.halo = null;
     }
     this.halo?.setPosition(x, y - this.px * 0.72);
-    // Black Plague: a skull and the kill count (each kill brings more puddles).
+    // Big Ben: a golden ring ticks round the unit while it attacks faster.
+    const ben = now < s.benUntil;
+    if (ben && !this.benRing) {
+      this.benRing = sc.add.ellipse(x, y, 96, 30).setStrokeStyle(4, 0xffd86b, 0.95).setDepth(depth - 1);
+      sc.tweens.add({ targets: this.benRing, scaleX: { from: 1, to: 1.15 }, scaleY: { from: 1, to: 1.15 }, yoyo: true, repeat: -1, duration: 250 });
+    } else if (!ben && this.benRing) {
+      sc.tweens.killTweensOf(this.benRing);
+      this.benRing.destroy();
+      this.benRing = null;
+    }
+    this.benRing?.setPosition(x, y + 20);
+    // Frozen Fields: the Crystal Queen glows with ice while she holds it (no attacks).
+    const ice = now < s.frostUntil;
+    if (ice && !this.iceAura) {
+      this.iceAura = sc.add.ellipse(x, y, 120, 150, 0x9fe0ff, 0.25).setStrokeStyle(4, 0xdff6ff, 0.9).setDepth(depth - 1);
+      sc.tweens.add({ targets: this.iceAura, alpha: { from: 1, to: 0.55 }, yoyo: true, repeat: -1, duration: 700 });
+    } else if (!ice && this.iceAura) {
+      sc.tweens.killTweensOf(this.iceAura);
+      this.iceAura.destroy();
+      this.iceAura = null;
+    }
+    this.iceAura?.setPosition(x, y - this.px * 0.25);
+    // Black Plague: a skull and the kill count (each kill brings more puddles). Star Merger: a star and the ranks absorbed.
+    const star = this.awakened && ultOf(this.def.id)?.id === "star_merger";
+    if (star) {
+      if (!this.tally) {
+        const icon = hasFx(sc, "pt_star") ? sc.add.image(-16, 0, fxKey("pt_star")) : null;
+        if (icon) icon.setScale(30 / Math.max(1, icon.height));
+        const label = txt(sc, 4, 0, "0", 22, "#ffe27a", [0, 0.5]);
+        this.tally = sc.add.container(0, 0, icon ? [icon, label] : [sc.add.star(-16, 0, 5, 6, 13, 0xffe27a), label]);
+      }
+      this.tally.setPosition(x + 30, y - this.px * 0.62).setDepth(depth + 2);
+      if (s.absorbed !== this.tallySeen) {
+        this.tallySeen = s.absorbed;
+        (this.tally.list[1] as Phaser.GameObjects.Text).setText(String(s.absorbed));
+        sc.tweens.add({ targets: this.tally, scale: { from: 1.5, to: 1 }, duration: 260 });
+      }
+    }
     if (this.awakened && ultOf(this.def.id)?.id === "black_plague") {
       if (!this.tally) {
         const icon = hasFx(sc, "plague_skull") ? sc.add.image(-16, 0, fxKey("plague_skull")) : null;
@@ -532,6 +572,8 @@ export class Unit {
     this.clones.forEach((c) => c.destroy());
     this.halo?.destroy();
     this.tally?.destroy();
+    this.benRing?.destroy();
+    this.iceAura?.destroy();
     this.heart?.destroy();
     this.statusIcons?.destroy();
     this.aura?.destroy();

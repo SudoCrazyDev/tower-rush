@@ -40,6 +40,8 @@ export interface UltCtx {
   field(kind: SimField["kind"], u: SimUnit, path: Path, dist: number, o: { radius: number; until: number; dps: number; readyAt?: number }): void;
   /** Scorched Earth: every monster burns at `dps` for `time` seconds (new ones too). */
   scorch(u: SimUnit, dps: number, time: number): void;
+  /** Frozen Fields: every monster is slowed by `slow` for `time` seconds (new ones too). */
+  frost(slow: number, time: number): void;
   /** Units on the board that attack (no supports, buffers or units that never attack themselves). */
   units(): SimUnit[];
 }
@@ -247,6 +249,51 @@ export function castUltimate(ctx: UltCtx, u: SimUnit, scale: number): boolean {
         m.slowUntil = Math.max(m.slowUntil, now + p.slowTime);
         ctx.hurt(u, m, hit * p.damage);
       }
+      return true;
+    }
+    case "frozen_fields": {
+      const now = ctx.now;
+      cast(ctx, u, ult, u.x, u.y, 0, { targets: ids(all) });
+      for (const m of all) {
+        m.frozenUntil = Math.max(m.frozenUntil, now + (m.boss ? p.bossFreeze : p.freeze));
+        ctx.view({ type: "proc", t: now, kind: "frozen", x: m.pos.x, y: m.pos.y - 30 });
+      }
+      ctx.frost(p.slow, p.duration);
+      u.frostUntil = now + p.duration;
+      return true;
+    }
+    case "black_hole": {
+      // The first hole opens on the thickest crowd, the next on the thickest crowd clear of it;
+      // with too few monsters, the rest open ahead of the leader.
+      const until = ctx.now + p.duration;
+      const points: Pt[] = [];
+      let left = all;
+      while (points.length < p.holes && left.length) {
+        let best = left[0];
+        let most = -1;
+        for (const m of left) {
+          const n = ctx.nearby(m.pos, p.radius).length;
+          if (n > most) [best, most] = [m, n];
+        }
+        ctx.field("blackhole", u, best.path, best.dist, { radius: p.radius, until, dps: 0 });
+        points.push(best.path.at(best.dist));
+        const c = best.pos;
+        left = left.filter((m) => Math.hypot(m.pos.x - c.x, m.pos.y - c.y) > p.radius * 2);
+      }
+      const front = [...all].sort((a, b) => b.progress - a.progress)[0];
+      for (let k = 1; points.length < p.holes; k++) {
+        const d = Math.min(front.path.length * 0.95, front.dist + p.radius * 2 * k);
+        ctx.field("blackhole", u, front.path, d, { radius: p.radius, until, dps: 0 });
+        points.push(front.path.at(d));
+      }
+      cast(ctx, u, ult, points[0].x, points[0].y, p.radius, { points });
+      return true;
+    }
+    case "big_ben": {
+      const picked = sample(ctx, ctx.units().filter((v) => v !== u), p.targets);
+      if (!picked.length) return false;
+      cast(ctx, u, ult, u.x, u.y, 0, { points: picked.map((v) => ({ x: v.x, y: v.y })), targets: picked.map((v) => v.uid) });
+      for (const v of picked) v.benUntil = ctx.now + p.duration;
       return true;
     }
   }

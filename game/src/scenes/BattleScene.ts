@@ -1201,10 +1201,12 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case "become": {
-        this.vfx("arcane_vortex", e.x, e.y - 20, 150);
+        this.vfx(e.why === "rank" ? "merge_levelup" : "arcane_vortex", e.x, e.y - 20, 150);
         this.dropUnit(e.gone);
         const u = this.makeUnit(e.uid, e.slot);
         if (u) this.spawnUnit(u);
+        // v2.7 Big Ben ranks units up; Retribution awakens a Shield Knight.
+        if (e.why === "rank") this.floater(e.x, e.y - 70, "RANK UP!", "#ffd86b", 26);
         break;
       }
       case "swap": {
@@ -1485,6 +1487,8 @@ export class BattleScene extends Phaser.Scene {
         const u = this.units.get(e.uid);
         u?.playOnce("skill");
         if (e.kind === "special") {
+          // v2.7 Star Merger: the absorbed astronomers leave the board.
+          if (e.ult === "star_merger") for (const g of e.targets ?? []) this.dropUnit(g);
           playUltimate(this, e, u?.sprite);
           break;
         }

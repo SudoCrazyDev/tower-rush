@@ -1191,6 +1191,20 @@
   "time": 192.167,
   "wave": 10
  },
+ "unit:chrono_mage:awake": {
+  "damage": 62034.4,
+  "heroDamage": 0,
+  "kills": 182,
+  "leaks": 0,
+  "mana": 3122,
+  "markHash": "74d3e4d6",
+  "marks": 466,
+  "outcome": "cleared",
+  "slotDamage": "2351.31,19176.5,16091.5,3566.74,2365.86,2026.2,2026.2,2026.2,2026.2,2026.2,1620.96,1620.96,1823.58,1665.03,1620.96",
+  "slotKills": "2,79,91,8,1,0,0,0,0,0,0,0,0,1,0",
+  "time": 178.433,
+  "wave": 10
+ },
  "unit:chrono_mage:r1": {
   "damage": 65916.2,
   "heroDamage": 0,
@@ -1343,6 +1357,20 @@
   "slotDamage": "9358.47,16988.7,11224,4048.72,5561.73,2075.7,2075.7,1660.56,1660.56,1660.56,1660.56,1660.56,1660.56,1660.56,1660.56",
   "slotKills": "25,82,55,10,14,0,0,0,0,0,0,0,0,0,0",
   "time": 185.367,
+  "wave": 10
+ },
+ "unit:crystal_queen:awake": {
+  "damage": 67545.4,
+  "heroDamage": 0,
+  "kills": 209,
+  "leaks": 0,
+  "mana": 3330,
+  "markHash": "559bd706",
+  "marks": 555,
+  "outcome": "cleared",
+  "slotDamage": "11193.3,5897.6,3835.2,2965.9,8351.88,6696.04,1837.44,1837.44,1837.44,8969.37,4394.43,1837.44,1837.44,1837.44,4217.02",
+  "slotKills": "56,33,21,1,25,14,0,0,0,31,15,0,0,0,13",
+  "time": 220,
   "wave": 10
  },
  "unit:crystal_queen:r1": {
@@ -3837,6 +3865,20 @@
   "time": 199.933,
   "wave": 10
  },
+ "unit:star_astronomer:awake": {
+  "damage": 62972.1,
+  "heroDamage": 0,
+  "kills": 180,
+  "leaks": 0,
+  "mana": 3142,
+  "markHash": "9fa6e9e7",
+  "marks": 203,
+  "outcome": "cleared",
+  "slotDamage": "62972.1,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+  "slotKills": "180,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+  "time": 173.9,
+  "wave": 10
+ },
  "unit:star_astronomer:r1": {
   "damage": 1089.72,
   "heroDamage": 0,
@@ -3990,6 +4032,20 @@
   "slotKills": "104,58,11,4,1,1,0,0,0,1,0,0,0,0,0",
   "time": 175.367,
   "wave": 10
+ },
+ "unit:sun_priestess:awake": {
+  "damage": 0,
+  "heroDamage": 0,
+  "kills": 0,
+  "leaks": 3,
+  "mana": 36,
+  "markHash": "a81fd377",
+  "marks": 11,
+  "outcome": "lost",
+  "slotDamage": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+  "slotKills": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+  "time": 33.3333,
+  "wave": 2
  },
  "unit:sun_priestess:r1": {
   "damage": 0,
@@ -4327,12 +4383,26 @@
   "time": 166.967,
   "wave": 10
  },
+ "unit:vampire_countess:awake": {
+  "damage": 62972.1,
+  "heroDamage": 0,
+  "kills": 180,
+  "leaks": 0,
+  "mana": 4762,
+  "markHash": "f5a275d8",
+  "marks": 215,
+  "outcome": "cleared",
+  "slotDamage": "4357.07,28524.3,13923.9,4494.23,2411.64,2411.64,2411.64,2411.64,2026.05,0,0,0,0,0,0",
+  "slotKills": "2,118,59,0,0,0,0,0,1,0,0,0,0,0,0",
+  "time": 174.7,
+  "wave": 10
+ },
  "unit:vampire_countess:r1": {
   "damage": 38678,
   "heroDamage": 0,
   "kills": 167,
   "leaks": 3,
-  "mana": 3192,
+  "mana": 3752,
   "markHash": "64ecc6cd",
   "marks": 428,
   "outcome": "lost",
@@ -4346,7 +4416,7 @@
   "heroDamage": 0,
   "kills": 186,
   "leaks": 0,
-  "mana": 3778,
+  "mana": 3838,
   "markHash": "4a07f729",
   "marks": 300,
   "outcome": "cleared",
@@ -4360,7 +4430,7 @@
   "heroDamage": 0,
   "kills": 180,
   "leaks": 0,
-  "mana": 3682,
+  "mana": 3692,
   "markHash": "33806097",
   "marks": 251,
   "outcome": "cleared",
@@ -4424,6 +4494,20 @@
   "slotKills": "0,4,0,0,0,1,0,0,2,0,5,0,4,1,1",
   "time": 41.1333,
   "wave": 2
+ },
+ "unit:void_titan:awake": {
+  "damage": 65063.7,
+  "heroDamage": 0,
+  "kills": 190,
+  "leaks": 0,
+  "mana": 3183,
+  "markHash": "463da76e",
+  "marks": 344,
+  "outcome": "cleared",
+  "slotDamage": "5279.98,19662.9,11743.6,11447,8617.32,0,0,8312.95,0,0,0,0,0,0,0",
+  "slotKills": "21,87,37,26,18,0,0,1,0,0,0,0,0,0,0",
+  "time": 198.4,
+  "wave": 10
  },
  "unit:void_titan:r1": {
   "damage": 2435.95,

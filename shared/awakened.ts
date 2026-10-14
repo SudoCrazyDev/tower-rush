@@ -40,7 +40,13 @@ export type UltId =
   | "hunting_storm"
   | "forest_grasp"
   | "raise_dead"
-  | "tidal_wave";
+  | "tidal_wave"
+  | "queens_gambit"
+  | "retribution"
+  | "star_merger"
+  | "frozen_fields"
+  | "black_hole"
+  | "big_ben";
 
 export interface UltDef {
   id: UltId;
@@ -86,10 +92,23 @@ export const ULTIMATES: Record<UltId, UltDef> = {
   forest_grasp: { id: "forest_grasp", name: "Forest Grasp", mode: "timer", every: 10, params: { targets: 5, hold: 3, bossHold: 1, damage: 2 } },
   raise_dead: { id: "raise_dead", name: "Raise Dead", mode: "passive", every: 0, params: { max: 5, damage: 3, radius: 100, speed: 110, life: 20, touch: 45 } },
   tidal_wave: { id: "tidal_wave", name: "Tidal Wave", mode: "timer", every: 12, params: { push: 120, bossPush: 40, damage: 1.5, slow: 0.4, slowTime: 3 } },
+  // legendary
+  // Every monster spawns kissed; her kisses pay `kiss` mana (plain Vampire's Kiss: REWORKS.vampire_countess).
+  queens_gambit: { id: "queens_gambit", name: "Queen's Gambit", mode: "passive", every: 0, params: { kiss: 3 } },
+  // Sun Priestess never attacks: `speed` multiplies her buff (cap `max`); neighbours get +`damage` and a `stun` chance per hit.
+  retribution: { id: "retribution", name: "Retribution", mode: "passive", every: 0, params: { speed: 2.4, max: 3, damage: 0.3, stun: 0.25 } },
+  // Per absorbed rank.
+  star_merger: { id: "star_merger", name: "Star Merger", mode: "passive", every: 0, params: { damage: 0.2, speed: 0.1 } },
+  // The cooldown runs from the cast (the field lasts `duration` of it). `chance`: her freeze chance once awakened.
+  frozen_fields: { id: "frozen_fields", name: "Frozen Fields", mode: "timer", every: 55, params: { freeze: 10, bossFreeze: 5, duration: 40, slow: 0.75, chance: 0.45 } },
+  // mythic
+  // `pull`: px/s toward the centre. `execute`: the Void Titan's execute chance once awakened.
+  black_hole: { id: "black_hole", name: "Black Hole", mode: "timer", every: 35, params: { holes: 2, radius: 120, duration: 25, pull: 90, execute: 0.1 } },
+  big_ben: { id: "big_ben", name: "Big Ben", mode: "timer", every: 45, params: { targets: 4, speed: 0.8, duration: 12 } },
 };
 
 /** Ultimates an Echo Spirit can't repeat (a second copy would change nothing or stack oddly). */
-export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll", "moonshine", "reborn", "shadow_clones", "tidal_wave"]);
+export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll", "moonshine", "reborn", "shadow_clones", "tidal_wave", "frozen_fields", "black_hole", "big_ben"]);
 
 /** Units that never awaken (even with awakened art). */
 export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller"]);
@@ -135,6 +154,15 @@ export const AWAKENINGS: Record<string, Awakening> = {
   treant_guardian: { damage: 2, speed: 3, ult: "forest_grasp" },
   bone_necromancer: { damage: 4, speed: 2, ult: "raise_dead" },
   tide_mermaid: { damage: 3, speed: 3, ult: "tidal_wave" },
+  // legendary
+  vampire_countess: { damage: 3, speed: 3, ult: "queens_gambit" },
+  // Sun Priestess never attacks: her speed multiplier scales the attack speed she gives her neighbours.
+  sun_priestess: { damage: 1, speed: 3, ult: "retribution" },
+  star_astronomer: { damage: 3, speed: 3, ult: "star_merger" },
+  crystal_queen: { damage: 2, speed: 4, ult: "frozen_fields" },
+  // mythic
+  void_titan: { damage: 3, speed: 3, ult: "black_hole" },
+  chrono_mage: { damage: 1, speed: 4, ult: "big_ben" },
 };
 
 /** Awakened damage and speed multipliers for a unit id (its own, or the generic ones). */
@@ -218,6 +246,18 @@ export function ultText(id: string): string {
       return `Passive: monsters that die under his curse rise as skeletons (up to ${p.max}) and walk back up the path. The first monster they meet sets them off for ${x(p.damage)} damage within ${p.radius}px.`;
     case "tidal_wave":
       return `Every ${u.every}s: a wave washes every monster ${p.push}px back up the path (bosses ${p.bossPush}px) for ${x(p.damage)} damage and slows them ${pct(p.slow)} for ${p.slowTime}s.`;
+    case "queens_gambit":
+      return `Passive: every monster walks in already carrying Vampire's Kiss. Her kisses pay ${p.kiss} mana when the monster dies, plus her Plunder.`;
+    case "retribution":
+      return `Passive: her neighbours attack much faster (her buff ${x(p.speed)} more, up to +${pct(p.max)}), deal +${pct(p.damage)} damage and gain True Strike, Giant Slayer and a ${pct(p.stun)} chance to stun. A Shield Knight next to her awakens.`;
+    case "star_merger":
+      return `Passive: every other Star Astronomer on the board, and every new one summoned, merges into her. Each absorbed rank adds +${pct(p.damage)} damage and +${pct(p.speed)} attack speed.`;
+    case "frozen_fields":
+      return `Every ${u.every}s: freezes every monster for ${p.freeze}s (bosses ${p.bossFreeze}s) and ices the whole path for ${p.duration}s: monsters on it are slowed ${pct(p.slow)}. She can't attack while the ice lasts. Freeze chance rises to ${pct(p.chance)}.`;
+    case "black_hole":
+      return `Every ${u.every}s: opens ${p.holes} black holes on the path for ${p.duration}s (${p.radius}px). Monsters caught can't move and are pulled to the centre. Execute chance rises to ${pct(p.execute)}.`;
+    case "big_ben":
+      return `Every ${u.every}s: ${p.targets} random units attack ${x(1 + p.speed)} as fast for ${p.duration}s, then rank up by 1 (reaching max rank, they awaken).`;
   }
 }
 

@@ -19,6 +19,8 @@ export const REWORKS = {
   vine_druid: { vine: { regrow: 6, hold: 3, bossHold: 1, ahead: 70, radius: 60, dps: 1, life: 12 } },
   /** Snowglobe Fairy: higher base freeze chance (it still rises with rank). */
   snowglobe_fairy: { freezeChance: 0.2 },
+  /** Vampire Countess: every hit leaves Vampire's Kiss; a kissed monster pays this mana (plus her Plunder) when it dies. */
+  vampire_countess: { kiss: { mana: 2 } },
 } as const;
 
 export const puddleTime = (level: number, powerUp: number) => {
@@ -56,6 +58,18 @@ export function liveDef(def: UnitDef, awakened = false): UnitDef {
     const perks = [...def.perks];
     for (const perk of ["true_strike", "giant_slayer"] as const) if (!perks.some((s) => s.perk === perk)) perks.push({ perk });
     return { ...def, kit, perks };
+  }
+  if (awakened && AWAKENINGS[def.id]?.ult === "retribution") {
+    // Sun Priestess: Giant Slayer joins her True Strike (her neighbours get both).
+    return def.perks.some((s) => s.perk === "giant_slayer") ? def : { ...def, perks: [...def.perks, { perk: "giant_slayer" as const }] };
+  }
+  if (awakened && AWAKENINGS[def.id]?.ult === "frozen_fields") {
+    const chance = ULTIMATES.frozen_fields.params.chance;
+    return { ...def, kit: def.kit.map((s) => (s.arch === "freeze" ? { ...s, tune: { ...s.tune, chance, perRank: 0, perRarity: 0 } } : s)) };
+  }
+  if (awakened && AWAKENINGS[def.id]?.ult === "black_hole") {
+    const chance = ULTIMATES.black_hole.params.execute;
+    return { ...def, kit: def.kit.map((s) => (s.arch === "execute" ? { ...s, tune: { ...s.tune, chance, perRank: 0, perRarity: 0 } } : s)) };
   }
   return def;
 }

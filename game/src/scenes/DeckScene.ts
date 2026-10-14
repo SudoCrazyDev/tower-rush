@@ -635,6 +635,8 @@ export class DeckScene extends Phaser.Scene {
     } else if (id === "raccoon_thief") {
       archName = "Mana pulse";
       slotLines = [`Every ${raccoonEvery(lv)}s a pulse pays ${raccoonMana(1, 0)} mana (+${REWORKS.raccoon_thief.mana.perRank} per rank).`];
+    } else if (id === "vampire_countess") {
+      slotLines = [...slotLines, `Vampire's Kiss: every monster she hits pays ${REWORKS.vampire_countess.kiss.mana} mana when it dies, plus her Plunder.`];
     } else if (id === "vine_druid") {
       const v = REWORKS.vine_druid.vine;
       archName = "Prickly vine";

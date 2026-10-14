@@ -350,6 +350,53 @@ const PLAY: Partial<Record<UltId, Play>> = {
   },
 };
 
+Object.assign(PLAY, {
+  star_merger(scene, e, from) {
+    // The absorbed astronomers stream into her as stars.
+    (e.points ?? []).forEach((p, i) =>
+      scene.time.delayedCall(i * 90, () => {
+        scene.vfx("star_burst", p.x, p.y - 20, 110);
+        fly(scene, "proj_star", { x: p.x, y: p.y - 30 }, from, 380, 40, 60, undefined, () => {
+          ring(scene, from.x, from.y + 30, 90, 0xffe27a, 380, 6);
+          scene.vfx("merge_levelup", from.x, from.y + 20, 150);
+        });
+      }),
+    );
+  },
+  frozen_fields(scene, e, from) {
+    const flash = scene.add.rectangle(ARENA_W / 2, ARENA_H / 2, ARENA_W, ARENA_H, 0xdff6ff, 0.55).setDepth(2058);
+    scene.tweens.add({ targets: flash, alpha: 0, duration: 700, onComplete: () => flash.destroy() });
+    ring(scene, from.x, from.y + 30, 800, 0x9fe0ff, 900, 14);
+    scene.cameras.main.shake(260, 0.01);
+    for (const uid of e.targets ?? []) {
+      const m = scene.getMonster(uid);
+      if (m) scene.vfx("freeze", m.sprite.x, m.sprite.y - 20, 90);
+    }
+  },
+  black_hole(scene, e, from) {
+    glow(scene, from.x, from.y + 30, 0x5a2a9a);
+    (e.points ?? []).forEach((p, i) =>
+      scene.time.delayedCall(i * 140, () => {
+        streak(scene, [from, p], 0xb06bff);
+        scene.vfx("arcane_vortex", p.x, p.y - 10, e.radius * 2);
+        ring(scene, p.x, p.y, e.radius, 0xb06bff, 500, 8);
+      }),
+    );
+    scene.cameras.main.shake(300, 0.012);
+  },
+  big_ben(scene, e, from) {
+    // A clock-face ring on the Chrono Mage, then a golden tick on each unit she hastes.
+    ring(scene, from.x, from.y + 30, 130, 0xffd86b, 600, 8);
+    scene.time.delayedCall(120, () => ring(scene, from.x, from.y + 30, 90, 0xffffff, 450, 4));
+    (e.points ?? []).forEach((p, i) =>
+      scene.time.delayedCall(80 + i * 100, () => {
+        streak(scene, [from, { x: p.x, y: p.y - 30 }], 0xffd86b);
+        ring(scene, p.x, p.y, 70, 0xffd86b, 420, 6);
+      }),
+    );
+  },
+} satisfies Partial<Record<UltId, Play>>);
+
 const FLOAT_COLOR: Partial<Record<UltId, string>> = {
   burning_spear: "#ff9a3b",
   bomberman: "#ff9a3b",
@@ -368,6 +415,10 @@ const FLOAT_COLOR: Partial<Record<UltId, string>> = {
   hunting_storm: "#9ff0ff",
   forest_grasp: "#9be27a",
   tidal_wave: "#8fd0ff",
+  star_merger: "#ffe27a",
+  frozen_fields: "#bfe9ff",
+  black_hole: "#d9a2ff",
+  big_ben: "#ffd86b",
 };
 
 /** Plays the look of a "special" ultimate (or an Echo Spirit's repeat of one). */

@@ -132,7 +132,7 @@ export type SimEvent =
   /** `gone` are the two merged units; `uid` is the new one on the target slot. `lucky`: a Lucky Cat kept the unit. */
   | { type: "merge"; t: number; uid: number; gone: [number, number]; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean; lucky: boolean }
   /** `gone` was replaced by `uid` (a Mime copy or a Mirror Slime turning). */
-  | { type: "become"; t: number; uid: number; gone: number; why: "copy" | "mirror"; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean }
+  | { type: "become"; t: number; uid: number; gone: number; why: "copy" | "mirror" | "awaken" | "rank"; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean }
   /** Portal Imp: `other` is the unit it traded with (null for a hop to an empty tile). */
   | { type: "swap"; t: number; uid: number; other: number | null; from: number; to: number }
   | { type: "awaken"; t: number; uid: number; id: string; slot: number; x: number; y: number }
@@ -467,6 +467,14 @@ export class SimUnit {
   blessings: number[] = [];
   /** v2.7: monsters this unit has killed (Black Plague throws more puddles with more kills). */
   kills = 0;
+  /** v2.7 Star Merger (Star Astronomer): ranks of the astronomers merged into it. */
+  absorbed = 0;
+  /** v2.7 Frozen Fields (Crystal Queen): holds the ice instead of attacking until then. */
+  frostUntil = 0;
+  /** v2.7 Big Ben (Chrono Mage): attacks faster until then, then ranks up. */
+  benUntil = 0;
+  /** v2.7 Retribution (a neighbouring awakened Sun Priestess): chance for each hit to stun. */
+  sunStun = 0;
   /** v2.7 Iceborn Warmother: extra damage to bosses (1.5 = +150%). */
   readonly bossBonus: number;
 
@@ -531,6 +539,8 @@ export class SimMonster {
   roarImmuneUntil = 0;
   /** v2.7 Raise Dead: the awakened Bone Necromancer whose curse is on it (it rises if it dies). */
   raiseBy: SimUnit | null = null;
+  /** v2.7 Vampire's Kiss: the Vampire Countess who kissed it (it pays mana when it dies). */
+  kissBy: SimUnit | null = null;
   poison: { dps: number; until: number; src: Source }[] = [];
   burn: { dps: number; until: number; src: Source } = { dps: 0, until: 0, src: 0 };
   powerTimer = 0;
@@ -642,7 +652,7 @@ export interface SimShot {
  */
 export interface SimField {
   id: number;
-  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive" | "plague" | "skeleton";
+  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive" | "plague" | "skeleton" | "blackhole";
   unit: SimUnit;
   path: Path;
   /** Centre along the path, and its foot point. */
@@ -774,6 +784,8 @@ export class Sim {
   private fieldId = 0;
   /** v2.7 Scorched Earth: every monster burns at `dps` until `until`. Read by the renderer. */
   scorch: { until: number; dps: number; src: Source } | null = null;
+  /** v2.7 Frozen Fields: every monster is slowed by `slow` until `until`. Read by the renderer. */
+  frost: { until: number; slow: number } | null = null;
   /** Echo Spirit encores waiting to go off. */
   private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number; ult?: UltId; scale: number }[] = [];
   /** v2.2 Story 3 state (see shared/faceless.ts). Read by the renderer: brazierLit (per ChapterMechanics.faceless.braziers entry), cageHp (null without a cage), cageOpen. */
@@ -1027,6 +1039,7 @@ export class Sim {
       u.charge = 0;
       u.auraSpeed = 0;
       u.auraDamage = 0;
+      u.sunStun = 0;
       u.perks = [];
       for (const p of u.ownPerks) addPerk(u.perks, p);
     }
@@ -1058,14 +1071,24 @@ export class Sim {
         return;
       }
       if (u.primary !== "buff") return;
-      const mult = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id)) * (u.awakened ? awakenDamageMult(u.def.id) : 1);
-      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult, u.fx);
+      // v2.7 Retribution (awakened Sun Priestess): her speed multipliers scale the buff (with a higher cap),
+      // and her neighbours also hit harder and may stun.
+      const ret = u.awakened && ultOf(u.def.id)?.id === "retribution" ? ULTIMATES.retribution.params : null;
+      const boost = boostMult(this.levelOf(u.def.id), this.powerOf(u.def.id));
+      const mult = boost * (ret ? awakenSpeedMult(u.def.id) * ret.speed : u.awakened ? awakenDamageMult(u.def.id) : 1);
+      const bonus = buffBonus(u.rank, rarityIndex(u.def.rarity), mult, ret ? { ...u.fx, buff: { ...u.fx.buff, max: ret.max } } : u.fx);
       for (const j of neighbours(i)) {
         const v = this.units[j];
         if (v && v.primary !== "buff") {
           // Support units get the haste (it shortens their timers) but not the perk: they never hit.
           v.haste += bonus;
-          if (!isSupport(v.primary)) for (const p of u.ownPerks) addPerk(v.perks, p);
+          if (!isSupport(v.primary)) {
+            for (const p of u.ownPerks) addPerk(v.perks, p);
+            if (ret) {
+              v.auraDamage += ret.damage;
+              v.sunStun = Math.max(v.sunStun, ret.stun);
+            }
+          }
         }
       }
     });
@@ -1092,8 +1115,9 @@ export class Sim {
   }
 
   /** Put a new unit on a tile (summon, merge, become): fresh uid, buffs, awaken events. */
-  private place(id: string, rank: number, slot: number, pos: Pt = slotPos(this.arena, slot)) {
-    const awakened = this.awakensAt(id, rank);
+  private place(id: string, rank: number, slot: number, pos: Pt = slotPos(this.arena, slot), awake = false) {
+    // `awake`: awakens below max rank too (Retribution's Shield Knight), if the game has the art.
+    const awakened = this.awakensAt(id, rank) || (awake && !isSupport(unitPrimary(id)) && mayAwaken(id) && !!this.o.awakens?.(id));
     const u = this.adopt(new SimUnit({ id, rank, awakened }, slot, pos, this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0));
     this.units[slot] = u;
     this.recomputeBuffs();
@@ -1105,8 +1129,8 @@ export class Sim {
   }
 
   /** Swap a unit onto another tile (a Mime copy, a Mirror Slime turning): same slot, new unit, new uid. */
-  protected become(u: SimUnit, id: string, rank: number, why: "copy" | "mirror" = "copy") {
-    const v = this.place(id, rank, u.slot, { x: u.x, y: u.y });
+  protected become(u: SimUnit, id: string, rank: number, why: "copy" | "mirror" | "awaken" | "rank" = "copy", awake = false) {
+    const v = this.place(id, rank, u.slot, { x: u.x, y: u.y }, awake);
     this.emit({ type: "become", t: this.now, uid: v.uid, gone: u.uid, why, id, rank, slot: v.slot, x: v.x, y: v.y, awakened: v.awakened });
     return v;
   }
@@ -1277,6 +1301,9 @@ export class Sim {
       m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     }
     this.monsters.push(m);
+    // v2.7 Queen's Gambit: every monster walks in already kissed.
+    const queen = this.units.find((v) => v?.awakened && ultOf(v.def.id)?.id === "queens_gambit");
+    if (queen) m.kissBy = queen;
     if (this.story?.mechanics) this.facelessSpawn(m);
     if (!q.boss && q.def?.iron && this.story?.mechanics?.runes) this.runeRoll(m);
     if (q.boss?.parts && this.story?.mechanics?.forge && !this.forgeBoss) this.forgeStart(m);
@@ -1384,8 +1411,9 @@ export class Sim {
     if (this.forgeBoss) this.tickForge();
     if (this.lawsOn) this.lawTick();
     if (this.story?.mechanics?.scale) this.tickScale();
+    this.boardRules();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
-    if (this.fields.length || this.scorch) this.updateFields(dt);
+    if (this.fields.length || this.scorch || this.frost) this.updateFields(dt);
     if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
     this.updateShots(dt);
@@ -1504,7 +1532,10 @@ export class Sim {
     else {
       const was = m.dist;
       m.dist += m.speed(now) * dt;
-      if (this.fields.length) this.holdAtVines(m, was);
+      if (this.fields.length) {
+        this.holdAtVines(m, was);
+        this.pullToHoles(m, was, dt);
+      }
     }
 
     m.poison = m.poison.filter((p) => p.until > now);
@@ -1573,6 +1604,7 @@ export class Sim {
     const killer = typeof src === "number" ? this.units[src] : null;
     if (killer) killer.kills++;
     if (m.raiseBy) this.raiseDead(m);
+    if (m.kissBy) this.kissPays(m);
     this.gainMana(m.mana, null, null, "kill");
     const p = m.pos;
     this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
@@ -2207,8 +2239,9 @@ export class Sim {
   /** A unit's attack damage: its own, or the equal-ground one while that lasts. */
   private statDamage(u: SimUnit) {
     const base = this.equal && this.now < this.equal.until ? (this.equal.dmg.get(u) ?? u.stats.damage) : u.stats.damage;
-    // v2.7 Luna's Blessing: each one on the unit adds damage.
-    return u.blessings.length ? base * (1 + ULTIMATES.moonshine.params.damage * this.blessed(u)) : base;
+    // v2.7 Luna's Blessing: each one on the unit adds damage. Star Merger: each absorbed rank too.
+    const blessed = u.blessings.length ? base * (1 + ULTIMATES.moonshine.params.damage * this.blessed(u)) : base;
+    return u.absorbed ? blessed * (1 + ULTIMATES.star_merger.params.damage * u.absorbed) : blessed;
   }
 
   /** v2.7 Luna's Blessings on a unit right now (expired ones are dropped). */
@@ -3220,6 +3253,10 @@ export class Sim {
     if (now < u.overheatUntil) rate *= Math.max(1, ULTIMATES.overheat.params.baseSpeed / Math.max(0.01, u.def.speed));
     else if (now < u.jamUntil) return;
     if (u.blessings.length) rate *= 1 + ULTIMATES.moonshine.params.speed * this.blessed(u);
+    if (u.absorbed) rate *= 1 + ULTIMATES.star_merger.params.speed * u.absorbed;
+    if (now < u.benUntil) rate *= 1 + ULTIMATES.big_ben.params.speed;
+    // v2.7 Frozen Fields: the Crystal Queen holds the ice instead of attacking (her charge keeps running).
+    if (now < u.frostUntil) return;
     u.cooldown -= dt;
     if (u.cooldown > 0 || u.sulking) return;
     const target = this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
@@ -3380,6 +3417,59 @@ export class Sim {
     return Math.hypot(p.x - f.x, p.y - f.y) <= f.radius;
   }
 
+  /** Vampire's Kiss: a kissed monster's death pays mana, plus the Countess's Plunder. */
+  private kissPays(m: SimMonster) {
+    const v = m.kissBy!;
+    const gambit = v.awakened && ultOf(v.def.id)?.id === "queens_gambit";
+    const mana = (gambit ? ULTIMATES.queens_gambit.params.kiss : REWORKS.vampire_countess.kiss.mana) + plunderMana(v.perks);
+    this.gainMana(mana, m.pos.x, m.pos.y - 60, "plunder");
+  }
+
+  /** Black Hole: a monster in reach can't walk on; it is pulled toward the hole's centre. */
+  private pullToHoles(m: SimMonster, was: number, dt: number) {
+    const now = this.now;
+    for (const f of this.fields) {
+      if (f.kind !== "blackhole" || now >= f.until || !this.inField(f, m)) continue;
+      const pull = ULTIMATES.black_hole.params.pull * dt;
+      m.dist = m.path === f.path ? was + Math.max(-pull, Math.min(pull, f.dist - was)) : was;
+      return;
+    }
+  }
+
+  /**
+   * v2.7 ultimates that change the board, once per step before the units act: Big Ben's rank-ups,
+   * Retribution's Shield Knight, Star Merger.
+   */
+  private boardRules() {
+    const now = this.now;
+    const free = (v: SimUnit) => !v.dragging && v.chain === 0 && !v.witness && !v.jailed;
+    // Big Ben: the faster spell ends with a rank up (reaching max rank with art, the unit awakens).
+    for (const v of this.units) {
+      if (!v?.benUntil || now < v.benUntil) continue;
+      v.benUntil = 0;
+      if (v.rank < maxRank() && free(v)) this.become(v, v.def.id, v.rank + 1, "rank");
+    }
+    // Retribution: a Shield Knight next to an awakened Sun Priestess awakens (if the game has the art).
+    for (const s of this.units) {
+      if (!s?.awakened || s.dragging || ultOf(s.def.id)?.id !== "retribution") continue;
+      for (const j of neighbours(s.slot)) {
+        const v = this.units[j];
+        if (v?.def.id === "shield_knight" && !v.awakened && free(v) && this.o.awakens?.(v.def.id)) this.become(v, v.def.id, v.rank, "awaken", true);
+      }
+    }
+    // Star Merger: every other Star Astronomer merges into the awakened one.
+    const star = this.units.find((v) => v?.awakened && !v.dragging && ultOf(v.def.id)?.id === "star_merger");
+    if (!star) return;
+    const gone = this.units.filter((v): v is SimUnit => !!v && v !== star && v.def.id === star.def.id && free(v));
+    if (!gone.length) return;
+    for (const v of gone) {
+      this.units[v.slot] = null;
+      star.absorbed += v.rank + v.absorbed;
+    }
+    this.recomputeBuffs();
+    this.emit({ type: "ultimate", t: now, uid: star.uid, kind: "special", ult: "star_merger", x: star.x, y: star.y, radius: 0, points: gone.map((v) => ({ x: v.x, y: v.y })), targets: gone.map((v) => v.uid) });
+  }
+
   /** Raise Dead: a monster that died under an awakened Bone Necromancer's curse rises as a skeleton. */
   private raiseDead(m: SimMonster) {
     const u = m.raiseBy!;
@@ -3487,7 +3577,7 @@ export class Sim {
     for (const f of this.fields) {
       if (now >= f.until) continue;
       // Hives, mushrooms, vines and vineyards leave with their unit.
-      if (f.kind !== "puddle" && f.kind !== "doll" && f.kind !== "plague" && f.kind !== "skeleton" && !this.onBoard(f.unit)) {
+      if (f.kind !== "puddle" && f.kind !== "doll" && f.kind !== "plague" && f.kind !== "skeleton" && f.kind !== "blackhole" && !this.onBoard(f.unit)) {
         f.until = now;
         continue;
       }
@@ -3576,6 +3666,15 @@ export class Sim {
           m.burn = { dps: sc.dps, until: now + 0.5, src: sc.src };
         }
     }
+    const fr = this.frost;
+    if (fr) {
+      if (now >= fr.until) this.frost = null;
+      else
+        for (const m of live) {
+          m.slowPct = Math.max(m.slowUntil > now ? m.slowPct : 0, fr.slow);
+          m.slowUntil = Math.max(m.slowUntil, now + 0.2);
+        }
+    }
   }
 
   private makeUltCtx(): UltCtx {
@@ -3613,6 +3712,9 @@ export class Sim {
       field: (kind, u, path, dist, o) => void sim.addField(kind, u, path, dist, o),
       scorch: (u, dps, time) => {
         sim.scorch = { until: sim.now + time, dps: Math.max(dps, sim.scorch && sim.now < sim.scorch.until ? sim.scorch.dps : 0), src: u.slot };
+      },
+      frost: (slow, time) => {
+        sim.frost = { until: sim.now + time, slow };
       },
       text: (x, y, color, text) => sim.mark("text", x, y, color, { text }),
       units: () => sim.units.filter((v): v is SimUnit => !!v && !v.dragging && !noAttack(v.primary) && !noOwnAttack(v.def.id, v.awakened)),
@@ -3935,6 +4037,15 @@ export class Sim {
           break;
       }
     }
+    // v2.7 Retribution: next to an awakened Sun Priestess, any hit may stun.
+    if (u.sunStun)
+      for (const o of hits) {
+        if (o.dead || this.rand() >= u.sunStun) continue;
+        o.stunUntil = Math.max(o.stunUntil, now + (o.boss ? e.stun.bossDuration : e.stun.duration));
+        this.view({ type: "proc", t: now, kind: "stun", x: o.pos.x, y: o.pos.y - 30 });
+      }
+    // v2.7 Vampire's Kiss: her hits mark monsters to pay mana when they die.
+    if (def.id === "vampire_countess") for (const o of hits) o.kissBy = u;
     if (!chained) this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
   }
 }
