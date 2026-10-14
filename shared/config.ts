@@ -86,6 +86,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.7.0-witness-rank": { units: {}, effects: {}, chapters: { b2s5c1: ["trial"] } },
   // v2.7 rares: Raccoon Thief hits a little harder (its mana pulse lives in shared/reworks.ts).
   "2.7.0-raccoon": { units: { raccoon_thief: ["damage"] }, effects: {} },
+  // v2.7: Mirror Slime, Banner Herald and Mime are retired (saved decks drop them on load: server/src/users.ts).
+  "2.7.0-retired-supports": { units: { mirror_slime: ["enabled"], banner_herald: ["enabled"], mime: ["enabled"] }, effects: {} },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

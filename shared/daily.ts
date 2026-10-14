@@ -113,7 +113,8 @@ export function rewardText(r: Reward, chestName?: (id: string) => string) {
 
 /** Pick `n` different enabled quests, weighted. */
 export function pickQuests(n: number, rand: () => number = Math.random) {
-  const pool = QUESTS.filter((q) => q.enabled && q.weight > 0);
+  // v2.7: the Mime is retired, so nobody can make copies.
+  const pool = QUESTS.filter((q) => q.enabled && q.weight > 0 && q.goal !== "copies");
   const out: QuestDef[] = [];
   while (out.length < n && pool.length) {
     let x = rand() * pool.reduce((s, q) => s + q.weight, 0);

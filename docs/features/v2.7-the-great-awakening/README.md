@@ -136,3 +136,9 @@ The user's designs. Void Titan and Chrono Mage are mythics, done with this pass.
 - [ ] `whatsNew` entry.
 - [ ] CHANGELOGs (game and API).
 - [ ] Game and API deployed together.
+
+## 10. Retired supports
+Mirror Slime, Banner Herald and Mime are off (`enabled: false` in `shared/units.ts`; live configs get it through the HOTFIXES entry `2.7.0-retired-supports`).
+- They no longer drop, can't go in decks, and leave the Unit Lab and PvP bot pools. Saved decks drop them on load and refill from owned cards (`server/src/users.ts`).
+- Owners still see the card in their collection, marked "Currently unavailable".
+- The daily quest `mime_3` (copies) is no longer picked.

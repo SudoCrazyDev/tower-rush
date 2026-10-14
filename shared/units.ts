@@ -390,9 +390,10 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("ogre_chef", "Ogre Chef", "rare", "fire", "splash", "cannonball", "Big pots for big appetites.", "giant", "heavy", "giant_slayer"),
   // v1.1 Supporting Cast Arrival: support units (rare)
   U("portal_imp", "Portal Imp", "rare", "fire", "portal", "spark", "A mischievous imp who rearranges the battlefield.", "demon", "balanced", "none"),
-  U("mirror_slime", "Mirror Slime", "rare", "poison", "mirror", "poison", "It wobbles, it watches, then it's someone else.", "elemental", "balanced", "none"),
+  // v2.7: Mirror Slime, Banner Herald and Mime are retired (off: no drops, no decks; owners still see the card).
+  { ...U("mirror_slime", "Mirror Slime", "rare", "poison", "mirror", "poison", "It wobbles, it watches, then it's someone else.", "elemental", "balanced", "none"), enabled: false },
   U("lucky_cat", "Lucky Cat", "rare", "nature", "lucky", "spark", "Wave the paw, keep the luck.", "beast", "balanced", "none"),
-  U("banner_herald", "Banner Herald", "rare", "fire", "herald", "spark", "When a hero awakens, the whole army rallies.", "human", "balanced", "none"),
+  { ...U("banner_herald", "Banner Herald", "rare", "fire", "herald", "spark", "When a hero awakens, the whole army rallies.", "human", "balanced", "none"), enabled: false },
   U("gnome_brewer", "Gnome Brewer", "rare", "nature", "brewer", "spark", "Slow and steady fills the cauldron.", "gnome", "balanced", "none"),
   // epic
   U("crystal_golem", "Crystal Golem", "epic", "arcane", "splash", "arcane_orb", "Crystal shards split any armor.", "elemental", "heavy", "armor_breaker"),
@@ -413,7 +414,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("bone_necromancer", "Bone Necromancer", "epic", "poison", "curse", "poison", "Marks the dying for the grave.", "undead", "heavy", "finisher"),
   U("card_jester", "Card Jester", "epic", "arcane", "crit", "arcane_orb", "Always holds the ace. And your mana.", "human", "balanced", "plunder"),
   // v1.1 Supporting Cast Arrival: support units (epic)
-  U("mime", "Mime", "epic", "arcane", "mime", "arcane_orb", "A silent performer who becomes whoever stands across.", "fae", "balanced", "none"),
+  { ...U("mime", "Mime", "epic", "arcane", "mime", "arcane_orb", "A silent performer who becomes whoever stands across.", "fae", "balanced", "none"), enabled: false },
   U("hourglass_owl", "Hourglass Owl", "epic", "lightning", "hourglass", "lightning", "A clockwork owl that makes time run faster for friends.", "construct", "balanced", "none"),
   U("echo_spirit", "Echo Spirit", "epic", "ice", "echo", "ice_shard", "Every great move deserves an encore.", "undead", "balanced", "none"),
   // legendary
