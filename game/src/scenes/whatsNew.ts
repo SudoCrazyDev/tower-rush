@@ -36,7 +36,7 @@ function show(scene: Phaser.Scene) {
   scene.tweens.add({ targets: logo, y: logo.y + 10, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
   m.add(txt(scene, m.cx, m.cy + 150, "Five Orcs join the fight, with the new Normal element.", 26, "#ffffff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 210, "Unit Lab for everyone, PvP in the carousel, music for every arena.", 26, "#c9d2ff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 210, "Unit Lab for everyone, and PvP joins the mode carousel.", 26, "#c9d2ff").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 280, "Mythics get their own projectiles. Plus a round of balance fixes.", 26, "#ff9df0").setWordWrapWidth(600));
   m.add(button(scene, m.cx, m.cy + 420, 320, 96, "LET'S GO!", "green", () => m.close()));
 }

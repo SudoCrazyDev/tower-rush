@@ -1185,6 +1185,49 @@ const B25: B22Row[] = [
 
 export const BOOK2_S5_REQUESTS: ArtRequest[] = mapB2Rows(B25, B25_GROUP, "book2s5");
 
+// ----- v2.8 Beta Berserker: Orc units, grunt axes, Mythic projectiles (made with the Higgsfield MCP, see docs/features/v2.8-beta-berserker/ART_PROMPTS.md) -----
+const B28_GROUP = "v2.8 Arts Requirements";
+const B28_VFX = "Single game sprite, centered with margin, no ground shadow.";
+const B28: B22Row[] = [
+  ["peon", "units/peon.png", "Orc unit: Peon (still)", "ally", ["units/witch_doctor.webp"],
+    "Peon, a humble green-skinned orc worker, short and hunched with small tusks and a goofy tired grin, ragged brown vest and patched trousers, a chipped pickaxe over one shoulder and a bulging burlap sack of loot (a few gold coins spilling out) in the other hand, facing slightly right."],
+  ["grunt", "units/grunt.png", "Orc unit: Grunt (still)", "ally", ["units/witch_doctor.webp"],
+    "Grunt, a muscular green-skinned orc warrior, broad shoulders, heavy jaw with two upward tusks, red war paint, studded leather pauldrons and an iron-banded belt, a big single-bladed battle axe in a ready pose, fierce scowl, facing slightly right."],
+  ["headhunter", "units/headhunter.png", "Orc unit: Headhunter (still)", "ally", ["units/witch_doctor.webp"],
+    "Headhunter, a lean agile green-skinned orc spear thrower with long tusks, a black mohawk, tribal tattoos, a necklace of small trophy skulls and feathers, fur loincloth and bone bracers, raising a long wooden spear with a stone tip, a quiver of spears on his back, cunning grin, facing slightly right."],
+  ["spirit_walker", "units/spirit_walker.png", "Orc unit: Spirit Walker (still)", "ally", ["units/witch_doctor.webp"],
+    "Spirit Walker, a wise green-skinned orc shaman with a white braided beard and small tusks, feathered headdress, blue-teal ceremonial cloak with glowing white runes, one hand holding up a carved wooden lantern with a ghostly cyan spirit flame and a faint smiling ghost wisp inside, a gnarled staff in the other hand, facing slightly right."],
+  ["kodo_beasts", "units/kodo_beasts.png", "Orc unit: Kodo Beasts (still)", "ally", ["units/witch_doctor.webp"],
+    "Kodo Beasts, a huge armored tusked war beast (giant shaggy rhino-elephant) with thick grey-brown hide, bronze plate armor, two big curved tusks, a pair of large taut war drums with bone-and-hide straps on its back, a small green-skinned orc drummer on top beating the drums with two mallets, three-quarter view facing slightly right."],
+  ["peon_card", "cards/portraits/peon.png", "Orc card portrait: Peon", "cardportrait", ["peon"], "Trading-card portrait of the Peon orc from the first reference, bust from the chest up, three-quarter view, warm golden mine-cave background with glints of gold. Square 1:1, full-bleed, no card frame, no border, no text."],
+  ["grunt_card", "cards/portraits/grunt.png", "Orc card portrait: Grunt", "cardportrait", ["grunt"], "Trading-card portrait of the Grunt orc from the first reference, bust from the chest up, three-quarter view, fiery red-orange battlefield sky background. Square 1:1, full-bleed, no card frame, no border, no text."],
+  ["headhunter_card", "cards/portraits/headhunter.png", "Orc card portrait: Headhunter", "cardportrait", ["headhunter"], "Trading-card portrait of an original orc spear thrower (lean face, long tusks, black mohawk, tribal tattoos, holding a spear, feather and wooden-bead necklace), bust from the chest up, three-quarter view, dark jungle-green dusk background. Square 1:1, full-bleed, no card frame, no border, no text. (With the still as a reference and a skull necklace the content filter blocked it twice; the done image was made from text only.)"],
+  ["spirit_walker_card", "cards/portraits/spirit_walker.png", "Orc card portrait: Spirit Walker", "cardportrait", ["spirit_walker"], "Trading-card portrait of the Spirit Walker orc shaman from the first reference, bust from the chest up, three-quarter view, mystical deep blue and cyan ghostly spirit-mist background. Square 1:1, full-bleed, no card frame, no border, no text."],
+  ["kodo_beasts_card", "cards/portraits/kodo_beasts.png", "Orc card portrait: Kodo Beasts", "cardportrait", ["kodo_beasts"], "Trading-card portrait of the Kodo Beasts from the first reference (armored kodo head and shoulders, tusks, orc drummer and war drums on top), three-quarter view, dusty orange savanna sunset background. Square 1:1, full-bleed, no card frame, no border, no text."],
+  ["grunt_axe_0", "vfx/weapons/grunt_axe_0.png", "Grunt axe tier 0: stone hatchet", "prop", ["vfx/weapons/axe.webp"], "Same style, size and orientation as the reference axe (horizontal, head on the left, handle to the right). A crude STONE HATCHET: chipped grey stone blade lashed with leather cords to a short rough wooden handle with bark."],
+  ["grunt_axe_1", "vfx/weapons/grunt_axe_1.png", "Grunt axe tier 1: iron axe", "prop", ["vfx/weapons/axe.webp"], "Same style, size and orientation as the reference axe. A sturdy IRON AXE: plain steel single-bladed head, dark wood handle with leather grip wrap."],
+  ["grunt_axe_2", "vfx/weapons/grunt_axe_2.png", "Grunt axe tier 2: bearded war axe", "prop", ["vfx/weapons/axe.webp"], "Same style, size and orientation as the reference axe. A BEARDED WAR AXE: big wide crescent steel blade with a hooked lower beard, rune-etched, bronze trim, long dark haft with iron rings."],
+  ["grunt_axe_3", "vfx/weapons/grunt_axe_3.png", "Grunt axe tier 3: double-bladed bloodied axe", "prop", ["vfx/weapons/axe.webp"], "Same style, size and orientation as the reference axe. A DOUBLE-BLADED battle axe, two big crescent blades back to back, dark steel stained with dripping red blood, spikes on top, black haft wrapped in red cloth."],
+  ["grunt_axe_4", "vfx/weapons/grunt_axe_4.png", "Grunt axe tier 4: flaming chieftain axe", "prop", ["vfx/weapons/axe.webp"], "Same style, size and orientation as the reference axe. A legendary FLAMING CHIEFTAIN AXE: huge double-bladed black-iron head with glowing molten orange cracks, wreathed in orange and yellow flames, skull-and-horn ornaments, gold-banded haft."],
+  ["proj_lantern", "vfx/proj_lantern.png", "Projectile: spirit lantern", "prop", [], "Game projectile: a small carved wooden spirit lantern with glowing cyan-white flame and a tiny ghostly wisp inside, tilted as if thrown, a short trailing wisp of cyan ghost smoke. " + B28_VFX],
+  ["drum_ring", "vfx/drum_ring.png", "VFX: drum ring", "prop", [], "VFX: a war-drum shockwave ring, a thick round ring of orange and gold energy with a red outer edge and little sound-wave arcs radiating outward, centre empty. " + B28_VFX],
+  ["spirit_wisp", "vfx/spirit_wisp.png", "VFX: spirit wisp", "prop", [], "VFX: a friendly ancestral spirit wisp, glowing cyan and white teardrop ghost flame with a wavy tail, calm closed-eye face, cyan sparkle droplets. " + B28_VFX],
+  ["pillage_coins", "vfx/pillage_coins.png", "VFX: pillage coins", "prop", [], "VFX: a burst of shiny gold coins flying up and outward in a fountain, gold sparkle stars, a puff of gold dust. " + B28_VFX],
+  ["proj_void_rift", "vfx/proj_void_rift.png", "Mythic projectile: void rift (green screen)", "prop", [], "Game projectile: a small swirling black-hole vortex orb, deep black centre, violet and indigo spiral arms, purple rim, tiny stars, short violet trail to the left. Made on pure GREEN (#00FF00), keyed with keyimg.py (default colour). " + B28_VFX],
+  ["proj_dragon_flame", "vfx/proj_dragon_flame.png", "Mythic projectile: dragon flame", "prop", [], "Game projectile: a roaring teardrop fireball shaped like a dragon head breathing flame, orange, red and yellow with a golden core, flame tail to the left. " + B28_VFX],
+  ["proj_chrono_gear", "vfx/proj_chrono_gear.png", "Mythic projectile: chrono gear", "prop", [], "Game projectile: a spinning brass and gold clockwork cog with eight teeth, glowing cyan clock-hand and hourglass-blue gem hub, cyan time sparkles; round, flat front view so it can spin. " + B28_VFX],
+  ["monkey_cloud", "vfx/monkey_cloud.png", "Mythic trail: monkey king gold cloud", "prop", [], "VFX: a golden magic flying-cloud trail puff, fluffy swirly ruyi cloud in bright gold and cream yellow with spirals and tiny gold sparkles. " + B28_VFX],
+  ["impact_void_rift", "vfx/impact_void_rift.png", "Mythic impact: void rift (green screen)", "prop", [], "Impact burst: collapsing violet and black implosion, swirling arms, dark centre, purple shards and white sparkles. Made on pure GREEN (#00FF00). " + B28_VFX],
+  ["impact_dragon_flame", "vfx/impact_dragon_flame.png", "Mythic impact: dragon flame", "prop", [], "Impact burst: roaring orange, red and golden fire blast with a faint dragon-head silhouette, embers and gold scale sparks. " + B28_VFX],
+  ["impact_chrono_gear", "vfx/impact_chrono_gear.png", "Mythic impact: chrono gear", "prop", [], "Impact burst: flying brass gears and cogs, cyan clock-face ripples, pocket-watch fragments, cyan and gold sparkles. " + B28_VFX],
+  ["monkey_impact", "vfx/monkey_impact.png", "Mythic impact: monkey king staff", "prop", [], "Impact burst: golden shockwave with a crossed pair of golden staff-strike lines, gold stars, a puff of golden cloud, orange-red sparks. " + B28_VFX],
+  ["element_normal", "ui/elements/normal.png", "Element emblem: Normal", "prop", ["ui/element_fire.webp"], "Element emblem for NORMAL matching the fire emblem in shape (round beveled medallion ring, gem on top, small wings) but neutral: silver-grey metal ring, white and light-grey centre with a white four-point star, clear white-grey gem, silver wings. Readable at 48 px."],
+  ["pvp_poster", "story/pvp_poster.png", "Lobby carousel card: PvP poster (4:3, not 16:9)", "panel", ["assets/story/lab_poster.png"],
+    "Versus-style PvP battle poster in the style of the lab poster: two armies clash head-on on a wide grassy battlefield, a blue-and-gold human kingdom army (knights, archer, wizard) on the left and a red-and-green rival army (orc warrior with axe, fox samurai, skeleton mage) on the right, a white-gold lightning flash splitting the middle, banners, castles in the background. Aspect 4:3."],
+];
+
+export const BOOK2_S28_REQUESTS: ArtRequest[] = mapB2Rows(B28, B28_GROUP, "v28");
+
 /** The awakened art the game already has: index.json from the asset base. */
 export interface HaveArt {
   units_awakened: string[];
@@ -1197,6 +1240,7 @@ export function artRequests(have: HaveArt): ArtRequest[] {
     ...BOOK2_S23_REQUESTS,
     ...BOOK2_S4_REQUESTS,
     ...BOOK2_S5_REQUESTS,
+    ...BOOK2_S28_REQUESTS,
     ...awakened(have),
     ...TRAITS.map((t) => icon("Monster trait icons", "trait", "ui/traits", t, `Trait: ${t}`, `Monster trait badge icon: ${TRAIT_ART[t]}, inside a round dark badge.`, ["ui/icon_buttons_set.webp"])),
     ...PERK_IDS.filter((p) => p !== "none").map((p) =>
