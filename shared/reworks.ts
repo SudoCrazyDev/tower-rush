@@ -19,7 +19,7 @@ export const REWORKS = {
   vine_druid: { vine: { regrow: 6, hold: 3, bossHold: 1, ahead: 70, radius: 60, dps: 1, life: 12 } },
   /** Snowglobe Fairy: higher base freeze chance (it still rises with rank). */
   snowglobe_fairy: { freezeChance: 0.2 },
-  /** Vampire Countess: every hit leaves Vampire's Kiss; a kissed monster pays this mana (plus her Plunder) when it dies. */
+  /** Vampire Countess: every monster she hits pays this mana (plus her Plunder) on the hit, and again when it dies. */
   vampire_countess: { kiss: { mana: 2 } },
 } as const;
 

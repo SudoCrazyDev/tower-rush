@@ -42,7 +42,7 @@
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ALLOWED_ORIGINS": "https://game.crownnkeep.com,https://manage.crownnkeep.com",
-    "MIN_CLIENT": "2.7.0",
+    "MIN_CLIENT": "2.7.2",
     "GAME_URL": "https://game.crownnkeep.com/",
     "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
     "TURNSTILE_HOSTNAMES": "game.crownnkeep.com"
@@ -77,7 +77,7 @@
       "vars": {
         "ADMIN_USERNAME": "admin",
         "ALLOWED_ORIGINS": "https://staging-game.crownnkeep.com,https://manage.crownnkeep.com,http://localhost:5173,http://localhost:5174",
-        "MIN_CLIENT": "2.7.0",
+        "MIN_CLIENT": "2.7.2",
         "GAME_URL": "https://staging-game.crownnkeep.com/",
         "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
         "TURNSTILE_HOSTNAMES": "staging-game.crownnkeep.com",

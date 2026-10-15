@@ -541,6 +541,8 @@ export class SimMonster {
   raiseBy: SimUnit | null = null;
   /** v2.7 Vampire's Kiss: the Vampire Countess who kissed it (it pays mana when it dies). */
   kissBy: SimUnit | null = null;
+  /** Queen's Gambit: seconds of kiss drain since its last mana payout. */
+  kissTick = 0;
   poison: { dps: number; until: number; src: Source }[] = [];
   burn: { dps: number; until: number; src: Source } = { dps: 0, until: 0, src: 0 };
   powerTimer = 0;
@@ -1541,6 +1543,7 @@ export class Sim {
     m.poison = m.poison.filter((p) => p.until > now);
     for (const p of m.poison) if (!m.dead) this.hurt(m, p.dps * dt, p.src, { sure: true, quiet: true });
     if (m.burn.until > now && !m.dead) this.hurt(m, m.burn.dps * dt, m.burn.src, { sure: true, quiet: true });
+    if (m.kissBy && !m.dead) this.kissDrain(m, dt);
   }
 
   /** Apply damage; returns true if it killed. */
@@ -3457,6 +3460,18 @@ export class Sim {
     this.gainMana(mana, m.pos.x, m.pos.y - 60, "plunder");
   }
 
+  /** Queen's Gambit: an awakened Countess's kiss drains HP over time; each `tick` pays `kiss` mana, plus her Plunder. */
+  private kissDrain(m: SimMonster, dt: number) {
+    const v = m.kissBy!;
+    if (!v.awakened || ultOf(v.def.id)?.id !== "queens_gambit" || !this.onBoard(v)) return;
+    const p = ULTIMATES.queens_gambit.params;
+    this.hurt(m, this.hitOf(v) * p.drain * dt, v.slot, { sure: true, quiet: true, perks: v.perks });
+    m.kissTick += dt;
+    if (m.kissTick < p.tick) return;
+    m.kissTick -= p.tick;
+    this.gainMana(p.kiss + plunderMana(v.perks), m.pos.x, m.pos.y - 60, "plunder");
+  }
+
   /** Black Hole: a monster in reach can't walk on; it is pulled toward the hole's centre. */
   private pullToHoles(m: SimMonster, was: number, dt: number) {
     const now = this.now;
@@ -4076,8 +4091,12 @@ export class Sim {
         o.stunUntil = Math.max(o.stunUntil, now + (o.boss ? e.stun.bossDuration : e.stun.duration));
         this.view({ type: "proc", t: now, kind: "stun", x: o.pos.x, y: o.pos.y - 30 });
       }
-    // v2.7 Vampire's Kiss: her hits mark monsters to pay mana when they die.
-    if (def.id === "vampire_countess") for (const o of hits) o.kissBy = u;
+    // v2.7 Vampire's Kiss: every monster she hits pays mana now (plus her Plunder), and again when it dies.
+    if (def.id === "vampire_countess")
+      for (const o of hits) {
+        o.kissBy = u;
+        this.gainMana(REWORKS.vampire_countess.kiss.mana + plunderMana(u.perks), o.pos.x, o.pos.y - 60, "plunder");
+      }
     if (!chained) this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
   }
 }

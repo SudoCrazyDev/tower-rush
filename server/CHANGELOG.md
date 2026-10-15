@@ -1,5 +1,9 @@
 # API changelog
 
+## 1.3.1
+- Ships with game 2.7.2: Vampire's Kiss pays on every hit, and Queen's Gambit drains kissed monsters for mana each second (shared battle rules used by PvP and story checks).
+- `MIN_CLIENT` 2.7.2: older game tabs must reload.
+
 ## 1.3.0
 - Ships with game 2.7.0 "The Great Awakening": the shared battle rules (awakenings, ultimates, max rank 5, level speed, retired supports) used by PvP and story checks.
 - `MIN_CLIENT` 2.7.0: older game tabs must reload (their battle rules no longer match).

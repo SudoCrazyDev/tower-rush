@@ -2,6 +2,10 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.7.2
+- Vampire's Kiss reads as a bite now: every monster the Vampire Countess hits pays 2 mana plus her Plunder on the hit (`REWORKS.vampire_countess`), and still pays again when it dies.
+- Queen's Gambit (awakened Countess): every monster still walks in kissed, and the kiss is now a drain. It deals 30% of her hit per second and pays 3 mana plus her Plunder every second while she is on the board (`ULTIMATES.queens_gambit` `drain`, `tick`), plus 3 on death. Code values, no HOTFIXES entry.
+
 ## 2.7.1
 - Portal: when the board is locked (every tile taken and no two units can merge), a portal opens under the board. Drag a unit into it and it leaves the board, refunding 40% of its worth (summon cost x rank, `ECONOMY.portalRefund`) as mana. Awakened units, chapter heroes and witnesses can't go through. The portal closes as soon as a tile is free or a merge is possible. Solo battles and PvP (new `banish` action); not in the Unit Lab. Art: `ui/board_portal` (a ring of rune stones around a violet vortex, GPT Image 2.5), with the arcane vortex spinning on top; a drawn rim stands in if the art is missing.
 

@@ -93,8 +93,9 @@ export const ULTIMATES: Record<UltId, UltDef> = {
   raise_dead: { id: "raise_dead", name: "Raise Dead", mode: "passive", every: 0, params: { max: 5, damage: 3, radius: 100, speed: 110, life: 20, touch: 45 } },
   tidal_wave: { id: "tidal_wave", name: "Tidal Wave", mode: "timer", every: 12, params: { push: 120, bossPush: 40, damage: 1.5, slow: 0.4, slowTime: 3 } },
   // legendary
-  // Every monster spawns kissed; her kisses pay `kiss` mana (plain Vampire's Kiss: REWORKS.vampire_countess).
-  queens_gambit: { id: "queens_gambit", name: "Queen's Gambit", mode: "passive", every: 0, params: { kiss: 3 } },
+  // Every monster spawns kissed. The kiss drains `drain`× her hit per second; every `tick` s and on death it pays `kiss` mana
+  // (plain Vampire's Kiss: REWORKS.vampire_countess).
+  queens_gambit: { id: "queens_gambit", name: "Queen's Gambit", mode: "passive", every: 0, params: { kiss: 3, drain: 0.3, tick: 1 } },
   // Sun Priestess never attacks: `speed` multiplies her buff (cap `max`); neighbours get +`damage` and a `stun` chance per hit.
   retribution: { id: "retribution", name: "Retribution", mode: "passive", every: 0, params: { speed: 2.4, max: 3, damage: 0.3, stun: 0.25 } },
   // Per absorbed rank.
@@ -247,7 +248,7 @@ export function ultText(id: string): string {
     case "tidal_wave":
       return `Every ${u.every}s: a wave washes every monster ${p.push}px back up the path (bosses ${p.bossPush}px) for ${x(p.damage)} damage and slows them ${pct(p.slow)} for ${p.slowTime}s.`;
     case "queens_gambit":
-      return `Passive: every monster walks in already carrying Vampire's Kiss. Her kisses pay ${p.kiss} mana when the monster dies, plus her Plunder.`;
+      return `Passive: every monster walks in already carrying Vampire's Kiss. The kiss drains ${Math.round(p.drain * 100)}% of her hit per second and pays ${p.kiss} mana every ${p.tick}s, plus her Plunder; it pays ${p.kiss} more when the monster dies.`;
     case "retribution":
       return `Passive: her neighbours attack much faster (her buff ${x(p.speed)} more, up to +${pct(p.max)}), deal +${pct(p.damage)} damage and gain True Strike, Giant Slayer and a ${pct(p.stun)} chance to stun. A Shield Knight next to her awakens.`;
     case "star_merger":

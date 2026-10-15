@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.3.1
+- Vampire Countess text follows game 2.7.2: Vampire's Kiss pays 2 mana plus Plunder on every hit (and again on death); Queen's Gambit drains every monster and pays 3 mana each second. `data/game.js` re-exported and the `v2-7.html` note updated.
+
 ## 1.3.0
 - New page `v2-7.html`: the full v2.7.0 "The Great Awakening" list. Every awakened unit (commons, rares, epics, legendaries and mythics) with its damage and speed multipliers, ultimate, type and effect; the four rare reworks; card levels (+3% attack speed), max rank 5; the Unit Lab; and the retired supports.
 - Release notes: v2.7.0 is the latest (with a button to the new page). v2.1 "Chaos Corrupted" moves into the History panel, so the page keeps the latest five.
