@@ -15,6 +15,7 @@ import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
 import { topBar } from "./LobbyScene";
 import { storyUnlocking } from "../../../shared/stories.ts";
+import { RACE_IDS, RACES, type Race } from "../../../shared/races.ts";
 import { coach, setTutorialDone, tutorialDue } from "../tutorial";
 import { music, sfx } from "../audio";
 import { bakeAll, bakedImage } from "../bake";
@@ -43,7 +44,7 @@ const GAP_X = 176;
 const ROW_H = 264;
 
 type Status = "all" | "owned" | "locked" | "ready";
-type GroupBy = "rarity" | "element" | "role" | "none";
+type GroupBy = "rarity" | "element" | "role" | "race" | "none";
 
 const STATUS_TABS: { id: Status; label: string }[] = [
   { id: "all", label: "ALL" },
@@ -51,7 +52,7 @@ const STATUS_TABS: { id: Status; label: string }[] = [
   { id: "locked", label: "LOCKED" },
   { id: "ready", label: "UPGRADE" },
 ];
-const GROUP_ORDER: GroupBy[] = ["rarity", "element", "role", "none"];
+const GROUP_ORDER: GroupBy[] = ["rarity", "element", "role", "race", "none"];
 
 interface Group {
   key: string;
@@ -77,6 +78,26 @@ const ELEMENT_GROUPS: Record<Element, [string, string]> = {
   nature: ["NATURE", "Herbal brews"],
   poison: ["POISON", "Snake oil"],
   arcane: ["ARCANE", "Mystic mixers"],
+};
+const RACE_SUBS: Record<Race, string> = {
+  human: "Regulars at the bar",
+  elf: "Sipping elderflower wine",
+  dwarf: "Stout by the barrel",
+  gnome: "Tinkering with the taps",
+  orc: "Grog, no glass",
+  goblin: "Counting someone else's coins",
+  giant: "Mind the rafters",
+  beast: "No paws on the counter",
+  undead: "Drinks on the house, forever",
+  demon: "Brimstone with a twist",
+  dragon: "Hoarding the gold tips",
+  elemental: "Served shaken, stirred and struck",
+  construct: "Runs on oil, not ale",
+  sylvan: "Rooted by the window",
+  fae: "Here one round, gone the next",
+  celestial: "Heavenly spirits",
+  candy: "Sugar-rimmed",
+  chaos: "Banned from the premises",
 };
 /** Archetypes bundled into four broad roles. */
 const ROLES: { key: string; title: string; sub: string; icon: string; archs: Arch[] }[] = [
@@ -155,6 +176,14 @@ function groupsFor(by: GroupBy): Group[] {
       icon: `element:${e}`,
       accent: ELEMENT_COLOR[e],
       match: (u) => u.element === e,
+    }));
+  if (by === "race")
+    return RACE_IDS.map((r) => ({
+      key: r,
+      title: RACES[r].label.toUpperCase(),
+      sub: RACE_SUBS[r],
+      accent: RACES[r].color,
+      match: (u) => u.race === r,
     }));
   if (by === "role") return ROLES.map((r) => ({ ...r, match: (u) => roleOf(u)?.key === r.key }));
   return [{ key: "all", title: "THE WHOLE SALOON", sub: "Every card, owned first", match: () => true }];

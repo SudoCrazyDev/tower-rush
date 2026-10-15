@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.7.3
+- Battle Deck: new GROUP: RACE mode (after Role) shelves the collection by race (`shared/races.ts`), each with its race colour and an owned/total count. Races with no cards (Candy, Chaos) are skipped.
+
 ## 2.7.2
 - Vampire's Kiss reads as a bite now: every monster the Vampire Countess hits pays 2 mana plus her Plunder on the hit (`REWORKS.vampire_countess`), and still pays again when it dies.
 - Queen's Gambit (awakened Countess): every monster still walks in kissed, and the kiss is now a drain. It deals 30% of her hit per second and pays 3 mana plus her Plunder every second while she is on the board (`ULTIMATES.queens_gambit` `drain`, `tick`), plus 3 on death. Code values, no HOTFIXES entry.
