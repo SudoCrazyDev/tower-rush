@@ -6,7 +6,7 @@ import { checkInvite, loadConfig, loadMe } from "../save";
 import { showAuth, showBlocker, type Invite } from "../authOverlay";
 import { unlockAudio } from "../audio";
 import { ambientVideo, coverFit } from "../backdrop";
-import { ELEMENTS } from "../data/units";
+import { ELEMENTS, ELEMENT_COLOR } from "../data/units";
 
 /** The token from an invitation email's link (`?invite=`), taken out of the address bar so a reload doesn't reuse it. */
 const linkInvite = new URLSearchParams(location.search).get("invite");
@@ -120,7 +120,18 @@ export class BootScene extends Phaser.Scene {
     for (let i = 0; i < index.atlas.buttons; i++) this.load.image(`button:${i}`, `${BASE}ui/button_${i}.webp`);
     for (let i = 0; i < index.atlas.icons; i++) this.load.image(`icon:${i}`, `${BASE}ui/icon_${i}.webp`);
     for (let i = 0; i < (index.atlas.leagues ?? 0); i++) this.load.image(`league:${i}`, `${BASE}ui/league_${i}.webp`);
-    for (const e of ELEMENTS) this.load.image(`element:${e}`, `${BASE}ui/element_${e}.webp`);
+    // The six first elements always have a badge; a newer one (v2.8 "normal") only once its emblem is built, else a plain disc.
+    for (const e of ELEMENTS) {
+      if (ELEMENTS.indexOf(e) < 6 || index.elements?.includes(e)) this.load.image(`element:${e}`, `${BASE}ui/element_${e}.webp`);
+      else if (!this.textures.exists(`element:${e}`)) {
+        const g = this.make.graphics({}, false);
+        g.fillStyle(0x2a2f3a, 1).fillCircle(64, 64, 62);
+        g.fillStyle(ELEMENT_COLOR[e], 1).fillCircle(64, 64, 50);
+        g.lineStyle(6, 0xffffff, 0.8).strokeCircle(64, 64, 50);
+        g.generateTexture(`element:${e}`, 128, 128);
+        g.destroy();
+      }
+    }
 
     this.load.start();
   }

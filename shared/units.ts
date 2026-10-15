@@ -6,7 +6,8 @@ import { DEFAULT_EFFECTS } from "./effects.ts";
 import { withKits, type ArchSlot, type PerkSlot } from "./kit.ts";
 
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic" | "event";
-export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane";
+/** v2.8: "normal" is neutral (no monster resists it or is weak to it). */
+export type Element = "fire" | "ice" | "lightning" | "nature" | "poison" | "arcane" | "normal";
 
 /**
  * How a unit fights. Every unit uses exactly one archetype; the special-effect numbers
@@ -76,7 +77,12 @@ export type Proj =
   | "poison_awakened"
   | "arcane_orb_awakened"
   | "arrow_awakened"
-  | "cannonball_awakened";
+  | "cannonball_awakened"
+  // v2.8: Spirit Walker's lantern and the Mythics' own projectiles.
+  | "lantern"
+  | "void_rift"
+  | "dragon_flame"
+  | "chrono_gear";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -87,7 +93,7 @@ export type ChestRarity = Exclude<Rarity, "event">;
 export const CHEST_RARITIES: ChestRarity[] = ["common", "rare", "epic", "legendary", "mythic"];
 /** A rarity's step for formulas (common 0 ... mythic 4). Event cards use Epic's numbers. */
 export const rarityIndex = (r: Rarity) => (r === "event" ? 2 : RARITIES.indexOf(r));
-export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane"];
+export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane", "normal"];
 export const PROJECTILES: Proj[] = [
   "arrow",
   "fireball",
@@ -122,6 +128,10 @@ export const PROJECTILES: Proj[] = [
   "arcane_orb_awakened",
   "arrow_awakened",
   "cannonball_awakened",
+  "lantern",
+  "void_rift",
+  "dragon_flame",
+  "chrono_gear",
 ];
 
 export interface UnitDef {
@@ -196,6 +206,7 @@ export const ELEMENT_COLOR: Record<Element, number> = {
   nature: 0x6bd34a,
   poison: 0xb05cff,
   arcane: 0xff7ad9,
+  normal: 0xc8c8c8,
 };
 
 /** Defaults used to seed each unit's damage/speed: speed = attacks/s, dmg = multiplier on rarity damage. */
@@ -258,6 +269,8 @@ export const WEAPON_KEYS: string[] = [
   "frying_pan", "wrench", "saw_blade", "ladle", "war_fan", "bone", "pitchfork",
   // Signature weapons
   "sig_monkey_king", "sig_fox_samurai", "sig_rogue_knight", "sig_pentagonal_knight", "sig_berserker_sellsword", "sig_lance_knight",
+  // v2.8 Grunt: one axe per Berserker Strength tier
+  "grunt_axe_0", "grunt_axe_1", "grunt_axe_2", "grunt_axe_3", "grunt_axe_4",
 ];
 
 /** How each weapon sprite moves (art-requests.ts WEAPONS): spin turns in flight, straight points along it, strike has no flight. */
@@ -314,6 +327,11 @@ export const WEAPON_MOTION: Record<string, "spin" | "straight" | "strike"> = {
   sig_pentagonal_knight: "spin",
   sig_berserker_sellsword: "spin",
   sig_lance_knight: "straight",
+  grunt_axe_0: "spin",
+  grunt_axe_1: "spin",
+  grunt_axe_2: "spin",
+  grunt_axe_3: "spin",
+  grunt_axe_4: "spin",
 };
 
 const round = (v: number, step: number) => Math.round(v / step) * step;
@@ -379,7 +397,8 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("imp_hunter", "Imp Hunter", "rare", "fire", "crit", "fireball", "Hunts down the quick little things.", "demon", "balanced", "hunter"),
   U("lute_bard", "Lute Bard", "rare", "arcane", "buff", "arcane_orb", "Plays fast. Neighbours chase the quick.", "elf", "balanced", "hunter"),
   { ...U("raccoon_thief", "Raccoon Thief", "rare", "nature", "mana", "spark", "Picks the pockets of every fallen foe.", "beast", "rapid", "plunder"), damage: 10 },
-  { ...U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "A palm strike no one can dodge.", "human", "rapid", "true_strike"), weapon: "palm_wave" },
+  // v2.8: Sand Monk damage 19 (HOTFIX 2.8.0-sand).
+  { ...U("sand_monk", "Sand Monk", "rare", "nature", "stun", "spark", "A palm strike no one can dodge.", "human", "rapid", "true_strike"), damage: 19, weapon: "palm_wave" },
   U("snowglobe_fairy", "Snowglobe Fairy", "rare", "ice", "freeze", "ice_shard", "Her snow freezes even the yetis.", "fae", "balanced", "frostbite"),
   U("spore_sage", "Spore Sage", "rare", "poison", "poison", "poison", "Big spores for big monsters.", "sylvan", "heavy", "giant_slayer"),
   U("storm_totem", "Storm Totem", "rare", "lightning", "chain", "lightning", "Its lightning never misses.", "construct", "balanced", "true_strike"),
@@ -406,7 +425,8 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("lantern_ghost", "Lantern Ghost", "epic", "arcane", "mana", "arcane_orb", "Its light finds whatever hides.", "undead", "rapid", "true_strike"),
   U("phoenix_chick", "Phoenix Chick", "epic", "fire", "burn", "fireball", "Small bird, fast fire, no survivors.", "beast", "rapid", "finisher"),
   U("plague_alchemist", "Plague Alchemist", "epic", "poison", "poison", "poison", "Finishes the ones still coughing.", "human", "balanced", "finisher"),
-  U("sand_worm", "Sand Worm", "epic", "nature", "splash", "cannonball", "Bursts up under the runners.", "beast", "balanced", "hunter"),
+  // v2.8: Sand Worm damage 47 (HOTFIX 2.8.0-sand).
+  { ...U("sand_worm", "Sand Worm", "epic", "nature", "splash", "cannonball", "Bursts up under the runners.", "beast", "balanced", "hunter"), damage: 47 },
   { ...U("shadow_ninja", "Shadow Ninja", "epic", "poison", "crit", "spark", "Nothing dodges the shadow.", "human", "rapid", "true_strike"), weapon: "shuriken" },
   U("storm_whelp", "Storm Whelp", "epic", "lightning", "chain", "lightning", "Baby dragon, faster than its prey.", "dragon", "rapid", "hunter"),
   U("tide_mermaid", "Tide Mermaid", "epic", "ice", "slow", "ice_shard", "Her tide chills even ice-born foes.", "fae", "balanced", "frostbite"),
@@ -428,9 +448,10 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("valkyrie", "Valkyrie", "legendary", "lightning", "chain", "lightning", "Chooses who falls.", "celestial", "balanced", "finisher"),
   U("vampire_countess", "Vampire Countess", "legendary", "poison", "growth", "poison", "Every bite feeds her power.", "undead", "balanced", "plunder"),
   // mythic
-  U("void_titan", "Void Titan", "mythic", "arcane", "execute", "arcane_orb", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
-  U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "fireball", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
-  U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "arcane_orb", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
+  // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
+  U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
+  U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "dragon_flame", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
+  U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "chrono_gear", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
   { ...U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"), weapon: "sig_monkey_king" },
   // v1.2 Stories: Princess Muse, the Story 1 reward and the first Event card.
   { ...U("princess_muse", "Princess Muse", "event", "arcane", "aura", "arcane_orb", "A round on the house, and the whole bar fights harder.", "human", "balanced", "none"), role: "Barkeeper" },
@@ -455,6 +476,13 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   { ...U("durgrim", "Durgrim Emberhold", "epic", "fire", "burn", "fireball", "An oath broken must be paid. Stronger beside every Knight.", "dwarf", "heavy", "none"), damage: 70, role: "Thane", storyOnly: true, effect: "oath" },
   // v2.4 Book 2 Story 5 "The Silver Tribunal": Argent (Event card). Mercy is a rule in the Sim (shared/tribunal.ts): beside her, no unit is jailed, chained or condemned.
   { ...U("argent", "Argent, the Merciful", "event", "arcane", "pierce", "spark", "Her gavel-sword runs the line through. Beside her, no one is jailed, chained or condemned.", "construct", "heavy", "none"), damage: 80, role: "Justiciar", weapon: "sword" },
+  // v2.8 "Beta Berserker": the Orcs (element Normal, never awaken; their rules live in shared/reworks.ts).
+  // Peon and Kodo Beasts never attack: their kit is "buff", but the Sim skips the generic buff for them (BETA_SUPPORT).
+  { ...U("peon", "Peon", "common", "normal", "buff", "rock", "Work work. Every swing of the pick pays.", "orc", "balanced", "none"), role: "Support" },
+  { ...U("grunt", "Grunt", "common", "normal", "shot", "axe", "The longer he stands, the harder he hits.", "orc", "balanced", "none"), damage: 35, speed: 0.9, weapon: "grunt_axe_0" },
+  { ...U("headhunter", "Headhunter", "common", "normal", "shot", "spear", "Picks a head. Any head. Then the one at the gate.", "orc", "balanced", "none"), damage: 25, speed: 1.7, weapon: "spear" },
+  { ...U("spirit_walker", "Spirit Walker", "rare", "normal", "shot", "lantern", "The ancestors drag the horde back.", "orc", "balanced", "none"), damage: 50, speed: 0.6 },
+  { ...U("kodo_beasts", "Kodo Beasts", "rare", "normal", "buff", "rock", "War drums. The closer they come, the faster we fight.", "orc", "balanced", "none"), role: "Support" },
 ], DEFAULT_EFFECTS);
 
 /** The Story units: Muse, the Knights and the Mercenaries (v1.2), Maren and Bako (v2.2), Brakka, the Emberhold dwarves and Durgrim (v2.3), Argent (v2.4). */
@@ -464,7 +492,9 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
  * Units added to the defaults after configs were already saved (the v1.1 support units):
  * appended to an older saved unit list so a live config gets them, with the default numbers.
  */
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS];
+/** v2.8 "Beta Berserker": the Orc units. */
+export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
 }

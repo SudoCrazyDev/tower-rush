@@ -9,7 +9,7 @@ import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultOf, ultText, ULTIMATES } from "../../../shared/awakened.ts";
-import { liveDef, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../../shared/reworks.ts";
+import { liveDef, orcText, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../../shared/reworks.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
@@ -78,6 +78,7 @@ const ELEMENT_GROUPS: Record<Element, [string, string]> = {
   nature: ["NATURE", "Herbal brews"],
   poison: ["POISON", "Snake oil"],
   arcane: ["ARCANE", "Mystic mixers"],
+  normal: ["NORMAL", "House pour"],
 };
 const RACE_SUBS: Record<Race, string> = {
   human: "Regulars at the bar",
@@ -671,6 +672,12 @@ export class DeckScene extends Phaser.Scene {
       archName = "Prickly vine";
       slotLines = [`Never attacks. Grows a vine ahead of the front monster: holds it ${v.hold}s (bosses ${v.bossHold}s) and deals her hit each second. Regrows ${v.regrow}s after it withers.`];
     }
+    // v2.8 Orcs: their rules are in code (shared/reworks.ts).
+    const orc = orcText(id);
+    if (orc) {
+      archName = orc.arch;
+      slotLines = orc.lines;
+    }
     row(supportish ? "SUPPORT" : "ATTACK", [value(archName, 22, "#ffffff"), ...(slotLines[0] ? [value(slotLines[0], 18, "#7fffd4")] : [])]);
     // One ability row per extra kit slot, then one perk row per perk.
     slotLines.forEach((line, i) => {
@@ -690,6 +697,8 @@ export class DeckScene extends Phaser.Scene {
     const rows: [string, string][] = [
       ...(isSupport(arch)
         ? ([[SUPPORT_STAT[arch][0], "never attacks"]] as [string, string][])
+        : orc?.stat
+        ? [orc.stat]
         : arch === "buff"
         ? ([["stat:attack_speed", `neighbours +${Math.round(buffBonus(1, rarityIndex(def.rarity), levelMult(level)) * 100)}% faster`]] as [string, string][])
         : arch === "aura"
@@ -890,15 +899,19 @@ export class DeckScene extends Phaser.Scene {
     // Buff units: the attack speed they give their neighbours, in place of damage.
     const rarityIdx = rarityIndex(def.rarity);
     // Support units: their own effect (a time, a chance, mana...) in the same place; Muse her speed bonus.
+    // v2.8 Peon and Kodo Beasts: their own number in place of a buff.
+    const orc = orcText(def.id);
     const buff = (rank: number, lvl: number, up: number, mult = 1) =>
-      support
+      orc?.stat
+        ? orc.stat[1]
+        : support
         ? supportCell(support, rank, boostMult(lvl, up))
         : arch === "aura"
         ? `+${pct(auraBonus(rank, boostMult(lvl, up)).speed)}`
         : arch === "aegis"
         ? "—"
         : `+${pct(buffBonus(rank, rarityIdx, boostMult(lvl, up) * mult))}`;
-    const buffIcon = support ? SUPPORT_STAT[support][0] : "stat:attack_speed";
+    const buffIcon = orc?.stat ? orc.stat[0] : support ? SUPPORT_STAT[support][0] : "stat:attack_speed";
     const ROW = 33;
     let y = top - 6;
     // How it fights: style (hit size vs attack speed) and its perk.
@@ -973,7 +986,11 @@ export class DeckScene extends Phaser.Scene {
     const ranks = Array.from({ length: maxRank() }, (_, i) => i + 1);
     const awakens = canAwaken(def.id, arch);
     const boost = (r: number, mult: number) => (awakens && r === maxRank() ? mult : 1);
-    const mergeNote = support
+    const mergeNote = orc?.stat
+      ? def.id === "peon"
+        ? "Each merge: more Pillage chance for the other Peons · never awakens"
+        : "The drums don't change with rank · never awakens"
+      : support
       ? "Each merge: a stronger effect · support units never awaken"
       : noAttack
       ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(def.id)})` : ""}`
@@ -989,8 +1006,11 @@ export class DeckScene extends Phaser.Scene {
       ],
       0,
     );
-    const foot = support
+    const foot = orc?.stat
+      ? orc.lines.join(" ")
+      : support
       ? `${SUPPORT_STAT[support][1]} (Lv ${level}). ${SUPPORT_TEXT[support]}; it never attacks.`
+
       : noAttack
       ? `Its four neighbours attack this much faster (Lv ${level}, max +${pct(EFFECTS.buff.max)}).`
       : def.id === "frog_alchemist"

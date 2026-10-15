@@ -6,6 +6,7 @@ import { EFFECTS } from "../../../shared/effects.ts";
 import { steam } from "./ultFx";
 import { mayAwaken, ultEvery, ultOf } from "../../../shared/awakened.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
+import { BETA_SUPPORT } from "../../../shared/reworks.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
 import type { SimUnit } from "../../../shared/sim.ts";
 import { NAVY, txt } from "../ui";
@@ -403,12 +404,15 @@ export class Unit {
     }
 
     const arch = kitPrimary(this.def);
+    // v2.8 Kodo Beasts: drum rings, faster and redder at each War Drums stage.
+    if (this.def.id === "kodo_beasts") this.drumRings(dt, scene.sim.drums);
     if (arch === "buff" || arch === "aura" || arch === "aegis") {
       // Muse's "attack" clip is her buff pulse, the Aegis Knight's a shield pulse.
       this.showOff -= dt;
       if (this.showOff <= 0) {
         this.showOff = 4;
-        this.playOnce(arch === "buff" ? "skill" : "attack");
+        // v2.8 Peon and Kodo Beasts swing (their sheets have no skill clip).
+        this.playOnce(arch === "buff" && !BETA_SUPPORT.has(this.def.id) ? "skill" : "attack");
       }
       return;
     }
@@ -420,6 +424,27 @@ export class Unit {
       const rate = s.stats.speed * (1 + scene.sim.hasteOf(s)) * (now < s.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1);
       this.playOnce("attack", Math.max(1, (16 / 24) * rate));
     }
+  }
+
+  private drumAt = 0;
+  /** v2.8 War Drums: a ring pulses from the Kodo (vfx/drum_ring, or a drawn ring). At stage 2 it sweeps the whole board. */
+  private drumRings(dt: number, stage: number) {
+    if (stage < 0) return;
+    this.drumAt -= dt;
+    if (this.drumAt > 0) return;
+    this.drumAt = [1.3, 0.8, 0.45][stage] ?? 1.3;
+    const color = [0xffb25a, 0xff7a3a, 0xff3a2a][stage] ?? 0xffb25a;
+    const reach = stage === 2 ? 640 : 150;
+    const x = this.sprite.x;
+    const y = this.sprite.y + 10;
+    const depth = this.sprite.depth - 1;
+    const ring: Phaser.GameObjects.Image | Phaser.GameObjects.Arc = hasFx(this.scene, "drum_ring")
+      ? this.scene.add.image(x, y, fxKey("drum_ring")).setTint(color)
+      : this.scene.add.circle(x, y, 50).setStrokeStyle(6, color, 0.9);
+    const base = 100 / Math.max(1, ring.width);
+    ring.setScale(base * 0.5, base * 0.5 * 0.55).setDepth(depth).setAlpha(0.9);
+    const end = (reach * 2) / Math.max(1, ring.width);
+    this.scene.tweens.add({ targets: ring, scaleX: end, scaleY: end * 0.55, alpha: 0, duration: stage === 2 ? 900 : 650, ease: "Sine.Out", onComplete: () => ring.destroy() });
   }
 
   /** Support units: the timer ring, ready flashes, the Mirror Slime's wobble, idle show-offs. */

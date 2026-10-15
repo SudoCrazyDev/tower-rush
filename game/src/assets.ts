@@ -38,6 +38,12 @@ export interface AssetIndex {
   hazy: string[];
   /** Content hash per "<folder>/<name>" sheet, used to bust the cache (missing in older builds). */
   ver?: Record<string, string>;
+  /** Elements that have their own emblem (ui/element_<e>.webp); the first six always have one. */
+  elements?: string[];
+  /** v2.8 streamed music tracks (music/<name>.mp3, e.g. arena_meadow); missing in older builds. */
+  music?: string[];
+  /** v1.2 story art folders (book covers, panels, ...). */
+  "story/covers"?: string[];
 }
 
 /** Where the art lives: public/assets in dev, the R2 bucket in production (see vite.config.ts). */
@@ -73,7 +79,19 @@ export const animKey = sheetKey;
  * v2.3: unit cards whose own art isn't in the pack yet borrow an existing card's (portrait, still, card and sheets), so
  * Story 4 can be earned and played before its art lands. Drop an entry once the art is built.
  */
-const UNIT_STAND_IN: Record<string, string> = { brakka: "thunder_dwarf", durgrim: "bear_rider", emberhold_gunner: "pirate_gunner", runecaller: "frost_sorceress", argent: "aegis_knight" };
+const UNIT_STAND_IN: Record<string, string> = {
+  brakka: "thunder_dwarf",
+  durgrim: "bear_rider",
+  emberhold_gunner: "pirate_gunner",
+  runecaller: "frost_sorceress",
+  argent: "aegis_knight",
+  // v2.8 "Beta Berserker" Orcs, until their own art is built.
+  peon: "ogre_chef",
+  grunt: "berserker_sellsword",
+  headhunter: "witch_doctor",
+  spirit_walker: "witch_doctor",
+  kodo_beasts: "bear_rider",
+};
 
 /** The unit id whose sheets draw unit `id` (itself, or its stand-in while its own sheets are missing). */
 export function unitArt(id: string) {

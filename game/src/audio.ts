@@ -4,9 +4,15 @@
  * - sfx(name): short effects (summon, merge, hits, deaths, UI...). Busy effects such as
  *   hits are rate-limited so a full board doesn't turn into noise.
  * - music(song): looping chiptune-style tracks played by a small step sequencer.
+ * - arenaMusic(id): v2.8 streamed arena tracks (music/arena_<id>.mp3 from the asset base). While the
+ *   "battle" song plays, the arena's track is fetched once and crossfades in over the synth; boss
+ *   waves go back to the synth boss track, then the arena track resumes where it stopped. A track
+ *   that is missing (not in the asset index, a 404, a decode error) leaves the synth playing.
  *
  * Browsers only allow audio after a user gesture; call unlockAudio() from a tap/click.
  */
+
+import { BASE, assetIndex } from "./assets";
 
 type Song = "lobby" | "battle" | "boss";
 
@@ -22,6 +28,8 @@ let ctx: AudioContext | null = null;
 let master: GainNode;
 let musicBus: GainNode;
 let sfxBus: GainNode;
+/** The synth sequencer's own bus (under musicBus), faded out while a streamed track plays. */
+let synthBus: GainNode;
 let noise: AudioBuffer;
 
 function init() {
@@ -39,6 +47,8 @@ function init() {
   musicBus = ctx.createGain();
   musicBus.gain.value = settings.music ? 0.32 : 0;
   musicBus.connect(master);
+  synthBus = ctx.createGain();
+  synthBus.connect(musicBus);
   sfxBus = ctx.createGain();
   sfxBus.gain.value = settings.sfx ? 0.7 : 0;
   sfxBus.connect(master);
@@ -74,6 +84,8 @@ export function setAudio(kind: "music" | "sfx", on: boolean) {
   if (!ctx) return;
   const bus = kind === "music" ? musicBus : sfxBus;
   bus.gain.setTargetAtTime(on ? (kind === "music" ? 0.32 : 0.7) : 0, ctx.currentTime, 0.05);
+  // Music back on mid-battle: the arena track may not have been fetched yet.
+  if (kind === "music" && on) syncFile();
 }
 
 // ---------------------------------------------------------------- synth voices
@@ -163,7 +175,7 @@ const SFX = {
     else if (kind === "cannonball") {
       tone(140, t, 0.12, { type: "sine", vol: 0.3, slideTo: 50 });
       burst(t, 0.1, { type: "lowpass", freq: 900, vol: 0.15 });
-    } else if (kind === "fireball") burst(t, 0.18, { type: "bandpass", freq: 600, sweepTo: 1800, vol: 0.14 });
+    } else if (kind === "fireball" || kind === "dragon_flame") burst(t, 0.18, { type: "bandpass", freq: 600, sweepTo: 1800, vol: 0.14 });
     else if (kind === "ice_shard") tone(1800, t, 0.08, { type: "triangle", vol: 0.07, slideTo: 2600 });
     else tone(500, t, 0.1, { type: "triangle", vol: 0.08, slideTo: 900 });
   },
@@ -328,7 +340,7 @@ function playStep(track: Track, s: number, t: number) {
   const bar = track.bars[Math.floor(s / 16) % track.bars.length];
   const i = s % 16;
   const sixteenth = 60 / track.bpm / 4;
-  const m = musicBus;
+  const m = synthBus;
   if (track.kick[i]) tone(150, t, 0.16, { type: "sine", vol: 0.55, slideTo: 45, dest: m });
   if (track.snare[i]) burst(t, 0.14, { type: "bandpass", freq: 1800, q: 0.8, vol: 0.28, dest: m });
   if (track.hat[i]) burst(t, 0.04, { type: "highpass", freq: 7000, vol: 0.12, dest: m });
@@ -352,9 +364,16 @@ export function music(song: Song | null) {
   current = song;
   if (timer !== undefined) clearInterval(timer);
   timer = undefined;
-  if (!song) return;
+  if (!song) {
+    arena = null;
+    return syncFile();
+  }
   const c = init();
   if (!c) return;
+  // The synth comes back in (it was faded out under a streamed track).
+  synthBus.gain.cancelScheduledValues(c.currentTime);
+  synthBus.gain.setValueAtTime(synthBus.gain.value, c.currentTime);
+  synthBus.gain.linearRampToValueAtTime(1, c.currentTime + 0.4);
   const track = TRACKS[song];
   step = 0;
   nextTime = c.currentTime + 0.1;
@@ -371,6 +390,103 @@ export function music(song: Song | null) {
       nextTime += sixteenth;
     }
   }, 30);
+  // Last, so a streamed track that is ready fades the synth we just started back out.
+  syncFile();
+}
+
+// ---------------------------------------------------------------- v2.8 streamed arena tracks
+
+/** Crossfade length (s) and the streamed track's level under the music bus. */
+const FADE = 1.5;
+const FILE_VOL = 0.85;
+let arena: string | null = null;
+/** Decoded tracks by name (null: missing, never retried this session). Only the latest decoded one is kept. */
+const tracks = new Map<string, AudioBuffer | null>();
+const loading = new Map<string, Promise<AudioBuffer | null>>();
+/** Where each track stopped (s), so it resumes there after a boss wave. */
+const offsets = new Map<string, number>();
+let file: { src: AudioBufferSourceNode; gain: GainNode; key: string; startedAt: number } | null = null;
+
+/** The arena whose track the "battle" song streams (null: synth only). Call before music("battle"). */
+export function arenaMusic(id: string | null) {
+  if (id === arena) return;
+  arena = id;
+  syncFile();
+}
+
+function fetchTrack(key: string): Promise<AudioBuffer | null> {
+  const known = tracks.get(key);
+  if (known !== undefined) return Promise.resolve(known);
+  const pending = loading.get(key);
+  if (pending) return pending;
+  // An index that lists its music (newer builds) says which tracks exist; an older one doesn't, so try.
+  const listed = assetIndex()?.music;
+  if (listed && !listed.includes(key)) {
+    tracks.set(key, null);
+    return Promise.resolve(null);
+  }
+  const p = fetch(`${BASE}music/${key}.mp3?cors`)
+    .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+    .then((b) => (ctx ? ctx.decodeAudioData(b) : null))
+    .catch(() => null)
+    .then((buf) => {
+      loading.delete(key);
+      // A decoded track is big: keep only this one (missing markers stay).
+      if (buf) for (const [k, v] of tracks) if (v) tracks.delete(k);
+      tracks.set(key, buf);
+      return buf;
+    });
+  loading.set(key, p);
+  return p;
+}
+
+/** Start, stop or fetch the streamed track so it matches the song and arena now. */
+function syncFile() {
+  const key = current === "battle" && arena ? `arena_${arena}` : null;
+  if (file && file.key !== key) stopFile();
+  if (!key || file || !ctx || !settings.music) return;
+  const buf = tracks.get(key);
+  if (buf) return startFile(key, buf);
+  if (buf === null) return;
+  void fetchTrack(key).then(() => syncFile());
+}
+
+function startFile(key: string, buf: AudioBuffer) {
+  const c = ctx!;
+  const t = c.currentTime;
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(FILE_VOL, t + FADE);
+  gain.connect(musicBus);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  src.connect(gain);
+  const off = (offsets.get(key) ?? 0) % buf.duration;
+  src.start(t, off);
+  file = { src, gain, key, startedAt: t - off };
+  synthBus.gain.cancelScheduledValues(t);
+  synthBus.gain.setValueAtTime(synthBus.gain.value, t);
+  synthBus.gain.linearRampToValueAtTime(0, t + FADE);
+  // The synth is silent now: stop its sequencer (music() restarts it for the next song).
+  window.setTimeout(() => {
+    if (file?.src === src && timer !== undefined) {
+      clearInterval(timer);
+      timer = undefined;
+    }
+  }, FADE * 1000 + 100);
+}
+
+function stopFile() {
+  if (!file || !ctx) return;
+  const f = file;
+  file = null;
+  const t = ctx.currentTime;
+  offsets.set(f.key, (t - f.startedAt) % f.src.buffer!.duration);
+  f.gain.gain.cancelScheduledValues(t);
+  f.gain.gain.setValueAtTime(f.gain.gain.value, t);
+  f.gain.gain.linearRampToValueAtTime(0, t + 0.6);
+  f.src.stop(t + 0.7);
 }
 
 /** "running" once sound is unlocked; useful for debugging. */

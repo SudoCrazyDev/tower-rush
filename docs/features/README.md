@@ -14,6 +14,7 @@ document and a promo kit for social media. The release timeline is in [ROADMAP.m
 | v2.3.0 | **The Iron Oath** | Testing | [README.md](v2.3-the-iron-oath/README.md) | [PROMO.md](v2.3-the-iron-oath/PROMO.md) |
 | v2.4.0 | **The Silver Tribunal** | Testing | [README.md](v2.4-the-silver-tribunal/README.md) | [PROMO.md](v2.4-the-silver-tribunal/PROMO.md) |
 | v2.7.0 | **The Great Awakening** | In progress | [README.md](v2.7-the-great-awakening/README.md) | [PROMO.md](v2.7-the-great-awakening/PROMO.md) |
+| v2.8.0 | **Beta Release: Beta Berserker** | Building | [README.md](v2.8-beta-berserker/README.md) | |
 
 ## Conventions
 

@@ -24,7 +24,7 @@ import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, finishStory, type BattleResult, type StoryResult, type StoryStart } from "../save";
 import { storyPanels, storyResult } from "./storyUi";
 import { onPlayLost, releasePlay } from "../play";
-import { music, sfx } from "../audio";
+import { arenaMusic, music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT, rewardRays, rewardPop } from "../ui";
 import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
 import { Monster } from "../battle/Monster";
@@ -48,6 +48,7 @@ const HIT_VFX: Record<Element, string> = {
   nature: "hit_impact",
   poison: "poison_cloud",
   arcane: "arcane_vortex",
+  normal: "hit_impact",
 };
 
 const AUTO_CAST_KEY = "tower-rush-autocast";
@@ -158,11 +159,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   init(data: { arena?: string; story?: { chapter: string; start: StoryStart }; lab?: { deck: string[]; level: number } }) {
-    this.lab = (import.meta.env.DEV || import.meta.env.MODE === "staging") && data.lab && !data.story ? data.lab : null;
+    // v2.8: the Unit Lab is open to everyone (only owned units; it never reports to the server).
+    this.lab = data.lab && !data.story ? data.lab : null;
     const f = data.story ? findChapter(data.story.chapter) : null;
     this.story = f && data.story ? { def: f.story, chapter: f.chapter, start: data.story.start } : null;
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
-    this.deck = this.lab ? this.lab.deck.filter((id) => UNIT_BY_ID[id]) : this.story ? [...this.story.start.deck] : [...profile.deck];
+    this.deck = this.lab ? this.lab.deck.filter((id) => UNIT_BY_ID[id] && profile.cards[id]) : this.story ? [...this.story.start.deck] : [...profile.deck];
     this.tethers = null;
     this.tideView = this.faceless = this.oath = this.tribunal = null;
     this.equalUntil = 0;
@@ -299,6 +301,8 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.summon());
     if (this.lab) this.input.on("pointerup", (p: Phaser.Input.Pointer) => this.labTap(p));
     this.input.keyboard?.on("keydown-H", () => this.castHero());
+    // v2.8: the arena's own track streams in over the synth battle music.
+    arenaMusic(this.arena.id);
     music("battle");
     this.load.on(Phaser.Loader.Events.COMPLETE, this.onAwakenedArt, this);
     // Another device started a battle: this one ends, saving what it has.
@@ -1109,7 +1113,7 @@ export class BattleScene extends Phaser.Scene {
       let img = this.shotImgs.get(s);
       if (!img) {
         const def = s.unit.def;
-        img = new ShotView(this, def, s.x, s.y);
+        img = new ShotView(this, def, s.x, s.y, s.unit.berserk);
         if (s.kind === "bee" && this.textures.exists("vfx:bee_swarm")) {
           img.img.setTexture("vfx:bee_swarm");
           img.img.setScale(60 / Math.max(1, img.img.width));

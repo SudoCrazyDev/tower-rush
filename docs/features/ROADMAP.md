@@ -156,6 +156,7 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 - **v2.3.0 "The Iron Oath" (live 2026-10-11):** Book 2 Story 4, see [v2.3](v2.3-the-iron-oath/README.md).
 - **v2.4.0 "The Silver Tribunal" (live 2026-10-12, with hotfix 2.4.1):** Book 2 Story 5, the finale, see [v2.4](v2.4-the-silver-tribunal/README.md).
 - **v2.7.0 "The Great Awakening" (live 2026-10-14):** every unit with awakened art gets its own awakening and ultimate (commons to legendaries, plus Void Titan and Chrono Mage), max rank 5, card levels add speed, Unit Lab, Mirror Slime / Banner Herald / Mime retired. See [v2.7](v2.7-the-great-awakening/README.md). Supports and the units still without awakened art are next.
+- **v2.8.0 "Beta Release: Beta Berserker" (building 2026-10-16):** five Orc units and the Normal element, the Unit Lab for everyone, a lobby mode carousel with PvP in it, Mythic projectiles, arena music and a balance pass. See [v2.8](v2.8-beta-berserker/README.md).
 - **Later:** Book 3 (pitched in the saga plan; the Book 3 finale reveals the mastermind).
 - Ideas waiting for a release are in the root [ROADMAP.md](../../ROADMAP.md).
 - Fantasy features (ideas only, not scheduled): [World Boss](fantasy/world-boss.md).

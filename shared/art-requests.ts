@@ -68,6 +68,7 @@ const ELEMENT_ART: Record<Element, string> = {
   nature: "a shield with forest-green enamel, a bold stylized leaf symbol, a glossy bronze-gold rim and a cut emerald; instead of wings, large leaves fan out from behind the shield",
   poison: "a shield with toxic purple enamel, a poison drop with a small skull, a glossy dark silver rim, a cut amethyst and a few lime bubbles; instead of wings, dripping toxic tendrils curl out from behind the shield",
   arcane: "a shield with deep violet enamel, a glowing star-and-rune symbol, a glossy gold rim and a cut amethyst; instead of wings, swirling magic ribbons with small stars curl out from behind the shield",
+  normal: "a shield with plain steel-grey enamel, a bold stylized crossed-fists symbol, a glossy iron rim and a cut clear quartz; instead of wings, two short iron blades fan out from behind the shield",
 };
 
 const ICON ="Single centered icon, bold simple shape that stays readable at 32 pixels, on a solid flat pure green (#00FF00) background.";
@@ -79,6 +80,7 @@ const AURA: Record<Element, string> = {
   nature: "a leafy emerald aura, curling vines and blossoms, gold trim",
   poison: "a bubbling toxic-green aura, violet and lime trim, floating bubbles",
   arcane: "swirling violet arcane runes, starry gold trim, a glowing halo",
+  normal: "a dusty steel-grey war aura, iron and leather trim, drifting sparks",
 };
 
 const GRANDEUR: Record<Rarity, string> = {
@@ -533,6 +535,12 @@ const WEAPONS: [string, string, "spin" | "straight" | "strike"][] = [
   ["war_fan", "an open folding steel war fan", "spin"],
   ["bone", "a big cartoon bone", "spin"],
   ["pitchfork", "a three-tined farm pitchfork, pointing right", "straight"],
+  // v2.8 Grunt: one axe per Berserker Strength tier (0..4).
+  ["grunt_axe_0", "a crude stone hatchet lashed to a wooden handle", "spin"],
+  ["grunt_axe_1", "a sturdy iron axe with a leather-wrapped handle", "spin"],
+  ["grunt_axe_2", "a big bearded war axe with a curved iron blade", "spin"],
+  ["grunt_axe_3", "a double-bladed battle axe with a bloodied edge", "spin"],
+  ["grunt_axe_4", "a huge chieftain's axe with a flaming orange edge", "spin"],
 ];
 
 /** Hand-made weapons for top-tier units, drawn from the unit's own sprite. [unit id, name, what] */

@@ -201,8 +201,24 @@ const IMPACT: Record<Element, string> = {
   nature: "impact_nature",
   poison: "impact_poison",
   arcane: "impact_arcane",
+  normal: "impact_physical",
 };
-const PROJ_IMPACT: Record<string, string> = { holy: "impact_holy", shadow: "impact_shadow" };
+const PROJ_IMPACT: Record<string, string> = {
+  holy: "impact_holy",
+  shadow: "impact_shadow",
+  // v2.8 Mythic projectiles (each falls back to the element's impact until its art is built).
+  void_rift: "impact_void_rift",
+  dragon_flame: "impact_dragon_flame",
+  chrono_gear: "impact_chrono_gear",
+};
+/** v2.8 projectiles whose art may not be built yet: drawn with an existing projectile until then. */
+const PROJ_FALLBACK: Record<string, string> = { lantern: "arcane_orb", void_rift: "arcane_orb", dragon_flame: "fireball", chrono_gear: "arcane_orb" };
+/** Projectiles that turn in flight instead of pointing along it. */
+const SPIN_PROJ = new Set(["chrono_gear"]);
+/** v2.8: units with their own impact on top of the usual one (Monkey King's staff). */
+const UNIT_IMPACT: Record<string, string> = { monkey_king: "monkey_impact" };
+/** v2.8: units whose weapon leaves its own trail (Monkey King's golden cloud). */
+const UNIT_TRAIL: Record<string, string> = { monkey_king: "monkey_cloud" };
 /** Ground decal an element's hit leaves behind. */
 const GROUND: Record<Element, string | null> = {
   fire: "ground_scorch",
@@ -211,6 +227,7 @@ const GROUND: Record<Element, string | null> = {
   nature: null,
   poison: "ground_poison",
   arcane: null,
+  normal: null,
 };
 /** Particle puffed by an element's hit (also the weapon trail). */
 const PARTICLE: Record<Element, string> = {
@@ -220,6 +237,7 @@ const PARTICLE: Record<Element, string> = {
   nature: "pt_leaf",
   poison: "pt_bubble",
   arcane: "pt_rune",
+  normal: "pt_smoke",
 };
 /** Blades get a slash arc on top of the impact; claws their marks. */
 const SLASH = new Set(["sword", "katana", "greatsword", "dagger", "twin_daggers", "sabre", "scimitar", "rapier", "cutlass", "cleaver", "sig_fox_samurai", "sig_rogue_knight", "sig_berserker_sellsword"]);
@@ -250,8 +268,13 @@ export function fxHit(scene: FxScene, e: Extract<SimEvent, { type: "hit" }>): bo
     const proj = def && PROJ_IMPACT[def.proj];
     const key = e.kind === "bane" ? "impact_lightning" : def?.weapon && !proj ? "impact_physical" : proj ?? IMPACT[e.element];
     // A weapon hit reads as a physical blow tinted by the unit's element.
-    const s = fxSprite(scene, key, e.x, e.y, { size: size * 1.2, life: 380, rotate: (Math.random() - 0.5) * 0.8, tint: def?.weapon && key === "impact_physical" ? ELEMENT_COLOR[e.element] : undefined });
+    const s =
+      fxSprite(scene, key, e.x, e.y, { size: size * 1.2, life: 380, rotate: (Math.random() - 0.5) * 0.8, tint: def?.weapon && key === "impact_physical" ? ELEMENT_COLOR[e.element] : undefined }) ??
+      // A v2.8 impact whose art isn't built yet: the element's own.
+      (key !== IMPACT[e.element] ? fxSprite(scene, IMPACT[e.element], e.x, e.y, { size: size * 1.2, life: 380, rotate: (Math.random() - 0.5) * 0.8 }) : null);
     replaced = !!s;
+    const own = def && UNIT_IMPACT[def.id];
+    if (own) fxSprite(scene, own, e.x, e.y, { size: size * 1.3, life: 420, from: 0.5 });
     if (def?.weapon) {
       if (def.weapon === "claw_swipe") fxSprite(scene, "claw_marks", e.x, e.y, { size: size * 1.1, life: 400, from: 0.9 });
       else if (SLASH.has(def.weapon)) fxSprite(scene, "slash_arc", e.x, e.y, { size: size * 1.4, life: 300, from: 0.8, rotate: 0.5, tint: ELEMENT_COLOR[e.element] });
@@ -410,6 +433,27 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
     case "hero":
       heroFx(scene, e.power);
       break;
+    // v2.8 Orcs.
+    case "berserk":
+      // A red flash on the Grunt (the scene also tints the sprite).
+      if (!fxSprite(scene, "merge_flash", e.x, e.y - 20, { size: 200, life: 500, from: 0.4, tint: 0xff3020 })) {
+        const c = scene.add.circle(e.x, e.y - 20, 70, 0xff3020, 0.55).setDepth(2100);
+        scene.tweens.add({ targets: c, alpha: 0, scale: 1.6, duration: 450, onComplete: () => c.destroy() });
+      }
+      fxBurst(scene, "pt_ember", e.x, e.y - 20, { n: 6, size: 22, spread: 60 });
+      break;
+    case "pillage":
+      if (!fxSprite(scene, "pillage_coins", e.x, e.y, { size: 110, life: 700, rise: 40, from: 0.6 })) fxBurst(scene, "pt_coin", e.x, e.y, { n: 6, size: 22, spread: 50, gravity: 40 });
+      break;
+    case "spirit_push":
+      for (const uid of e.targets) {
+        const m = sim.monsters.find((o) => o.uid === uid);
+        if (!m) continue;
+        const p = m.pos;
+        const key = hasFx(scene, "spirit_wisp") ? "spirit_wisp" : "soul_wisp";
+        fxSprite(scene, key, p.x + 20, p.y, { size: 70, life: 600, from: 0.8, alpha: 0.9, tint: key === "soul_wisp" ? 0x9ff0d0 : undefined });
+      }
+      break;
     case "end":
       if (e.outcome === "won") {
         fxSprite(scene, "light_rays", 360, 640, { size: 900, life: 1800, rotate: 0.6, from: 0.5, add: true, alpha: 0.7 });
@@ -455,35 +499,55 @@ function heroFx(scene: FxScene, power: string) {
  * strike = no flight, pops at the target on impact. Weapon art is element-neutral, so it gets
  * the element's glow and a short particle trail.
  */
+/**
+ * The weapon sprite a shot uses, or null for the projectile. A Grunt's axe follows its Berserker
+ * tier (grunt_axe_<tier>, else the best lower tier built, else the generic axe).
+ */
+export function shotWeapon(scene: Phaser.Scene, def: UnitDef, tier = 0): string | null {
+  const has = (k: string) => scene.textures.exists(`weapon:${k}`);
+  if (def.id === "grunt") {
+    for (let t = Math.max(0, Math.min(4, tier)); t >= 0; t--) if (has(`grunt_axe_${t}`)) return `grunt_axe_${t}`;
+    return has("axe") ? "axe" : null;
+  }
+  return def.weapon && has(def.weapon) ? def.weapon : null;
+}
+
 export class ShotView {
   readonly img: Phaser.GameObjects.Image;
   private readonly motion: "spin" | "straight" | "strike" | null = null;
   private readonly color: number;
   private readonly element: Element;
+  private readonly projSpin: boolean = false;
   private spin = Math.random() * 6;
   private trailAt = 0;
 
-  constructor(private scene: Phaser.Scene, readonly def: UnitDef, x: number, y: number) {
+  /** `tier`: a Grunt's Berserker tier (0..4), which picks its axe. */
+  constructor(private scene: Phaser.Scene, readonly def: UnitDef, x: number, y: number, tier = 0) {
     this.element = def.element;
     this.color = ELEMENT_COLOR[def.element];
-    const wk = def.weapon && scene.textures.exists(`weapon:${def.weapon}`) ? def.weapon : null;
+    const wk = shotWeapon(scene, def, tier);
     if (wk) {
       this.motion = WEAPON_MOTION[wk] ?? "spin";
       this.img = scene.add.image(x, y, `weapon:${wk}`).setDepth(2000);
-      this.img.setScale((wk.startsWith("sig_") ? 76 : 64) / Math.max(1, this.img.width));
+      this.img.setScale((wk.startsWith("sig_") ? 76 : wk.startsWith("grunt_axe_") ? 60 + tier * 6 : 64) / Math.max(1, this.img.width));
       if (this.motion === "strike") this.img.setVisible(false);
-      else this.img.preFX?.addGlow(this.color, 3, 0, false, 0.1, 8);
+      else this.img.preFX?.addGlow(tier >= 3 ? 0xff4a3b : this.color, 3, 0, false, 0.1, 8);
     } else {
-      const tex = def.proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${def.proj}`;
+      const proj = !hasFx(scene, `proj_${def.proj}`) && PROJ_FALLBACK[def.proj] ? PROJ_FALLBACK[def.proj] : def.proj;
+      const tex = proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${proj}`;
       this.img = scene.add.image(x, y, tex).setDepth(2000);
-      this.img.setScale((def.proj === "spark" ? 40 : 56) / Math.max(1, this.img.width));
+      this.img.setScale((proj === "spark" ? 40 : 56) / Math.max(1, this.img.width));
+      this.projSpin = SPIN_PROJ.has(def.proj);
     }
   }
 
   /** Where the shot is now and which way it is heading (radians). */
   move(x: number, y: number, angle: number) {
     this.img.setPosition(x, y);
-    if (this.motion === "spin") {
+    if (this.projSpin) {
+      this.spin += 0.25;
+      this.img.rotation = this.spin;
+    } else if (this.motion === "spin") {
       this.spin += 0.35;
       this.img.rotation = this.spin;
     } else this.img.rotation = angle;
@@ -497,6 +561,13 @@ export class ShotView {
   }
 
   private trail(x: number, y: number) {
+    const own = UNIT_TRAIL[this.def.id];
+    if (own && hasFx(this.scene, own)) {
+      const puff = this.scene.add.image(x, y, fxKey(own)).setDepth(1990);
+      puff.setScale(34 / Math.max(1, puff.width)).setRotation(Math.random() * 6);
+      this.scene.tweens.add({ targets: puff, alpha: 0, scale: puff.scale * 1.6, duration: 380, onComplete: () => puff.destroy() });
+      return;
+    }
     const key = PARTICLE[this.element];
     const dot = hasFx(this.scene, key)
       ? this.scene.add.image(x, y, fxKey(key)).setScale(16 / Math.max(1, this.scene.textures.get(fxKey(key)).getSourceImage().width))

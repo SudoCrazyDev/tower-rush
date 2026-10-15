@@ -32,11 +32,12 @@ let installOffered = false;
 /** Day we last re-fetched the profile for (quests roll over at UTC midnight). */
 let refreshedFor = "";
 
-/** The lobby carousel's pages: the arenas, the story books, then (staging and dev builds only) the Unit Lab. */
-type Mode = "arena" | "story" | "lab";
-const MODES: Mode[] = ["arena", "story", "lab"];
-const LAB_ON = !!(import.meta.env.DEV || import.meta.env.MODE === "staging");
+/** The lobby carousel's pages: the arenas, the story books, PvP, then the Unit Lab (v2.8: open to everyone). */
+type Mode = "arena" | "story" | "pvp" | "lab";
+const MODES: Mode[] = ["arena", "story", "pvp", "lab"];
 let mode: Mode = "arena";
+/** The PvP poster (story/pvp_poster) failed to load this session: the PvP card shows the arena instead. */
+let pvpPosterMissing = false;
 /** Whether the mode card is open (its arenas or books showing) rather than the ARENA / STORIES cards. */
 let opened = false;
 /** The middle of the carousel card. */
@@ -48,7 +49,7 @@ let bookTab = 0;
 const curBook = () => BOOKS[bookTab] ?? BOOK;
 const hasStories = () => BOOKS.some((b) => b.stories.length > 0);
 /** The mode cards this build shows, in carousel order. */
-const activeModes = () => MODES.filter((m) => (m !== "story" || hasStories()) && (m !== "lab" || LAB_ON));
+const activeModes = () => MODES.filter((m) => m !== "story" || hasStories());
 
 /** The story to show first: the first one not finished yet (or the last one). */
 function currentStory() {
@@ -117,6 +118,8 @@ function eventStrip(scene: Phaser.Scene) {
 export class LobbyScene extends Phaser.Scene {
   private arena!: ArenaDef;
   private card?: Phaser.GameObjects.Container;
+  /** v2.8: the neighbouring mode cards peeking in at the sides of the carousel. */
+  private peeks: Phaser.GameObjects.Container[] = [];
 
   private saveTimer?: Phaser.Time.TimerEvent;
   /** Waiting to hear whether a battle can start here. */
@@ -143,6 +146,7 @@ export class LobbyScene extends Phaser.Scene {
     const chosen = profile.arena ? ARENA_BY_ID[profile.arena] : null;
     this.arena = chosen && chosen.trophies <= profile.trophies ? chosen : unlocked;
     this.card = undefined;
+    this.peeks = [];
     if (!activeModes().includes(mode)) mode = "arena";
     // New players go straight to the first arena's BATTLE.
     if (tutorialDue("battle")) [mode, opened] = ["arena", true];
@@ -190,13 +194,12 @@ export class LobbyScene extends Phaser.Scene {
 
     this.lobbyTiles(side);
 
+    // v2.8: PvP is a carousel card now; DECK and SHOP keep their places.
     if (WIDE) {
       button(this, deckX, 640, 340, 110, "DECK", "blue", () => this.scene.start("Deck"));
       button(this, deckX, 790, 340, 110, "SHOP", "green", () => this.scene.start("Shop"));
-      button(this, deckX, 940, 340, 110, "PVP", "red", () => this.scene.start("PvpMenu"));
     } else {
       button(this, W / 2 - 240, 1530, 220, 110, "DECK", "blue", () => this.scene.start("Deck"), 40);
-      button(this, W / 2, 1530, 220, 110, "PVP", "red", () => this.scene.start("PvpMenu"), 40);
       button(this, W / 2 + 240, 1530, 220, 110, "SHOP", "green", () => this.scene.start("Shop"), 40);
     }
     // The install pill shares the event strip's spot, so a live event wins it.
@@ -321,10 +324,14 @@ export class LobbyScene extends Phaser.Scene {
       const out = flip ? { scaleX: 0 } : { x: old.x - slide, alpha: 0 };
       this.tweens.add({ targets: old, ...out, duration: flip ? 130 : 200, ease: "Sine.In", onComplete: () => old.destroy() });
     } else old?.destroy();
+    for (const p of this.peeks) p.destroy();
+    this.peeks = [];
     const group = this.add.container(W / 2, CARD_Y);
     this.card = group;
-    if (!opened) this.modeCard(group);
-    else if (mode === "story") this.storyCard(group);
+    if (!opened) {
+      this.modeCard(group);
+      this.drawPeeks(group, !!slide);
+    } else if (mode === "story") this.storyCard(group);
     else this.arenaCard(group);
     if (flip && old) {
       group.setScale(0, 1);
@@ -336,15 +343,40 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   /**
-   * A mode card: ARENA (the arena you're on) or STORIES (the book covers). Tap it to open it;
-   * arrows, a swipe or the dots show the other one.
+   * v2.8: the neighbouring mode cards, smaller and dimmed, peeking in at both sides of the middle
+   * card (under it). Tap one to bring it to the middle. They stop short of the deck and the logo.
    */
-  private modeCard(group: Phaser.GameObjects.Container) {
-    this.cardFrame(group, false);
+  private drawPeeks(main: Phaser.GameObjects.Container, fade: boolean) {
     const modes = activeModes();
     const i = modes.indexOf(mode);
+    const scale = WIDE ? 0.55 : 0.62;
+    // How far a peek shows past the middle card's edge (the card is 600 wide).
+    const show = WIDE ? Phaser.Math.Clamp(W * 0.3 - 490, 40, 220) : Phaser.Math.Clamp(W / 2 - 304, 50, 200);
+    const off = 300 + show - (600 * scale) / 2;
+    for (const side of [-1, 1] as const) {
+      const m = modes[i + side];
+      if (!m) continue;
+      const peek = this.add.container(W / 2 + side * off, CARD_Y + 30);
+      this.modeCard(peek, m);
+      peek.setScale(scale).setAlpha(fade ? 0 : 0.55);
+      if (fade) this.tweens.add({ targets: peek, alpha: 0.55, duration: 260, delay: 80 });
+      this.children.moveBelow(peek as Phaser.GameObjects.GameObject, main as Phaser.GameObjects.GameObject);
+      this.peeks.push(peek);
+    }
+  }
+
+  /**
+   * A mode card: ARENA (the arena you're on), STORIES (the book covers), PVP or UNIT LAB. Tap it to
+   * open it; arrows, a swipe, the dots or a tap on a side card show another. `peekMode`: draw that
+   * mode as a dimmed side card (no button, dots or arrows; a tap brings it to the middle).
+   */
+  private modeCard(group: Phaser.GameObjects.Container, peekMode?: Mode) {
+    const shown = peekMode ?? mode;
+    this.cardFrame(group, false);
+    const modes = activeModes();
+    const i = modes.indexOf(shown);
     this.artFade(group);
-    if (mode === "arena") {
+    if (shown === "arena") {
       const a = this.arena;
       this.arenaArt(group, a, a.trophies > profile.trophies);
       this.chips(group, [
@@ -352,10 +384,14 @@ export class LobbyScene extends Phaser.Scene {
         { icon: "ui:wave_horn", text: `Best wave ${profile.arenaBest?.[a.id] ?? 0}` },
       ]);
       this.namePlate(group, "ARENA", "ui:icon_pvp");
-    } else if (mode === "lab") {
+    } else if (shown === "lab") {
       this.labArt(group);
-      this.chips(group, [{ text: "Test any unit" }, { text: "Royal Meadow", color: "#7dff7a" }]);
+      this.chips(group, [{ text: "Test your units" }, { text: "Royal Meadow", color: "#7dff7a" }]);
       this.namePlate(group, "UNIT LAB", "ui:icon_quests");
+    } else if (shown === "pvp") {
+      this.pvpArt(group);
+      this.chips(group, [{ text: "Live duels" }, { icon: "item:trophy", text: fmt(profile.trophies), color: "#ffd93b" }]);
+      this.namePlate(group, "PVP", "ui:icon_pvp");
     } else {
       this.storiesArt(group);
       const all = BOOKS.flatMap((b) => b.stories);
@@ -365,9 +401,15 @@ export class LobbyScene extends Phaser.Scene {
       this.namePlate(group, "STORIES", "ui:icon_story");
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
-    // The lab has no page of its own: it opens its own scene.
-    const go = () => (mode === "lab" ? this.scene.start("Lab") : this.open(true));
-    const cta = button(this, 0, 272, 340, 92, mode === "arena" ? "PICK ARENA" : mode === "lab" ? "OPEN LAB" : "OPEN BOOKS", "green", go, 40);
+    if (peekMode) {
+      group.setSize(600, 660);
+      const side = i - modes.indexOf(mode);
+      pressable(group, () => this.setMode(i, Math.sign(side) || 1));
+      return;
+    }
+    // The lab and PvP have no page of their own: they open their own scenes.
+    const go = () => (mode === "lab" ? this.scene.start("Lab") : mode === "pvp" ? this.scene.start("PvpMenu") : this.open(true));
+    const cta = button(this, 0, 272, 340, 92, mode === "arena" ? "PICK ARENA" : mode === "lab" ? "OPEN LAB" : mode === "pvp" ? "PLAY PVP" : "OPEN BOOKS", "green", go, 40);
     group.add(cta);
     this.tweens.add({ targets: cta, scale: 1.05, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     // Page dots under the card.
@@ -387,6 +429,24 @@ export class LobbyScene extends Phaser.Scene {
     loadStoryImages(this, ["lab_poster"], () => {
       if (!group.active) return;
       const bg = this.add.image(0, 0, "story:lab_poster");
+      const s = Math.max(540 / bg.width, 470 / bg.height);
+      const cw = 540 / s;
+      const ch = 470 / s;
+      bg.setScale(s).setCrop((bg.width - cw) / 2, (bg.height - ch) / 2, cw, ch).setY(-85);
+      group.addAt(bg, 1);
+    });
+  }
+
+  /** v2.8 The PVP card's art: its poster (story/pvp_poster), or the arena until the poster is built. */
+  private pvpArt(group: Phaser.GameObjects.Container) {
+    if (pvpPosterMissing) return this.arenaArt(group, this.arena, false);
+    loadStoryImages(this, ["pvp_poster"], () => {
+      if (!group.active) return;
+      if (!this.textures.exists("story:pvp_poster")) {
+        pvpPosterMissing = true;
+        return this.arenaArt(group, this.arena, false);
+      }
+      const bg = this.add.image(0, 0, "story:pvp_poster");
       const s = Math.max(540 / bg.width, 470 / bg.height);
       const cw = 540 / s;
       const ch = 470 / s;

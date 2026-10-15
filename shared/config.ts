@@ -88,6 +88,12 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.7.0-raccoon": { units: { raccoon_thief: ["damage"] }, effects: {} },
   // v2.7: Mirror Slime, Banner Herald and Mime are retired (saved decks drop them on load: server/src/users.ts).
   "2.7.0-retired-supports": { units: { mirror_slime: ["enabled"], banner_herald: ["enabled"], mime: ["enabled"] }, effects: {} },
+  // v2.8 balance: Hourglass Owl base ultimate charge 30% -> 40%.
+  "2.8.0-owl": { units: {}, effects: { hourglass: ["charge"] } },
+  // v2.8 balance: Sand Worm damage -> 47, Sand Monk damage -> 19.
+  "2.8.0-sand": { units: { sand_worm: ["damage"], sand_monk: ["damage"] }, effects: {} },
+  // v2.8 QoL: each Mythic gets its own projectile (Void Titan void_rift, Dragon Egg dragon_flame, Chrono Mage chrono_gear).
+  "2.8.0-mythic-proj": { units: { void_titan: ["proj"], dragon_egg: ["proj"], chrono_mage: ["proj"] }, effects: {} },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

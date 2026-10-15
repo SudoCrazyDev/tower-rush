@@ -9,7 +9,7 @@ import { extname, join, relative } from "node:path";
 
 const BUCKET = "tower-rush-assets";
 const ROOT = "game/public/assets";
-const TYPES = { ".webp": "image/webp", ".mp4": "video/mp4", ".json": "application/json", ".png": "image/png" };
+const TYPES = { ".webp": "image/webp", ".mp4": "video/mp4", ".mp3": "audio/mpeg", ".json": "application/json", ".png": "image/png" };
 
 const only = process.argv.slice(2);
 const files = [];

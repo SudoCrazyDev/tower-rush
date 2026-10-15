@@ -9,6 +9,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import zlib
@@ -194,6 +195,9 @@ STATIC = [
 ]
 jobs.append(lambda: fit(f"{SRC}/story/story_background.png", f"{OUT}/story/story_background.webp", 1344))
 jobs.append(lambda: fit(f"{SRC}/story/lab_poster.png", f"{OUT}/story/lab_poster.webp", 1344))
+# v2.8: the lobby carousel's PvP card (optional until the art lands; the lobby falls back to its old look).
+if os.path.exists(f"{SRC}/story/pvp_poster.png"):
+    jobs.append(lambda: fit(f"{SRC}/story/pvp_poster.png", f"{OUT}/story/pvp_poster.webp", 1344))
 # Reward VFX are drawn large (rays 500-900 px, bursts 300-450 px), so they build bigger than the other vfx.
 BIG_VFX = {"level_up_arrow", "light_rays", "star_burst", "chest_glow", "merge_flash", "rarity_glow_legendary", "rarity_glow_epic", "rarity_glow_rare"}
 for folder, out, size in STATIC:
@@ -218,7 +222,8 @@ ELEMENT_ORDER = ["fire", "ice", "lightning", "nature", "poison", "arcane"]
 
 # v2.0 element emblems (assets/ui/elements/<e>.png, keyed) replace the cut-out badges: they build to
 # the same ui/element_<e>.webp name BootScene loads, and rebuild whenever the emblem is newer.
-index["elements"] = [e for e in ELEMENT_ORDER if os.path.exists(f"{SRC}/ui/elements/{e}.png")]
+# v2.8 "normal" has no atlas badge: it only exists as an emblem (the game draws a plain disc until then).
+index["elements"] = [e for e in ELEMENT_ORDER + ["normal"] if os.path.exists(f"{SRC}/ui/elements/{e}.png")]
 
 
 def emblem(src, dst, size=128):
@@ -340,6 +345,15 @@ for path in sorted(glob.glob(f"{SRC}/animations/locations/*_loop.mp4")):
     jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", True))
 index["videos"].append("trailer")
 jobs.append(lambda: video(f"{SRC}/video/trailer_main.mp4", f"{OUT}/video/trailer.mp4", False))
+
+# v2.8 arena music: assets/music/arena_<arenaId>.mp3 (or already in public/assets/music) is copied as is.
+# The game only streams the tracks listed here; a missing track plays the synth battle music.
+os.makedirs(f"{OUT}/music", exist_ok=True)
+for path in sorted(glob.glob(f"{SRC}/music/*.mp3")):
+    dst = f"{OUT}/music/{os.path.basename(path)}"
+    if need(dst) or os.path.getmtime(dst) < os.path.getmtime(path):
+        shutil.copyfile(path, dst)
+index["music"] = sorted(os.path.splitext(os.path.basename(p))[0] for p in glob.glob(f"{OUT}/music/*.mp3"))
 
 # A few character clips came back with a drifting (olive/black) background that the
 # green key can't remove. Their frames have opaque pixels all along the frame border,

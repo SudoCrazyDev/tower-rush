@@ -57,8 +57,13 @@ export function pressable<T extends Phaser.GameObjects.GameObject & Phaser.GameO
     tw = scene.tweens.add({ targets: obj, scaleX: x, scaleY: y, duration });
   };
   const release = () => {
-    if (base) to(base.x, base.y, 80);
-    rest = base;
+    // v2.8: only a real press sets `rest`. A second release (pointerout after pointerup) used to
+    // wipe it, so a tap during the grow-back tween took the half-grown scale as its base and the
+    // button shrank a little more with every tap (the Summon button).
+    if (base) {
+      to(base.x, base.y, 80);
+      rest = base;
+    }
     base = null;
   };
   obj.setInteractive({ useHandCursor: true });

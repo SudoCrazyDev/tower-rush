@@ -112,7 +112,7 @@ export const ULTIMATES: Record<UltId, UltDef> = {
 export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll", "moonshine", "reborn", "shadow_clones", "tidal_wave", "frozen_fields", "black_hole", "big_ben"]);
 
 /** Units that never awaken (even with awakened art). */
-export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller"]);
+export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller", "peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"]);
 
 export interface Awakening {
   /** Permanent multipliers on the awakened unit's damage and attack speed. */
@@ -145,7 +145,7 @@ export const AWAKENINGS: Record<string, Awakening> = {
   // Vine Druid never attacks (see shared/reworks.ts): the multipliers scale her vines.
   vine_druid: { damage: 3, speed: 1, ult: "vineyard" },
   // epic
-  crystal_golem: { damage: 6, speed: 0.2, ult: "crystal_throw" },
+  crystal_golem: { damage: 6, speed: 0.4, ult: "crystal_throw" },
   fox_samurai: { damage: 3, speed: 3, ult: "blade_dance" },
   moon_oracle: { damage: 3, speed: 2, ult: "moonshine" },
   phoenix_chick: { damage: 3, speed: 4, ult: "reborn" },

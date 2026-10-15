@@ -5,6 +5,7 @@ import { ASSETS, asset } from "../api";
 import { ARENAS } from "../../../shared/arenas.ts";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { ELEMENTS, PROJECTILES, RARITIES, STYLES, STYLE_IDS, WEAPON_KEYS, maxCardLevel, maxPowerUp, maxRank, restyle, unitStats, type Rarity, type Style, type UnitDef } from "../../../shared/units.ts";
+import { orcText } from "../../../shared/reworks.ts";
 import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultText, mayAwaken } from "../../../shared/awakened.ts";
 import { noAttack } from "../../../shared/support.ts";
 import { kitSummary, perkSummary } from "../../../shared/kit.ts";
@@ -276,7 +277,7 @@ export function GameCard({ u, size = 132, level, awakened, locked, caption }: { 
       <div className={`gcard ${locked ? "locked" : ""}`} style={{ ["--s" as string]: `${size}px` }}>
         <img className="gcard-frame" src={`${ASSETS}cards/frame_${awakened ? "mythic" : u.rarity}.webp`} alt="" />
         <img className="gcard-art" crossOrigin="anonymous" src={asset(awakened ? "portraits_awakened" : "portraits", u.id)} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
-        <img className="gcard-el" src={`${ASSETS}ui/element_${u.element}.webp`} alt={u.element} />
+        <img className="gcard-el" src={`${ASSETS}ui/element_${u.element}.webp`} alt={u.element} onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
         {level !== undefined && <div className="gcard-lv">LV {level}</div>}
       </div>
       <div className="gcard-name">{u.name}</div>
@@ -331,7 +332,7 @@ function CardTab({ u, canAwaken }: { u: UnitDef; canAwaken: Set<string> }) {
           {u.blurb && <div className="blurb">{u.blurb}</div>}
           {attacks && <div className="style">{(u.role ?? st.label).toUpperCase()}: {st.text}{vs}</div>}
           {perkSummary(u).map((l, i) => <div key={i} className="perk">{attacks ? "" : "Neighbours get "}{l}</div>)}
-          <div className="kitline">{kitSummary(u, 1, 1).map((l, i) => <div key={i}>{l}</div>)}</div>
+          <div className="kitline">{(orcText(u.id)?.lines ?? kitSummary(u, 1, 1)).map((l, i) => <div key={i}>{l}</div>)}</div>
 
           <div className="gold">CARD LEVEL</div>
           <div className="note">+{pct(ECONOMY.levelBonus)} {attacks ? `damage, +${pct(ECONOMY.levelSpeedBonus)} speed` : "boost"} per upgrade · max level {max}</div>

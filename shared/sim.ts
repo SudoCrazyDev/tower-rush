@@ -49,7 +49,7 @@ import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type Ac
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
 import { NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type UltId } from "./awakened.ts";
 import { castUltimate, hatchReborn, ultimateAttack, type UltCtx } from "./ultimates.ts";
-import { REWORKS, liveDef, noOwnAttack, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
+import { BETA_SUPPORT, REWORKS, drumStage, gruntMult, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
   brewMana,
   canBecome,
@@ -119,7 +119,7 @@ export interface SimLogEntry {
 }
 
 export type ManaSource = "kill" | "wave" | "harvest" | "brew" | "pulse" | "lantern" | "ultimate" | "echo" | "plunder" | "hero" | "income" | "other";
-export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald";
+export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald" | "berserk" | "pillage";
 
 /**
  * Structured events for a renderer, drained with drainEvents(). Unit uids are stable per
@@ -253,7 +253,14 @@ export type SimEvent =
   /** A lightning bolt segment: chain n (0 first), a Lance Knight's bane chain, or a hero storm bolt. */
   | { type: "zap"; t: number; kind: "chain" | "bane" | "storm"; n: number; x: number; y: number; x2: number; y2: number; color: string }
   /** A healer monster's pulse. */
-  | { type: "heal_pulse"; t: number; x: number; y: number };
+  | { type: "heal_pulse"; t: number; x: number; y: number }
+  // v2.8 "Beta Berserker" Orcs (shared/reworks.ts).
+  /** A Grunt's Berserker Strength reached `tier` (1..4): its axe changes. */
+  | { type: "berserk"; t: number; uid: number; tier: number; x: number; y: number }
+  /** A Peon's Pillage doubled its pulse (`amount` mana). */
+  | { type: "pillage"; t: number; uid: number; amount: number; x: number; y: number }
+  /** A Spirit Walker's ancestors pushed monsters `targets` back (wisps from x, y). */
+  | { type: "spirit_push"; t: number; uid: number; targets: number[]; x: number; y: number };
 
 export type SimMode = "solo" | "pvp";
 
@@ -477,6 +484,9 @@ export class SimUnit {
   sunStun = 0;
   /** v2.7 Iceborn Warmother: extra damage to bosses (1.5 = +150%). */
   readonly bossBonus: number;
+  /** v2.8 Grunt: the wave it was placed on (swaps and hops keep it; a merge places a new unit) and its Berserker tier. */
+  placedWave = 0;
+  berserk = 0;
 
   constructor(b: BoardUnit, slot: number, pos: Pt, cardLevel: number, powerUp: number, cooldown: number, alive: number) {
     const base = UNIT_BY_ID[b.id];
@@ -697,6 +707,7 @@ const ELEMENT_CSS: Record<Element, string> = {
   nature: "#6bd34a",
   poison: "#b05cff",
   arcane: "#ff7ad9",
+  normal: "#c8c8c8",
 };
 
 // ---------------------------------------------------------------- the simulation
@@ -777,6 +788,8 @@ export class Sim {
   private trackedBoss: SimMonster | null = null;
   /** Banner Herald: damage multiplier for every attacking unit. */
   heraldMult = 1;
+  /** v2.8 Kodo Beasts' War Drums stage this step (-1: no Kodo on the board; 0..2: see drumStage). The viewer reads it. */
+  drums = -1;
   /** v2.7: what a unit's own ultimate may touch (shared/ultimates.ts). */
   private readonly ultCtx: UltCtx = this.makeUltCtx();
   /** Banner Herald war cry: everyone attacks faster until then. */
@@ -999,6 +1012,7 @@ export class Sim {
   /** Give a new unit its stable uid. */
   private adopt(u: SimUnit) {
     u.uid = ++this.unitUid;
+    u.placedWave = this.wave;
     return u;
   }
 
@@ -1072,7 +1086,8 @@ export class Sim {
         }
         return;
       }
-      if (u.primary !== "buff") return;
+      // v2.8: Peon and Kodo Beasts have a "buff" kit but run their own rules (shared/reworks.ts).
+      if (u.primary !== "buff" || BETA_SUPPORT.has(u.def.id)) return;
       // v2.7 Retribution (awakened Sun Priestess): her speed multipliers scale the buff (with a higher cap),
       // and her neighbours also hit harder and may stun.
       const ret = u.awakened && ultOf(u.def.id)?.id === "retribution" ? ULTIMATES.retribution.params : null;
@@ -1414,6 +1429,7 @@ export class Sim {
     if (this.lawsOn) this.lawTick();
     if (this.story?.mechanics?.scale) this.tickScale();
     this.boardRules();
+    this.drums = this.drumsNow();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.fields.length || this.scorch || this.frost) this.updateFields(dt);
     if (this.echoes.length) this.updateEchoes();
@@ -3242,8 +3258,19 @@ export class Sim {
         this.gainMana(lanternMana(this.units.filter((v) => v && isKnight(v.def)).length, u.fx), u.x, u.y - 50, "lantern");
       }
     }
+    // v2.8 Peon: a mana pulse that Pillage may double (shared/reworks.ts).
+    if (u.def.id === "peon") this.peonPulse(u, dt);
     if (u.primary === "buff" || u.primary === "aura" || u.primary === "aegis") return;
     if (isSupport(u.primary)) return this.updateSupport(u, dt);
+    // v2.8 Grunt: Berserker Strength rises with the waves it has stood on the board.
+    if (u.def.id === "grunt") {
+      const tier = gruntTier(this.wave - u.placedWave);
+      if (tier > u.berserk) {
+        u.berserk = tier;
+        this.callout("berserk", "BERSERK!", "#ff4a3b", u.x, u.y - 60, u.uid);
+        this.emit({ type: "berserk", t: now, uid: u.uid, tier, x: u.x, y: u.y });
+      } else if (tier < u.berserk) u.berserk = tier;
+    }
     if (u.def.id === "raccoon_thief") {
       // v2.7: Raccoon Thief's own pulse (shared/reworks.ts).
       u.pulse += dt;
@@ -3290,15 +3317,19 @@ export class Sim {
     if (u.blessings.length) rate *= 1 + ULTIMATES.moonshine.params.speed * this.blessed(u);
     if (u.absorbed) rate *= 1 + ULTIMATES.star_merger.params.speed * u.absorbed;
     if (now < u.benUntil) rate *= 1 + ULTIMATES.big_ben.params.speed;
+    // v2.8 Headhunter: Berserker Upgrade attack speed from a late wave on.
+    const hh = u.def.id === "headhunter" ? REWORKS.headhunter.upgrade : null;
+    if (hh && this.wave >= hh.fastWave) rate *= hh.speed;
     // v2.7 Frozen Fields: the Crystal Queen holds the ice instead of attacking (her charge keeps running).
     if (now < u.frostUntil) return;
     u.cooldown -= dt;
     if (u.cooldown > 0 || u.sulking) return;
-    const target = this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
+    const hunt = hh ? this.headhunt() : null;
+    const target = hunt ? hunt.target : this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
     if (!target) return;
     u.cooldown = 1 / rate;
     u.firedAt = now;
-    this.fire(u, target);
+    this.fire(u, target, hunt?.mult ?? 1);
     // v2.4: every attack wears a chain down a link.
     if (u.chain > 0) this.chainLink(u, 1);
   }
@@ -3313,8 +3344,72 @@ export class Sim {
       (now < u.rushUntil ? EFFECTS.portal.rush : 0) +
       (now < this.shoutUntil ? EFFECTS.herald.shout : 0) +
       (now < u.status.rallyUntil ? EFFECTS.rally.speed : 0) +
-      (kitHas(u.def, "oath") ? u.fx.oath.speedPerKnight * this.adjacentKnights(u) : 0)
+      (kitHas(u.def, "oath") ? u.fx.oath.speedPerKnight * this.adjacentKnights(u) : 0) +
+      this.drumHaste(u)
     );
+  }
+
+  /** v2.8 Kodo War Drums stage right now: -1 without a Kodo on the board, else drumStage of the furthest monster. */
+  private drumsNow() {
+    if (!this.units.some((v) => v?.def.id === "kodo_beasts" && !v.dragging)) return -1;
+    let far = 0;
+    for (const m of this.monsters) if (!m.gone && !m.civilian && !m.family && m.intro <= 0) far = Math.max(far, m.progress);
+    return drumStage(far);
+  }
+
+  /** v2.8 Kodo War Drums haste for one unit (the best Kodo bonus counts; several Kodos don't stack). */
+  private drumHaste(u: SimUnit) {
+    if (this.drums < 0) return 0;
+    const d = REWORKS.kodo_beasts.drums;
+    if (this.drums === 2) return d.far;
+    const near = neighbours(u.slot).some((j) => this.units[j]?.def.id === "kodo_beasts" && !this.units[j]!.dragging);
+    return near ? (this.drums === 1 ? d.mid : d.near) : 0;
+  }
+
+  /** v2.8 Peon: +mana every few seconds; Pillage may double it (more likely with every other Orc on the board). */
+  private peonPulse(u: SimUnit, dt: number) {
+    const p = REWORKS.peon.pillage;
+    u.pulse += dt;
+    if (u.pulse < p.every) return;
+    u.pulse = 0;
+    u.firedAt = this.now;
+    const orcRanks = this.units.reduce((s, v) => s + (v && v !== u && v.def.race === "orc" ? v.rank : 0), 0);
+    const pillage = this.rand() < pillageChance(orcRanks);
+    const amount = pillage ? p.mana * p.mult : p.mana;
+    this.gainMana(amount, u.x, u.y - 50, "pulse");
+    if (!pillage) return;
+    this.callout("pillage", "PILLAGE!", "#ffd24a", u.x, u.y - 60, u.uid);
+    this.emit({ type: "pillage", t: this.now, uid: u.uid, amount, x: u.x, y: u.y - 50 });
+  }
+
+  /**
+   * v2.8 Headhunter's target: the furthest monster at 87%+ of its path (for ×5.2), else a random one.
+   * Same rules as pickTarget for who may be targeted.
+   */
+  private headhunt(): { target: SimMonster; mult: number } | null {
+    const hh = REWORKS.headhunter.upgrade;
+    const ok = this.monsters.filter((m) => !(m.gone || m.intro > 0 || m.dist < this.targetFrom || m.masked || m.civilian || m.shelled || m.family));
+    if (!ok.length) return null;
+    let far: SimMonster | null = null;
+    for (const m of ok) if (m.progress >= hh.at && (!far || m.progress > far.progress)) far = m;
+    if (far) return { target: far, mult: hh.mult };
+    return { target: ok[Math.floor(this.rand() * ok.length)], mult: 1 };
+  }
+
+  /** v2.8 Spirit Walker's Ancestral Spirit: may push the hit monster and up to 4 near it back along their paths. */
+  private spiritPush(u: SimUnit, m: SimMonster) {
+    const sp = REWORKS.spirit_walker.spirit;
+    if (m.gone || m.dead || this.rand() >= sp.chance) return;
+    const movable = (o: SimMonster) => !o.gone && !o.dead && o.pinned === null && !o.civilian && !o.family && !o.masked && !o.shelled && o.intro <= 0;
+    const at = m.pos;
+    const near = this.nearby(at, sp.radius, m)
+      .filter(movable)
+      .sort((a, b) => Math.hypot(a.pos.x - at.x, a.pos.y - at.y) - Math.hypot(b.pos.x - at.x, b.pos.y - at.y))
+      .slice(0, sp.extra);
+    const pushed = [...(movable(m) ? [m] : []), ...near];
+    if (!pushed.length) return;
+    for (const o of pushed) o.dist = Math.max(0, o.dist - (o.boss ? sp.bossPush : sp.push));
+    this.emit({ type: "spirit_push", t: this.now, uid: u.uid, targets: pushed.map((o) => o.uid), x: at.x, y: at.y });
   }
 
   private adjacentKnights(u: SimUnit) {
@@ -3786,7 +3881,8 @@ export class Sim {
     for (const m of this.nearby(center, ECONOMY.ultimateRadius)) this.applyHit(u, damage, m);
   }
 
-  private fire(u: SimUnit, target: SimMonster) {
+  /** `mult`: an extra damage multiplier for this attack (a Headhunter's focus). */
+  private fire(u: SimUnit, target: SimMonster, mult = 1) {
     const now = this.now;
     // Irritation: the attack may miss.
     if (now < u.status.irritatedUntil && this.rand() < u.status.miss) {
@@ -3809,6 +3905,9 @@ export class Sim {
     if (kitHas(u.def, "fatigue")) damage *= 1 + u.fx.fatigue.perMercenary * this.units.filter((v) => v && isMercenary(v.def)).length;
     if (kitHas(u.def, "growth")) damage *= growthMult(u.alive, u.fx);
     if (now < u.status.glimmeredUntil) damage *= u.status.glimmer;
+    // v2.8: Grunt's Berserker Strength, Headhunter's focus.
+    if (u.def.id === "grunt") damage *= gruntMult(this.wave - u.placedWave);
+    damage *= mult;
     const from = { x: u.x, y: u.y - 30 };
     // v2.7 Luna's Blessing: every attack earns mana.
     const blessings = this.blessed(u);
@@ -4098,6 +4197,8 @@ export class Sim {
         this.gainMana(REWORKS.vampire_countess.kiss.mana + plunderMana(u.perks), o.pos.x, o.pos.y - 60, "plunder");
       }
     if (!chained) this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
+    // v2.8 Spirit Walker: Ancestral Spirit pushes them back.
+    if (def.id === "spirit_walker") this.spiritPush(u, m);
   }
 }
 

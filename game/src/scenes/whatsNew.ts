@@ -3,7 +3,7 @@ import { sfx } from "../audio";
 import { button, modal, txt } from "../ui";
 
 /** The release the "What's new" popup describes (see docs/features). */
-export const RELEASE = { version: "2.7.0", title: "The Great Awakening", tagline: "Every unit is reborn at max rank." };
+export const RELEASE = { version: "2.8.0", title: "Beta Release: Beta Berserker", tagline: "The Orcs march in. The Lab opens to all." };
 const SEEN_KEY = "tower-rush-whats-new";
 
 function seen() {
@@ -35,8 +35,8 @@ function show(scene: Phaser.Scene) {
   m.add(logo);
   scene.tweens.add({ targets: logo, y: logo.y + 10, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
-  m.add(txt(scene, m.cx, m.cy + 150, "Max rank is now 5: awakening comes much sooner.", 26, "#ffffff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 210, "Awakened units get their own boosts and ultimate: Multi-Shot, Black Hole, Big Ben and more.", 26, "#c9d2ff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 280, "Card levels add attack speed. New mode: Unit Lab.", 26, "#ff9df0").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 150, "Five Orcs join the fight, with the new Normal element.", 26, "#ffffff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 210, "Unit Lab for everyone, PvP in the carousel, music for every arena.", 26, "#c9d2ff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 280, "Mythics get their own projectiles. Plus a round of balance fixes.", 26, "#ff9df0").setWordWrapWidth(600));
   m.add(button(scene, m.cx, m.cy + 420, 320, 96, "LET'S GO!", "green", () => m.close()));
 }

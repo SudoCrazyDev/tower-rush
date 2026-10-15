@@ -8,7 +8,7 @@ import Phaser from "phaser";
 import { BASE, animKey, assetIndex, ensureAnim, loadImages, loadSheet, sheetScale } from "../assets";
 import { avatarView, botAvatar } from "../avatars";
 import { RES } from "../display";
-import { music, sfx } from "../audio";
+import { arenaMusic, music, sfx } from "../audio";
 import { W, H, WIDE, ARENA_W, ARENA_H, NAVY, PORTRAIT_FIT, button, cardView, floatText, fmt, iconButton, modal, pressable, resourcePill, toast, txt } from "../ui";
 import { finishStory, loadMe } from "../save";
 import { CrowdFavor, barkBubble, barkPortraitKey, duelSetup, duelStars, rivalBark, roundSkill, type DuelRun } from "./duel";
@@ -238,6 +238,7 @@ export class PvpScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, (o: Phaser.GameObjects.GameObject) => this.mini.ignore(o));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE));
     this.makeAnims();
+    arenaMusic(this.arena.id);
     music("battle");
 
     const a = this.arena;
@@ -931,7 +932,7 @@ export class PvpScene extends Phaser.Scene {
       let img = this.shotViews.get(s);
       if (!img) {
         const proj = s.unit.def.proj;
-        img = new ShotView(this, s.unit.def, s.x, s.y);
+        img = new ShotView(this, s.unit.def, s.x, s.y, s.unit.berserk);
         this.shotViews.set(s, img);
         sfx("shoot", proj);
       }
