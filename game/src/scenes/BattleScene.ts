@@ -29,7 +29,7 @@ import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fm
 import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
 import { Monster } from "../battle/Monster";
 import { Unit, canAwaken } from "../battle/Unit";
-import { ShotView, fxEvent, fxHit } from "../battle/vfx";
+import { ShotView, fxBusy, fxEvent, fxHit, fxTrack } from "../battle/vfx";
 import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
@@ -359,20 +359,36 @@ export class BattleScene extends Phaser.Scene {
     return `loc:${this.art}`;
   }
 
-  floater(x: number, y: number, text: string, color: string, size = 24) {
-    floatText(this, x, y, text, color, size);
+  /**
+   * v2.8.1: floating numbers alive right now. Each one is a text texture drawn on the CPU, and late
+   * waves (fast crits, kill mana) made dozens a second, so small ones are capped; big ones always show.
+   */
+  private floats = 0;
+  private float(x: number, y: number, text: string, color: string, size: number) {
+    if (size < 30 && this.floats >= 18) return null;
+    const t = floatText(this, x, y, text, color, size);
+    this.floats++;
+    t.once(Phaser.GameObjects.Events.DESTROY, () => this.floats--);
+    return t;
   }
 
-  /** A big hit number that punches in before it rises (crits, executes). */
+  floater(x: number, y: number, text: string, color: string, size = 24) {
+    this.float(x, y, text, color, size);
+  }
+
+  /** A big hit number that punches in before it rises (crits, executes). Capped like the small numbers. */
   critFloater(x: number, y: number, text: string, color: string, size = 36) {
-    const t = floatText(this, x, y, text, color, size).setDepth(520).setScale(1.8);
+    if (this.floats >= 18) return;
+    const t = this.float(x, y, text, color, size);
+    if (!t) return;
+    t.setDepth(520).setScale(1.8);
     this.tweens.add({ targets: t, scale: 1, duration: 180, ease: "Back.Out" });
   }
 
   vfx(name: string, x: number, y: number, px: number, depth = 2100) {
     const key = animKey("vfx", name);
-    if (!this.anims.exists(key)) return;
-    const s = this.add.sprite(x, y, key).setDepth(depth).setScale(sheetScale("vfx", px));
+    if (!this.anims.exists(key) || fxBusy()) return;
+    const s = fxTrack(this.add.sprite(x, y, key).setDepth(depth).setScale(sheetScale("vfx", px)));
     s.play(key);
     s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => s.destroy());
   }

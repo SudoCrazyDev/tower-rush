@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale, unitArt } from "../assets";
-import { fxKey, hasFx } from "./vfx";
+import { fxBusy, fxKey, fxTrack, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
 import { steam } from "./ultFx";
@@ -11,6 +11,9 @@ import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../share
 import type { SimUnit } from "../../../shared/sim.ts";
 import { NAVY, txt } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
+
+/** v2.8.1: when the last board-wide War Drums sweep started (one sweep for every Kodo on the board). */
+let drumSweepAt = -1e9;
 
 export const UNIT_PX = 116;
 /** Awakened units stand a little taller. */
@@ -427,20 +430,32 @@ export class Unit {
   }
 
   private drumAt = 0;
-  /** v2.8 War Drums: a ring pulses from the Kodo (vfx/drum_ring, or a drawn ring). At stage 2 it sweeps the whole board. */
+  /**
+   * v2.8 War Drums: a ring pulses from the Kodo (vfx/drum_ring, or a drawn ring). At stage 2 it sweeps the whole board.
+   * v2.8.1: slower pulses, and the board-wide sweep is one ring for the whole board (from the centre), not one huge ring per Kodo.
+   */
   private drumRings(dt: number, stage: number) {
     if (stage < 0) return;
     this.drumAt -= dt;
     if (this.drumAt > 0) return;
-    this.drumAt = [1.3, 0.8, 0.45][stage] ?? 1.3;
+    this.drumAt = [1.6, 1.1, 1.1][stage] ?? 1.6;
+    if (fxBusy()) return;
     const color = [0xffb25a, 0xff7a3a, 0xff3a2a][stage] ?? 0xffb25a;
-    const reach = stage === 2 ? 640 : 150;
-    const x = this.sprite.x;
-    const y = this.sprite.y + 10;
+    if (stage === 2) {
+      const now = this.scene.time.now;
+      if (now - drumSweepAt < 1000) return;
+      drumSweepAt = now;
+    }
+    const reach = stage === 2 ? 480 : 150;
+    // The sweep starts from the board's middle tile (slot 7 of the 5x3 grid).
+    const mid = this.scene.slotPos(7);
+    const x = stage === 2 ? mid.x : this.sprite.x;
+    const y = stage === 2 ? mid.y + 10 : this.sprite.y + 10;
     const depth = this.sprite.depth - 1;
     const ring: Phaser.GameObjects.Image | Phaser.GameObjects.Arc = hasFx(this.scene, "drum_ring")
       ? this.scene.add.image(x, y, fxKey("drum_ring")).setTint(color)
       : this.scene.add.circle(x, y, 50).setStrokeStyle(6, color, 0.9);
+    fxTrack(ring);
     const base = 100 / Math.max(1, ring.width);
     ring.setScale(base * 0.5, base * 0.5 * 0.55).setDepth(depth).setAlpha(0.9);
     const end = (reach * 2) / Math.max(1, ring.width);

@@ -99,17 +99,29 @@ export function unitArt(id: string) {
 }
 
 /** Queue a set of static images under `<prefix>:<id>` keys. */
+/**
+ * Images replaced in place on R2 (same key, new art). The bucket and browsers cache art for 24h,
+ * so these load with a version query to skip the stale copy. Add an entry whenever art is replaced.
+ */
+const REFRESHED: Record<string, string> = {
+  // v2.8.1: new Slow and Frozen status art, the Headhunter portrait redone from his still.
+  "vfx/status_slowed": "2.8.1",
+  "vfx/status_frozen": "2.8.1",
+  "portraits/headhunter": "2.8.1",
+};
+const imgUrl = (folder: string, id: string) => `${BASE}${folder}/${id}.webp${REFRESHED[`${folder}/${id}`] ? `?v=${REFRESHED[`${folder}/${id}`]}` : ""}`;
+
 export function loadImages(scene: Phaser.Scene, prefix: string, folder: string, ids: string[]) {
   // A unit without its own portrait, still or card image loads its stand-in's file under its own key.
   if (folder === "portraits" || folder === "units" || folder === "cards") {
     for (const [id, from] of Object.entries(UNIT_STAND_IN)) {
       const key = `${prefix}:${id}`;
-      if (!ids.includes(id) && ids.includes(from) && !scene.textures.exists(key)) scene.load.image(key, `${BASE}${folder}/${from}.webp`);
+      if (!ids.includes(id) && ids.includes(from) && !scene.textures.exists(key)) scene.load.image(key, imgUrl(folder, from));
     }
   }
   for (const id of ids) {
     const key = `${prefix}:${id}`;
-    if (!scene.textures.exists(key)) scene.load.image(key, `${BASE}${folder}/${id}.webp`);
+    if (!scene.textures.exists(key)) scene.load.image(key, imgUrl(folder, id));
   }
 }
 

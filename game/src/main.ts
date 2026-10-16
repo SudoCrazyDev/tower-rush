@@ -84,8 +84,9 @@ async function start() {
     // Production art comes from another origin (the R2 bucket), which allows it with CORS.
     loader: { crossOrigin: "anonymous" },
     render: { antialias: true, roundPixels: false },
-    // ?timer drives the loop with setTimeout, for testing in background tabs.
-    fps: { target: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
+    // ?timer drives the loop with setTimeout, for testing in background tabs. v2.8.1: limit 60, so
+    // 90/120 Hz phones don't draw (and heat up) at twice the frame rate.
+    fps: { target: 60, limit: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
     scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene, PvpMenuScene, PvpScene, StoryScene, LabScene],
   });
   if (!WIDE && W > ARENA_W) {

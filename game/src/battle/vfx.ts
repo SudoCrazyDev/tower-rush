@@ -19,6 +19,23 @@ export const fxKey = (key: string) => `vfx:${key}`;
 /** Whether the art for a static VFX key has been built and loaded. */
 export const hasFx = (scene: Phaser.Scene, key: string) => scene.textures.exists(fxKey(key));
 
+/**
+ * v2.8.1 VFX budget. Late waves with fast attackers (Headhunter at x3.2 speed, many Grunts) spawned
+ * hundreds of short-lived sprites and tweens a second and heated phones. Every one-shot effect
+ * counts itself here; past the cap, new hit effects, bursts and trails are skipped (the fight
+ * itself is unchanged: this is the view only).
+ */
+let fxLive = 0;
+const FX_CAP = 90;
+/** Too many effects alive: skip optional ones. */
+export const fxBusy = () => fxLive >= FX_CAP;
+/** Count an effect object until it is destroyed. */
+export function fxTrack<T extends Phaser.GameObjects.GameObject>(obj: T): T {
+  fxLive++;
+  obj.once(Phaser.GameObjects.Events.DESTROY, () => fxLive--);
+  return obj;
+}
+
 export interface FxOpts {
   /** Displayed width in px (default 100). */
   size?: number;
@@ -45,7 +62,7 @@ export interface FxOpts {
 /** A one-shot static VFX sprite. Returns null when the art is missing. */
 export function fxSprite(scene: Phaser.Scene, key: string, x: number, y: number, o: FxOpts = {}) {
   if (!hasFx(scene, key)) return null;
-  const img = scene.add.image(x, y, fxKey(key)).setDepth(o.depth ?? 2100);
+  const img = fxTrack(scene.add.image(x, y, fxKey(key)).setDepth(o.depth ?? 2100));
   const end = (o.size ?? 100) / Math.max(1, img.width);
   const sy = o.flat ? 0.5 : 1;
   const from = o.from ?? 0.6;
@@ -86,12 +103,14 @@ export interface BurstOpts {
 /** A small burst of particle sprites (pt_*). False when the art is missing. */
 export function fxBurst(scene: Phaser.Scene, key: string, x: number, y: number, o: BurstOpts = {}) {
   if (!hasFx(scene, key)) return false;
+  // Over budget: report it handled, draw nothing.
+  if (fxBusy()) return true;
   const n = o.n ?? 5;
   const spread = o.spread ?? 50;
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const d = spread * (0.4 + Math.random() * 0.6);
-    const img = scene.add.image(x, y, fxKey(key)).setDepth(o.depth ?? 2110);
+    const img = fxTrack(scene.add.image(x, y, fxKey(key)).setDepth(o.depth ?? 2110));
     const s = ((o.size ?? 22) * (0.7 + Math.random() * 0.6)) / Math.max(1, img.width);
     img.setScale(s * 0.5).setRotation(Math.random() * 6);
     if (o.tint !== undefined) img.setTint(o.tint);
@@ -261,6 +280,8 @@ const defOf = (scene: FxScene, uid: number): UnitDef | undefined => scene.sim.un
  * (so the caller skips it). Extras (slash, ground, particles) are drawn either way.
  */
 export function fxHit(scene: FxScene, e: Extract<SimEvent, { type: "hit" }>): boolean {
+  // Over budget: the hit is shown as handled with nothing drawn (the monster still flashes).
+  if (fxBusy()) return true;
   const def = defOf(scene, e.uid);
   const size = Math.max(60, e.size);
   let replaced = false;
@@ -435,7 +456,7 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
       break;
     // v2.8 Orcs.
     case "berserk":
-      // A red flash on the Grunt (the scene also tints the sprite).
+      // A red flash on the Grunt (the scene also tints the sprite). Rare, so it ignores the budget.
       if (!fxSprite(scene, "merge_flash", e.x, e.y - 20, { size: 200, life: 500, from: 0.4, tint: 0xff3020 })) {
         const c = scene.add.circle(e.x, e.y - 20, 70, 0xff3020, 0.55).setDepth(2100);
         scene.tweens.add({ targets: c, alpha: 0, scale: 1.6, duration: 450, onComplete: () => c.destroy() });
@@ -443,17 +464,16 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
       fxBurst(scene, "pt_ember", e.x, e.y - 20, { n: 6, size: 22, spread: 60 });
       break;
     case "pillage":
+      if (fxBusy()) break;
       if (!fxSprite(scene, "pillage_coins", e.x, e.y, { size: 110, life: 700, rise: 40, from: 0.6 })) fxBurst(scene, "pt_coin", e.x, e.y, { n: 6, size: 22, spread: 50, gravity: 40 });
       break;
-    case "spirit_push":
-      for (const uid of e.targets) {
-        const m = sim.monsters.find((o) => o.uid === uid);
-        if (!m) continue;
-        const p = m.pos;
-        const key = hasFx(scene, "spirit_wisp") ? "spirit_wisp" : "soul_wisp";
-        fxSprite(scene, key, p.x + 20, p.y, { size: 70, life: 600, from: 0.8, alpha: 0.9, tint: key === "soul_wisp" ? 0x9ff0d0 : undefined });
-      }
+    case "spirit_push": {
+      // v2.8.1: one wisp where the spirit struck (not one per pushed monster), and only within budget.
+      if (fxBusy()) break;
+      const key = hasFx(scene, "spirit_wisp") ? "spirit_wisp" : "soul_wisp";
+      fxSprite(scene, key, e.x + 20, e.y, { size: 80, life: 600, from: 0.8, alpha: 0.9, tint: key === "soul_wisp" ? 0x9ff0d0 : undefined });
       break;
+    }
     case "end":
       if (e.outcome === "won") {
         fxSprite(scene, "light_rays", 360, 640, { size: 900, life: 1800, rotate: 0.6, from: 0.5, add: true, alpha: 0.7 });
@@ -530,8 +550,10 @@ export class ShotView {
       this.motion = WEAPON_MOTION[wk] ?? "spin";
       this.img = scene.add.image(x, y, `weapon:${wk}`).setDepth(2000);
       this.img.setScale((wk.startsWith("sig_") ? 76 : wk.startsWith("grunt_axe_") ? 60 + tier * 6 : 64) / Math.max(1, this.img.width));
+      // v2.8.1: no per-shot glow shader (a preFX pass per flying weapon was the late-wave lag).
+      // The top Grunt axes get a red tint instead.
       if (this.motion === "strike") this.img.setVisible(false);
-      else this.img.preFX?.addGlow(tier >= 3 ? 0xff4a3b : this.color, 3, 0, false, 0.1, 8);
+      else if (tier >= 3) this.img.setTint(0xffb0a0);
     } else {
       const proj = !hasFx(scene, `proj_${def.proj}`) && PROJ_FALLBACK[def.proj] ? PROJ_FALLBACK[def.proj] : def.proj;
       const tex = proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${proj}`;
@@ -553,7 +575,8 @@ export class ShotView {
     } else this.img.rotation = angle;
     if (this.motion && this.motion !== "strike") {
       const t = this.scene.time.now;
-      if (t - this.trailAt > 45) {
+      // v2.8.1: a trail puff every 90 ms (was 45), none while the effect budget is spent.
+      if (t - this.trailAt > 90 && !fxBusy()) {
         this.trailAt = t;
         this.trail(x, y);
       }
@@ -563,7 +586,7 @@ export class ShotView {
   private trail(x: number, y: number) {
     const own = UNIT_TRAIL[this.def.id];
     if (own && hasFx(this.scene, own)) {
-      const puff = this.scene.add.image(x, y, fxKey(own)).setDepth(1990);
+      const puff = fxTrack(this.scene.add.image(x, y, fxKey(own)).setDepth(1990));
       puff.setScale(34 / Math.max(1, puff.width)).setRotation(Math.random() * 6);
       this.scene.tweens.add({ targets: puff, alpha: 0, scale: puff.scale * 1.6, duration: 380, onComplete: () => puff.destroy() });
       return;
@@ -572,17 +595,16 @@ export class ShotView {
     const dot = hasFx(this.scene, key)
       ? this.scene.add.image(x, y, fxKey(key)).setScale(16 / Math.max(1, this.scene.textures.get(fxKey(key)).getSourceImage().width))
       : this.scene.add.circle(x, y, 5, this.color, 0.7);
-    dot.setDepth(1990);
+    fxTrack(dot).setDepth(1990);
     this.scene.tweens.add({ targets: dot, alpha: 0, scale: 0.2, duration: 260, onComplete: () => dot.destroy() });
   }
 
   /** The shot arrived (or its target is gone): strike weapons pop where it lands. */
   destroy(at?: { x: number; y: number }) {
     if (this.motion === "strike" && at) {
-      const pop = this.scene.add.image(at.x, at.y, this.img.texture.key).setDepth(2000);
+      const pop = fxTrack(this.scene.add.image(at.x, at.y, this.img.texture.key).setDepth(2000));
       const end = 96 / Math.max(1, pop.width);
       pop.setScale(end * 0.5).setRotation((Math.random() - 0.5) * 0.6);
-      pop.preFX?.addGlow(this.color, 3, 0, false, 0.1, 8);
       this.scene.tweens.add({ targets: pop, scale: end, alpha: 0, duration: 320, ease: "Back.Out", onComplete: () => pop.destroy() });
     }
     this.img.destroy();

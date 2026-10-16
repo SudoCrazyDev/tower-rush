@@ -34,6 +34,7 @@ export class Monster {
   private bob = Math.random() * 10;
   private flashUntil = 0;
   private labelShown = "";
+  private labelAt = -1e9;
   /** v2.2: drawn as a masked Faceless (veiled); and the green ring under an unmasked civilian. */
   private veiled = false;
   private ring: Phaser.GameObjects.Graphics | null = null;
@@ -109,7 +110,10 @@ export class Monster {
     // v2.2 Faceless: a masked one is a veiled "?", an unmasked civilian is marked friendly.
     const friendly = (m.civilian && !m.masked) || m.family;
     const text = m.masked ? "?" : m.family ? "♥ FAMILY" : friendly ? "♥ CIVILIAN" : fmt(Math.max(0, m.hp));
-    if (text !== this.labelShown) {
+    // v2.8.1: a label redraw re-renders its text texture, so HP numbers refresh at most ~8 times a second.
+    const t = this.scene.time.now;
+    if (text !== this.labelShown && (t - this.labelAt > 120 || text.startsWith("♥") || text === "?")) {
+      this.labelAt = t;
       this.labelShown = text;
       this.label.setText(text);
       this.label.setColor(m.masked ? "#c9c4e8" : friendly ? "#7dff7a" : "#ffffff");
