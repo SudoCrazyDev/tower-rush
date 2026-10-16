@@ -8,7 +8,7 @@ Made with the Higgsfield MCP on 2026-10-16. The full prompt for every image is i
 - Style prefix: "Flat 2D vector cartoon game art, thick dark navy outlines, simple two-tone cel shading, chunky rounded badge-like proportions, bright saturated colors, no gradients, no text, no watermark."
 - References (`image_references`): `style/style_anchor_v2.png` + `units/witch_doctor` (units); `vfx/weapons/axe` (axes); `ui/elements/fire` (element); `story/lab_poster` (PvP poster); the unit's own job id (card portraits).
 - Orcs are green, so sprites sit on flat magenta (#FF00FF) and are keyed with `keyimg.py --color magenta`. Void Rift art is violet, so it sits on green and is keyed with the default colour.
-- Clips: Seedance 1.5 Pro (`seedance1_5`), 4 s, 480p, 1:1, no audio, start image = the still's job id. 2.4 credits each. Sheets: `tospritesheet.py in.mp4 out 16 256 magenta`. Idle + attack only (no skill clip, no HD).
+- Clips: Seedance 1.5 Pro (`seedance1_5`), 4 s, 480p, 1:1, no audio, start image = the still's job id. 2.4 credits each. Sheets: `tospritesheet.py in.mp4 out 16 256 magenta <keep>`, framed bust-up like the other units (keep = top share of the body kept: Grunt, Peon, Spirit Walker 0.82; Headhunter 0.7; Kodo Beasts 0.8). The first cut was full body and read small on the board. Idle + attack only (no skill clip, no HD).
 - Raw stills live in `assets/_green/v28/`.
 
 ## Files (raw pack -> built game file)

@@ -1,5 +1,6 @@
 """Convert a green-screen mp4 into transparent PNG frames + a sprite sheet.
-usage: python tospritesheet.py in.mp4 out_prefix [frames=16] [size=256] [green|magenta, + suffix to flood-clear a drifting backdrop]"""
+usage: python tospritesheet.py in.mp4 out_prefix [frames=16] [size=256] [green|magenta, + suffix to flood-clear a drifting backdrop] [keep=1]
+keep < 1 frames the character bust-up like the other units: only the top `keep` of its height (head to hips), scaled to fill."""
 import sys, os, subprocess, numpy as np, imageio_ffmpeg
 from PIL import Image
 src, out = sys.argv[1], sys.argv[2]
@@ -8,6 +9,7 @@ S = int(sys.argv[4]) if len(sys.argv) > 4 else 256
 KEY = sys.argv[5] if len(sys.argv) > 5 else "green"
 FLOOD = KEY.endswith("+")  # e.g. magenta+: also flood-clear a drifting backdrop
 KEY = KEY.rstrip("+")
+KEEP = float(sys.argv[6]) if len(sys.argv) > 6 else 1.0
 ff = imageio_ffmpeg.get_ffmpeg_exe()
 tmp = out + "_raw"; os.makedirs(tmp, exist_ok=True)
 subprocess.run([ff, "-loglevel", "error", "-y", "-i", src, os.path.join(tmp, "%04d.png")], check=True)
@@ -50,7 +52,21 @@ for i in idx:
 m = np.zeros(frames[0].shape[:2], bool)
 for f in frames: m |= f[..., 3] > 20
 ys, xs = np.where(m); y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
+if KEEP < 1:  # robust box: rows/columns with only a few stray keyed pixels don't count
+    rows = np.where(m.sum(1) > 6)[0]; cols = np.where(m.sum(0) > 6)[0]
+    y0, y1, x0, x1 = rows.min(), rows.max(), cols.min(), cols.max()
+if KEEP < 1:  # bust-up: cut the legs off and frame head to hips (the window's bottom edge is the cut)
+    y1 = y0 + int((y1 - y0) * KEEP)
 side = max(y1 - y0, x1 - x0) + 8; cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
+if KEEP < 1:
+    # Height-limited square, top-aligned, centred on the character's solid pixels (stray keyed
+    # pixels at the frame edges would otherwise stretch the box to the full width).
+    side = int((y1 - y0) * 1.08) + 8  # a little margin, like the other units
+    cy = y0 - 4 + side // 2
+    solid = np.zeros(frames[0].shape[:2]); 
+    for f in frames: solid += f[..., 3] > 200
+    cols = solid[y0:y1].sum(0)
+    cx = int((cols * np.arange(len(cols))).sum() / max(1, cols.sum()))
 os.makedirs(out, exist_ok=True)
 sheet = Image.new("RGBA", (S * N, S), (0, 0, 0, 0))
 for k, f in enumerate(frames):
