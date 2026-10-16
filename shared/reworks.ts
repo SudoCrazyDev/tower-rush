@@ -62,6 +62,19 @@ export const gruntMult = (waves: number) => {
   return mult;
 };
 
+/**
+ * Grunt: how many times Berserker Strength has grown after `waves` waves (0 = x1). Each step is a new
+ * multiplier: x2, x4, x7, then every 5 waves past 30. The viewer celebrates each one.
+ */
+export const gruntStep = (waves: number) => {
+  const b = REWORKS.grunt.berserk;
+  let step = 0;
+  for (const s of b.steps) if (waves >= s.waves) step++;
+  const last = b.steps[b.steps.length - 1];
+  if (waves >= last.waves) step += Math.floor((waves - last.waves) / b.growEvery);
+  return step;
+};
+
 /** Kodo War Drums stage from the furthest monster's path progress: 0 (adjacent ×1.2), 1 (adjacent ×2.4), 2 (everyone ×3). */
 export const drumStage = (progress: number) => {
   const d = REWORKS.kodo_beasts.drums;

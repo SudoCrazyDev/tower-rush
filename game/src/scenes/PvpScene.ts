@@ -932,7 +932,7 @@ export class PvpScene extends Phaser.Scene {
       let img = this.shotViews.get(s);
       if (!img) {
         const proj = s.unit.def.proj;
-        img = new ShotView(this, s.unit.def, s.x, s.y, s.unit.berserk);
+        img = new ShotView(this, s.unit.def, s.x, s.y, s.unit.berserk, !!s.focus);
         this.shotViews.set(s, img);
         sfx("shoot", proj);
       }

@@ -455,14 +455,19 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
       heroFx(scene, e.power);
       break;
     // v2.8 Orcs.
-    case "berserk":
-      // A red flash on the Grunt (the scene also tints the sprite). Rare, so it ignores the budget.
-      if (!fxSprite(scene, "merge_flash", e.x, e.y - 20, { size: 200, life: 500, from: 0.4, tint: 0xff3020 })) {
-        const c = scene.add.circle(e.x, e.y - 20, 70, 0xff3020, 0.55).setDepth(2100);
+    case "berserk": {
+      // A red flash on the Grunt at every new multiplier, bigger with each step. Rare, so it ignores the budget.
+      const big = 1 + Math.min(4, e.step ?? 1) * 0.18;
+      if (!fxSprite(scene, "merge_flash", e.x, e.y - 20, { size: 200 * big, life: 550, from: 0.4, tint: 0xff3020 })) {
+        const c = scene.add.circle(e.x, e.y - 20, 70 * big, 0xff3020, 0.55).setDepth(2100);
         scene.tweens.add({ targets: c, alpha: 0, scale: 1.6, duration: 450, onComplete: () => c.destroy() });
       }
-      fxBurst(scene, "pt_ember", e.x, e.y - 20, { n: 6, size: 22, spread: 60 });
+      // A shock ring on the ground, and embers that rise.
+      const ring = scene.add.ellipse(e.x, e.y + 20, 60, 24).setStrokeStyle(6, 0xff3a2a, 0.95).setDepth(90 + e.y);
+      scene.tweens.add({ targets: ring, scaleX: 3 * big, scaleY: 3 * big, alpha: 0, duration: 600, ease: "Cubic.Out", onComplete: () => ring.destroy() });
+      fxBurst(scene, "pt_ember", e.x, e.y - 20, { n: 6 + Math.min(6, e.step ?? 1), size: 24, spread: 70 * big, gravity: -40 });
       break;
+    }
     case "pillage":
       if (fxBusy()) break;
       if (!fxSprite(scene, "pillage_coins", e.x, e.y, { size: 110, life: 700, rise: 40, from: 0.6 })) fxBurst(scene, "pt_coin", e.x, e.y, { n: 6, size: 22, spread: 50, gravity: 40 });
@@ -541,8 +546,8 @@ export class ShotView {
   private spin = Math.random() * 6;
   private trailAt = 0;
 
-  /** `tier`: a Grunt's Berserker tier (0..4), which picks its axe. */
-  constructor(private scene: Phaser.Scene, readonly def: UnitDef, x: number, y: number, tier = 0) {
+  /** `tier`: a Grunt's Berserker tier (0..4), which picks its axe. `focus`: a Headhunter focus shot (x5.2). */
+  constructor(private scene: Phaser.Scene, readonly def: UnitDef, x: number, y: number, tier = 0, readonly focus = false) {
     this.element = def.element;
     this.color = ELEMENT_COLOR[def.element];
     const wk = shotWeapon(scene, def, tier);
@@ -554,6 +559,8 @@ export class ShotView {
       // The top Grunt axes get a red tint instead.
       if (this.motion === "strike") this.img.setVisible(false);
       else if (tier >= 3) this.img.setTint(0xffb0a0);
+      // Focus spear: blood red and bigger.
+      if (focus) this.img.setTint(0xff5040).setScale(this.img.scaleX * 1.35);
     } else {
       const proj = !hasFx(scene, `proj_${def.proj}`) && PROJ_FALLBACK[def.proj] ? PROJ_FALLBACK[def.proj] : def.proj;
       const tex = proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${proj}`;
@@ -601,6 +608,14 @@ export class ShotView {
 
   /** The shot arrived (or its target is gone): strike weapons pop where it lands. */
   destroy(at?: { x: number; y: number }) {
+    // v2.8.2 Headhunter focus: a red reticle snaps shut on the target.
+    if (this.focus && at && !fxBusy()) {
+      const g = fxTrack(this.scene.add.graphics().setPosition(at.x, at.y - 20).setDepth(2105));
+      g.lineStyle(4, 0xff3a2a, 1).strokeCircle(0, 0, 26);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) g.lineBetween(dx * 16, dy * 16, dx * 36, dy * 36);
+      g.setScale(1.8).setAlpha(0.2);
+      this.scene.tweens.add({ targets: g, scale: 0.9, alpha: 1, duration: 120, ease: "Cubic.Out", yoyo: true, hold: 120, onComplete: () => g.destroy() });
+    }
     if (this.motion === "strike" && at) {
       const pop = fxTrack(this.scene.add.image(at.x, at.y, this.img.texture.key).setDepth(2000));
       const end = 96 / Math.max(1, pop.width);

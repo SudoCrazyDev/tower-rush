@@ -1129,7 +1129,7 @@ export class BattleScene extends Phaser.Scene {
       let img = this.shotImgs.get(s);
       if (!img) {
         const def = s.unit.def;
-        img = new ShotView(this, def, s.x, s.y, s.unit.berserk);
+        img = new ShotView(this, def, s.x, s.y, s.unit.berserk, !!s.focus);
         if (s.kind === "bee" && this.textures.exists("vfx:bee_swarm")) {
           img.img.setTexture("vfx:bee_swarm");
           img.img.setScale(60 / Math.max(1, img.img.width));

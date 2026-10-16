@@ -1,16 +1,19 @@
 import Phaser from "phaser";
 import { animKey, hasAnim, sheetScale, unitArt } from "../assets";
-import { fxBusy, fxKey, fxTrack, hasFx } from "./vfx";
+import { fxBusy, fxKey, fxSprite, fxTrack, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
 import { steam } from "./ultFx";
 import { mayAwaken, ultEvery, ultOf } from "../../../shared/awakened.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
-import { BETA_SUPPORT } from "../../../shared/reworks.ts";
+import { BETA_SUPPORT, REWORKS } from "../../../shared/reworks.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
 import type { SimUnit } from "../../../shared/sim.ts";
 import { NAVY, txt } from "../ui";
 import type { BattleScene } from "../scenes/BattleScene";
+
+/** v2.8.2 War Drums buff marker colour per stage (adjacent x1.2, adjacent x2.4, everyone x3). */
+const DRUM_COLORS = [0xffb25a, 0xff7a3a, 0xff3a2a];
 
 /** v2.8.1: when the last board-wide War Drums sweep started (one sweep for every Kodo on the board). */
 let drumSweepAt = -1e9;
@@ -72,6 +75,10 @@ export class Unit {
   /** v2.7 Big Ben clock ring and Frozen Fields ice aura. */
   private benRing: Phaser.GameObjects.Ellipse | null = null;
   private iceAura: Phaser.GameObjects.Ellipse | null = null;
+  /** v2.8.2 Orc abilities: Grunt's Berserker rage, Headhunter's late-wave frenzy (a glow under the unit). */
+  private orcAura: Phaser.GameObjects.Image | Phaser.GameObjects.Ellipse | null = null;
+  private orcLevel = 0;
+  private frenzy = false;
   private tallySeen = -1;
 
   constructor(scene: BattleScene, sim: SimUnit) {
@@ -212,9 +219,11 @@ export class Unit {
     this.showHeart();
     const scene = this.scene;
     // Owl charge on an awakened unit shows in teal; any attack-speed bonus in gold.
-    const teal = this.sim.haste <= 0 && this.sim.charge > 0;
-    const amount = teal ? this.sim.charge : this.sim.haste;
-    const color = teal ? 0x3fe0d0 : 0xffd93b;
+    // v2.8.2: War Drums haste counts too, and turns the marker drum orange (red at the board-wide stage).
+    const drum = scene.sim.drumHaste(this.sim);
+    const teal = this.sim.haste <= 0 && drum <= 0 && this.sim.charge > 0;
+    const amount = teal ? this.sim.charge : this.sim.haste + drum;
+    const color = teal ? 0x3fe0d0 : drum > 0 ? DRUM_COLORS[scene.sim.drums] ?? 0xff7a3a : 0xffd93b;
     if (amount <= 0 || (this.buffBadge && this.buffBadge.getData("color") !== color)) {
       this.buffBadge?.destroy();
       this.buffRing?.destroy();
@@ -361,9 +370,10 @@ export class Unit {
     this.drawStatus(now);
     this.drawUltRing();
     this.epicLook(now);
+    this.orcLook();
 
     // Buff badge and Muse's heart follow the Sim's haste, charge and aura numbers.
-    const buff = `${s.haste.toFixed(3)}:${s.charge.toFixed(3)}:${s.auraSpeed > 0 || s.auraDamage > 0}`;
+    const buff = `${s.haste.toFixed(3)}:${s.charge.toFixed(3)}:${s.auraSpeed > 0 || s.auraDamage > 0}:${scene.sim.drumHaste(s)}:${scene.sim.drums}`;
     if (buff !== this.buffSeen) {
       this.buffSeen = buff;
       this.showBuff();
@@ -427,6 +437,46 @@ export class Unit {
       const rate = s.stats.speed * (1 + scene.sim.hasteOf(s)) * (now < s.status.fatiguedUntil ? 1 - EFFECTS.fatigue.slow : 1);
       this.playOnce("attack", Math.max(1, (16 / 24) * rate));
     }
+  }
+
+  /**
+   * v2.8.2 Orc ability looks. Grunt: a red rage glow that grows with each Berserker tier. Headhunter:
+   * a gold frenzy glow from the wave his Berserker Upgrade starts (with a FRENZY! callout).
+   */
+  private orcLook() {
+    const id = this.def.id;
+    if (id !== "grunt" && id !== "headhunter") return;
+    const sc = this.scene;
+    const hh = REWORKS.headhunter.upgrade;
+    const level = id === "grunt" ? this.sim.berserk : sc.sim.wave >= hh.fastWave ? 2 : 0;
+    if (id === "headhunter") {
+      const on = level > 0;
+      if (on && !this.frenzy) {
+        this.callout("FRENZY!", "#6fd8ff");
+        fxSprite(sc, "merge_flash", this.sprite.x, this.sprite.y - 30, { size: 200, life: 500, from: 0.4, tint: 0x6fd8ff });
+      }
+      this.frenzy = on;
+    }
+    if (level !== this.orcLevel) {
+      this.orcLevel = level;
+      this.orcAura?.destroy();
+      this.orcAura = null;
+      if (level > 0) {
+        // A ground ring at the feet: fire for the Grunt (redder from tier 3), lightning for the Headhunter.
+        const key = id === "grunt" ? "aura_fire" : "aura_lightning";
+        const color = id === "grunt" ? 0xff3a2a : 0x6fd8ff;
+        this.orcAura = hasFx(sc, key) ? sc.add.image(0, 0, fxKey(key)) : sc.add.ellipse(0, 0, 120, 60, color, 0.35);
+        if (id === "grunt" && level >= 3 && this.orcAura instanceof Phaser.GameObjects.Image) this.orcAura.setTint(0xff7a6a);
+      }
+    }
+    const a = this.orcAura;
+    if (!a) return;
+    // Bigger and brighter per tier; a heartbeat pulse with no tween (one image, moved every frame).
+    const t = sc.time.now / (id === "grunt" ? 160 - level * 15 : 110);
+    const base = ((id === "grunt" ? 80 + level * 14 : 110) / Math.max(1, a.width)) * (1 + Math.sin(t) * 0.06);
+    a.setScale(base, base * 0.55).setAlpha((id === "grunt" ? 0.55 + level * 0.1 : 0.85) + Math.sin(t) * 0.1);
+    const p = sc.slotPos(this.slot);
+    a.setPosition(p.x, p.y + 30).setDepth(98 + p.y).setVisible(!this.dragging);
   }
 
   private drumAt = 0;
@@ -614,6 +664,7 @@ export class Unit {
     this.tally?.destroy();
     this.benRing?.destroy();
     this.iceAura?.destroy();
+    this.orcAura?.destroy();
     this.heart?.destroy();
     this.statusIcons?.destroy();
     this.aura?.destroy();

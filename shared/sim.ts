@@ -49,7 +49,7 @@ import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type Ac
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
 import { NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type UltId } from "./awakened.ts";
 import { castUltimate, hatchReborn, ultimateAttack, type UltCtx } from "./ultimates.ts";
-import { BETA_SUPPORT, REWORKS, drumStage, gruntMult, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
+import { BETA_SUPPORT, REWORKS, drumStage, gruntMult, gruntStep, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
   brewMana,
   canBecome,
@@ -256,7 +256,7 @@ export type SimEvent =
   | { type: "heal_pulse"; t: number; x: number; y: number }
   // v2.8 "Beta Berserker" Orcs (shared/reworks.ts).
   /** A Grunt's Berserker Strength reached `tier` (1..4): its axe changes. */
-  | { type: "berserk"; t: number; uid: number; tier: number; x: number; y: number }
+  | { type: "berserk"; t: number; uid: number; tier: number; x: number; y: number; mult: number; step: number }
   /** A Peon's Pillage doubled its pulse (`amount` mana). */
   | { type: "pillage"; t: number; uid: number; amount: number; x: number; y: number }
   /** A Spirit Walker's ancestors pushed monsters `targets` back (wisps from x, y). */
@@ -487,6 +487,8 @@ export class SimUnit {
   /** v2.8 Grunt: the wave it was placed on (swaps and hops keep it; a merge places a new unit) and its Berserker tier. */
   placedWave = 0;
   berserk = 0;
+  /** v2.8.2 Grunt: Berserker Strength steps reached (each new multiplier, see gruntStep). View only. */
+  berserkStep = 0;
 
   constructor(b: BoardUnit, slot: number, pos: Pt, cardLevel: number, powerUp: number, cooldown: number, alive: number) {
     const base = UNIT_BY_ID[b.id];
@@ -655,6 +657,8 @@ export interface SimShot {
   speed: number;
   /** v2.7: a bee swarm from a hive, or a Frog Alchemist flask that leaves a puddle where it lands. */
   kind?: "bee" | "puddle";
+  /** v2.8.2: a Headhunter focus shot (the viewer draws it red and marks the target). */
+  focus?: boolean;
 }
 
 /**
@@ -3264,12 +3268,17 @@ export class Sim {
     if (isSupport(u.primary)) return this.updateSupport(u, dt);
     // v2.8 Grunt: Berserker Strength rises with the waves it has stood on the board.
     if (u.def.id === "grunt") {
-      const tier = gruntTier(this.wave - u.placedWave);
-      if (tier > u.berserk) {
-        u.berserk = tier;
-        this.callout("berserk", "BERSERK!", "#ff4a3b", u.x, u.y - 60, u.uid);
-        this.emit({ type: "berserk", t: now, uid: u.uid, tier, x: u.x, y: u.y });
-      } else if (tier < u.berserk) u.berserk = tier;
+      const waves = this.wave - u.placedWave;
+      const tier = gruntTier(waves);
+      const step = gruntStep(waves);
+      // Every new multiplier (x2, x4, x7, then each 5 waves past 30) is announced; the tier picks the axe.
+      if (step > u.berserkStep) {
+        const mult = gruntMult(waves);
+        this.callout("berserk", `BERSERK x${+mult.toFixed(1)}!`, "#ff4a3b", u.x, u.y - 60, u.uid);
+        this.emit({ type: "berserk", t: now, uid: u.uid, tier, x: u.x, y: u.y, mult, step });
+      }
+      u.berserkStep = step;
+      u.berserk = tier;
     }
     if (u.def.id === "raccoon_thief") {
       // v2.7: Raccoon Thief's own pulse (shared/reworks.ts).
@@ -3358,7 +3367,7 @@ export class Sim {
   }
 
   /** v2.8 Kodo War Drums haste for one unit (the best Kodo bonus counts; several Kodos don't stack). */
-  private drumHaste(u: SimUnit) {
+  drumHaste(u: SimUnit) {
     if (this.drums < 0) return 0;
     const d = REWORKS.kodo_beasts.drums;
     if (this.drums === 2) return d.far;
@@ -3925,7 +3934,9 @@ export class Sim {
     if (u.primary === "chain") return this.chainLightning(u, target, damage, from);
     // v2.7 Frog Alchemist: the flask leaves a puddle where it lands.
     if (u.def.id === "frog_alchemist") return void this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: 900, kind: "puddle" });
-    this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.primary === "sniper" ? u.fx.sniper.shotSpeed : 1100 });
+    // v2.8.2: a Headhunter's focus shot (x5.2 at a monster near the gate) is marked for the viewer.
+    const focus = mult > 1 && u.def.id === "headhunter" ? { focus: true } : {};
+    this.shots.push({ unit: u, damage, target, x: from.x, y: from.y, aim: target.pos, speed: u.primary === "sniper" ? u.fx.sniper.shotSpeed : 1100, ...focus });
   }
 
   private chainLightning(u: SimUnit, first: SimMonster, damage: number, from: Pt) {
