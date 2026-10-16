@@ -108,6 +108,12 @@ const REFRESHED: Record<string, string> = {
   "vfx/status_slowed": "2.8.1",
   "vfx/status_frozen": "2.8.1",
   "portraits/headhunter": "2.8.1",
+  // v2.8.4: the Orc board stills redone as chibi busts like the other units.
+  "units/peon": "2.8.4",
+  "units/grunt": "2.8.4",
+  "units/headhunter": "2.8.4",
+  "units/spirit_walker": "2.8.4",
+  "units/kodo_beasts": "2.8.4",
   // v2.8.2: particles and weapons whose flat background had survived as a square behind them.
   "vfx/pt_smoke": "2.8.2",
   "vfx/pt_confetti": "2.8.2",
