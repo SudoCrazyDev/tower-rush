@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>v2.8 Beta Berserker | Crown &amp; Keep: Tower Defense</title>
+  <meta name="description" content="Release 2.8 of Crown &amp; Keep, the Beta release: five Orc units and the new Normal element, the Unit Lab for everyone, a mode carousel in the lobby, Mythic projectiles and a round of balance changes." />
+  <meta name="theme-color" content="#0a0f2c" />
+  <meta property="og:title" content="v2.8 Beta Berserker | Crown &amp; Keep: Tower Defense" />
+  <meta property="og:description" content="The Orcs march in. Five new units, the Unit Lab for everyone, and more." />
+  <meta property="og:image" content="https://assets.crownnkeep.com/brand/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="brand/favicon-64.png" />
+  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://assets.crownnkeep.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=2.8.0" />
+  <style>
+    .v28 .section { padding-top: 56px; padding-bottom: 24px; }
+    .v28 .v28__hero { padding-top: 140px; padding-bottom: 24px; }
+    .v28__hero .release__meta { justify-content: center; margin-bottom: 14px; }
+    .v28__hero .section__head { margin-bottom: 20px; }
+    .v28__back { text-align: center; margin: 0 0 18px; }
+    .v28__back a { color: var(--gold); font-weight: 800; text-decoration: none; }
+    .v28__nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+    .v28__nav a { padding: 9px 16px; border-radius: 999px; text-decoration: none; font-weight: 800; font-size: 14px; color: var(--muted); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 1px var(--line); }
+    .v28__nav a:hover { color: var(--text); box-shadow: inset 0 0 0 2px var(--gold); }
+    .v28__box { background: var(--panel); border-radius: 22px; padding: 28px 32px; box-shadow: inset 0 0 0 1px var(--line); max-width: 920px; margin: 0 auto; }
+    .v28__box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; color: var(--muted); }
+    .v28__box li { position: relative; padding-left: 26px; }
+    .v28__box li::before { content: "\2694"; position: absolute; left: 0; color: var(--gold); }
+    .v28__box b { color: var(--text); }
+    .v28__box p { color: var(--muted); margin: 0 0 12px; }
+    .v28__note { max-width: 920px; margin: 18px auto 0; color: var(--muted); font-size: 15px; }
+    .v28__note b { color: var(--text); }
+    .wk__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 1040px; margin: 0 auto; }
+    .wk { display: flex; gap: 14px; align-items: flex-start; min-width: 0; padding: 16px; border-radius: 18px; background: var(--panel); box-shadow: inset 0 0 0 2px var(--rc, var(--line)); }
+    .wk--common { --rc: var(--r-common); } .wk--rare { --rc: var(--r-rare); } .wk--epic { --rc: var(--r-epic); } .wk--legendary { --rc: var(--r-legendary); } .wk--retired { --rc: var(--line); opacity: .8; }
+    .wk__art { flex: 0 0 96px; width: 96px; }
+    .wk__art img { display: block; width: 100%; height: auto; border-radius: 12px; box-shadow: 0 6px 14px rgba(0, 0, 0, .45); }
+    .wk--retired .wk__art img { filter: grayscale(1); }
+    .wk__main { min-width: 0; flex: 1; }
+    .wk h4 { margin: 0 0 6px; font: 400 22px/1.1 var(--display); color: var(--text); }
+    .wk p { margin: 6px 0 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+    .wk__stats { display: flex; flex-wrap: wrap; gap: 6px; }
+    .wk__stats span { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; color: var(--muted); background: rgba(10, 15, 44, .6); box-shadow: inset 0 0 0 1px var(--line); }
+    .wk__stats b { color: var(--gold); }
+    .wk__type--passive { color: #bff3bc !important; box-shadow: inset 0 0 0 1px rgba(94, 224, 90, .55) !important; }
+    .wk__type--timer { color: #ffe7a6 !important; box-shadow: inset 0 0 0 1px rgba(255, 201, 60, .5) !important; }
+    .wk__type--field { color: #cfe3ff !important; box-shadow: inset 0 0 0 1px rgba(58, 160, 255, .6) !important; }
+    .wk .wk__ult { margin-top: 10px; font: 400 18px/1.1 var(--display); color: var(--gold); }
+    .wk .wk__ult + p { margin-top: 4px; }
+    .v28__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; max-width: 920px; margin: 0 auto; }
+    .v28__steps div { background: var(--panel); border-radius: 18px; padding: 18px; box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); }
+    .v28__steps b { display: block; font: 400 30px/1 var(--display); color: var(--gold); margin-bottom: 6px; }
+    @media (max-width: 760px) {
+      .v28__box { padding: 20px 18px; }
+      .wk__grid, .v28__steps { grid-template-columns: 1fr; }
+      .wk__art { flex-basis: 76px; width: 76px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ============ NAV ============ -->
+  <header class="nav is-solid" id="nav">
+    <a class="nav__brand" href="index.html" aria-label="Crown &amp; Keep home">
+      <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" />
+    </a>
+    <nav class="nav__links" id="navLinks">
+      <a href="index.html#how">How to play</a>
+      <a href="index.html#codex">Units</a>
+      <a href="index.html#arenas">Arenas</a>
+      <a href="index.html#modes">Modes</a>
+      <a href="index.html#pvp">PvP</a>
+      <a href="index.html#news">News</a>
+      <a href="release-notes.html" class="is-active" aria-current="page">Release notes</a>
+    </nav>
+    <a class="btn btn--play btn--sm" data-play href="#">Play free</a>
+    <button class="nav__burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+
+  <main id="top" class="v28">
+    <section class="section v28__hero">
+      <div class="section__head">
+        <div class="release__meta"><span class="release__ver">v2.8.0</span><time datetime="2026-10-17">Oct 17, 2026</time><span class="pill pill--live"><i></i> Latest</span></div>
+        <span class="eyebrow">Beta Release 2.8</span>
+        <h2>Beta Berserker</h2>
+        <p>The Orcs march in. Five Orc units arrive with a new Normal element. The Unit Lab opens to everyone, the lobby gets a mode carousel, and every Mythic throws its own projectile.</p>
+      </div>
+      <p class="v28__back"><a href="release-notes.html#v2-8-0">&larr; Back to the release notes</a></p>
+      <nav class="v28__nav" aria-label="Jump to a section">
+        <a href="#orcs"><b>The Orcs</b></a>
+        <a href="#normal">Normal element</a>
+        <a href="#lab">Unit Lab</a>
+        <a href="#lobby">Lobby</a>
+        <a href="#mythics">Mythic projectiles</a>
+        <a href="#balance">Balance</a>
+        <a href="#fixes">Fixes</a>
+      </nav>
+    </section>
+
+    <section class="section" id="orcs">
+      <div class="section__head">
+        <span class="eyebrow">New units</span>
+        <h2>The Orcs</h2>
+        <p>Five Orcs, all of the Normal element. Orcs never awaken: their power grows in battle instead.</p>
+      </div>
+      <div class="wk__grid">
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/peon.webp" alt="Peon" /></div>
+          <div class="wk__main">
+            <h4>Peon</h4>
+            <div class="wk__stats"><span>Common</span><span>Support</span><span class="wk__type wk__type--timer">+3 mana / 2s</span></div>
+            <p class="wk__ult">Pillage</p>
+            <p>Never attacks. Makes 3 mana every 2 s. Each pulse has a 50% chance to pay double. Every other Orc on the board adds 2% &times; its rank to that chance (up to 100%).</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/grunt.webp" alt="Grunt" /></div>
+          <div class="wk__main">
+            <h4>Grunt</h4>
+            <div class="wk__stats"><span>Damage <b>35</b></span><span>Speed <b>0.9/s</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Berserker Strength</p>
+            <p>Throws an axe at the leading monster. The longer he stands, the harder he hits: &times;2 damage after 10 waves, &times;4 after 20, &times;7 after 30, then &times;1.5 more every 5 waves. A merge starts the count over; moving him keeps it. His axe changes with every tier.</p>
+          </div>
+        </article>
+        <article class="wk wk--common">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/headhunter.webp" alt="Headhunter" /></div>
+          <div class="wk__main">
+            <h4>Headhunter</h4>
+            <div class="wk__stats"><span>Damage <b>25</b></span><span>Speed <b>1.7/s</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Berserker Upgrade</p>
+            <p>Throws spears at random monsters. A monster 87% of the way to your keep draws his aim for &times;5.2 damage. From wave 20 he attacks &times;3.2 faster.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/spirit_walker.webp" alt="Spirit Walker" /></div>
+          <div class="wk__main">
+            <h4>Spirit Walker</h4>
+            <div class="wk__stats"><span>Damage <b>50</b></span><span>Speed <b>0.6/s</b></span><span class="wk__type wk__type--passive">Passive</span></div>
+            <p class="wk__ult">Ancestral Spirit</p>
+            <p>Throws a spirit lantern at the leading monster. Each hit has a 76% chance to push the target and up to 4 monsters near it back 35px. Bosses are pushed half as far.</p>
+          </div>
+        </article>
+        <article class="wk wk--rare">
+          <div class="wk__art"><img crossorigin="anonymous" loading="lazy" src="https://assets.crownnkeep.com/portraits/kodo_beasts.webp" alt="Kodo Beasts" /></div>
+          <div class="wk__main">
+            <h4>Kodo Beasts</h4>
+            <div class="wk__stats"><span>Rare</span><span>Support</span><span class="wk__type wk__type--field">Always on</span></div>
+            <p class="wk__ult">War Drums</p>
+            <p>Never attacks. Adjacent units attack &times;1.2 faster. When a monster is halfway down its path, &times;2.4. When one reaches 88%, every unit on the board attacks &times;3 faster. Several Kodos don't stack: the best bonus counts.</p>
+          </div>
+        </article>
+      </div>
+      <p class="v28__note"><b>Witch Doctor</b> is an Orc too, so he counts for the Peon's Pillage.</p>
+    </section>
+
+    <section class="section" id="normal">
+      <div class="section__head">
+        <span class="eyebrow">New element</span>
+        <h2>Normal</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>Neutral.</b> No monster resists Normal damage and none is weak to it.</li>
+          <li><b>Find it in the Deck.</b> Normal has its own grey icon and its own filter chip.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="lab">
+      <div class="section__head">
+        <span class="eyebrow">For everyone</span>
+        <h2>Unit Lab</h2>
+        <p>The Unit Lab is open to every player.</p>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>Test your own cards.</b> Units you don't own yet show greyed out with a lock.</li>
+          <li><b>No stakes.</b> Lab battles give no rewards, trophies or quest progress.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="lobby">
+      <div class="section__head">
+        <span class="eyebrow">Lobby</span>
+        <h2>Mode carousel</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>One carousel</b> for Arena, Stories, PvP and the Unit Lab. The cards next to the current one peek in at the sides.</li>
+          <li><b>Swipe, tap the arrows or tap a side card</b> to move. The page dots stay.</li>
+          <li><b>PvP moves into the carousel.</b> The separate PvP button is gone. Deck and Shop stay where they were.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="mythics">
+      <div class="section__head">
+        <span class="eyebrow">New visuals</span>
+        <h2>Mythic projectiles</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>Void Titan</b> tears a void rift.</li>
+          <li><b>Dragon Egg</b> breathes dragon flame.</li>
+          <li><b>Chrono Mage</b> throws a spinning clockwork gear.</li>
+          <li><b>Monkey King</b> leaves a golden cloud trail, with a new impact on his staff.</li>
+          <li>Each one has its own impact effect, too.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="balance">
+      <div class="section__head">
+        <span class="eyebrow">Unit balance</span>
+        <h2>Balance changes</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>Crystal Golem:</b> awakened speed &times;0.2 &rarr; &times;0.4.</li>
+          <li><b>Hourglass Owl:</b> ultimate charge 30% &rarr; 40%.</li>
+          <li><b>Sand Worm:</b> damage 44 &rarr; 47.</li>
+          <li><b>Sand Monk:</b> damage 15.8 &rarr; 19.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="fixes">
+      <div class="section__head">
+        <span class="eyebrow">Polish</span>
+        <h2>Fixes and smoother battles</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>Summon button.</b> Fast taps no longer shrink it a little more each time.</li>
+          <li><b>Smoother late waves.</b> Fewer effects pile up at once, so battles past wave 20 stay smooth and phones stay cooler.</li>
+          <li><b>New Slow and Frozen effects</b> on monsters.</li>
+          <li><b>Ability effects for the Orcs:</b> Grunt's rage aura grows with every tier, Headhunter's frenzy and focus shots stand out, and War Drums shows which units it speeds up.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" loading="lazy" />
+    <nav>
+      <a href="index.html#codex">Units</a><a href="index.html#arenas">Arenas</a><a href="index.html#modes">Modes</a><a href="index.html#pvp">PvP</a><a href="index.html#news">News</a><a href="release-notes.html">Release notes</a><a data-play href="#">Play</a>
+    </nav>
+    <p>&copy; 2026 Crown &amp; Keep. All rights reserved.</p>
+  </footer>
+
+  <script>
+    (() => {
+      const GAME_URL = "https://game.crownnkeep.com/";
+      document.querySelectorAll("[data-play]").forEach((a) => { a.href = GAME_URL; a.target = "_blank"; a.rel = "noopener"; });
+      const burger = document.getElementById("burger"), links = document.getElementById("navLinks");
+      burger.addEventListener("click", () => burger.setAttribute("aria-expanded", links.classList.toggle("is-open")));
+    })();
+  </script>
+</body>
+</html>

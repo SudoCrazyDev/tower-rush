@@ -13,9 +13,9 @@
   const fmt = (n) => n.toLocaleString("en-US");
 
   const RARITIES = ["common", "rare", "epic", "legendary", "mythic", "event"];
-  const ELEMENTS = ["fire", "ice", "lightning", "nature", "poison", "arcane"];
+  const ELEMENTS = ["fire", "ice", "lightning", "nature", "poison", "arcane", "normal"];
   const RARITY_COLOR = { common: "#9aa5b8", rare: "#3d8bff", epic: "#a24bff", legendary: "#ffb21e", mythic: "#ff3b6b", event: "#ff8fd8" };
-  const ELEMENT_COLOR = { fire: "#ff6a2b", ice: "#5fd4ff", lightning: "#ffd93b", nature: "#6bd34a", poison: "#b05cff", arcane: "#ff7ad9" };
+  const ELEMENT_COLOR = { fire: "#ff6a2b", ice: "#5fd4ff", lightning: "#ffd93b", nature: "#6bd34a", poison: "#b05cff", arcane: "#ff7ad9", normal: "#c8c8c8" };
   const BOSS_POWER = {
     summon: "Summons minions", heal: "Heals the horde", haste: "Hastes monsters", shield: "Raises shields",
     freeze_units: "Freezes your units", teleport: "Teleports ahead", charm: "Charms your units", roar: "Stunning roar",
@@ -59,7 +59,7 @@
   const RARITY_DESC = ["mythic", "legendary", "epic", "rare", "common", "event"];
   // Shelf names and taglines are the deck screen's own (DeckScene RARITY_GROUPS, ELEMENT_GROUPS, ROLES).
   const RARITY_GROUPS = { common: "The house pour", rare: "Fine spirits", epic: "Aged in oak", legendary: "Top shelf", mythic: "Kept under the counter", event: "On the house" };
-  const ELEMENT_GROUPS = { fire: "Firewater", ice: "Served on the rocks", lightning: "Thunder shots", nature: "Herbal brews", poison: "Snake oil", arcane: "Mystic mixers" };
+  const ELEMENT_GROUPS = { fire: "Firewater", ice: "Served on the rocks", lightning: "Thunder shots", nature: "Herbal brews", poison: "Snake oil", arcane: "Mystic mixers", normal: "House pour" };
   const ROLES = [
     { key: "gun", title: "Gunslingers", sub: "Single-target damage", icon: "stats/range", archs: ["shot", "pierce", "sniper", "crit", "execute", "growth"] },
     { key: "brawl", title: "Brawlers", sub: "Hit the whole crowd", icon: "stats/splash", archs: ["splash", "burn", "chain"] },

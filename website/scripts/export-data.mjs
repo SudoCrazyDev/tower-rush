@@ -17,7 +17,7 @@ import {
 } from "../../shared/support.ts";
 import { storyUnlocking } from "../../shared/stories.ts";
 import { awakenBoostText, awakenDamageMult, awakenSpeedMult, mayAwaken, ultName, ultText } from "../../shared/awakened.ts";
-import { liveDef, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../shared/reworks.ts";
+import { liveDef, orcText, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../shared/reworks.ts";
 
 // Which art exists (awakened portraits, arena videos) comes from the live asset index on R2.
 const index = await (await fetch("https://assets.crownnkeep.com/index.json")).json();
@@ -70,9 +70,14 @@ function cardInfo(u) {
     : u.id === "vine_druid"
     ? `Never attacks. Grows a prickly vine ahead of the front monster: it holds monsters ${REWORKS.vine_druid.vine.hold}s (bosses ${REWORKS.vine_druid.vine.bossHold}s) and deals her hit each second. Regrows ${REWORKS.vine_druid.vine.regrow}s after it withers.`
     : null;
+  // v2.8 Orcs: their rules are in code (shared/reworks.ts); orcText is what the card back says.
+  // Its icons are game texture keys ("item:mana_orb"), the site uses R2 paths ("items/mana_orb").
+  const orc = orcText(u.id);
+  const orcStat = orc?.stat ? [orc.stat[0].replace(/^item:/, "items/").replace(/^stat:/, "stats/"), orc.stat[1]] : null;
   const perkLines = perkSummary(u).map((l) => `${arch === "buff" ? "Neighbours get " : ""}${l}`);
   const now = unitStats(u, 1, 1, 0);
-  const quick = support || arch === "aegis" ? [["stats/attack_speed", "never attacks"]]
+  const quick = orcStat ? [orcStat]
+    : support || arch === "aegis" ? [["stats/attack_speed", "never attacks"]]
     : arch === "buff" ? [["stats/attack_speed", `neighbours +${pct(buffBonus(1, ri, 1))} faster`]]
     : arch === "aura" ? [["stats/attack_speed", `3×3 +${pct(auraBonus(1, 1).speed)} speed, +${pct(auraBonus(1, 1).damage)} dmg`]]
     : [["stats/damage", fmt(now.damage)], ["stats/attack_speed", u.id === "vine_druid" ? "never attacks" : `every ${+(1 / now.speed).toFixed(2)}s`]];
@@ -82,9 +87,9 @@ function cardInfo(u) {
   const every = (s) => (silent || u.id === "vine_druid" ? "—" : `${+(1 / s).toFixed(2)}s`);
   const buff = (rank, up, mult = 1) => {
     const m = (1 + up * ECONOMY.powerUpBonus) * mult;
-    return support ? supportCell(support, rank, m) : arch === "aura" ? `+${pct(auraBonus(rank, m).speed)}` : arch === "aegis" ? "—" : `+${pct(buffBonus(rank, ri, m))}`;
+    return orcStat ? orcStat[1] : support ? supportCell(support, rank, m) : arch === "aura" ? `+${pct(auraBonus(rank, m).speed)}` : arch === "aegis" ? "—" : `+${pct(buffBonus(rank, ri, m))}`;
   };
-  const buffIcon = support ? SUPPORT_STAT[support][0] : "stats/attack_speed";
+  const buffIcon = orcStat ? orcStat[0] : support ? SUPPORT_STAT[support][0] : "stats/attack_speed";
   const boost = (r, mult) => (awakens && r === maxRank() ? mult : 1);
   const ranks = Array.from({ length: maxRank() }, (_, i) => i + 1);
   const ups = Array.from({ length: maxPowerUp() + 1 }, (_, i) => i);
@@ -93,13 +98,19 @@ function cardInfo(u) {
     raceLabel: RACES[u.race]?.label ?? u.race,
     raceColor: hex(RACES[u.race]?.color ?? 0xffffff),
     awakens,
-    role: role + (support ? SUPPORT_TEXT[support] : ARCHETYPES[arch].label),
-    effects: rework && u.id !== "raccoon_thief" ? [] : effects,
+    role: orc ? role + orc.arch : role + (support ? SUPPORT_TEXT[support] : ARCHETYPES[arch].label),
+    effects: orc ? orc.lines : rework && u.id !== "raccoon_thief" ? [] : effects,
     rework,
     perkLines,
     quick,
     styleLine: silent ? null : `${st.label}: ${st.text}${u.style === "balanced" ? "" : ` · ×${+st.dmg.toFixed(2)} damage, ×${st.speed} speed`}`,
-    rankNote: support
+    rankNote: orcStat
+      ? u.id === "peon"
+        ? "Each merge: more Pillage chance for the other Peons · never awakens"
+        : "The drums don't change with rank · never awakens"
+      : orc
+      ? `Each merge: +${pct(ECONOMY.rankDamageStep)} base damage, ${pct(ECONOMY.rankSpeedStep)} faster · never awakens`
+      : support
       ? "Each merge: a stronger effect · support units never awaken"
       : silent
       ? `Each merge: +${pct(EFFECTS.buff.perRank)} boost${awakens ? ` · ★${maxRank()} awakens (×${awakenDamageMult(u.id)})` : ""}`
@@ -122,7 +133,9 @@ function cardInfo(u) {
         { icon: "items/mana_orb", cells: ups.map((p) => (p ? fmt(powerUpCost(p - 1)) : "—")) },
       ],
     },
-    foot: support
+    foot: orcStat
+      ? orc.lines.join(" ")
+      : support
       ? `${SUPPORT_STAT[support][1]}. ${SUPPORT_TEXT[support]}; it never attacks.`
       : arch === "aura"
       ? "Units in the 3×3 around it attack this much faster."

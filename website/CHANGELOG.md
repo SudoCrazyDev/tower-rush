@@ -1,5 +1,11 @@
 # Website changelog
 
+## 1.4.0
+- New page `v2-8.html`: the full v2.8.0 "Beta Berserker" list. The five Orcs (Peon, Grunt, Headhunter, Spirit Walker, Kodo Beasts) with their stats and abilities, the Normal element, the Unit Lab for everyone, the mode carousel, Mythic projectiles, balance changes and fixes.
+- Release notes: v2.8.0 is the latest (with a button to the new page). v2.2 "Sand & Sea" moves into the History panel, so the page keeps the latest five.
+- Latest news: v2.8.0 is the featured post (Grunt portrait); the v2.7 post joins the regular ones and the v2.2 post is dropped to keep five. Hero pill says v2.8 Beta Berserker is live.
+- Unit data re-exported from `shared/`: the Orcs' card text comes from `orcText` (shared/reworks.ts), so the codex shows Pillage, Berserker Strength, Berserker Upgrade, Ancestral Spirit and War Drums. The codex has a Normal element shelf ("House pour"). Cache query on `styles.css`, `app.js` and `data/game.js` bumped to `?v=2.8.0`.
+
 ## 1.3.1
 - Vampire Countess text follows game 2.7.2: Vampire's Kiss pays 2 mana plus Plunder on every hit (and again on death); Queen's Gambit drains every monster and pays 3 mana each second. `data/game.js` re-exported and the `v2-7.html` note updated.
 

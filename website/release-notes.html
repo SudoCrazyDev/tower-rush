@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://assets.crownnkeep.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2.7.0" />
+  <link rel="stylesheet" href="styles.css?v=2.8.0" />
 </head>
 <body>
   <!-- ============ NAV ============ -->
@@ -46,24 +46,48 @@
         <p>The last five releases, newest first, with every hotfix that followed. Older ones are in the history.</p>
       </div>
       <nav class="notes__jump" aria-label="Jump to a release">
+        <a href="#v2-8-0"><b>v2.8</b> Beta Berserker</a>
         <a href="#v2-7-0"><b>v2.7</b> The Great Awakening</a>
         <a href="#v2-6-0"><b>v2.6</b> Install &amp; Play</a>
         <a href="#v2-4-0"><b>v2.4</b> The Silver Tribunal</a>
         <a href="#v2-3-0"><b>v2.3</b> The Iron Oath</a>
-        <a href="#v2-2-0"><b>v2.2</b> Sand &amp; Sea</a>
         <a href="#history"><b>History</b> Older releases</a>
       </nav>
     </section>
 
     <section class="section notes__list">
+      <!-- v2.8.0 -->
+      <article class="release release--latest" id="v2-8-0">
+        <div class="release__bg" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/locations/loading_keyart.webp" alt="" /></div>
+        <div class="release__body">
+          <div class="release__meta">
+            <span class="release__ver">v2.8.0</span>
+            <time datetime="2026-10-17">Oct 17, 2026</time>
+            <span class="pill pill--live"><i></i> Latest</span>
+          </div>
+          <h3>Beta Berserker</h3>
+          <p class="release__tag">The Beta release. The Orcs march in, and the Unit Lab opens to everyone.</p>
+          <h4>Highlights</h4>
+          <ul class="release__list">
+            <li><b>Five Orc units.</b> Peon (Common support: mana with a Pillage bonus), Grunt (Common: hits harder the longer he stands), Headhunter (Common: focuses monsters near your keep), Spirit Walker (Rare: pushes monsters back) and Kodo Beasts (Rare support: War Drums speed up your units). Orcs never awaken.</li>
+            <li><b>New Normal element.</b> Neutral: no monster resists it and none is weak to it.</li>
+            <li><b>Unit Lab for everyone.</b> Test the cards you own. Cards you don't own yet show with a lock.</li>
+            <li><b>Mode carousel.</b> Arena, Stories, PvP and the Unit Lab sit in one swipeable carousel. The separate PvP button is gone.</li>
+            <li><b>Mythic projectiles.</b> Void Titan, Dragon Egg, Chrono Mage and Monkey King each get their own projectile and impact.</li>
+            <li><b>Balance:</b> Crystal Golem awakened speed &times;0.2 &rarr; &times;0.4, Hourglass Owl charge 30% &rarr; 40%, Sand Worm damage 44 &rarr; 47, Sand Monk damage 15.8 &rarr; 19.</li>
+            <li><b>Fixes:</b> the Summon button no longer shrinks after fast taps. Late waves run smoother and keep phones cooler. New Slow and Frozen effects.</li>
+          </ul>
+          <p><a class="btn btn--play btn--sm" href="v2-8.html">Meet the Orcs</a></p>
+        </div>
+      </article>
+
       <!-- v2.7.0 -->
-      <article class="release release--latest" id="v2-7-0">
+      <article class="release" id="v2-7-0">
         <div class="release__bg" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/locations/loading_keyart.webp" alt="" /></div>
         <div class="release__body">
           <div class="release__meta">
             <span class="release__ver">v2.7.0</span>
             <time datetime="2026-10-14">Oct 14, 2026</time>
-            <span class="pill pill--live"><i></i> Latest</span>
           </div>
           <h3>The Great Awakening</h3>
           <p class="release__tag">Every unit gets a revamp. Awakened units earn their own damage, speed and a signature ultimate, and awakening is easier to reach.</p>
@@ -176,11 +200,19 @@
         </div>
       </article>
 
+      <!-- ============ HISTORY: releases older than the latest five ============ -->
+      <details class="history" id="history">
+        <summary class="history__head">
+          <span class="eyebrow">History</span>
+          <span class="history__title">Older releases</span>
+          <span class="history__list"><b>v2.2</b> Sand &amp; Sea &middot; <b>v2.1</b> Chaos Corrupted &middot; <b>v2.0</b> The Grand Revamp &middot; <b>v1.3</b> Branding Revamp &middot; <b>v1.2</b> Stories</span>
+        </summary>
+        <div class="history__body">
       <!-- v2.2.0 -->
       <article class="release" id="v2-2-0">
         <div class="release__bg release__bg--split" aria-hidden="true">
-          <img crossorigin="anonymous" src="https://assets.crownnkeep.com/story/covers/book2_story2_drowned_coast.webp" alt="" />
-          <img crossorigin="anonymous" src="https://assets.crownnkeep.com/story/covers/book2_story3_throne_of_dust.webp" alt="" />
+          <img crossorigin="anonymous" src="https://assets.crownnkeep.com/story/covers/book2_story2_drowned_coast.webp" alt="" loading="lazy" />
+          <img crossorigin="anonymous" src="https://assets.crownnkeep.com/story/covers/book2_story3_throne_of_dust.webp" alt="" loading="lazy" />
         </div>
         <div class="release__body">
           <div class="release__meta">
@@ -215,15 +247,6 @@
           </div>
         </div>
       </article>
-
-      <!-- ============ HISTORY: releases older than the latest five ============ -->
-      <details class="history" id="history">
-        <summary class="history__head">
-          <span class="eyebrow">History</span>
-          <span class="history__title">Older releases</span>
-          <span class="history__list"><b>v2.1</b> Chaos Corrupted &middot; <b>v2.0</b> The Grand Revamp &middot; <b>v1.3</b> Branding Revamp &middot; <b>v1.2</b> Stories</span>
-        </summary>
-        <div class="history__body">
       <!-- v2.1.0 -->
       <article class="release" id="v2-1-0">
         <div class="release__bg" aria-hidden="true"><img crossorigin="anonymous" src="https://assets.crownnkeep.com/story/covers/book2_story1_elven_wilds.webp" alt="" loading="lazy" /></div>
