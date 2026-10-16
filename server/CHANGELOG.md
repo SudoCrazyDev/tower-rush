@@ -1,5 +1,10 @@
 # API changelog
 
+## 1.4.0
+- Ships with game 2.8 "Beta Release: Beta Berserker": the shared battle rules for the five Orc units (Peon, Grunt, Headhunter, Spirit Walker, Kodo Beasts) and the Normal element, used by PvP and story checks.
+- HOTFIXES `2.8.0-owl`, `2.8.0-sand` and `2.8.0-mythic-proj` apply to the saved live config (Hourglass Owl charge 40%, Sand Worm damage 47, Sand Monk damage 19, Mythic projectiles). The Orcs join saved unit lists through `ADDED_UNITS`.
+- `MIN_CLIENT` 2.8.0: older game tabs must reload.
+
 ## 1.3.1
 - Ships with game 2.7.2: Vampire's Kiss pays on every hit, and Queen's Gambit drains kissed monsters for mana each second (shared battle rules used by PvP and story checks).
 - `MIN_CLIENT` 2.7.2: older game tabs must reload.

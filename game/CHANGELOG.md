@@ -2,6 +2,27 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.8.5
+- Grunt redrawn with a rounded silhouette, so he no longer reads as a square tile. Unit art rules written down in `assets/UNIT_ART_STYLE.md`.
+
+## 2.8.4
+- The Orcs are redrawn as chibi busts, the same size and framing as the other board units.
+
+## 2.8.3
+- Orc ability effects: Grunt's rage ring and a BERSERK callout at every tier, Headhunter's FRENZY from wave 20 and red focus spears with a reticle, and a War Drums badge on every sped-up unit.
+
+## 2.8.2
+- The square backgrounds behind 17 particle and weapon sprites are removed.
+
+## 2.8.1
+- Late-wave lag fix: an effect budget, capped floating text, throttled HP labels and a 60 fps limit keep battles past wave 20 smooth (and phones cooler).
+- New Slow and Frozen status art and a new Headhunter portrait.
+
+## 2.8.0 "Beta Release: Beta Berserker"
+- Five Orc units with the new neutral Normal element: Peon, Grunt, Headhunter, Spirit Walker and Kodo Beasts. They never awaken. Details in `docs/features/v2.8-beta-berserker/`.
+- Unit Lab for everyone (unowned cards are locked), lobby mode carousel with PvP in it (the PvP button is gone), Mythic projectiles, and the Summon button shrink fix.
+- Balance: Crystal Golem awakened speed x0.4, Hourglass Owl charge 40%, Sand Worm damage 47, Sand Monk damage 19.
+
 ## 2.7.3
 - Battle Deck: new GROUP: RACE mode (after Role) shelves the collection by race (`shared/races.ts`), each with its race colour and an owned/total count. Races with no cards (Candy, Chaos) are skipped.
 

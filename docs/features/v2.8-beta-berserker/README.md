@@ -1,6 +1,6 @@
 # v2.8.0 "Beta Release: Beta Berserker"
 
-Status: Testing on staging (2026-10-16). Game 2.8.0. Arena music: code ready, tracks still missing (Higgsfield has no usable music model).
+Status: Live on production 2026-10-17 (game 2.8.5, API 1.4.0, website 1.4.0, MIN_CLIENT 2.8.0). Arena music: code ready, tracks still missing (Higgsfield has no usable music model).
 
 The Beta release. It adds five Orc units, opens the Unit Lab to everyone, reworks the lobby
 into a mode carousel (PvP moves into it), gives every Mythic its own projectile, and gives
