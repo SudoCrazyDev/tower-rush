@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.4.1
+- New registered accounts (`/auth/register`, including guest upgrades and invites) are announced in the Discord #new-recruits channel through the `DISCORD_SIGNUP_WEBHOOK` secret (`src/discord.ts`). Only the username goes out, never the email; the post runs in `waitUntil`, so Discord can never slow down or fail a sign-up. Guests are not announced.
+
 ## 1.4.0
 - Ships with game 2.8 "Beta Release: Beta Berserker": the shared battle rules for the five Orc units (Peon, Grunt, Headhunter, Spirit Walker, Kodo Beasts) and the Normal element, used by PvP and story checks.
 - HOTFIXES `2.8.0-owl`, `2.8.0-sand` and `2.8.0-mythic-proj` apply to the saved live config (Hourglass Owl charge 40%, Sand Worm damage 47, Sand Monk damage 19, Mythic projectiles). The Orcs join saved unit lists through `ADDED_UNITS`.

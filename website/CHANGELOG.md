@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.4.1
+- Footer on every page has Discord and Facebook buttons (discord.gg/q7wq9DCfE and the Crown & Keep Facebook page), in their brand colours. Cache query on `styles.css` bumped to `?v=2.8.1`.
+
 ## 1.4.0
 - New page `v2-8.html`: the full v2.8.0 "Beta Berserker" list. The five Orcs (Peon, Grunt, Headhunter, Spirit Walker, Kodo Beasts) with their stats and abilities, the Normal element, the Unit Lab for everyone, the mode carousel, Mythic projectiles, balance changes and fixes.
 - Release notes: v2.8.0 is the latest (with a button to the new page). v2.2 "Sand & Sea" moves into the History panel, so the page keeps the latest five.

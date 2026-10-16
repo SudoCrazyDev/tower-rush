@@ -637,3 +637,11 @@ p { margin: 0; }
   .book2__head { flex-direction: column; }
   .chapters { grid-template-columns: 1fr; }
 }
+
+/* Community links (footer) */
+.footer__social { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.social { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; font-weight: 800; font-size: 14px; color: #fff; text-decoration: none; transition: transform .15s, filter .15s; }
+.social svg { width: 18px; height: 18px; fill: currentColor; }
+.social:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.social--discord { background: #5865f2; }
+.social--facebook { background: #1877f2; }

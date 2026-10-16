@@ -48,7 +48,8 @@
     "TURNSTILE_HOSTNAMES": "game.crownnkeep.com"
   },
   // Secrets (not in this file): ADMIN_PASSWORD, used once to create the first admin;
-  // TURNSTILE_SECRET, the Turnstile widget's secret key.
+  // TURNSTILE_SECRET, the Turnstile widget's secret key;
+  // DISCORD_SIGNUP_WEBHOOK, the Discord #new-recruits webhook that new sign-ups are posted to.
   "env": {
     "staging": {
       "name": "tower-rush-staging",

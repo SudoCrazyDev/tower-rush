@@ -6,6 +6,7 @@ import { body, fail, numParam, param, type AppEnv, type Ctx } from "./http.ts";
 import { CODE_MINUTES, newCode, normEmail, sendCode, useCode, validEmail, type CodePurpose } from "./email.ts";
 import { requireHuman } from "./turnstile.ts";
 import { claimInvite, findInvite, inviteOnly } from "./invites.ts";
+import { announceSignup } from "./discord.ts";
 import { createUser, getUser, getUserByEmail, getUserByName, ownUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
 import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
@@ -104,6 +105,7 @@ player.post("/auth/register", authLimit, async (c) => {
   u = (await getUser(db, u.id))!;
   if (invite) await claimInvite(db, invite.id, u.id);
   else await mailCode(c, u, "verify");
+  announceSignup(c, u);
   return c.json({ token: await createSession(db, "player", u.id), user: ownUser(u) });
 });
 

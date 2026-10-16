@@ -27,6 +27,8 @@ export interface Bindings {
   INVITE_ONLY?: string;
   /** Secret, set with `wrangler secret put`. Redeems Turnstile tokens (turnstile.ts). */
   TURNSTILE_SECRET?: string;
+  /** Secret, set with `wrangler secret put`. Discord webhook for #new-recruits sign-up posts (discord.ts). */
+  DISCORD_SIGNUP_WEBHOOK?: string;
   /** Secret, set with `wrangler secret put`. Creates the first admin when there is none. */
   ADMIN_PASSWORD?: string;
 }
