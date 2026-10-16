@@ -1,5 +1,9 @@
 # Website changelog
 
+## 1.4.2
+- Hero: Discord and Facebook buttons under the Play / Trailer / Install row. Cache query on `styles.css` bumped to `?v=2.8.2`.
+- Top menu shows only News and Release notes on every page. The section links (How to play, Units, Heroes, Arenas, Bosses, Modes, PvP, Leagues) are commented out in the HTML, not deleted, so they can come back.
+
 ## 1.4.1
 - Footer on every page has Discord and Facebook buttons (discord.gg/q7wq9DCfE and the Crown & Keep Facebook page), in their brand colours. Cache query on `styles.css` bumped to `?v=2.8.1`.
 

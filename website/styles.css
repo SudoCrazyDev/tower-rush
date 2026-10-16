@@ -640,6 +640,8 @@ p { margin: 0; }
 
 /* Community links (footer) */
 .footer__social { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.hero__social { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+.hero__social .social { box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
 .social { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; font-weight: 800; font-size: 14px; color: #fff; text-decoration: none; transition: transform .15s, filter .15s; }
 .social svg { width: 18px; height: 18px; fill: currentColor; }
 .social:hover { transform: translateY(-2px); filter: brightness(1.1); }
