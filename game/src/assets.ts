@@ -108,6 +108,24 @@ const REFRESHED: Record<string, string> = {
   "vfx/status_slowed": "2.8.1",
   "vfx/status_frozen": "2.8.1",
   "portraits/headhunter": "2.8.1",
+  // v2.8.2: particles and weapons whose flat background had survived as a square behind them.
+  "vfx/pt_smoke": "2.8.2",
+  "vfx/pt_confetti": "2.8.2",
+  "vfx/pt_gem": "2.8.2",
+  "vfx/pt_heart": "2.8.2",
+  "vfx/pt_leaf": "2.8.2",
+  "vfx/pt_rune": "2.8.2",
+  "vfx/pt_snowflake": "2.8.2",
+  "vfx/weapons/axe": "2.8.2",
+  "vfx/weapons/cleaver": "2.8.2",
+  "vfx/weapons/cutlass": "2.8.2",
+  "vfx/weapons/double_axe": "2.8.2",
+  "vfx/weapons/hammer": "2.8.2",
+  "vfx/weapons/morning_star": "2.8.2",
+  "vfx/weapons/rapier": "2.8.2",
+  "vfx/weapons/sabre": "2.8.2",
+  "vfx/weapons/scimitar": "2.8.2",
+  "vfx/weapons/twin_daggers": "2.8.2",
 };
 const imgUrl = (folder: string, id: string) => `${BASE}${folder}/${id}.webp${REFRESHED[`${folder}/${id}`] ? `?v=${REFRESHED[`${folder}/${id}`]}` : ""}`;
 
