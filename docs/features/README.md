@@ -30,4 +30,5 @@ document and a promo kit for social media. The release timeline is in [ROADMAP.m
 - **Promo graphics** are Remotion compositions in [`roadmap-video/`](../../roadmap-video), so
   they use the game's own art, fonts and colours and can be re-rendered when numbers or art
   change. Each release has its own source file (`roadmap-video/src/promo/<Release>.tsx`).
+- **Unit art:** any new unit's board art follows [assets/UNIT_ART_STYLE.md](../../assets/UNIT_ART_STYLE.md) so it matches the existing units.
 - **Status** moves Design → Building → Testing → Live. Update this table when it changes.

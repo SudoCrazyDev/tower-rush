@@ -57,7 +57,8 @@ if KEEP < 1:  # robust box: rows/columns with only a few stray keyed pixels don'
     y0, y1, x0, x1 = rows.min(), rows.max(), cols.min(), cols.max()
 if KEEP < 1:  # bust-up: cut the legs off and frame head to hips (the window's bottom edge is the cut)
     y1 = y0 + int((y1 - y0) * KEEP)
-side = max(y1 - y0, x1 - x0) + 8; cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
+# PAD=1.16 (env) leaves margin round the character, as assets/UNIT_ART_STYLE.md asks (1 = fill the frame).
+side = int(max(y1 - y0, x1 - x0) * float(os.environ.get("PAD", "1"))) + 8; cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
 if KEEP < 1:
     # Height-limited square, top-aligned, centred on the character's solid pixels (stray keyed
     # pixels at the frame edges would otherwise stretch the box to the full width).

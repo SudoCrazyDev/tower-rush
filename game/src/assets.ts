@@ -110,7 +110,7 @@ const REFRESHED: Record<string, string> = {
   "portraits/headhunter": "2.8.1",
   // v2.8.4: the Orc board stills redone as chibi busts like the other units.
   "units/peon": "2.8.4",
-  "units/grunt": "2.8.4",
+  "units/grunt": "2.8.5", // v2.8.5: Grunt redrawn with a rounded silhouette (he read as a square tile).
   "units/headhunter": "2.8.4",
   "units/spirit_walker": "2.8.4",
   "units/kodo_beasts": "2.8.4",

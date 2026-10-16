@@ -161,6 +161,7 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 - **v2.8.2 (2026-10-16):** 17 particle and weapon sprites (the Normal smoke trail, leaf, rune, snowflake and others, plus axe, double axe, swords) were re-keyed: their old background showed as a square behind them.
 - **v2.8.3 (2026-10-16):** Orc ability effects. A Grunt stands in a fire ring that grows with each Berserker tier, and every new multiplier (x2, x4, x7, then each 5 waves past 30) shows a red burst and "BERSERK xN!". A frenzied Headhunter (wave 20+) stands in a lightning ring and calls "FRENZY!", and his focus spears fly red and snap a reticle onto the target. Units sped up by War Drums show the attack-speed ring and badge in drum orange, red at the board-wide stage.
 - **v2.8.4 (2026-10-16):** the five Orcs were redrawn as chibi busts (big head, waist-up) like every other unit, with new idle and attack animations. The first full-body art read too small on the board.
+- **v2.8.5 (2026-10-16):** the Grunt was redrawn with a rounded silhouette inside the frame (he read as a square tile), and new units now follow a written board-art style guide ([assets/UNIT_ART_STYLE.md](../../assets/UNIT_ART_STYLE.md)).
 - **Later:** Book 3 (pitched in the saga plan; the Book 3 finale reveals the mastermind).
 - Ideas waiting for a release are in the root [ROADMAP.md](../../ROADMAP.md).
 - Fantasy features (ideas only, not scheduled): [World Boss](fantasy/world-boss.md).

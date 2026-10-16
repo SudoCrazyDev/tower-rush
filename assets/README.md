@@ -1,5 +1,7 @@
 # Asset Pack — Crown & Keep (formerly Tower Rush)
 
+**New units:** board art must follow [UNIT_ART_STYLE.md](UNIT_ART_STYLE.md) (chibi bust, rounded silhouette inside the frame, locked-camera clips), and pass its checks before upload.
+
 Original art in a flat 2D vector cartoon style (thick navy outlines, simple cel shading,
 chunky badge-like characters). Generated with Higgsfield on 2026-10-03 (1,631 credits).
 Style reference: `style/style_anchor_v2.png`.
