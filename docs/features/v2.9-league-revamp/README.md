@@ -91,14 +91,48 @@ Gems cannot be bought or earned through donations (no pay-to-win), so the Societ
 
 ## 6. Art
 
-Four new badge requests on the admin Art requests page, group "League badges"
-(`ui/league_ranks_extra_<n>.png`, built by `tools/build_assets.py`):
+Four new league badges, made with Higgsfield Nano Banana Pro on 2026-10-17 from the Champion,
+Master and Diamond badges as style references (prompts: `LEAGUE_BADGE_ART` in
+`shared/art-requests.ts`):
 
-- 7 Mythic, 8 Immortal, 9 Secret Society, 10 "???" (hidden league).
+- 7 Mythic: magenta phoenix wings, gold crown, ruby.
+- 8 Immortal: white angel wings, halo, laurel, flame over a diamond.
+- 9 Secret Society: obsidian shield, bat wings, all-seeing eye, red wax seal.
+- 10 "???" (hidden league): violet shield in chains with a padlock and a gold question mark.
 
-Until they're made, the game draws a shield in the league colour (a grey "?" shield for the hidden one).
+Sources are `assets/ui/league_ranks_extra_<n>.png` (keyed with `keyimg.py`, trimmed to the badge).
+`tools/build_assets.py` turns them into `ui/league_<n>.webp` and raises `atlas.leagues` to 11.
+They are on R2 with `index.json`, so every build already shows them. Without the art, the game
+falls back to a shield in the league colour.
 
-## 7. Files
+## 7. Leagues list redesign
+
+The leagues list (tap the badge in the lobby's top bar) was rebuilt in `scenes/leagues.ts`.
+The old one had overlapping parts: the reward labels ran three lines tall and overflowed their
+rows, the footer sat on the frame's bottom rim, and the frame's side gems covered the row ends.
+
+- **Size:** the panel is 720 wide and `min(H - 110, 1270)` tall. Row height comes from the
+  space left between the header and the footer, so all 11 leagues fit in both layouts.
+- **Header card:** your badge, league name, trophies, a "next: <league>" hint, the progress
+  bar and "N more trophies to promote", on a card in your league's colour. Your league's
+  trophy rule (or Society dues) sits under the card.
+- **Rows in league colour:** each row is filled with its league's colour (`tintPanel`): full
+  strength for leagues you've reached, muted above. Rows are 160 px narrower than the panel,
+  so the frame's side gems no longer cover them.
+- **Your league:** its row gets a rim in the league's colour over a navy outline, and wings on
+  both ends. The wings are cut from that league's own badge art (`badgeWings` adds a `wing`
+  frame from the outer 30% of the badge texture and mirrors it for the right end). If the art
+  is missing, `rowWings` draws three feathers in the league colour instead.
+- **Rewards:** the chest icon, then gold and gems as icon + amount on two lines. A green check
+  marks rewards already paid; "next battle" shows when a reward is owed. Bronze says
+  "Start here".
+- Hidden Society rows still show "???", "By invitation only" and the INVITATION button.
+
+Gotcha: adding a frame to a single-frame texture makes it the texture's `firstFrame`, so a plain
+`add.image(key)` would show the wing instead of the badge. `badgeWings` resets
+`firstFrame = "__BASE"` after adding it.
+
+## 8. Files
 
 - `shared/leagues.ts`: rules, `runTrophies`, `playerLeague`, `societyInvite`, new leagues.
 - `shared/profile.ts`: `society`, `settleSociety`, `joinSociety`; promotions respect membership.
@@ -107,11 +141,11 @@ Until they're made, the game draws a shield in the league colour (a grey "?" shi
 - `shared/config.ts`: league validation, `2.9.0-leagues` hotfix.
 - `server/src/player.ts`: finish scoring, arena lock, `settleAbandoned`, dues in `me()`, `/society/join`, leaderboard `society`.
 - `server/migrations/0011_close_abandoned_battles.sql`.
-- Game: `scenes/leagues.ts` (rules line, ??? row, invitation), `LobbyScene` (arena card hint, invitation), `BattleScene` (result note), `arenaInfo`, `LeaderboardScene`, `play.ts`, `whatsNew.ts`.
+- Game: `scenes/leagues.ts` (rules line, ??? row, invitation, list redesign, badge wings), `LobbyScene` (arena card hint, invitation), `BattleScene` (result note), `arenaInfo`, `LeaderboardScene`, `play.ts`, `whatsNew.ts`.
 - Admin: Leagues page columns (min wave, gain, loss, max loss, society), Economy page trophy fields removed.
 - Website: trophy cards, ladder and wiki text use the new rules; the Society stays hidden.
 
-## 8. Later
+## 9. Later
 
 - Anti-cheat: the server only clamps the reported wave to one wave per 3 s. With no gain cap, a
   forged wave is worth more, so tighten the clamp per arena or flag outliers on the admin page.

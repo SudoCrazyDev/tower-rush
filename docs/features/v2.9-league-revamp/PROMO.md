@@ -10,7 +10,8 @@
 | In-game "What's new" popup | `game/src/scenes/whatsNew.ts` | Done (shows once per device) |
 | Recruitment popup "YOU HAVE BEEN RECRUITED" | `game/src/scenes/leagues.ts` (`societyInvitation`) | Done |
 | Website release page, notes, news, league ladder | `website/` | Done (on staging) |
-| League badges: Mythic, Immortal, Secret Society, "???" | admin Art requests, group "League badges" | Requested, not made. The game draws coloured shields until then |
+| League badges: Mythic, Immortal, Secret Society, "???" | `assets/ui/league_ranks_extra_7..10.png`, on R2 | Done (2026-10-17) |
+| Redesigned leagues list (league-coloured rows, winged row for your league) | `game/src/scenes/leagues.ts` | Done (on staging) |
 | Copy below (posts, taglines, patch notes) | this file | Done |
 
 **Keep the secret.** Public posts never name the Secret Society League or its requirements
@@ -74,9 +75,13 @@ two new leagues, and one no one talks about. Play free: crownnkeep.com #CrownAnd
 - Trophies only in your two highest unlocked arenas (lower arenas still pay coins and gems)
 - A run you leave (closed, or taken over on another device) counts as your league's biggest loss
 - Ranked PvP trophies unchanged; Stories unaffected
+- Redesigned leagues list: rows in each league's colour, and your league's row gets its badge's wings
+- New badges for Mythic and Immortal
 - ???
 
 ## Footage to capture (for edits and spotlights)
+
+- The redesigned leagues list scrolling from Bronze up to Immortal, with your league's winged row.
 
 - The arena card showing "Reach wave N to win trophies", then a lower arena showing "Gold only".
 - A result screen past the minimum wave (green trophies), then one short of it (red loss).
@@ -92,6 +97,4 @@ two new leagues, and one no one talks about. Play free: crownnkeep.com #CrownAnd
 
 ## Not in this release
 
-- League badge art for Mythic, Immortal, the Society and "???" (shields stand in). Don't post
-  badge close-ups until the art exists.
 - Anti-cheat wave clamp tightening (planned later).
