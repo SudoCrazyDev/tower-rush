@@ -139,7 +139,7 @@ A character page for any player, in the spirit of an AQWorlds character page.
 - **Open it:** tap a row on the leaderboard (any tab) or in an arena's top list. Tap your own avatar
   in the lobby for your profile; it has an AVATAR button for the avatar picker that tap used to open.
 - **Header:** avatar with league badge, name, league, "Playing since <month year>", then trophies,
-  best wave, ranked rating and tier, and ranked W-L.
+  best wave, ranked rating and tier, and ranked W-L, set straight on the dialog with no panel behind.
 - **Stage (CURRENT DECK):** the player's hero idles large in the back; the 5 deck units idle in a
   shallow arc in front, each with a rarity-coloured shadow and a "Lv N" pill.
   The backdrop is the arena the player last picked (`profile.arena`, else their highest unlocked
@@ -172,3 +172,7 @@ A character page for any player, in the spirit of an AQWorlds character page.
 
 - Anti-cheat: the server only clamps the reported wave to one wave per 3 s. With no gain cap, a
   forged wave is worth more, so tighten the clamp per arena or flag outliers on the admin page.
+- New badge types on the profile: PvP milestones (wins, win streaks), wave milestones (best wave
+  50/100/200), collection (every unit owned, a unit at max rank), seasons (league reached per
+  season). Each needs an earn rule on the server, a `profile.badges`-style list and art; the
+  profile grid already takes any number of badges.

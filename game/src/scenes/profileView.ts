@@ -74,9 +74,6 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
     [rated ? `${p.ranked.wins}-${p.ranked.losses}` : "-", "ranked W-L", "#ffffff"],
   ];
   const colW = (right - left) / stats.length;
-  const sg = scene.add.graphics();
-  sg.fillStyle(0x1d2250, 0.95).fillRoundedRect(left, sy - 44, right - left, 88, 18);
-  m.add(sg);
   stats.forEach(([v, label, color], i) => {
     const x = left + colW * (i + 0.5);
     m.add(txt(scene, x, sy - 12, v, 30, color));
