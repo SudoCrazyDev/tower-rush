@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.5.1
+- Migration `0010_funding_game_servers.sql`: the running-costs goal is now "Game Servers" (it named the host before), still the only monthly goal. Content goals such as VFX stay one-time.
+
 ## 1.5.0
 - Community funding (`src/funding.ts`, `shared/funding.ts`, migration `0009_funding.sql`): goals, donations and payment settings in D1. Amounts are US cents; GCash pesos convert at `php_per_usd`.
 - Public `/api/funding` (exempt from the `MIN_CLIENT` gate): `GET /` goal progress, supporters and the general fund; `GET /gcash-qr` the uploaded QR image; `POST /pledge` (rate limited) makes a pending pledge with a `CK-XXXX` code; `POST /kofi` is the Ko-fi webhook, checked against the `KOFI_VERIFICATION_TOKEN` secret, which credits a pledge by the code in the message or else the general fund.
