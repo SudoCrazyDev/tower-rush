@@ -2,7 +2,8 @@
 import Phaser from "phaser";
 import { get } from "../api";
 import { profile } from "../save";
-import { ensureAnim, hasAnim, loadSheet, sheetScale, unitArt } from "../assets";
+import { BASE, ensureAnim, hasAnim, loadSheet, sheetScale, unitArt } from "../assets";
+import { ARENA_BY_ID, arenaForTrophies } from "../data/arenas";
 import { avatarView } from "../avatars";
 import { HERO_BY_ID } from "../data/heroes";
 import { RARITY_STATS, UNIT_BY_ID } from "../data/units";
@@ -34,8 +35,8 @@ export async function openProfile(scene: Phaser.Scene, id: number, onEditAvatar?
 
 /** `onEditAvatar` (your own profile) adds a button to change your avatar. */
 export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar?: () => void) {
-  const mw = Math.min(W - 32, 960);
-  const mh = Math.min(H - 80, 1480);
+  const mw = Math.min(W - 8, 1040);
+  const mh = Math.min(H - 24, 1620);
   const m = modal(scene, mw, mh, "PROFILE", () => {});
   const { cx, cy } = m;
   const left = cx - mw / 2 + 40;
@@ -82,7 +83,7 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
 
   // Stage: the hero behind, the deck in front, all idling.
   const stTop = sy + 64;
-  const stH = Math.min(680, mh - (stTop - (cy - mh / 2)) - 360);
+  const stH = Math.min(820, mh - (stTop - (cy - mh / 2)) - 360);
   stage(scene, m, p, left, stTop, right - left, stH);
 
   // Badges.
@@ -93,7 +94,31 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
 
 function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicProfile, x: number, y: number, w: number, h: number) {
   const g = scene.add.graphics();
-  g.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRoundedRect(x, y, w, h, 22);
+  const bg = scene.add.graphics();
+  bg.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRoundedRect(x, y, w, h, 22);
+  m.add(bg);
+  // Backdrop: the arena they last played, cropped to cover the stage and dimmed under the cast.
+  const arena = p.arena && ARENA_BY_ID[p.arena] ? p.arena : arenaForTrophies(p.trophies).id;
+  const artKey = `loc:arena_${arena}`;
+  const backdrop = scene.add.container(0, 0);
+  m.add(backdrop);
+  const showArt = () => {
+    if (!backdrop.active || !scene.textures.exists(artKey)) return;
+    const img = scene.add.image(0, 0, artKey);
+    const s = Math.max(w / img.width, h / img.height);
+    const cw = w / s;
+    const ch = h / s;
+    const cx0 = (img.width - cw) / 2;
+    const cy0 = (img.height - ch) * 0.55;
+    img.setScale(s).setCrop(cx0, cy0, cw, ch);
+    img.setPosition(x + w / 2 + (img.width / 2 - (cx0 + cw / 2)) * s, y + h / 2 + (img.height / 2 - (cy0 + ch / 2)) * s);
+    backdrop.add([img, scene.add.rectangle(x + w / 2, y + h / 2, w, h, 0x0d1030, 0.35)]);
+  };
+  if (scene.textures.exists(artKey)) showArt();
+  else {
+    scene.load.once(`filecomplete-image-${artKey}`, showArt);
+    scene.load.image(artKey, `${BASE}locations/arena_${arena}.webp`);
+  }
   g.lineStyle(4, 0xffd93b, 0.9).strokeRoundedRect(x, y, w, h, 22);
   // Floor.
   const floorY = y + h * 0.78;

@@ -141,7 +141,9 @@ A character page for any player, in the spirit of an AQWorlds character page.
 - **Header:** avatar with league badge, name, league, "Playing since <month year>", then trophies,
   best wave, ranked rating and tier, and ranked W-L.
 - **Stage (CURRENT DECK):** the player's hero idles large in the back; the 5 deck units idle in a
-  shallow arc in front, each with a rarity-coloured shadow and a "Lv N" pill. Sheets load on demand
+  shallow arc in front, each with a rarity-coloured shadow and a "Lv N" pill.
+  The backdrop is the arena the player last picked (`profile.arena`, else their highest unlocked
+  arena), cropped to cover the stage and dimmed. The dialog fills nearly the whole screen. Sheets load on demand
   (`loadSheet`); units start on staggered frames so they don't breathe in lockstep. A unit with no
   idle sheet bobs its static art instead. Tap a unit for its name and level.
 - **Badges (n):** earned only: every league reached (promotions paid, plus the current league),

@@ -816,6 +816,7 @@ player.get("/players/:id", P, async (c) => {
     society: p.society?.league ?? null,
     leagues: [...new Set([...p.leagues, now.id])],
     badges: p.story.badges,
+    arena: p.arena,
     deck: p.deck.map((d) => ({ id: d, level: p.cards[d]?.level ?? 1 })),
     joined: u.created_at,
   };

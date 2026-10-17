@@ -75,6 +75,8 @@ export interface PublicProfile {
   leagues: string[];
   /** Story badge ids (BADGES in stories.ts). */
   badges: string[];
+  /** Arena they last picked (the profile stage's backdrop), or null. */
+  arena: string | null;
   /** The 5 deck cards with their levels. */
   deck: { id: string; level: number }[];
   /** Account creation time (ms). */
