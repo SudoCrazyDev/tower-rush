@@ -95,10 +95,14 @@ function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicPr
   const g = scene.add.graphics();
   g.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRoundedRect(x, y, w, h, 22);
   g.lineStyle(4, 0xffd93b, 0.9).strokeRoundedRect(x, y, w, h, 22);
-  // Floor.
-  const floorY = y + h * 0.78;
-  g.fillStyle(0x0d1030, 0.7).fillEllipse(x + w / 2, floorY + 10, w * 0.92, h * 0.34);
-  g.fillStyle(0xffd93b, 0.08).fillEllipse(x + w / 2, floorY - h * 0.2, w * 0.5, h * 0.5);
+  // Two tiers that never overlap: the hero on a raised dais in the upper half, the deck in a row of
+  // equal slots along the floor below it.
+  const heroPx = Math.min(HERO_PX, h * 0.5);
+  const heroFeet = y + 44 + heroPx * 0.92;
+  const floorY = y + h - 64;
+  g.fillStyle(0xffd93b, 0.08).fillEllipse(x + w / 2, heroFeet - heroPx * 0.4, heroPx * 1.1, heroPx * 0.9);
+  g.fillStyle(0x0d1030, 0.7).fillEllipse(x + w / 2, heroFeet, heroPx * 0.9, heroPx * 0.16);
+  g.fillStyle(0x0d1030, 0.55).fillRoundedRect(x + 12, floorY - 18, w - 24, 76, 30);
   m.add(g);
   m.add(txt(scene, x + 24, y + 26, "CURRENT DECK", 24, "#fff4c2", [0, 0.5]));
 
@@ -115,23 +119,18 @@ function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicPr
     loading.destroy();
     if (hero) {
       const key = ensureAnim(scene, "heroes", `${hero}_idle`, 14, -1);
-      const hy = y + h * 0.5;
       if (key) {
-        const s = scene.add.sprite(x + w / 2, hy, key).setScale(sheetScale("heroes", Math.min(HERO_PX, h * 0.62))).setAlpha(0.95);
+        const s = scene.add.sprite(x + w / 2, heroFeet, key).setOrigin(0.5, 0.92).setScale(sheetScale("heroes", heroPx));
         s.play({ key, startFrame: 0 });
         m.add(s);
       }
       m.add(txt(scene, x + w - 24, y + 26, HERO_BY_ID[hero].name, 22, "#c9d2ff", [1, 0.5]));
     }
-    // Front row in a shallow arc: outer units a little higher (further back).
+    // One slot per card: the sprite frame fits its slot and stays below the hero's feet.
     const n = units.length;
-    const px = Math.min(UNIT_PX, h * 0.3, (w / Math.max(1, n)) * 0.95);
-    units.forEach((d, i) => {
-      const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-      const ux = x + w / 2 + t * (w - px * 1.1);
-      const uy = floorY - Math.abs(t) * h * 0.14;
-      unitOnStage(scene, m, d.id, d.level, ux, uy, px, i);
-    });
+    const slot = (w - 24) / Math.max(1, n);
+    const px = Math.max(60, Math.min(UNIT_PX, slot * 0.92, (floorY - heroFeet - 12) / 0.82));
+    units.forEach((d, i) => unitOnStage(scene, m, d.id, d.level, x + 12 + slot * (i + 0.5), floorY, px, i));
   };
   if (scene.load.list.size === 0 && !scene.load.isLoading()) build();
   else {
