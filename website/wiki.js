@@ -302,6 +302,23 @@
       <b>${l.name.replace(/ League$/, "")}<i>League</i></b><small>${l.hidden ? "Invite only" : `${img("items/trophy.webp", "", "ic")}${fmt(l.trophies)} · wave ${l.minWave}`}</small><span>${l.hidden ? "<em>No one speaks of it</em>" : l.reward.coins || l.reward.gems || l.reward.chest ? reward(l.reward) : "<em>Starting league</em>"}</span></div>`; }).join("")}</div>
   `);
 
+  // ---- profiles (v2.9)
+  section("profiles", "Player profiles and badges", "ui/league_6.webp", `
+    <p class="lead">Every player has a profile. Tap anyone on the leaderboard, in an arena's top players or at the top of a league; tap your own avatar in the lobby for yours. It shows their hero and 5 deck units idling on the arena they last played, with each unit's level.</p>
+    <div class="ledger">
+      <h3 class="ledger__title">On a profile</h3>
+      <ul>
+        ${rule("items/trophy.webp", "Record", "trophies, best wave, ranked rating and W-L")}
+        ${rule("ui/league_0.webp", "League badges", "every league reached")}
+        ${rule("ui/icon_pvp.webp", "Ranked badge", `peak tier, after ${R.ratingPlacementGames} games`)}
+        ${rule("items/star_shard.webp", "Story badges", "earned by finishing stories")}
+      </ul>
+    </div>
+    <h3>Story badges</h3>
+    <div class="tiers">${Object.values(W.badges).map((b) => plate(`${b.label} <em>${b.text}</em>`, "#ffd93b", "items/star_shard.webp")).join("")}</div>
+    <p>The leagues list shows the player on top of each league right now. Tap them to open their profile.</p>
+  `);
+
   // ---- progression
   function upgradeCost(i, r) {
     const ri = RARITY_IDX(r);

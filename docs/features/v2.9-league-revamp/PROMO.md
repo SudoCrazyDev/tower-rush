@@ -1,6 +1,6 @@
 # v2.9.0 "League Revamp" promo kit
 
-> Status: copy ready, no graphics or videos yet. Design doc: [README.md](README.md).
+> Status: copy ready, launch reel done, new trailer on the website. Design doc: [README.md](README.md).
 > Website: `website/v2-9.html` (release page), release notes and news.
 
 ## What is ready
@@ -12,6 +12,10 @@
 | Website release page, notes, news, league ladder | `website/` | Done (on staging) |
 | League badges: Mythic, Immortal, Secret Society, "???" | `assets/ui/league_ranks_extra_7..10.png`, on R2 | Done (2026-10-17) |
 | Redesigned leagues list (league-coloured rows, winged row for your league) | `game/src/scenes/leagues.ts` | Done (on staging) |
+| Player profiles (deck idling on their last arena, badges) | `game/src/scenes/profileView.ts` | Done (on staging) |
+| Leagues list as scrolling cards with each league's top player | `game/src/scenes/leagues.ts`, `GET /api/leagues/top` | Done (on staging) |
+| New website trailer | R2 `video/trailer_v2.mp4` (+ `.webp` poster) | Done (on staging) |
+| Launch reel (23 s, 9:16, in-game music) | R2 `marketing/reels/v2.9-profiles-leagues.mp4` | Done |
 | Copy below (posts, taglines, patch notes) | this file | Done |
 
 **Keep the secret.** Public posts never name the Secret Society League or its requirements
@@ -29,6 +33,8 @@ or earned through donations.
 - "Two new leagues above Champion: Mythic and Immortal."
 - "There's a league no one talks about."
 - "You don't apply. You get asked."
+- "See anyone's deck."
+- "Who rules your league?"
 
 ## Hashtags
 
@@ -48,10 +54,28 @@ Reach: `#TowerDefense #IndieGame #IndieDev #MobileGames #BrowserGames #FantasyGa
 > 🏟️ **Arena lock.** Only your two highest arenas count for trophies.
 > 🚪 **Leaving a run counts as a loss.** No more quitting a bad run.
 >
+> 👑 **Player profiles.** Tap anyone on the leaderboard to see their hero and deck idling on their last arena, their record and every badge they've earned. Tap your own avatar for yours.
+> 📜 **A new leagues list.** Scroll every league and see who rules each one right now.
+> 🎬 **A new trailer** on crownnkeep.com.
+>
 > And there's one more league. No one talks about it. If you're worthy, you'll know.
 >
 > Play free in your browser: https://crownnkeep.com
 > The new ladder: https://crownnkeep.com/v2-9
+
+## Launch reel (FB Reels / TikTok / Shorts)
+
+- **File:** https://assets.crownnkeep.com/marketing/reels/v2.9-profiles-leagues.mp4 (1080x1920, 23 s, H.264 + AAC).
+- **What's in it:** real gameplay. 0-8 s "See anyone's deck": a player's profile with the hero
+  and deck idling on their arena and 9 league badges. 8-20 s "Who rules your league?": the new
+  leagues list scrolling from Bronze up to Immortal and its top player. 20-23 s end card: logo,
+  "LEAGUE REVAMP", "Player profiles · New leagues list", "Play free · crownnkeep.com".
+- **Music:** the game's own lobby theme (synth, recorded live from the game), so no licensing
+  issues. Loudness-normalized to -14 LUFS.
+- **Caption:**
+
+> See anyone's deck. Climb to the top of your league. 👑 Crown & Keep 2.9 "League Revamp" is out: player profiles, a new leagues list, and trophies you have to earn. Play free in your browser: crownnkeep.com
+> #CrownAndKeep #LeagueRevamp #TowerDefense #IndieGame #BrowserGames #GameUpdate
 
 ## Short post (X / TikTok caption)
 
@@ -77,6 +101,8 @@ two new leagues, and one no one talks about. Play free: crownnkeep.com #CrownAnd
 - Ranked PvP trophies unchanged; Stories unaffected
 - Redesigned leagues list: rows in each league's colour, and your league's row gets its badge's wings
 - New badges for Mythic and Immortal
+- Player profiles: tap anyone on the leaderboard, an arena's top players or a league's top player
+- Leagues list: scrolling league cards, each with its current top player
 - ???
 
 ## Footage to capture (for edits and spotlights)
