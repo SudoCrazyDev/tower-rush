@@ -39,136 +39,149 @@ AI video often garbles text. Use one of these:
   - [25-30s] The camera pulls back and rises over the calm castle gate at dawn, banners waving.
 - **Caption:** Every kingdom needs a keeper. Build your army, merge your heroes, hold the gate. Crown & Keep is free in your browser. crownnkeep.com
 
+Reels 2-12 use no start or end frame. The arena and `docs/marketing/story-reels/end_card.png` are references instead, uploaded in the order shown.
+
 ## 2. One More Merge (comedy)
 
-- **Start:** `assets/locations/arena_meadow.png`
-- **Refs:** `@ref1` `assets/units/hooded_archer.png`, `@ref2` `assets/units/goblin_bomber.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/units/hooded_archer.png`, `@ref2` `assets/units/goblin_bomber.png`, `@ref3` `assets/locations/arena_meadow.png`, `@ref4` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A sunny meadow lane. One hooded archer (@ref1) shoots at a goblin bomber (@ref2), who laughs and keeps walking.
-  - [6-12s] A second identical archer walks in. They bump shoulders, glow bright white and merge into one bigger archer with a tiny gold star on the hood. The new archer looks smug.
-  - [12-19s] The goblin bomber gulps. Two more archers walk in. They all merge again with a bigger flash into a giant archer who barely fits the frame.
-  - [19-25s] The giant archer fires one huge glowing arrow. The goblin and a crowd of monsters behind it pop into a shower of gold coins.
-  - [25-30s] The coins rain down. The camera rises past the trees toward the castle on the hill.
+
+```
+[0-6s] The sunny meadow lane from @ref3; one hooded archer (@ref1) shoots at a goblin bomber (@ref2), who laughs and keeps walking. [6-12s] A second identical archer walks in, they bump shoulders, glow bright white and merge into one bigger archer with a tiny gold star on the hood, looking smug. [12-19s] The goblin gulps; two more archers walk in and merge again with a bigger flash into a giant archer who barely fits the frame. [19-25s] The giant archer fires one huge glowing arrow; the goblin and a crowd of monsters behind it pop into a shower of gold coins. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref4: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** It's never just one more merge. Crown & Keep: free merge tower defense. crownnkeep.com
 
-## 3. Saving the Muse (Candy Kingdom)
+## 3. Saving the Muse
 
-- **Start:** `assets/locations/arena_candy_land.png`
-- **Refs:** `@ref1` `assets/units/princess_muse.png`, `@ref2` `assets/bosses/sugar_plum_tyrant.png`, `@ref3` `assets/units/lance_knight.png`, `@ref4` `assets/bosses/gummy_warlord.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/units/princess_muse.png`, `@ref2` `assets/bosses/sugar_plum_tyrant.png`, `@ref3` `assets/units/lance_knight.png`, `@ref4` `assets/bosses/gummy_warlord.png`, `@ref5` `assets/locations/arena_candy_land.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A colorful candy kingdom. Violet cracks of chaos spread over the candy walls and the sky turns purple.
-  - [6-12s] Inside a candy palace, Princess Muse (@ref1) is held behind glowing violet bars. The corrupted Sugar Plum Tyrant (@ref2) laughs on his throne.
-  - [12-18s] At the candy gates, a lance knight (@ref3) charges through a wave of violet-eyed gummy bears while the Gummy Warlord (@ref4) roars.
-  - [18-25s] The knight smashes the violet bars with his lance. The chaos shatters into sparkles, and Muse smiles and raises a glowing heart. The candy colors flood back.
-  - [25-30s] The camera flies out of the palace window toward a bright castle gate.
+
+```
+[0-6s] The colorful candy kingdom from @ref5; violet cracks of chaos spread over the candy walls and the sky turns purple. [6-12s] Inside a candy palace, Princess Muse (@ref1) is trapped behind glowing violet bars while the corrupted Sugar Plum Tyrant (@ref2) laughs on his throne. [12-18s] At the candy gates a lance knight (@ref3) charges through violet-eyed gummy bears as the Gummy Warlord (@ref4) roars. [18-25s] The knight smashes the violet bars with his lance, the chaos shatters into sparkles, Muse smiles and raises a glowing heart, and bright candy colors flood back. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** The Candy Kingdom is falling to chaos. Only you can save the Muse. Story mode, free to play. crownnkeep.com
 
-## 4. The Dragon at the Gate (boss fight)
+## 4. The Dragon at the Gate
 
-- **Start:** `assets/locations/arena_volcano.png`
-- **Refs:** `@ref1` `assets/bosses/fire_dragon.png`, `@ref2` `assets/units/frost_sorceress.png`, `@ref3` `assets/units/thunder_dwarf.png`, `@ref4` `assets/units/aegis_knight.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/bosses/fire_dragon.png`, `@ref2` `assets/units/frost_sorceress.png`, `@ref3` `assets/units/thunder_dwarf.png`, `@ref4` `assets/units/aegis_knight.png`, `@ref5` `assets/locations/arena_volcano.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A volcano rumbles. Lava splashes. A huge shadow passes over the lane.
-  - [6-12s] The fire dragon (@ref1) lands with a quake and breathes a wall of fire toward three small towers.
-  - [12-18s] The aegis knight (@ref4) raises a shield and the fire splits around it. The frost sorceress (@ref2) answers with a blast of ice that freezes one of the dragon's wings.
-  - [18-25s] The thunder dwarf (@ref3) slams his hammer. A lightning bolt strikes the frozen dragon, who explodes into a shower of gold coins and a glowing treasure chest.
-  - [25-30s] The smoke clears and the camera rises toward a calm castle gate under a starry sky.
+
+```
+[0-6s] The volcano lane from @ref5 rumbles, lava splashes, a huge shadow passes over the lane. [6-12s] The fire dragon (@ref1) lands with a quake and breathes a wall of fire toward three small towers. [12-18s] The aegis knight (@ref4) raises his shield and the fire splits around it; the frost sorceress (@ref2) answers with an ice blast that freezes the dragon's wing. [18-25s] The thunder dwarf (@ref3) slams his hammer, a lightning bolt strikes the frozen dragon, and it explodes into gold coins and a glowing treasure chest. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** Bosses don't knock. Freeze them, shock them, take their loot. crownnkeep.com
 
-## 5. The Horde Is Here (Orcs, v2.8)
+## 5. The Horde Is Here
 
-- **Start:** `assets/locations/arena_mountain_pass.png`
-- **Refs:** `@ref1` `assets/heroes/orc_warchief.png`, `@ref2` `assets/units/grunt.png`, `@ref3` `assets/units/headhunter.png`, `@ref4` `assets/units/kodo_beasts.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/heroes/orc_warchief.png`, `@ref2` `assets/units/grunt.png`, `@ref3` `assets/units/headhunter.png`, `@ref4` `assets/units/kodo_beasts.png`, `@ref5` `assets/locations/arena_mountain_pass.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] Drums boom in a misty mountain pass. Dust shakes off the rocks with every beat.
-  - [6-12s] The orc warchief (@ref1) steps out of the fog and raises his axe. Behind him a grunt (@ref2) roars, red rage glowing in his eyes.
-  - [12-18s] A headhunter (@ref3) spins and throws axes in a frenzy. A kodo beast (@ref4) stomps in with war drums on its back, and red buff rings pulse over the orcs.
-  - [18-25s] The whole horde charges as one and smashes through a wave of skeletons, which burst into bones and gold coins.
-  - [25-30s] The dust settles. The camera rises over the pass toward the castle gate in the distance.
+
+```
+[0-6s] War drums boom in the misty mountain pass from @ref5, dust shakes off the rocks with every beat. [6-12s] The orc warchief (@ref1) steps out of the fog and raises his axe; behind him a grunt (@ref2) roars with red rage glowing in his eyes. [12-18s] A headhunter (@ref3) spins and throws axes in a frenzy; a kodo beast (@ref4) stomps in with war drums on its back as red buff rings pulse over the orcs. [18-25s] The whole horde charges as one and smashes through a wave of skeletons, which burst into bones and gold coins. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** The Horde has arrived. Grunt, Headhunter, Peon, Spirit Walker and Kodo are now in Crown & Keep. crownnkeep.com
 
-## 6. Rise of the Kraken (Sand & Sea)
+## 6. Rise of the Kraken
 
-- **Start:** `assets/locations/arena_pirate_beach.png`
-- **Refs:** `@ref1` `assets/bosses/kraken.png`, `@ref2` `assets/units/tide_mermaid.png`, `@ref3` `assets/units/pirate_gunner.png`, `@ref4` `assets/bosses/ghost_pirate_captain.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/bosses/kraken.png`, `@ref2` `assets/units/tide_mermaid.png`, `@ref3` `assets/units/pirate_gunner.png`, `@ref4` `assets/bosses/ghost_pirate_captain.png`, `@ref5` `assets/locations/arena_pirate_beach.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A calm pirate beach at sunset. Small waves. A ghostly ship appears in the fog.
-  - [6-12s] The ghost pirate captain (@ref4) points his sword at the shore. The sea swells and the kraken (@ref1) rises, its tentacles towering over the beach.
-  - [12-18s] On the sand, a pirate gunner (@ref3) fires a cannon blast. A tide mermaid (@ref2) summons a spinning water spout.
-  - [18-25s] The water spout and cannonballs hit the kraken together. It sinks back into the sea with a giant splash, and gold coins wash up on the shore.
-  - [25-30s] The camera follows the waves up the beach and rises toward the castle gate on the cliff.
+
+```
+[0-6s] The pirate beach from @ref5 at sunset, small waves, a ghostly ship appears in the fog. [6-12s] The ghost pirate captain (@ref4) points his sword at the shore; the sea swells and the kraken (@ref1) rises, tentacles towering over the beach. [12-18s] On the sand a pirate gunner (@ref3) fires a cannon blast while a tide mermaid (@ref2) summons a spinning water spout. [18-25s] Water spout and cannonballs hit the kraken together; it sinks back into the sea with a giant splash and gold coins wash up on shore. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** Something big lives in the deep. Sand & Sea is waiting. crownnkeep.com
 
-## 7. Lantern Night (graveyard)
+## 7. Lantern Night
 
-- **Start:** `assets/locations/arena_graveyard.png`
-- **Refs:** `@ref1` `assets/bosses/lich_king.png`, `@ref2` `assets/units/lantern_knight.png`, `@ref3` `assets/units/lantern_ghost.png`, `@ref4` `assets/units/pumpkin_scarecrow.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/bosses/lich_king.png`, `@ref2` `assets/units/lantern_knight.png`, `@ref3` `assets/units/lantern_ghost.png`, `@ref4` `assets/units/pumpkin_scarecrow.png`, `@ref5` `assets/locations/arena_graveyard.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A foggy graveyard under a green moon. Gravestones crack and bony hands push out of the dirt.
-  - [6-12s] The lich king (@ref1) floats up from a crypt with glowing blue eyes. Skeletons rise all around him.
-  - [12-18s] A small warm light appears. The lantern knight (@ref2) walks forward with a glowing lantern, a friendly lantern ghost (@ref3) beside him, and a pumpkin scarecrow (@ref4) waves its scythe.
-  - [18-25s] The lantern flares into a golden blast of light. The skeletons crumble into dust and gold coins and the lich king shields his eyes and shatters.
-  - [25-30s] The fog lifts and the camera rises over the graveyard toward a calm castle gate at dawn.
+
+```
+[0-6s] The foggy graveyard from @ref5 under a green moon; gravestones crack and bony hands push out of the dirt. [6-12s] The lich king (@ref1) floats up from a crypt with glowing blue eyes as skeletons rise around him. [12-18s] A small warm light appears: the lantern knight (@ref2) walks forward with a glowing lantern, a friendly lantern ghost (@ref3) beside him, a pumpkin scarecrow (@ref4) waving its scythe. [18-25s] The lantern flares into a golden blast of light; skeletons crumble into dust and gold coins, and the lich king shields his eyes and shatters. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** The dead walk tonight. Light the lanterns. crownnkeep.com
 
-## 8. The Iron Oath (dwarves)
+## 8. The Iron Oath
 
-- **Start:** `assets/locations/arena_oath_field.png`
-- **Refs:** `@ref1` `assets/units/durgrim.png`, `@ref2` `assets/bosses/walking_forge.png`, `@ref3` `assets/units/oath_knight.png`, `@ref4` `assets/units/cyclops_smith.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/units/durgrim.png`, `@ref2` `assets/bosses/walking_forge.png`, `@ref3` `assets/units/oath_knight.png`, `@ref4` `assets/units/cyclops_smith.png`, `@ref5` `assets/locations/arena_oath_field.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] An old battlefield of broken shields. Smoke and orange sparks drift in the wind.
-  - [6-12s] The ground shakes. The walking forge (@ref2), a giant iron machine with a burning furnace heart, stomps over the hill.
-  - [12-18s] The dwarf Durgrim (@ref1) slams his hammer on a glowing anvil and swears an oath. Beside him the oath knight (@ref3) and the cyclops smith (@ref4) raise their weapons.
-  - [18-25s] Together they charge. The forge's cannons fire and miss, the cyclops smith cracks its leg, and Durgrim's hammer smashes its furnace core. It collapses into gears and gold coins.
-  - [25-30s] The camera rises through the smoke toward the castle gate, banners waving.
+
+```
+[0-6s] The old battlefield of broken shields from @ref5, smoke and orange sparks drifting in the wind. [6-12s] The ground shakes as the walking forge (@ref2), a giant iron machine with a burning furnace heart, stomps over the hill. [12-18s] The dwarf Durgrim (@ref1) slams his hammer on a glowing anvil and swears an oath; beside him the oath knight (@ref3) and the cyclops smith (@ref4) raise their weapons. [18-25s] They charge together; the forge's cannons miss, the cyclops cracks its leg, and Durgrim's hammer smashes its furnace core; it collapses into gears and gold coins. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** A broken oath. An iron giant. One last stand. crownnkeep.com
 
-## 9. Order in the Court (Silver Tribunal, comedy)
+## 9. Order in the Court (comedy)
 
-- **Start:** `assets/locations/arena_aurelion_court.png`
-- **Refs:** `@ref1` `assets/bosses/prosecutor.png`, `@ref2` `assets/bosses/bailiff.png`, `@ref3` `assets/units/raccoon_thief.png`, `@ref4` `assets/units/argent.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/bosses/prosecutor.png`, `@ref2` `assets/bosses/bailiff.png`, `@ref3` `assets/units/raccoon_thief.png`, `@ref4` `assets/units/argent.png`, `@ref5` `assets/locations/arena_aurelion_court.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A grand silver courtroom. The prosecutor (@ref1) bangs a gavel and points dramatically.
-  - [6-12s] The bailiff (@ref2) drags in a raccoon thief (@ref3), who is holding a sack of gold coins and whistling innocently.
-  - [12-18s] The prosecutor shouts and the sack falls open. Hundreds of gold coins spill across the floor. Everyone freezes.
-  - [18-25s] Argent (@ref4) bursts through the courtroom doors in shining silver armor. The raccoon uses the distraction to grab the coins and run out of the door.
-  - [25-30s] The camera chases the raccoon out of the court, down the road, and up to the castle gate.
+
+```
+[0-6s] The grand silver courtroom from @ref5; the prosecutor (@ref1) bangs a gavel and points dramatically. [6-12s] The bailiff (@ref2) drags in a raccoon thief (@ref3) holding a sack of gold coins and whistling innocently. [12-18s] The prosecutor shouts, the sack falls open and hundreds of gold coins spill across the floor; everyone freezes. [18-25s] Argent (@ref4) bursts through the courtroom doors in shining silver armor; the raccoon uses the distraction to scoop up the coins and run out the door, comedic timing. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** The court finds you... guilty of having too much fun. The Silver Tribunal awaits. crownnkeep.com
 
 ## 10. Rivals (PvP)
 
-- **Start:** `assets/story/pvp_poster.png` (crop or outpaint to 9:16 first if WAN complains)
-- **Refs:** `@ref1` `assets/heroes/young_king.png`, `@ref2` `assets/heroes/dark_knight.png`, `@ref3` `assets/units/fox_samurai.png`, `@ref4` `assets/units/shadow_ninja.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/heroes/young_king.png`, `@ref2` `assets/heroes/dark_knight.png`, `@ref3` `assets/units/fox_samurai.png`, `@ref4` `assets/units/shadow_ninja.png`, `@ref5` `assets/story/pvp_poster.png`, `@ref6` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] Two castles face each other across a glowing battlefield. Thunder rolls.
-  - [6-12s] On the left the young king (@ref1) smirks. On the right the dark knight (@ref2) lowers his visor. The camera snaps between their eyes.
-  - [12-18s] Both throw cards at the same time. A fox samurai (@ref3) and a shadow ninja (@ref4) appear in puffs of smoke and dash toward each other.
-  - [18-25s] Their blades clash in the middle in a huge spark. Slow motion, then the shockwave knocks the dark knight's helmet crooked. The young king laughs.
-  - [25-30s] The camera whips around and flies to the young king's castle gate.
+
+```
+[0-6s] Two castles face each other across a glowing battlefield in the style of @ref5 as thunder rolls. [6-12s] On the left the young king (@ref1) smirks; on the right the dark knight (@ref2) lowers his visor; camera snaps between their eyes. [12-18s] Both throw cards at the same time; a fox samurai (@ref3) and a shadow ninja (@ref4) appear in puffs of smoke and dash toward each other. [18-25s] Their blades clash in the middle with a huge spark, slow motion, then the shockwave knocks the dark knight's helmet crooked and the young king laughs. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref6: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** Real players. Real time. Who keeps the crown? PvP is live. crownnkeep.com
 
-## 11. The Littlest Hero (heartwarming)
+## 11. The Littlest Hero
 
-- **Start:** `assets/locations/arena_winter_village.png`
-- **Refs:** `@ref1` `assets/units/phoenix_chick.png`, `@ref2` `assets/bosses/frost_wyrm.png`, `@ref3` `assets/units/penguin_wizard.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/units/phoenix_chick.png`, `@ref2` `assets/bosses/frost_wyrm.png`, `@ref3` `assets/units/penguin_wizard.png`, `@ref4` `assets/locations/arena_winter_village.png`, `@ref5` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A snowy village. Snow falls heavily. The towers are frozen solid and a penguin wizard (@ref3) shivers.
-  - [6-12s] The frost wyrm (@ref2) coils around the village bell tower and breathes an icy storm.
-  - [12-18s] A tiny phoenix chick (@ref1) peeks out of a nest, looks scared, then puffs up its chest bravely.
-  - [18-25s] The chick bursts into a huge fiery phoenix glow. The flames melt the ice, the towers thaw, and the frost wyrm flees into the clouds. The penguin wizard cheers.
-  - [25-30s] The glow fades and the tiny chick sits proudly in the snow. The camera rises toward the warm castle gate.
+
+```
+[0-6s] The snowy village from @ref4 in heavy snowfall; the towers are frozen solid and a penguin wizard (@ref3) shivers. [6-12s] The frost wyrm (@ref2) coils around the village bell tower and breathes an icy storm. [12-18s] A tiny phoenix chick (@ref1) peeks out of a nest, looks scared, then puffs up its chest bravely. [18-25s] The chick bursts into a huge fiery phoenix glow; the flames melt the ice, the towers thaw, the frost wyrm flees into the clouds and the penguin wizard cheers. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref5: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** Small hero. Big heart. Every unit has a story. crownnkeep.com
 
-## 12. The Jawbreaker Cracks (mystery)
+## 12. The Jawbreaker Cracks
 
-- **Start:** `assets/locations/arena_jawbreaker_core.png`
-- **Refs:** `@ref1` `assets/bosses/chaos_jawbreaker.png`, `@ref2` `assets/units/rogue_knight.png`, `@ref3` `assets/units/berserker_sellsword.png`
+- **Start frame:** none
+- **End frame:** none
+- **Refs:** `@ref1` `assets/bosses/chaos_jawbreaker.png`, `@ref2` `assets/units/rogue_knight.png`, `@ref3` `assets/units/berserker_sellsword.png`, `@ref4` `assets/locations/arena_jawbreaker_core.png`, `@ref5` `docs/marketing/story-reels/end_card.png`
 - **Prompt:**
-  - [0-6s] A giant cracked jawbreaker (@ref1) floats in a violet void, pulsing with chaos light.
-  - [6-12s] A rogue knight (@ref2) and a berserker sellsword (@ref3) climb its surface and strike it again and again. Each hit peels off a glowing layer.
-  - [12-18s] Deep cracks race over the core. Violet light pours out and the knights shield their eyes.
-  - [18-25s] The core splits open. Inside, a vision of a quiet human village glows, then a dark shadow falls over it.
-  - [25-30s] The vision zooms out into a starry sky and settles on the castle gate.
+
+```
+[0-6s] The violet void from @ref4; a giant cracked jawbreaker (@ref1) floats there, pulsing with chaos light. [6-12s] A rogue knight (@ref2) and a berserker sellsword (@ref3) climb its surface and strike it again and again; each hit peels off a glowing layer. [12-18s] Deep cracks race over the core, violet light pours out and the knights shield their eyes. [18-25s] The core splits open; inside, a vision of a quiet human village glows, then a dark shadow falls over it, mysterious mood. [25-30s] The camera rises to the castle gate and settles on the end card exactly as in @ref5: the castle, the Crown & Keep logo, the yellow PLAY NOW FOR FREE button and crownnkeep.com, text sharp and unchanged, held still for the last 2 seconds. Flat 2D cartoon game art, thick dark navy outlines, two-tone cel shading, chunky chibi characters with big heads and big expressive eyes, bright saturated colors, keep every character's design identical to its reference image, smooth cinematic camera, no subtitles and no text except the end card text, no watermark.
+```
+
 - **Caption:** What's inside the chaos? Play the story and find out. crownnkeep.com
 
 ---
