@@ -1,6 +1,7 @@
 # Website changelog
 
 ## 1.6.0
+- Trailer: "Watch trailer" plays the new 30-second trailer (`video/trailer_v2.mp4`, 1080p re-encoded to 18 MB with faststart) with its own poster frame (`video/trailer_v2.webp`). The old `video/trailer.mp4` stays in R2.
 - Leagues: the trophy card, home ladder and wiki explain the v2.9 rules (each league's min wave, no gain cap, two highest arenas only), with Mythic and Immortal added. The Secret Society shows only as "??? League, Invite only".
 - New release page `v2-9.html` (League Revamp: trophy rules, the league ladder table, arena lock, leaving a run, and a "???" teaser that never names the Society). Release notes get v2.9.0 as the latest (v2.3 moves to the history), and the home page gets a v2.9 news post and live pill. Cache queries on `data/game.js` and `app.js` bumped to `?v=2.9.0`.
 
