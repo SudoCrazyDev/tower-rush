@@ -5,7 +5,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { DEFAULT_UNITS, ARCHETYPES, STYLES, maxRank, maxPowerUp, powerUpCost, rarityIndex, unitStats } from "../../shared/units.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES } from "../../shared/monsters.ts";
 import { DEFAULT_ARENAS } from "../../shared/arenas.ts";
-import { DEFAULT_LEAGUES } from "../../shared/leagues.ts";
+import { DEFAULT_LEAGUES, MYSTERY_ICON, TROPHY_BASE } from "../../shared/leagues.ts";
 import { kitPrimary, kitSummary, perkSummary } from "../../shared/kit.ts";
 import { DEFAULT_HEROES, HERO_POWERS, heroAbilityText } from "../../shared/heroes.ts";
 import { RACES } from "../../shared/races.ts";
@@ -161,10 +161,11 @@ const out = {
   bosses: DEFAULT_BOSSES,
   arenas: DEFAULT_ARENAS,
   heroes: DEFAULT_HEROES.map((h) => ({ ...h, abilityName: h.ability, powerLabel: HERO_POWERS[h.power]?.label, ability: heroAbilityText(h) })),
-  leagues: DEFAULT_LEAGUES,
+  // The invite-only Secret Society stays a mystery on the site: no name, gate or fees.
+  leagues: DEFAULT_LEAGUES.map((l) => (l.society ? { id: l.id, name: "??? League", trophies: l.trophies, color: "#8f86b0", icon: MYSTERY_ICON, reward: { coins: 0, gems: 0, chest: null }, hidden: true } : l)),
   leagueBadges: index.atlas.leagues, // league badge art on R2: ui/league_0 .. n-1
   // How trophies move: arena runs (battleRewards) and Ranked PvP.
-  trophies: { perWave: ECONOMY.trophiesPerWave, offset: ECONOMY.trophyOffset, maxLoss: ECONOMY.trophyMaxLoss },
+  trophies: { base: TROPHY_BASE, arenasThatCount: 2 },
   chests: Object.fromEntries(DEFAULT_CHESTS.map((c) => [c.id, { name: c.name, image: c.image }])),
   pvp: { rules: DEFAULT_PVP.rules, sends: DEFAULT_PVP.sends.filter((s) => s.enabled), tiers: DEFAULT_PVP.tiers, modes: PVP_MODE_INFO },
   awakened: index.portraits_awakened,

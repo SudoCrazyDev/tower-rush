@@ -107,3 +107,12 @@ export function arenaForTrophies(trophies: number): ArenaDef {
   for (const a of ARENAS) if (a.trophies <= trophies && (best.trophies > trophies || a.trophies >= best.trophies)) best = a;
   return best;
 }
+
+/**
+ * v2.9 arena lock: solo runs win or lose trophies only in the player's two highest unlocked
+ * arenas. Lower arenas still pay gold but leave trophies alone, so they can't be farmed.
+ */
+export function trophyArena(arenaId: string, trophies: number) {
+  const unlocked = ARENAS.filter((a) => a.trophies <= trophies).sort((a, b) => b.trophies - a.trophies);
+  return unlocked.slice(0, 2).some((a) => a.id === arenaId);
+}

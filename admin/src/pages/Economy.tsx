@@ -66,15 +66,12 @@ const GROUPS: { title: string; desc?: string; fields: [NumKey | ListKey, string,
   },
   {
     title: "Battle rewards",
-    desc: "Gold = wave × coinsPerWave × (1 + arena number × arenaCoinBonus) + bosses × coinsPerBoss. Trophies = wave × trophiesPerWave − trophyOffset (never below −trophyMaxLoss).",
+    desc: "Gold = wave × coinsPerWave × (1 + arena number × arenaCoinBonus) + bosses × coinsPerBoss. Trophies follow each league's own rules (Leagues page).",
     fields: [
       ["coinsPerWave", "Gold per wave reached", 1],
       ["arenaCoinBonus", "Extra gold per arena number", 0.01],
       ["coinsPerBoss", "Gold per boss killed", 5],
       ["gemsPerBoss", "Gems per boss killed", 1],
-      ["trophiesPerWave", "Trophies per wave reached", 1],
-      ["trophyOffset", "Trophies subtracted", 1],
-      ["trophyMaxLoss", "Max trophies lost in one run", 1],
     ],
   },
   {

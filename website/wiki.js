@@ -291,12 +291,15 @@
     diamond: ["legendary", "hue-rotate(170deg) saturate(1.3) brightness(1.05)"],
     master: ["mythic", "hue-rotate(-95deg) saturate(1.1)"],
     champion: ["mythic", "none"],
+    mythic: ["mythic", "hue-rotate(-40deg) saturate(1.2)"],
+    immortal: ["mythic", "grayscale(.7) brightness(1.35)"],
+    secret_society: ["mythic", "grayscale(1) brightness(.45)"],
   };
   section("leagues", "Leagues", "ui/league_0.webp", `
-    <p class="lead">Trophies come from arena runs and Ranked PvP. An arena run pays ${E.trophiesPerWave} per wave reached minus ${E.trophyOffset}, and never takes more than ${E.trophyMaxLoss}. Each league pays its reward once.</p>
+    <p class="lead">Trophies come from arena runs and Ranked PvP. Each league sets a minimum wave: an arena run that reaches it wins ${D.trophies.base} trophies plus more for every wave past it, with no cap. A run that falls short loses trophies, up to the league's max loss. Only your two highest arenas count. Each league pays its reward once.</p>
     <div class="ladder2">${D.leagues.map((l) => { const [frame, tint] = LEAGUE_FRAME[l.id] ?? ["common", "none"]; return `<div class="rung2" style="--c:${l.color};--frame:url(${ART}/cards/frame_${frame}.webp);--tint:${tint}">
       ${img(l.icon < D.leagueBadges ? `ui/league_${l.icon}.webp` : "items/trophy.webp", l.name)}
-      <b>${l.name.replace(/ League$/, "")}<i>League</i></b><small>${img("items/trophy.webp", "", "ic")}${fmt(l.trophies)}</small><span>${l.reward.coins || l.reward.gems || l.reward.chest ? reward(l.reward) : "<em>Starting league</em>"}</span></div>`; }).join("")}</div>
+      <b>${l.name.replace(/ League$/, "")}<i>League</i></b><small>${l.hidden ? "Invite only" : `${img("items/trophy.webp", "", "ic")}${fmt(l.trophies)} · wave ${l.minWave}`}</small><span>${l.hidden ? "<em>No one speaks of it</em>" : l.reward.coins || l.reward.gems || l.reward.chest ? reward(l.reward) : "<em>Starting league</em>"}</span></div>`; }).join("")}</div>
   `);
 
   // ---- progression
@@ -312,7 +315,7 @@
       <ul>
         ${rule("items/coins.webp", "Coins", `${E.coinsPerWave} a wave (+${pct(E.arenaCoinBonus)} per arena) + ${E.coinsPerBoss} a boss`)}
         ${rule("items/gems.webp", "Gems", `${E.gemsPerBoss} a boss`)}
-        ${rule("items/trophy.webp", "Trophies", `${E.trophiesPerWave} × wave − ${E.trophyOffset}`)}
+        ${rule("items/trophy.webp", "Trophies", `From your league's min wave; lose them below it`)}
         ${rule("items/gift_box.webp", "Free gift", `${E.giftCoins} coins + ${E.giftGems} gems / ${E.giftCooldownHours}h`)}
       </ul>
     </div>

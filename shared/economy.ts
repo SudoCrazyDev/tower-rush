@@ -1,3 +1,5 @@
+import { runTrophies, type LeagueDef } from "./leagues.ts";
+
 /** Every tunable number that isn't tied to a single unit, monster or arena. */
 export interface Economy {
   // battle
@@ -47,9 +49,6 @@ export interface Economy {
   arenaCoinBonus: number;
   coinsPerBoss: number;
   gemsPerBoss: number;
-  trophiesPerWave: number;
-  trophyOffset: number;
-  trophyMaxLoss: number;
   // new players
   startingCoins: number;
   startingGems: number;
@@ -110,9 +109,6 @@ export const DEFAULT_ECONOMY: Economy = {
   arenaCoinBonus: 0.15,
   coinsPerBoss: 60,
   gemsPerBoss: 5,
-  trophiesPerWave: 3,
-  trophyOffset: 18,
-  trophyMaxLoss: 15,
 
   startingCoins: 300,
   startingGems: 120,
@@ -156,12 +152,16 @@ export const DEFAULT_CHESTS: ChestDef[] = [
 
 export const CHESTS: ChestDef[] = structuredClone(DEFAULT_CHESTS);
 
-/** Rewards for a finished run, computed by the server and shown by the client. */
-export function battleRewards(wave: number, bossesKilled: number, arenaIndex: number) {
+/**
+ * Rewards for a finished run, computed by the server and shown by the client. Trophies follow
+ * the player's league (`league`, see runTrophies in leagues.ts); null when the run can't earn
+ * or lose trophies (an arena below the player's two highest).
+ */
+export function battleRewards(wave: number, bossesKilled: number, arenaIndex: number, league: LeagueDef | null) {
   const e = ECONOMY;
   return {
     coins: Math.round(wave * e.coinsPerWave * (1 + arenaIndex * e.arenaCoinBonus) + bossesKilled * e.coinsPerBoss),
     gems: bossesKilled * e.gemsPerBoss,
-    trophies: Math.max(-e.trophyMaxLoss, wave * e.trophiesPerWave - e.trophyOffset),
+    trophies: league ? runTrophies(wave, league) : 0,
   };
 }

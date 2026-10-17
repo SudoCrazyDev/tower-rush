@@ -2,7 +2,7 @@
 import { ECONOMY, CHESTS, type ChestDef } from "./economy.ts";
 import { HEROES, HERO_BY_ID } from "./heroes.ts";
 import { freshDaily, utcDay, type DailyState, type LoginState, type Reward } from "./daily.ts";
-import { unpaidLeagues } from "./leagues.ts";
+import { LEAGUES, societyInvite, unpaidLeagues } from "./leagues.ts";
 import type { OfferDef } from "./offers.ts";
 import { PVP } from "./pvp.ts";
 import { CHEST_RARITIES, RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, canDrop, rarityIndex, upgradeCost, maxCardLevel, type ChestRarity, type Rarity } from "./units.ts";
@@ -48,6 +48,8 @@ export interface Profile {
   login: LoginState;
   /** Leagues whose one-time promotion reward has been paid. */
   leagues: string[];
+  /** Membership of an invite-only society league (v2.9); missing or null for everyone else. */
+  society?: SocietyMembership | null;
   /** Shop offers bought so far, by offer id (for per-player limits). */
   offers: Record<string, number>;
   /** Tutorial parts finished or skipped ("battle", "deck"); each one runs once per account. */
@@ -133,10 +135,59 @@ export interface Promotion {
 
 /** Pay the promotion reward of every league the player has reached for the first time. */
 export function payPromotions(p: Profile, rand?: () => number): Promotion[] {
-  return unpaidLeagues(p.trophies, p.leagues).map((l) => {
+  return unpaidLeagues(p.trophies, p.leagues, p.society?.league ?? null).map((l) => {
     p.leagues.push(l.id);
     return { league: l.id, reward: l.reward, loot: grantReward(p, l.reward, rand) };
   });
+}
+
+/** A player's place in an invite-only society league (v2.9). */
+export interface SocietyMembership {
+  league: string;
+  joined: number;
+  /** Dues are paid up to this time (ms); the next dues are taken when it passes. */
+  paidUntil: number;
+}
+
+const DAY_MS = 86_400_000;
+
+/** Why a membership ended: trophies fell below the gate, the dues couldn't be paid, or the league was removed. */
+export type SocietyLapse = "trophies" | "dues" | "gone";
+
+/**
+ * Take any society dues that have come due, and end the membership if the player has fallen
+ * below the league's trophy gate or can't pay. Returns how many dues were taken and why it ended.
+ */
+export function settleSociety(p: Profile, now = Date.now()): { dues: number; lapsed: SocietyLapse | null } {
+  const m = p.society;
+  let dues = 0;
+  if (!m) return { dues, lapsed: null };
+  const end = (why: SocietyLapse) => {
+    p.society = null;
+    return { dues, lapsed: why };
+  };
+  const league = LEAGUES.find((l) => l.id === m.league);
+  const s = league?.society;
+  if (!league || !s) return end("gone");
+  if (p.trophies < league.trophies) return end("trophies");
+  while (m.paidUntil <= now) {
+    if (p.coins < s.duesCoins || p.gems < s.duesGems) return end("dues");
+    p.coins -= s.duesCoins;
+    p.gems -= s.duesGems;
+    m.paidUntil += Math.max(1, s.duesDays) * DAY_MS;
+    dues++;
+  }
+  return { dues, lapsed: null };
+}
+
+/** Accept a society invitation: pay the entry fee and join. Returns the league joined, or a problem. */
+export function joinSociety(p: Profile, now = Date.now()) {
+  const l = societyInvite(p);
+  if (!l?.society) return { problem: "You haven't been invited" } as const;
+  p.coins -= l.society.entryCoins;
+  p.gems -= l.society.entryGems;
+  p.society = { league: l.id, joined: now, paidUntil: now + Math.max(1, l.society.duesDays) * DAY_MS };
+  return { league: l };
 }
 
 /** Pay for a shop offer and hand over its bundle. Check offerBuyProblem() first. */

@@ -54,7 +54,7 @@ export interface GameConfig {
  * own values over the defaults, so on load each hotfix it hasn't had copies the listed fields
  * from the defaults once (withHotfixes), and is recorded so later admin edits stick.
  */
-const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics | "waves")[]>; bosses?: Record<string, (keyof BossDef)[]>; economy?: (keyof Economy)[] }> = {
+const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effects: Record<string, string[]>; chapters?: Record<string, (keyof ChapterMechanics | "waves")[]>; bosses?: Record<string, (keyof BossDef)[]>; economy?: (keyof Economy)[]; leagues?: true }> = {
   "1.2.1": {
     units: { rogue_knight: ["speed"], hired_blade: ["damage", "speed"], lantern_knight: ["kit"] },
     effects: { rally: ["time"], oath: ["perKnight"] },
@@ -94,6 +94,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.8.0-sand": { units: { sand_worm: ["damage"], sand_monk: ["damage"] }, effects: {} },
   // v2.8 QoL: each Mythic gets its own projectile (Void Titan void_rift, Dragon Egg dragon_flame, Chrono Mage chrono_gear).
   "2.8.0-mythic-proj": { units: { void_titan: ["proj"], dragon_egg: ["proj"], chrono_mage: ["proj"] }, effects: {} },
+  // v2.9 league revamp: longer trophy gates, per-league min wave and trophy rules, Mythic, Immortal and the Secret Society.
+  "2.9.0-leagues": { units: {}, effects: {}, leagues: true },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {
@@ -104,9 +106,11 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
   const books = cfg.books ? structuredClone(cfg.books) : undefined;
   const bosses = cfg.bosses?.map((b) => ({ ...b }));
   const economy = { ...cfg.economy } as Record<string, unknown>;
+  let leagues = cfg.leagues;
   for (const [id, fix] of Object.entries(HOTFIXES)) {
     if (done.has(id)) continue;
     done.add(id);
+    if (fix.leagues) leagues = structuredClone(DEFAULT_LEAGUES);
     for (const f of fix.economy ?? []) economy[f] = structuredClone(DEFAULT_ECONOMY[f]);
     for (const [unitId, fields] of Object.entries(fix.units)) {
       const u = units.find((x) => x.id === unitId) as Record<string, unknown> | undefined;
@@ -129,7 +133,7 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
       }
     }
   }
-  return { ...cfg, units, effects: effects as unknown as Effects, books: books ?? cfg.books, bosses: bosses ?? cfg.bosses, economy: economy as unknown as Economy, hotfixes: [...done] };
+  return { ...cfg, units, effects: effects as unknown as Effects, books: books ?? cfg.books, bosses: bosses ?? cfg.bosses, economy: economy as unknown as Economy, leagues, hotfixes: [...done] };
 }
 
 export function defaultConfig(): GameConfig {
@@ -326,8 +330,20 @@ export function validateConfig(cfg: GameConfig): string[] {
     if (!/^#[0-9a-f]{6}$/i.test(l.color ?? "")) errs.push(`${w}: colour must look like #ffd93b`);
     if (!Number.isInteger(l.icon) || l.icon < 0) errs.push(`${w}: icon must be a whole number ≥ 0`);
     reward(l.reward, `${w} reward`);
+    num(l.minWave, `${w} min wave`, 1);
+    num(l.gainPerWave, `${w} trophies per wave gained`);
+    num(l.lossPerWave, `${w} trophies per wave lost`);
+    num(l.maxLoss, `${w} max loss`);
+    if (l.society) {
+      if (l.trophies === 0) errs.push(`${w}: an invite-only league needs a trophy gate`);
+      num(l.society.entryCoins, `${w} entry gold`);
+      num(l.society.entryGems, `${w} entry gems`);
+      num(l.society.duesCoins, `${w} dues gold`);
+      num(l.society.duesGems, `${w} dues gems`);
+      num(l.society.duesDays, `${w} dues days`, 1);
+    }
   }
-  if (!cfg.leagues.some((l) => l.trophies === 0)) errs.push("At least one league must start at 0 trophies");
+  if (!cfg.leagues.some((l) => l.trophies === 0 && !l.society)) errs.push("At least one league must start at 0 trophies");
   errs.push(...offerProblems(cfg.events, cfg.offers, chestIds));
 
   const e = cfg.economy;

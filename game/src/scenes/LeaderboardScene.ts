@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { getLeaderboard, type Leaderboard } from "../save";
 import { avatarView } from "../avatars";
-import { leagueFor } from "../../../shared/leagues.ts";
+import { leagueFor, LEAGUES } from "../../../shared/leagues.ts";
 import { leagueBadge } from "./leagues";
 import { tierBadge } from "./ranked";
 import { PVP, tierFor } from "../../../shared/pvp.ts";
@@ -126,7 +126,7 @@ export class LeaderboardScene extends Phaser.Scene {
     parts.push(avatarView(this, ax, y, 74, r.avatar, r.hero));
     // League badge on the avatar's corner (the ranked tier on the ranked board).
     const rating = r.rating ?? PVP.rules.ratingStart;
-    parts.push(this.by === "rating" ? tierBadge(this, ax + 28, y + 22, 36, tierFor(rating)) : leagueBadge(this, ax + 28, y + 22, 36, leagueFor(r.trophies)));
+    parts.push(this.by === "rating" ? tierBadge(this, ax + 28, y + 22, 36, tierFor(rating)) : leagueBadge(this, ax + 28, y + 22, 36, leagueFor(r.trophies, LEAGUES, r.society ?? null)));
 
     const name = r.name.length > 18 ? `${r.name.slice(0, 17)}…` : r.name;
     parts.push(txt(this, ax + 52, y, isMe ? `${name} (you)` : name, WIDE ? 32 : 28, isMe ? "#fff4c2" : "#ffffff", [0, 0.5]));

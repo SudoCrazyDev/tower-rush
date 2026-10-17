@@ -1,7 +1,7 @@
 import { useConfig } from "../config";
 import { ASSETS } from "../api";
 import { Num, Text, Select, PageHead } from "../components";
-import type { LeagueDef } from "../../../shared/leagues.ts";
+import { TROPHY_BASE, type LeagueDef, type SocietyRules } from "../../../shared/leagues.ts";
 import type { GameConfig } from "../../../shared/config.ts";
 
 const NO_CHEST = "(none)";
@@ -12,6 +12,8 @@ export function LeaguesPage() {
   const chests = draft.chests.map((c) => c.id);
   const set = <K extends keyof LeagueDef>(i: number, k: K, v: LeagueDef[K]) => edit((c) => void (c.leagues[i][k] = v));
   const setReward = (i: number, fn: (r: LeagueDef["reward"]) => void) => edit((c) => fn(c.leagues[i].reward));
+  const setSociety = (i: number, k: keyof SocietyRules, v: number) => edit((c) => void (c.leagues[i].society![k] = v));
+  const SOCIETY: SocietyRules = { entryCoins: 5_000_000, entryGems: 10_000, duesCoins: 30_000, duesGems: 1_000, duesDays: 30 };
   const changed = (l: LeagueDef, k: keyof LeagueDef) => {
     const before = saved.leagues.find((s) => s.id === l.id);
     return !before || JSON.stringify(before[k]) !== JSON.stringify(l[k]) ? "changed" : "";
@@ -21,7 +23,18 @@ export function LeaguesPage() {
       let n = c.leagues.length + 1;
       while (c.leagues.some((l) => l.id === `league_${n}`)) n++;
       const top = Math.max(0, ...c.leagues.map((l) => l.trophies));
-      c.leagues.push({ id: `league_${n}`, name: "New League", trophies: top + 1000, color: "#ffffff", icon: c.leagues.length, reward: { coins: 1000, gems: 50, chest: null } });
+      c.leagues.push({
+        id: `league_${n}`,
+        name: "New League",
+        trophies: top + 1000,
+        color: "#ffffff",
+        icon: c.leagues.length,
+        reward: { coins: 1000, gems: 50, chest: null },
+        minWave: 50,
+        gainPerWave: 1,
+        lossPerWave: 8,
+        maxLoss: 50,
+      });
     });
   const order = draft.leagues.map((l, i) => ({ l, i })).sort((a, b) => a.l.trophies - b.l.trophies);
 
@@ -29,7 +42,7 @@ export function LeaguesPage() {
     <>
       <PageHead
         title="Leagues"
-        desc="A player's league is the highest one whose trophy gate they've reached, so losing trophies can drop them back down. The promotion reward is paid once per player, the first time they reach the league (when a battle ends)."
+        desc={`A player's league is the highest one whose trophy gate they've reached, so losing trophies can drop them back down. The promotion reward is paid once per player, the first time they reach the league (when a battle ends). Solo runs: reaching Min wave gains ${TROPHY_BASE} + (wave − Min wave) × Gain/wave trophies, with no cap; falling short loses ${TROPHY_BASE} + (Min wave − wave) × Loss/wave, at most Max loss. Only a player's two highest arenas count.`}
       />
       <div className="table-wrap">
         <table className="grid">
@@ -43,6 +56,11 @@ export function LeaguesPage() {
               <th>Gold</th>
               <th>Gems</th>
               <th>Chest</th>
+              <th title="Wave a solo run must reach to gain trophies">Min wave</th>
+              <th title="Trophies per wave past Min wave">Gain/wave</th>
+              <th title="Trophies per wave short of Min wave">Loss/wave</th>
+              <th>Max loss</th>
+              <th title="Invite-only: hidden as ??? until joined; entry fee then monthly dues">Society</th>
               <th></th>
             </tr>
           </thead>
@@ -81,6 +99,24 @@ export function LeaguesPage() {
                     </td>
                   </>
                 )}
+                <td className={changed(l, "minWave")}><Num value={l.minWave} min={1} width={60} onChange={(v) => set(i, "minWave", Math.round(v))} /></td>
+                <td className={changed(l, "gainPerWave")}><Num value={l.gainPerWave} min={0} width={60} onChange={(v) => set(i, "gainPerWave", v)} /></td>
+                <td className={changed(l, "lossPerWave")}><Num value={l.lossPerWave} min={0} width={60} onChange={(v) => set(i, "lossPerWave", v)} /></td>
+                <td className={changed(l, "maxLoss")}><Num value={l.maxLoss} min={0} width={60} onChange={(v) => set(i, "maxLoss", Math.round(v))} /></td>
+                <td className={changed(l, "society")}>
+                  <label className="small">
+                    <input type="checkbox" checked={!!l.society} onChange={(e) => set(i, "society", e.target.checked ? { ...SOCIETY } : null)} /> invite-only
+                  </label>
+                  {l.society ? (
+                    <div className="small" style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 4, marginTop: 4 }}>
+                      <span>Entry gold</span><Num value={l.society.entryCoins} min={0} step={100000} width={90} onChange={(v) => setSociety(i, "entryCoins", Math.round(v))} />
+                      <span>Entry gems</span><Num value={l.society.entryGems} min={0} step={100} width={90} onChange={(v) => setSociety(i, "entryGems", Math.round(v))} />
+                      <span>Dues gold</span><Num value={l.society.duesCoins} min={0} step={1000} width={90} onChange={(v) => setSociety(i, "duesCoins", Math.round(v))} />
+                      <span>Dues gems</span><Num value={l.society.duesGems} min={0} step={100} width={90} onChange={(v) => setSociety(i, "duesGems", Math.round(v))} />
+                      <span>Every (days)</span><Num value={l.society.duesDays} min={1} width={90} onChange={(v) => setSociety(i, "duesDays", Math.round(v))} />
+                    </div>
+                  ) : null}
+                </td>
                 <td>
                   <button className="btn small ghost" disabled={draft.leagues.length <= 1} onClick={() => edit((c) => void c.leagues.splice(i, 1))}>
                     Remove

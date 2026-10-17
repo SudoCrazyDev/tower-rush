@@ -5,7 +5,7 @@ import { Modal, Num, PageHead, Select, Thumb, fmtDate, timeAgo, toast } from "..
 import { ARCHETYPES, ARCHS, ELEMENTS, ELEMENT_COLOR, RARITIES, RARITY_STATS, maxCardLevel, type Element, type Rarity } from "../../../shared/units.ts";
 import { RACE_IDS, RACES, type Race } from "../../../shared/races.ts";
 import type { Profile } from "../../../shared/profile.ts";
-import { leagueFor } from "../../../shared/leagues.ts";
+import { leagueFor, playerLeague } from "../../../shared/leagues.ts";
 import { tierFor } from "../../../shared/pvp.ts";
 import { withPvpDefaults } from "../../../shared/config.ts";
 
@@ -195,7 +195,7 @@ export function UserDetail({ id }: { id: number }) {
       <div className="stats">
         <Stat2 icon="coins" label="Gold" value={profile.coins} />
         <Stat2 icon="gems" label="Gems" value={profile.gems} />
-        <Stat2 icon="trophy" label="Trophies" value={profile.trophies} sub={saved?.leagues.length ? leagueFor(profile.trophies, saved.leagues).name : undefined} />
+        <Stat2 icon="trophy" label="Trophies" value={profile.trophies} sub={saved?.leagues.length ? playerLeague(profile, saved.leagues).name : undefined} />
         {profile.ranked && (
           <Stat2
             icon="trophy"

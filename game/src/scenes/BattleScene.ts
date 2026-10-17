@@ -17,7 +17,7 @@ import { SUPPORT_TIP, canBecome, mimePrep, neighbours, noAttack, type SupportArc
 import { kitPrimary } from "../../../shared/kit.ts";
 import type { HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
-import { LEAGUES, leagueFor } from "../../../shared/leagues.ts";
+import { LEAGUES, playerLeague } from "../../../shared/leagues.ts";
 import { Sim, SIM_DT, type SimEvent, type SimSetup, type SimShot } from "../../../shared/sim.ts";
 import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
@@ -1956,7 +1956,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     const doneBefore = new Set(profile.daily.quests.filter(questDone).map((q) => q.id));
-    const leagueBefore = leagueFor(profile.trophies);
+    const leagueBefore = playerLeague(profile);
     const result: Promise<BattleResult | null> = this.battleId
       .then((id) => (id === null ? null : finishBattle(id, stats)))
       .catch(() => null);
@@ -2018,6 +2018,12 @@ export class BattleScene extends Phaser.Scene {
           // A running event multiplied this one.
           if (mult > 1) m.add(txt(this, label.x + label.width + 16, y, `x${+mult.toFixed(2)} EVENT`, 24, "#ff9df0", [0, 0.5]));
         });
+        // v2.9: why the trophies went the way they did.
+        const tr = r.trophyRules;
+        if (tr) {
+          const note = !tr.counts ? "No trophies in this arena" : stats.wave < tr.minWave ? `Short of wave ${tr.minWave}` : `Past wave ${tr.minWave}`;
+          m.add(txt(this, m.cx - 30, m.cy + 203, note, 18, tr.counts && stats.wave >= tr.minWave ? "#c9d2ff" : "#ff8080", [0, 0.5]));
+        }
         // Daily quests this run finished (claimed from the lobby).
         const finished = profile.daily.quests.filter((q) => questDone(q) && !doneBefore.has(q.id)).map((q) => questById(q.id)!);
         if (finished.length) {
@@ -2026,7 +2032,7 @@ export class BattleScene extends Phaser.Scene {
           sfx("upgrade");
         }
         // League change: promoted (with rewards to show) or dropped back down.
-        const league = leagueFor(profile.trophies);
+        const league = playerLeague(profile);
         if (league.id !== leagueBefore.id) {
           const up = league.trophies > leagueBefore.trophies;
           const line = txt(this, m.cx + 30, m.cy + 285, up ? `PROMOTED TO ${league.name.toUpperCase()}!` : `Dropped to ${league.name}`, up ? 30 : 26, up ? league.color : "#ff8080");

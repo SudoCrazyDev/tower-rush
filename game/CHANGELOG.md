@@ -2,6 +2,13 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.0 "League Revamp"
+- Each league has a minimum wave for solo runs: reach it to win trophies (no cap), fall short and you lose them. Longer league gates (some players drop a league), plus the new Mythic (10,000) and Immortal (15,000) leagues. Details in `docs/features/v2.9-league-revamp/`.
+- Trophies only count in your two highest arenas; lower arenas pay gold only. The arena card, arena info and the run result say which rule applied.
+- A run left unfinished counts as a trophy loss when you start the next one.
+- Secret Society League: hidden as "???" until a player with 30,000 trophies, 5M gold and 10,000 gems is recruited by a lobby popup. Entry fee once, then 30,000 gold + 1,000 gems every 30 days.
+- Needs API 1.6.0.
+
 ## 2.8.6
 - Unit Lab: the TEST ★5 button (every board unit to max rank) now shows in every build, not only dev and staging. On phones it sits in the summon button's free spot instead of on top of the deck cards.
 

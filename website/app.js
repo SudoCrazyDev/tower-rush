@@ -318,11 +318,15 @@
   // ---------------------------------------------------------------- leagues
   // How trophies move (economy.battleRewards, pvp.trophyChange), then the league ladder.
   const T = D.trophies, R = D.pvp.rules;
-  const runTrophies = (wave) => Math.max(-T.maxLoss, wave * T.perWave - T.offset);
+  // Each league sets a min wave (leagues.ts runTrophies): reach it to gain, fall short to lose.
+  const leagueRun = (id, wave) => {
+    const l = D.leagues.find((x) => x.id === id);
+    return wave >= l.minWave ? T.base + (wave - l.minWave) * l.gainPerWave : -Math.min(l.maxLoss, T.base + (l.minWave - wave) * l.lossPerWave);
+  };
   const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `&minus;${-n}` : "0");
   $("#trophyEarn").innerHTML = [
-    ["items/trophy.webp", "Arena battles", `Every wave you survive is worth ${T.perWave} trophies, minus ${T.offset} for the run.`,
-      [[`Reach wave 10`, signed(runTrophies(10))], [`Reach wave 20`, signed(runTrophies(20))], [`Fall early`, `down to ${signed(-T.maxLoss)}`]]],
+    ["items/trophy.webp", "Arena battles", `Each league sets a minimum wave. Reach it to win trophies, with no cap for great runs; fall short and you lose them. Only your two highest arenas count.`,
+      [[`Gold League, wave 30`, signed(leagueRun("gold", 30))], [`Gold League, wave 12`, signed(leagueRun("gold", 12))], [`Gold League, wave 6`, signed(leagueRun("gold", 6))]]],
     ["ui/icon_pvp.webp", "Ranked PvP", "Win a Ranked duel to take trophies. Beat a higher-ranked rival and you win more, and lose less.",
       [["Win", signed(R.trophyWin)], ["Lose", signed(-R.trophyLoss)]]],
     ["ui/icon_story.webp", "Just for fun", "Story, Casual, Mirror, friend challenges and bot practice never win or lose trophies. Play them freely.", [["Trophies", "0"]]],
@@ -346,6 +350,9 @@
     diamond: ["legendary", "hue-rotate(170deg) saturate(1.3) brightness(1.05)"],
     master: ["mythic", "hue-rotate(-95deg) saturate(1.1)"],
     champion: ["mythic", "none"],
+    mythic: ["mythic", "hue-rotate(-40deg) saturate(1.2)"],
+    immortal: ["mythic", "grayscale(.7) brightness(1.35)"],
+    secret_society: ["mythic", "grayscale(1) brightness(.45)"],
   };
   const leagues = [...D.leagues].sort((a, b) => a.trophies - b.trophies);
   $("#leagueLadder").innerHTML = leagues.map((l, i) => {
@@ -353,8 +360,8 @@
     const [frame, tint] = LEAGUE_FRAME[l.id] ?? ["common", "none"];
     return `<div class="rung" style="--c:${l.color};--i:${i};--frame:url(${ART}/cards/frame_${frame}.webp);--tint:${tint}">
       ${img(icon, l.name)}<b>${l.name.replace(" League", "")}</b>
-      <span class="rung__gate">${img("items/trophy.webp")}${fmt(l.trophies)}</span>
-      <div class="rung__reward">${l.trophies ? `<small>Reward</small>${reward(l.reward)}` : "<small>Everyone starts here</small>"}</div>
+      <span class="rung__gate">${l.hidden ? "Invite only" : `${img("items/trophy.webp")}${fmt(l.trophies)}`}</span>
+      <div class="rung__reward">${l.hidden ? "<small>No one speaks of it</small>" : l.trophies ? `<small>Reward · wave ${l.minWave}+</small>${reward(l.reward)}` : `<small>Everyone starts here · wave ${l.minWave}+</small>`}</div>
     </div>`;
   }).join("");
 

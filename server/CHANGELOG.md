@@ -1,5 +1,11 @@
 # API changelog
 
+## 1.6.0
+- League revamp (v2.9): solo-run trophies follow the player's league (`runTrophies`), only in their two highest arenas (`trophyArena`); the finish response adds `trophyRules`. Abandoned solo runs are settled as a wave-0 loss on the next `POST /battles` (`settleAbandoned`).
+- Secret Society: `POST /society/join` pays the entry fee; dues are taken on profile load (`settleSociety`) with an inbox note for each payment or lapse. The leaderboard rows add `society`.
+- Config hotfix `2.9.0-leagues` replaces saved leagues with the new defaults once. `ECONOMY.trophiesPerWave`, `trophyOffset` and `trophyMaxLoss` are removed.
+- Migration `0011_close_abandoned_battles.sql`: closes solo runs abandoned before this release without a penalty. `MIN_CLIENT` 2.9.0.
+
 ## 1.5.1
 - Migration `0010_funding_game_servers.sql`: the running-costs goal is now "Game Servers" (it named the host before), still the only monthly goal. Content goals such as VFX stay one-time.
 

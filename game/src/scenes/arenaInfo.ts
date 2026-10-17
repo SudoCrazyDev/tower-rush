@@ -1,9 +1,10 @@
 import Phaser from "phaser";
 import { assetIndex, loadImages } from "../assets";
-import { ARENAS, type ArenaDef } from "../data/arenas";
+import { ARENAS, trophyArena, type ArenaDef } from "../data/arenas";
+import { playerLeague } from "../../../shared/leagues.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, type BossPower } from "../data/monsters";
 import { ECONOMY, battleRewards } from "../../../shared/economy.ts";
-import { getArenaTop, type ArenaTop } from "../save";
+import { getArenaTop, profile, type ArenaTop } from "../save";
 import { W, H, txt, button, modal, fmt, NAVY } from "../ui";
 
 type Tab = "details" | "top";
@@ -102,11 +103,10 @@ export function arenaInfo(scene: Phaser.Scene, arena: ArenaDef, tab: Tab = "deta
     const idx = Math.max(0, ARENAS.indexOf(arena));
     const e = ECONOMY;
     const perWave = e.coinsPerWave * (1 + idx * e.arenaCoinBonus);
-    const evenAt = Math.floor(e.trophyOffset / e.trophiesPerWave) + 1;
     const lines: [string, string][] = [
       ["item:coins", `${perWave % 1 ? perWave.toFixed(1) : perWave} coins per wave` + (idx ? ` (+${Math.round(idx * e.arenaCoinBonus * 100)}% arena bonus)` : "")],
       ["item:gems", `Boss every ${e.bossEvery} waves: +${e.coinsPerBoss} coins, +${e.gemsPerBoss} gems`],
-      ["item:trophy", `+${e.trophiesPerWave} per wave; you gain trophies from wave ${evenAt}`],
+      ["item:trophy", trophyArena(arena.id, profile.trophies) ? `Win trophies from wave ${playerLeague(profile).minWave} (your league)` : "No trophies here: only your two highest arenas count"],
     ];
     const lx = m.cx - MW / 2 + 70;
     lines.forEach(([icon, text], i) => {
@@ -116,12 +116,13 @@ export function arenaInfo(scene: Phaser.Scene, arena: ArenaDef, tab: Tab = "deta
       put(txt(scene, lx + 36, y, text, 20, "#ffffff", [0, 0.5])).setWordWrapWidth(MW - 150);
     });
     // A worked example: what a good run here pays.
-    const goal = 20;
-    const r = battleRewards(goal, Math.floor(goal / e.bossEvery), idx);
+    const league = playerLeague(profile);
+    const goal = Math.max(20, league.minWave + 5);
+    const r = battleRewards(goal, Math.floor(goal / e.bossEvery), idx, trophyArena(arena.id, profile.trophies) ? league : null);
     const ye = yr + 54 + lines.length * 52 + 20;
     const g = put(scene.add.graphics());
     g.fillStyle(NAVY, 0.7).fillRoundedRect(m.cx - MW / 2 + 40, ye - 30, MW - 80, 60, 18);
-    put(txt(scene, m.cx, ye, `Reach wave ${goal}: ${fmt(r.coins)} coins · ${r.gems} gems · +${r.trophies} trophies`, 20, "#ffd93b"));
+    put(txt(scene, m.cx, ye, `Reach wave ${goal}: ${fmt(r.coins)} coins · ${r.gems} gems · ${r.trophies >= 0 ? "+" : ""}${r.trophies} trophies`, 20, "#ffd93b"));
   };
 
   const players = () => {

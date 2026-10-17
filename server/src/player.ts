@@ -10,11 +10,12 @@ import { announceSignup } from "./discord.ts";
 import { createUser, getUser, getUserByEmail, getUserByName, ownUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
 import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
-import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, payPromotions, refreshDaily, rollChests, AVATAR_RE, TUTORIAL_PARTS, type Profile } from "../../shared/profile.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, joinSociety, payPromotions, refreshDaily, rollChests, settleSociety, AVATAR_RE, TUTORIAL_PARTS, type Profile, type SocietyLapse } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, deckable, upgradeCost } from "../../shared/units.ts";
-import { ARENAS, ARENA_BY_ID } from "../../shared/arenas.ts";
+import { ARENAS, ARENA_BY_ID, trophyArena } from "../../shared/arenas.ts";
+import { playerLeague, runTrophies } from "../../shared/leagues.ts";
 import { ECONOMY, battleRewards } from "../../shared/economy.ts";
 import { needsAttention } from "../../shared/mail.ts";
 import { inbox, mark, message, unclaim } from "./mail.ts";
@@ -163,8 +164,24 @@ async function me(c: Ctx): Promise<{ u: UserRow; p: Profile }> {
   // A new UTC day brings new quests; a new release its launch gift.
   const fresh = refreshDaily(p);
   const gifts = grantReleaseGifts(p).length > 0;
-  if (fresh || gifts) await writeProfile(db, u, p);
+  // v2.9: society dues come due every month; a member who can't pay (or dropped below the gate) is out.
+  const society = settleSociety(p);
+  const settled = society.dues > 0 || society.lapsed !== null;
+  if ((fresh || gifts || settled) && (await writeProfile(db, u, p)) && settled) await societyMail(db, u.id, society.dues, society.lapsed);
   return { u, p };
+}
+
+/** A personal inbox note for society dues taken or a membership that ended. */
+async function societyMail(db: D1Database, userId: number, dues: number, lapsed: SocietyLapse | null) {
+  const why: Record<SocietyLapse, string> = {
+    trophies: "You fell below the Society's trophy gate, so your membership has ended.",
+    dues: "You couldn't pay this month's dues, so your membership has ended.",
+    gone: "The Society you belonged to has been dissolved.",
+  };
+  const paid = dues > 0 ? `Monthly dues were paid${dues > 1 ? ` (${dues} months)` : ""}. ` : "";
+  const title = lapsed ? "Secret Society: membership ended" : "Secret Society: dues paid";
+  const text = `${paid}${lapsed ? `${why[lapsed]} Meet the requirements again and you'll be invited back.` : "Your place in the Society is secure for another month."}`;
+  await run(db, "INSERT INTO mail (user_id, title, body, reward, new_players, admin_id, created_at, expires_at) VALUES (?, ?, ?, NULL, 0, NULL, ?, NULL)", userId, title, text, Date.now());
 }
 
 /**
@@ -491,6 +508,7 @@ player.post("/battles", P, async (c) => {
   // The game claims the play slot first (see play.ts); without it, another device is playing.
   const device = deviceOf(c);
   if (!(await holdsPlay(c.env.DB, m.u.id, device))) fail(409, "playing elsewhere");
+  await settleAbandoned(c);
   const r = await run(
     c.env.DB,
     "INSERT INTO battles (user_id, arena, deck, hero, started_at) VALUES (?, ?, ?, ?, ?)",
@@ -503,6 +521,31 @@ player.post("/battles", P, async (c) => {
   await setPlayBattle(c.env.DB, m.u.id, device!, r.meta.last_row_id);
   return c.json({ battleId: r.meta.last_row_id });
 });
+
+/**
+ * v2.9: a solo run that was started but never finished (the game closed mid-run, or another
+ * device took over) counts as a wave-0 loss under the player's league, so quitting can't
+ * dodge a trophy loss.
+ */
+async function settleAbandoned(c: Ctx) {
+  const db = c.env.DB;
+  const playerId = c.get("playerId");
+  const open = await all<{ id: number; arena: string }>(
+    db,
+    "SELECT id, arena FROM battles WHERE user_id = ? AND finished_at IS NULL AND arena NOT LIKE 'story:%'",
+    playerId,
+  );
+  for (const b of open) {
+    const claimed = await run(db, "UPDATE battles SET finished_at = ?, wave = 0, trophies = 0 WHERE id = ? AND finished_at IS NULL", Date.now(), b.id);
+    if (!claimed.meta.changes) continue;
+    const r = await update(c, (p) => {
+      const loss = trophyArena(b.arena, p.trophies) ? runTrophies(0, playerLeague(p)) : 0;
+      p.trophies = Math.max(0, p.trophies + loss);
+      return { loss };
+    });
+    if (r.loss) await run(db, "UPDATE battles SET trophies = ? WHERE id = ?", r.loss, b.id);
+  }
+}
 
 /**
  * The battle runs in the browser, so the client reports how far it got. The server
@@ -545,10 +588,14 @@ player.post("/battles/:id/finish", P, async (c) => {
   const arenaIndex = Math.max(0, ARENAS.findIndex((a) => a.id === b.arena));
   // Running events boost the gold and gems (judged at the end of the battle).
   const boosts = eventBoosts();
-  const rewards = boostRewards(battleRewards(wave, bosses, arenaIndex));
+  let rewards = boostRewards(battleRewards(wave, bosses, arenaIndex, null));
   let r;
   try {
     r = await update(c, (p) => {
+      // v2.9: trophies follow the league the player was in, and only count in their two highest arenas.
+      const counts = trophyArena(b.arena, p.trophies);
+      const league = playerLeague(p);
+      rewards = { ...rewards, trophies: counts ? runTrophies(wave, league) : 0 };
       // Records are kept per arena; bestWave stays the overall best for the leaderboard.
       const before = p.arenaBest[b.arena] ?? 0;
       const newBest = wave > before;
@@ -560,7 +607,7 @@ player.post("/battles/:id/finish", P, async (c) => {
       // First time in a league pays its promotion reward.
       const promotions = payPromotions(p);
       addQuestProgress(p.daily, { battles: 1, wave, kills, bosses, summons, merges, awakens, heroCasts, copies, swaps, brewed });
-      return { newBest, promotions };
+      return { newBest, promotions, trophyRules: { league: league.id, minWave: league.minWave, counts } };
     });
   } catch (e) {
     await run(db, "UPDATE battles SET finished_at = NULL WHERE id = ?", b.id);
@@ -579,6 +626,19 @@ player.post("/battles/:id/finish", P, async (c) => {
   );
   await releasePlay(db, playerId, deviceOf(c));
   return c.json({ rewards, boosts: { coinMult: boosts.coinMult, gemMult: boosts.gemMult }, wave, ...r });
+});
+
+// ---------------------------------------------------------------- secret society (v2.9)
+
+/** Accept the Secret Society's invitation: pays the entry fee, then dues every month (see settleSociety). */
+player.post("/society/join", P, async (c) => {
+  return c.json(
+    await update(c, (p) => {
+      const r = joinSociety(p);
+      if (!r.league) fail(400, r.problem ?? "You haven't been invited");
+      return { league: r.league.id, promotions: payPromotions(p) };
+    }),
+  );
 });
 
 // ---------------------------------------------------------------- stories (v1.2)
@@ -724,7 +784,7 @@ player.get("/leaderboard", P, async (c) => {
       db,
       `SELECT id, display_name AS name, json_extract(profile, '$.trophies') AS trophies,
               json_extract(profile, '$.bestWave') AS bestWave, json_extract(profile, '$.hero') AS hero, json_extract(profile, '$.avatar') AS avatar,
-              json_extract(profile, '$.ranked.rating') AS rating,
+              json_extract(profile, '$.ranked.rating') AS rating, json_extract(profile, '$.society.league') AS society,
               RANK() OVER (ORDER BY ${v} DESC) AS rank
        FROM users WHERE banned = 0 AND ${on}
        ORDER BY rank, id LIMIT ?`,

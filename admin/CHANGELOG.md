@@ -1,5 +1,8 @@
 # Admin changelog
 
+## 1.5.0
+- Leagues page: min wave, gain per wave, loss per wave and max loss for each league, and an invite-only (Society) switch with entry gold and gems, dues gold and gems and dues days. Economy page: the old trophy fields are gone. Needs API 1.6.0.
+
 ## 1.4.0
 - Funding page: add, edit, order and archive goals (monthly ones for running costs); see pledges waiting for payment and mark them Received (with the GCash reference) or Drop them; log a donation by hand; move a donation to another goal or reject it; upload the GCash QR and set the account name, PHP per USD and the optional Ko-fi handle. Needs API 1.5.0.
 

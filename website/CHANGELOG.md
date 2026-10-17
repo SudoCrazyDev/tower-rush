@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.6.0
+- Leagues: the trophy card, home ladder and wiki explain the v2.9 rules (each league's min wave, no gain cap, two highest arenas only), with Mythic and Immortal added. The Secret Society shows only as "??? League, Invite only".
+
 ## 1.5.0
 - New page `support.html` ("Support us", in the top menu and footer of every page): totals, monthly running costs, each goal category with progress bars, rollover and donor names, the general fund and the latest supporters, all from the API's `/api/funding`. Donate opens a dialog: amount (with a "finish it" amount), wall name or Anonymous, then a `CK-XXXX` code with the GCash QR and peso amount (or a Ko-fi link once a handle is set). Needs API 1.5.0.
 - New page `wiki.html` (Wiki, in the top menu and footer): every unit with filters and full info, rarities and elements, awakening, PvP modes, leagues (same tinted card frames as the home page ladder), chests, the daily login calendar and every race. Data from `data/game.js` through the shared `wiki-kit.js`.

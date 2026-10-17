@@ -72,7 +72,7 @@ addEventListener("pagehide", () => {
 });
 
 const TAKEOVER_TEXT: Record<PlayKind, string> = {
-  battle: "You have a battle running on another device. Play here instead? That battle will end there, and its progress so far is saved.",
+  battle: "You have a battle running on another device. Play here instead? That battle will end there and count for the wave it reached; if it never saves, it counts as a trophy loss.",
   pvp: "You're in PvP on another device. Play here instead? It will leave there; a match in progress counts as a surrender.",
 };
 

@@ -255,6 +255,13 @@ const B = (id: string) => `bosses/${id}.webp`;
 const H = (id: string) => `heroes/${id}.webp`;
 const A = (id: string) => `locations/arena_${id}.webp`;
 const BADGES = [0, 1, 2, 3, 4, 5, 6].map((n) => `ui/league_${n}.webp`);
+/** v2.9 league badges still to draw: slice number, title, what it shows. */
+const LEAGUE_BADGE_ART: [number, string, string][] = [
+  [7, "League badge: Mythic", "the Mythic League, a step above Champion: a radiant magenta-and-gold crest with a phoenix spreading its wings over a crown, a large cut ruby in the center"],
+  [8, "League badge: Immortal", "the Immortal League, the highest public league: a pearl-white and pale-gold crest with angel wings, a laurel wreath and a glowing ever-burning flame above a diamond"],
+  [9, "League badge: Secret Society", "the invite-only Secret Society League: a dark obsidian-black and antique-gold crest with an all-seeing eye inside a triangle, a hooded silhouette behind it and a wax seal ribbon, mysterious and exclusive"],
+  [10, "League badge: ??? (hidden)", "a locked mystery league: a dark smoky-violet shield wrapped in shadow and chains with one big glowing gold question mark in the center"],
+];
 
 /** Scenes with our cast: the model must copy the referenced characters, not invent its own. */
 const CAST =
@@ -1270,6 +1277,19 @@ export function artRequests(have: HaveArt): ArtRequest[] {
         `A heraldic crest for the ${RACES[r].label} race, in exactly the same style, outline thickness, glossy shading and proportions as the reference crest: ${RACE_ART[r]}, set on a shield with ` +
         `enamel in #${RACES[r].color.toString(16).padStart(6, "0")} and a glossy metal rim. ${RACE_WINGS[r] ?? "No wings: the shield alone, maybe with a small race-themed ornament on top."} ` +
         `${EMBLEM} Single emblem, centered with margin, on a solid flat pure ${GREENISH_RACES.has(r) ? "magenta (#FF00FF)" : "green (#00FF00)"} background.`,
+    })),
+    // v2.9 league revamp: badges after Champion (league_ranks_extra_<n>.png follow the atlas, see build_assets.py).
+    ...LEAGUE_BADGE_ART.map(([n, title, what]) => ({
+      id: `league:${n}`,
+      group: "League badges",
+      title,
+      file: `ui/league_ranks_extra_${n}.png`,
+      model: "Nano Banana Pro" as const,
+      aspect: "1:1" as const,
+      refs: [BADGES[6], BADGES[5], BADGES[4]],
+      prompt:
+        `A league rank badge in exactly the same style, outline thickness, glossy beveled shading and proportions as the reference badges: ${what}. ` +
+        `${EMBLEM} Single badge, centered with margin, on a solid flat pure green (#00FF00) background.`,
     })),
     ...Object.keys(ARCH_ART).map((a) =>
       icon("Archetype icons", "arch", "ui/archs", a, `Archetype: ${a}`, `Unit fighting-style icon: ${ARCH_ART[a]}, inside a rounded-square dark badge.`, ["ui/icon_buttons_set.webp"]),

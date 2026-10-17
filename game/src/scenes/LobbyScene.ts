@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BASE, ICON } from "../assets";
-import { ARENAS, ARENA_BY_ID, arenaForTrophies, type ArenaDef } from "../data/arenas";
+import { ARENAS, ARENA_BY_ID, arenaForTrophies, trophyArena, type ArenaDef } from "../data/arenas";
 import { profile, account, mail, setArena, setAvatar, signOut, loadMe, loadInbox, serverNow } from "../save";
 import { storyIsNew } from "../../../shared/profile.ts";
 import { BOOK, BOOKS, SAGA, bookLock, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
@@ -8,9 +8,9 @@ import { loadStoryImages } from "./storyUi";
 import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
 import { dailyCounts, loginModal, questsModal } from "./daily";
-import { leagueBadge, leagueModal } from "./leagues";
+import { leagueBadge, leagueModal, societyInvitation } from "./leagues";
 import { inboxModal, mailIcon } from "./inbox";
-import { leagueFor } from "../../../shared/leagues.ts";
+import { playerLeague } from "../../../shared/leagues.ts";
 import { showAccount, showAuth } from "../authOverlay";
 import { claimPlay, releasePlay } from "../play";
 import { music } from "../audio";
@@ -81,7 +81,7 @@ export function topBar(scene: Phaser.Scene) {
   const gems = resourcePill(scene, x0 + 120 + step, 38, "item:gems", fmt(profile.gems), 180);
   resourcePill(scene, x0 + 120 + 2 * step, 38, "item:trophy", fmt(profile.trophies), 190);
   // League badge in the corner; tap it for the leagues list.
-  pressable(leagueBadge(scene, W - 46, 38, 66, leagueFor(profile.trophies)), () => leagueModal(scene));
+  pressable(leagueBadge(scene, W - 46, 38, 66, playerLeague(profile)), () => leagueModal(scene));
   /** Re-read coins and gems after spending without rebuilding the scene. */
   return { refresh: () => (coins.text.setText(fmt(profile.coins)), gems.text.setText(fmt(profile.gems))) };
 }
@@ -216,7 +216,15 @@ export class LobbyScene extends Phaser.Scene {
     if (tutorialDue("battle")) pointAt(this, { x: W / 2, y: CARD_Y + 330 }, "down", "START HERE!", 80);
     else if (tutorialDue("deck")) pointAt(this, WIDE ? { x: deckX, y: 640 } : { x: W / 2 - 240, y: 1530 }, "down", WIDE ? "YOUR DECK" : undefined, 70);
     // After an update: the release popup, once (not for brand-new players mid-tutorial, nor over the install offer).
-    else if (!offerInstall) this.time.delayedCall(700, () => this.sys.isActive() && whatsNew(this));
+    // v2.9: a Secret Society invitation comes first when the player qualifies, once no other popup (the daily reward) is open.
+    else if (!offerInstall) {
+      const popups = () => {
+        if (!this.sys.isActive()) return;
+        if (this.children.list.some((o) => (o as Phaser.GameObjects.Container).depth >= 5000)) return void this.time.delayedCall(1000, popups);
+        if (!societyInvitation(this, (joined) => joined && this.scene.restart())) whatsNew(this);
+      };
+      this.time.delayedCall(700, popups);
+    }
   }
 
   /** The player's avatar in its ring; tap to pick another. */
@@ -588,7 +596,12 @@ export class LobbyScene extends Phaser.Scene {
     group.add(iconButton(this, 248, -282, "info", 64, () => arenaInfo(this, a)));
     this.closeButton(group);
     group.add(txt(this, 0, 186, a.name, 46));
-    group.add(txt(this, 0, 236, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
+    group.add(txt(this, 0, 226, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
+    // v2.9: the trophy rule for a run here (only the two highest arenas count).
+    if (!locked) {
+      const counts = trophyArena(a.id, profile.trophies);
+      group.add(txt(this, 0, 258, counts ? `Reach wave ${playerLeague(profile).minWave} to win trophies` : "Gold only: no trophies in this arena", 22, counts ? "#ffd27a" : "#8f9ad0"));
+    }
     const battle = button(this, 0, 330, 380, 120, "BATTLE", "yellow", () => this.battle(a.id), 54);
     group.add(battle);
     if (locked) battle.setEnabled(false);

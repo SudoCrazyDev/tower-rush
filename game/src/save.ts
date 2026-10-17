@@ -233,7 +233,7 @@ export async function deleteMail(id: number) {
 export interface Leaderboard {
   by: "trophies" | "wave" | "rating";
   /** `rating` is the ranked PvP rating (null for an account that predates it). */
-  rows: { rank: number; id: number; name: string; trophies: number; bestWave: number; rating: number | null; hero: string | null; avatar?: string | null }[];
+  rows: { rank: number; id: number; name: string; trophies: number; bestWave: number; rating: number | null; hero: string | null; avatar?: string | null; society?: string | null }[];
   /** Ranked players on this board. */
   total: number;
   /** The signed-in player's place (null when they have 0 on this board). */
@@ -264,6 +264,8 @@ export interface BattleResult {
   promotions: Promotion[];
   /** Event multipliers already applied to the gold and gems (1 = no event). */
   boosts?: { coinMult: number; gemMult: number };
+  /** v2.9: the league whose trophy rules applied, its min wave, and whether this arena counted for trophies. */
+  trophyRules?: { league: string; minWave: number; counts: boolean };
 }
 
 export interface BattleStats {
@@ -281,6 +283,13 @@ export interface BattleStats {
 
 export async function finishBattle(battleId: number, stats: BattleStats) {
   const r = await post<BattleResult & { profile: Profile }>(`/battles/${battleId}/finish`, stats);
+  setProfile(r.profile);
+  return r;
+}
+
+/** Accept the Secret Society's invitation (pays the entry fee). */
+export async function joinSociety() {
+  const r = await post<{ league: string; promotions: Promotion[]; profile: Profile }>("/society/join", {});
   setProfile(r.profile);
   return r;
 }
