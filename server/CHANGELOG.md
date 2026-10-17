@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.5.2
+- CORS allows `PATCH`. The admin player edit (`PATCH /api/admin/users/:id`: gems, gold, trophies, best wave, name, email) failed its preflight and showed "Can't reach the server".
+
 ## 1.5.1
 - Migration `0010_funding_game_servers.sql`: the running-costs goal is now "Game Servers" (it named the host before), still the only monthly goal. Content goals such as VFX stay one-time.
 
