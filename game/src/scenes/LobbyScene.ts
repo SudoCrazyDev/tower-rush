@@ -9,6 +9,7 @@ import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/off
 import { utcDay } from "../../../shared/daily.ts";
 import { dailyCounts, loginModal, questsModal } from "./daily";
 import { leagueBadge, leagueModal, societyInvitation } from "./leagues";
+import { openProfile } from "./profileView";
 import { inboxModal, mailIcon } from "./inbox";
 import { playerLeague } from "../../../shared/leagues.ts";
 import { showAccount, showAuth } from "../authOverlay";
@@ -227,10 +228,10 @@ export class LobbyScene extends Phaser.Scene {
     }
   }
 
-  /** The player's avatar in its ring; tap to pick another. */
+  /** The player's avatar in its ring; tap for your profile (v2.9), which has the avatar picker. */
   private avatarButton([x, y]: [number, number], size: number) {
     const a = avatarView(this, x, y, size, profile.avatar, profile.hero);
-    pressable(a, () => this.avatarPicker());
+    pressable(a, () => (account.id ? void openProfile(this, account.id, () => this.avatarPicker()) : this.avatarPicker()));
   }
 
   /** Grid of the avatars in the asset index, the current one highlighted; choosing saves it. */

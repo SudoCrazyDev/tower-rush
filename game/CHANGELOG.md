@@ -7,6 +7,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Trophies only count in your two highest arenas; lower arenas pay gold only. The arena card, arena info and the run result say which rule applied.
 - A run left unfinished counts as a trophy loss when you start the next one.
 - Secret Society League: hidden as "???" until a player with 30,000 trophies, 5M gold and 10,000 gems is recruited by a lobby popup. Entry fee once, then 30,000 gold + 1,000 gems every 30 days.
+- Player profiles: tap a leaderboard or arena top-list row (or your own avatar in the lobby) for a character page with the player's hero and 5 deck units idling on a stage, their levels, trophies, best wave, ranked record, and every badge earned (leagues reached, peak ranked tier, story badges). Your own profile has the AVATAR button that used to open from the lobby avatar.
 - Needs API 1.6.0.
 
 ## 2.8.6

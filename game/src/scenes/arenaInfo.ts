@@ -6,6 +6,7 @@ import { BOSS_BY_ID, MONSTER_BY_ID, type BossPower } from "../data/monsters";
 import { ECONOMY, battleRewards } from "../../../shared/economy.ts";
 import { getArenaTop, profile, type ArenaTop } from "../save";
 import { W, H, txt, button, modal, fmt, NAVY } from "../ui";
+import { openProfile } from "./profileView";
 
 type Tab = "details" | "top";
 
@@ -160,6 +161,9 @@ export function arenaInfo(scene: Phaser.Scene, arena: ArenaDef, tab: Tab = "deta
       const name = r.name.length > 18 ? `${r.name.slice(0, 17)}…` : r.name;
       put(txt(scene, left + 76, y, mine ? `${name} (you)` : name, 22, mine ? "#fff4c2" : "#ffffff", [0, 0.5]));
       put(txt(scene, left + w - 20, y, `Wave ${fmt(r.wave)}`, 22, "#ffd93b", [1, 0.5]));
+      // v2.9: tap a row for that player's profile.
+      const hit = put(scene.add.zone(left + w / 2, y, w, rowH - 6).setInteractive({ useHandCursor: true }));
+      hit.on("pointerup", () => void openProfile(scene, r.id));
     });
     // The player's own record here, even outside the list.
     const fy = top + MH - 70;

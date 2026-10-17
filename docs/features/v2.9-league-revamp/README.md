@@ -132,7 +132,28 @@ Gotcha: adding a frame to a single-frame texture makes it the texture's `firstFr
 `add.image(key)` would show the wing instead of the badge. `badgeWings` resets
 `firstFrame = "__BASE"` after adding it.
 
-## 8. Files
+## 8. Player profiles
+
+A character page for any player, in the spirit of an AQWorlds character page.
+
+- **Open it:** tap a row on the leaderboard (any tab) or in an arena's top list. Tap your own avatar
+  in the lobby for your profile; it has an AVATAR button for the avatar picker that tap used to open.
+- **Header:** avatar with league badge, name, league, "Playing since <month year>", then trophies,
+  best wave, ranked rating and tier, and ranked W-L.
+- **Stage (CURRENT DECK):** the player's hero idles large in the back; the 5 deck units idle in a
+  shallow arc in front, each with a rarity-coloured shadow and a "Lv N" pill. Sheets load on demand
+  (`loadSheet`); units start on staggered frames so they don't breathe in lockstep. A unit with no
+  idle sheet bobs its static art instead. Tap a unit for its name and level.
+- **Badges (n):** earned only: every league reached (promotions paid, plus the current league),
+  the peak ranked tier once placement is done, and story badges (`BADGES`, drawn as a gold medal
+  until they get art). A Society league the player has left shows as "???" unless the viewer is a
+  member. The grid shrinks to fit.
+- **API:** `GET /api/players/:id` returns `PublicProfile` (`shared/profile.ts`). Signed-in only;
+  banned or unknown ids are 404. No migration, no `MIN_CLIENT` change.
+- **Files:** `game/src/scenes/profileView.ts` (new), `LeaderboardScene.ts`, `arenaInfo.ts`,
+  `LobbyScene.ts`, `server/src/player.ts`.
+
+## 9. Files
 
 - `shared/leagues.ts`: rules, `runTrophies`, `playerLeague`, `societyInvite`, new leagues.
 - `shared/profile.ts`: `society`, `settleSociety`, `joinSociety`; promotions respect membership.
@@ -145,7 +166,7 @@ Gotcha: adding a frame to a single-frame texture makes it the texture's `firstFr
 - Admin: Leagues page columns (min wave, gain, loss, max loss, society), Economy page trophy fields removed.
 - Website: trophy cards, ladder and wiki text use the new rules; the Society stays hidden.
 
-## 9. Later
+## 10. Later
 
 - Anti-cheat: the server only clamps the reported wave to one wave per 3 s. With no gain cap, a
   forged wave is worth more, so tighten the clamp per arena or flag outliers on the admin page.

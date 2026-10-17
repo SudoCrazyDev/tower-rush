@@ -60,6 +60,27 @@ export interface Profile {
   story: StoryProgress;
 }
 
+/** What other players can see of an account (GET /api/players/:id, the v2.9 profile view). */
+export interface PublicProfile {
+  id: number;
+  name: string;
+  avatar: string | null;
+  hero: string | null;
+  trophies: number;
+  bestWave: number;
+  ranked: RankedStats;
+  /** Society league joined, or null. */
+  society: string | null;
+  /** League ids reached (promotions paid, plus the league the player is in now). */
+  leagues: string[];
+  /** Story badge ids (BADGES in stories.ts). */
+  badges: string[];
+  /** The 5 deck cards with their levels. */
+  deck: { id: string; level: number }[];
+  /** Account creation time (ms). */
+  joined: number;
+}
+
 /** Cards every player gets once when a feature release goes live (docs/features). */
 export const RELEASE_GIFTS: { version: string; cards: string[] }[] = [{ version: "1.1.0", cards: ["portal_imp", "gnome_brewer"] }];
 

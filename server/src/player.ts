@@ -10,7 +10,7 @@ import { announceSignup } from "./discord.ts";
 import { createUser, getUser, getUserByEmail, getUserByName, ownUser, readProfile, touch, writeProfile, NAME_RE, USERNAME_RE, type UserRow } from "./users.ts";
 import { boostRewards, discounted, eventBoosts, offerById, offerBuyProblem } from "../../shared/offers.ts";
 import { chapterDeck, chapterLock, findChapter, objectiveMult, starsFor, type StoryChapter, type StoryObjectives } from "../../shared/stories.ts";
-import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, joinSociety, payPromotions, refreshDaily, rollChests, settleSociety, AVATAR_RE, TUTORIAL_PARTS, type Profile, type SocietyLapse } from "../../shared/profile.ts";
+import { buyOffer, canUpgrade, chestById, giftReadyAt, grantReleaseGifts, grantReward, grantStoryWin, heroBuyProblem, ownsHero, joinSociety, payPromotions, refreshDaily, rollChests, settleSociety, AVATAR_RE, TUTORIAL_PARTS, type Profile, type PublicProfile, type SocietyLapse } from "../../shared/profile.ts";
 import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, utcDay } from "../../shared/daily.ts";
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, deckable, upgradeCost } from "../../shared/units.ts";
@@ -796,6 +796,30 @@ player.get("/leaderboard", P, async (c) => {
   ]);
   const rank = mine && mine.ok && !mine.banned ? (await count(db, `SELECT COUNT(*) + 1 AS n FROM users WHERE banned = 0 AND ${on} AND ${v} > ?`, mine.value)) : null;
   return c.json({ by, rows, total, me: { id: c.get("playerId"), rank } });
+});
+
+/** Another player's public profile: league badges, story badges and current deck (v2.9 profile view). */
+player.get("/players/:id", P, async (c) => {
+  const id = numParam(c, "id");
+  const u = Number.isInteger(id) && id > 0 ? await getUser(c.env.DB, id) : null;
+  if (!u || u.banned) fail(404, "Player not found");
+  const p = readProfile(u);
+  const now = playerLeague(p);
+  const out: PublicProfile = {
+    id: u.id,
+    name: u.display_name,
+    avatar: p.avatar,
+    hero: p.hero,
+    trophies: p.trophies,
+    bestWave: p.bestWave,
+    ranked: p.ranked,
+    society: p.society?.league ?? null,
+    leagues: [...new Set([...p.leagues, now.id])],
+    badges: p.story.badges,
+    deck: p.deck.map((d) => ({ id: d, level: p.cards[d]?.level ?? 1 })),
+    joined: u.created_at,
+  };
+  return c.json(out);
 });
 
 /** Longest waves survived in one arena (profile.arenaBest), for the arena info dialog. */

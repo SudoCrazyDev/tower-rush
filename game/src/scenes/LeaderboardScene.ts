@@ -8,7 +8,8 @@ import { PVP, tierFor } from "../../../shared/pvp.ts";
 import { RES } from "../display";
 import { W, H, WIDE, txt, button, iconButton, NAVY, fmt } from "../ui";
 import { cover, topBar } from "./LobbyScene";
-import { music } from "../audio";
+import { music, sfx } from "../audio";
+import { openProfile } from "./profileView";
 
 type Board = Leaderboard["by"];
 
@@ -72,7 +73,18 @@ export class LeaderboardScene extends Phaser.Scene {
       txt(this, W / 2, TOP + 160, `Nobody is ranked yet.\nPlay ${board.by === "rating" ? "a ranked PvP match" : "a battle"} to be the first!`, 32, "#c9d2ff");
     }
     const list = this.add.container(0, TOP);
-    board.rows.forEach((r, i) => list.add(this.row(r, i * ROW_H + ROW_H / 2, left, panelW, r.id === board.me.id)));
+    board.rows.forEach((r, i) => {
+      const y = i * ROW_H + ROW_H / 2;
+      list.add(this.row(r, y, left, panelW, r.id === board.me.id));
+      // v2.9: tap a row to view that player's profile (not a drag, and only inside the clipped panel).
+      const hit = this.add.zone(W / 2, y, panelW - 24, ROW_H - 10).setInteractive({ useHandCursor: true });
+      hit.on("pointerup", (p: Phaser.Input.Pointer) => {
+        if (p.getDistance() > 40 || p.worldY < TOP - 10 || p.worldY > bottom) return;
+        sfx("click");
+        void openProfile(this, r.id);
+      });
+      list.add(hit);
+    });
 
     // Scroll by dragging or mouse wheel, clipped to the panel.
     const viewH = bottom - TOP - 10;
