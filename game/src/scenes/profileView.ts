@@ -228,7 +228,7 @@ function badges(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicP
     items.push(scene.add.container(0, 0, [medal(scene, SIZE), label(scene, def.label, "#ffd93b")]));
   }
 
-  m.add(txt(scene, x, y + 4, `BADGES (${items.length})`, 26, "#fff4c2", [0, 0.5]));
+  m.add(txt(scene, x + w / 2, y + 4, `BADGES (${items.length})`, 26, "#fff4c2"));
   if (!items.length) {
     m.add(txt(scene, x + w / 2, y + 90, "No badges earned yet", 24, "#8f9ad0"));
     return;
