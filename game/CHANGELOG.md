@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.8.6
+- Unit Lab: the TEST ★5 button (every board unit to max rank) now shows in every build, not only dev and staging. On phones it sits in the summon button's free spot instead of on top of the deck cards.
+
 ## 2.8.5
 - Grunt redrawn with a rounded silhouette, so he no longer reads as a square tile. Unit art rules written down in `assets/UNIT_ART_STYLE.md`.
 

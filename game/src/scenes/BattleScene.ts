@@ -524,9 +524,11 @@ export class BattleScene extends Phaser.Scene {
     if (this.lab) this.summonBtn.setVisible(false).disableInteractive();
     this.tweens.add({ targets: sb, angle: { from: -3, to: 3 }, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
     if (WIDE && !this.lab) hud(txt(this, R, 920, "SUMMON  (Space)", 26, "#c9d2ff").setDepth(3000));
-    // Staging and dev builds only: a test button that takes every unit on the board to max rank (awakening it).
-    if (import.meta.env.DEV || import.meta.env.MODE === "staging") {
-      const t = button(this, WIDE ? R : W - 130, WIDE ? 1010 : H - 200, 220, 64, `TEST ★${maxRank()}`, "red", () => this.sim.testMaxRankAll());
+    // Unit Lab (every build) plus staging and dev builds: a test button that takes every unit on the board to max rank
+    // (awakening it). On phones in the lab it takes the summon button's spot, clear of the deck row.
+    if (this.lab || import.meta.env.DEV || import.meta.env.MODE === "staging") {
+      const [tx, ty] = WIDE ? [R, 1010] : this.lab ? [heroRow ? 424 : W / 2, H - 76] : [W - 130, H - 200];
+      const t = button(this, tx, ty, !WIDE && this.lab ? 190 : 220, 64, `TEST ★${maxRank()}`, "red", () => this.sim.testMaxRankAll());
       hud(t.setDepth(3010));
     }
 
