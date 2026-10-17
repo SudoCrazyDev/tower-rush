@@ -15,7 +15,7 @@ import { addQuestProgress, loginReady, nextLoginReward, questById, questDone, ut
 import { HERO_BY_ID } from "../../shared/heroes.ts";
 import { UNIT_BY_ID, deckable, upgradeCost } from "../../shared/units.ts";
 import { ARENAS, ARENA_BY_ID, trophyArena } from "../../shared/arenas.ts";
-import { playerLeague, runTrophies } from "../../shared/leagues.ts";
+import { leaguesByTrophies, playerLeague, runTrophies } from "../../shared/leagues.ts";
 import { ECONOMY, battleRewards } from "../../shared/economy.ts";
 import { needsAttention } from "../../shared/mail.ts";
 import { inbox, mark, message, unclaim } from "./mail.ts";
@@ -821,6 +821,47 @@ player.get("/players/:id", P, async (c) => {
     joined: u.created_at,
   };
   return c.json(out);
+});
+
+/**
+ * The top player in each league right now (v2.9 leagues list). A public league holds everyone
+ * from its gate up to the next public gate, except society members past their society's gate.
+ * A society league's top player is only sent to its own members; to everyone else it stays "???".
+ */
+player.get("/leagues/top", P, async (c) => {
+  const db = c.env.DB;
+  const leagues = leaguesByTrophies();
+  const pub = leagues.filter((l) => !l.society);
+  const u = await getUser(db, c.get("playerId"));
+  const member = u ? readProfile(u).society?.league ?? null : null;
+  const t = "json_extract(profile, '$.trophies')";
+  // IFNULL: with no society the comparison would be NULL, and NOT (NULL) drops the row.
+  const soc = "IFNULL(json_extract(profile, '$.society.league'), '')";
+  const cols = `id, display_name AS name, ${t} AS trophies, json_extract(profile, '$.hero') AS hero, json_extract(profile, '$.avatar') AS avatar`;
+  // Society members past their society's gate count in the society league, not a public one.
+  // League ids and gates come from the admin config, not the request; quotes are stripped anyway.
+  const inSociety = leagues
+    .filter((l) => l.society)
+    .map((l) => `(${soc} = '${l.id.replace(/'/g, "")}' AND ${t} >= ${Number(l.trophies)})`)
+    .join(" OR ");
+  const notSociety = inSociety ? `AND NOT (${inSociety})` : "";
+  const top = await Promise.all(
+    leagues.map((l) => {
+      if (l.society) {
+        if (member !== l.id) return null;
+        return one(db, `SELECT ${cols} FROM users WHERE banned = 0 AND ${soc} = ?1 AND ${t} >= ?2 ORDER BY ${t} DESC, id LIMIT 1`, l.id, l.trophies);
+      }
+      const next = pub.find((n) => n.trophies > l.trophies);
+      // Starting league: only players with a trophy or more, so it isn't just the newest accounts.
+      return one(
+        db,
+        `SELECT ${cols} FROM users WHERE banned = 0 AND ${t} >= ?1 AND ${t} < ?2 ${notSociety} ORDER BY ${t} DESC, id LIMIT 1`,
+        Math.max(1, l.trophies),
+        next ? next.trophies : Number.MAX_SAFE_INTEGER,
+      );
+    }),
+  );
+  return c.json({ top: Object.fromEntries(leagues.map((l, i) => [l.id, top[i] ?? null])) });
 });
 
 /** Longest waves survived in one arena (profile.arenaBest), for the arena info dialog. */

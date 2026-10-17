@@ -1,9 +1,16 @@
 /** League badges and the leagues list (opened from the badge in the top bar). */
 import Phaser from "phaser";
 import { leaguesByTrophies, nextLeague, playerLeague, societyInvite, MYSTERY_ICON, type LeagueDef } from "../../../shared/leagues.ts";
-import { joinSociety, profile } from "../save";
+import { account, getLeagueTop, joinSociety, profile, type LeagueTop } from "../save";
+import { RES } from "../display";
+import { sfx } from "../audio";
+import { avatarView } from "../avatars";
+import { openProfile } from "./profileView";
 import { txt, modal, button, fitImage, NAVY, H, fmt } from "../ui";
 import { checkMark, rewardIcon } from "./daily";
+
+/** Top players fetched this session, kept for a minute so reopening the list doesn't refetch. */
+let leagueTopCache: { at: number; top: LeagueTop } | null = null;
 
 const colorOf = (l: LeagueDef) => Phaser.Display.Color.HexStringToColor(l.color).color;
 /** `a` blended toward `b` by t (0..1), for league-tinted panels. */
@@ -152,47 +159,65 @@ export function leagueModal(scene: Phaser.Scene) {
     : `Reach wave ${cur.minWave} to win trophies; fall short and you lose them`;
   m.add(txt(scene, cx, cardTop + 214, rules, 20, "#ffd27a"));
 
-  // Every league, highest first, with its promotion reward. The footer sits above the frame's bottom rim.
+  // v2.9: every league as a card, highest first, with its promotion reward and the player on top
+  // of it right now. The cards scroll under the header; the footer sits above the frame's bottom rim.
   const footY = top + h - 84;
-  const listTop = cardTop + 240;
-  const step = Math.min(96, (footY - 24 - listTop) / Math.max(1, all.length));
-  const rowH = step - 8;
+  const viewTop = cardTop + 240;
+  const viewH = footY - 30 - viewTop;
+  const CARD = 236;
+  const STEP = CARD + 18;
   const left = cx - rowW / 2;
   const right = cx + rowW / 2;
-  [...all].reverse().forEach((l, i) => {
-    const y = listTop + step / 2 + i * step;
+  const list = [...all].reverse();
+  // Not inside the dialog's container: a mask on a nested container is ignored. Same depth as the
+  // dialog and added after it, so it draws over the dialog but under any dialog opened later.
+  const rows = scene.add.container(0, viewTop).setDepth(m.depth).setScrollFactor(0).setAlpha(0);
+  scene.tweens.add({ targets: rows, alpha: 1, duration: 140 });
+  const inView = (p: Phaser.Input.Pointer) => p.worldY >= viewTop && p.worldY <= viewTop + viewH;
+  /** Filled in per card once the top players arrive. */
+  const slots: { l: LeagueDef; y: number; hidden: boolean; status: Phaser.GameObjects.Text }[] = [];
+
+  list.forEach((l, i) => {
+    const y0 = 8 + i * STEP;
     const here = l.id === cur.id;
     const hidden = hiddenFromMe(l);
     const reached = l.trophies <= profile.trophies && !hidden;
-    const art = here && badgeWings(scene, cx - rowW / 2, cx + rowW / 2, y, rowH, l);
-    if (art) m.add(art);
+    const tint = hidden ? 0x4a3f6b : colorOf(l);
+    const ty = y0 + 62; // the badge row's centre
+    const art = here && badgeWings(scene, left, right, ty, 100, l);
+    if (art) rows.add(art);
     else if (here) {
       const wings = scene.add.graphics();
-      rowWings(wings, cx - rowW / 2, y, rowH, colorOf(l), -1);
-      rowWings(wings, cx + rowW / 2, y, rowH, colorOf(l), 1);
-      m.add(wings);
+      rowWings(wings, left, ty, 100, colorOf(l), -1);
+      rowWings(wings, right, ty, 100, colorOf(l), 1);
+      rows.add(wings);
     }
     const g = scene.add.graphics();
-    // The whole row in the league's colour: full strength once reached, muted above.
-    const tint = hidden ? 0x4a3f6b : colorOf(l);
-    tintPanel(g, left, y - rowH / 2, rowW, rowH, 16, tint, here ? 0.62 : reached ? 0.5 : 0.24);
+    // The whole card in the league's colour: full strength once reached, muted above.
+    tintPanel(g, left, y0, rowW, CARD, 22, tint, here ? 0.62 : reached ? 0.5 : 0.24);
     // Your league: a bright rim in its own colour over a navy outline, like the badge art.
     if (here) {
-      g.lineStyle(9, 0x0a0d24, 1).strokeRoundedRect(left, y - rowH / 2, rowW, rowH, 16);
-      g.lineStyle(5, mix(tint, 0xffffff, 0.3), 1).strokeRoundedRect(left, y - rowH / 2, rowW, rowH, 16);
-    } else g.lineStyle(2, mix(tint, 0xffffff, 0.2), reached ? 0.9 : 0.4).strokeRoundedRect(left, y - rowH / 2, rowW, rowH, 16);
-    m.add(g);
-    const badge = leagueBadge(scene, left + 50, y, rowH * 0.9, l, hidden);
+      g.lineStyle(9, 0x0a0d24, 1).strokeRoundedRect(left, y0, rowW, CARD, 22);
+      g.lineStyle(5, mix(tint, 0xffffff, 0.3), 1).strokeRoundedRect(left, y0, rowW, CARD, 22);
+    } else g.lineStyle(2, mix(tint, 0xffffff, 0.2), reached ? 0.9 : 0.4).strokeRoundedRect(left, y0, rowW, CARD, 22);
+    // The top-player strip along the bottom of the card.
+    g.fillStyle(0x0a0d24, 0.45).fillRoundedRect(left + 14, y0 + 128, rowW - 28, CARD - 142, 16);
+    rows.add(g);
+    const badge = leagueBadge(scene, left + 66, ty, 104, l, hidden);
     if (!reached && !here) badge.setAlpha(0.6);
-    m.add(badge);
-    const nameY = y - rowH * 0.2;
-    m.add(txt(scene, left + 96, nameY, hidden ? "???" : l.name, Math.min(28, rowH * 0.36), reached ? "#ffffff" : "#c3c9e6", [0, 0.5]));
-    const gate = hidden ? "By invitation only" : l.trophies ? `${fmt(l.trophies)}+ trophies · wave ${l.minWave}` : `Starting league · wave ${l.minWave}`;
-    m.add(txt(scene, left + 96, y + rowH * 0.22, gate, Math.min(19, rowH * 0.26), reached ? "#e6e9ff" : "#9aa3c9", [0, 0.5]));
+    rows.add(badge);
+    rows.add(txt(scene, left + 130, ty - 30, hidden ? "???" : l.name.replace(" League", ""), 32, reached ? "#ffffff" : "#c3c9e6", [0, 0.5]));
+    // Gate and trophy wave on two short lines, clear of the reward on the right.
+    const gate = hidden ? ["By invitation only"] : [l.trophies ? `${fmt(l.trophies)}+ trophies` : "Starting league", `Trophies from wave ${l.minWave}`];
+    gate.forEach((line, k) => rows.add(txt(scene, left + 130, ty + 6 + k * 26, line, 20, reached ? "#e6e9ff" : "#9aa3c9", [0, 0.5])));
+    const sy = y0 + 128 + (CARD - 142) / 2;
+    const status = txt(scene, cx, sy, hidden ? "Members only" : "Loading...", 20, "#8f9ad0");
+    slots.push({ l, y: sy, hidden, status });
+    rows.add(status);
     if (hidden) {
       // An invitation the player put off ("Not now") can be opened again here.
       if (societyInvite(profile)?.id === l.id)
-        m.add(button(scene, right - 105, y, 180, Math.min(64, rowH - 10), "INVITATION", "yellow", () => {
+        rows.add(button(scene, right - 105, ty, 180, 60, "INVITATION", "yellow", () => {
           societyInvitation(scene, (joined) => {
             if (!joined) return;
             m.destroy();
@@ -204,28 +229,82 @@ export function leagueModal(scene: Phaser.Scene) {
     // Promotion reward (paid once, the first time the league is reached): chest, then gold and gems.
     const r = l.reward;
     if (!l.trophies || (!r.coins && !r.gems && !r.chest)) {
-      if (!l.trophies) m.add(txt(scene, right - 30, y, "Start here", 18, "#8a93bd", [1, 0.5]));
+      if (!l.trophies) rows.add(txt(scene, right - 30, ty, "Start here", 18, "#8a93bd", [1, 0.5]));
       return;
     }
     const paid = profile.leagues.includes(l.id);
     const dim = paid ? 0.5 : 1;
     const ix = right - 205;
-    if (r.chest) {
-      const chest = scene.add.image(ix, y, rewardIcon(r)).setAlpha(dim);
-      m.add(fitImage(chest, rowH * 0.78));
-    }
+    if (r.chest) rows.add(fitImage(scene.add.image(ix, ty, rewardIcon(r)).setAlpha(dim), 74));
     const amounts = [r.coins && (["item:coins", fmt(r.coins)] as const), r.gems && (["item:gems", fmt(r.gems)] as const)].filter(Boolean) as (readonly [string, string])[];
     const ax = ix + 46;
     amounts.forEach(([key, n], k) => {
-      const ay = y + (amounts.length === 1 ? 0 : k === 0 ? -rowH * 0.2 : rowH * 0.2);
-      m.add(scene.add.image(ax + 12, ay, key).setDisplaySize(24, 24).setAlpha(dim));
-      m.add(txt(scene, ax + 30, ay, `+${n}`, Math.min(21, rowH * 0.28), paid ? "#9aa3c9" : "#ffd93b", [0, 0.5]));
+      const ay = ty + (amounts.length === 1 ? 0 : k === 0 ? -20 : 20);
+      rows.add(scene.add.image(ax + 12, ay, key).setDisplaySize(26, 26).setAlpha(dim));
+      rows.add(txt(scene, ax + 30, ay, `+${n}`, 22, paid ? "#9aa3c9" : "#ffd93b", [0, 0.5]));
     });
-    if (paid) m.add(checkMark(scene, right - 32, y, 34));
+    if (paid) rows.add(checkMark(scene, right - 32, ty, 34));
     // Reached before leagues paid rewards (or by an admin edit): it comes with the next battle.
-    else if (reached) m.add(txt(scene, right - 18, y, "next\nbattle", 15, "#7dff7a", [1, 0.5]).setAlign("right"));
+    else if (reached) rows.add(txt(scene, right - 18, ty, "next\nbattle", 15, "#7dff7a", [1, 0.5]).setAlign("right"));
   });
-  m.add(txt(scene, cx, footY, "Promotion rewards are paid once, the first time you reach a league.", 18, "#8f9ad0"));
+
+  // The top player in each league: avatar, name and trophies; tap for their profile.
+  const fill = (t: LeagueTop) => {
+    if (!rows.active) return;
+    for (const s of slots) {
+      if (s.hidden) continue;
+      const p = t.top[s.l.id];
+      if (!p) {
+        s.status.setText("No one here yet");
+        continue;
+      }
+      s.status.destroy();
+      const mine = p.id === account.id;
+      rows.add(txt(scene, left + 34, s.y, "TOP", 20, "#ffd27a", [0, 0.5]));
+      rows.add(avatarView(scene, left + 108, s.y, 72, p.avatar, p.hero));
+      const name = p.name.length > 16 ? `${p.name.slice(0, 15)}…` : p.name;
+      rows.add(txt(scene, left + 156, s.y, mine ? `${name} (you)` : name, 24, mine ? "#fff4c2" : "#ffffff", [0, 0.5]));
+      rows.add(scene.add.image(right - 150, s.y, "item:trophy").setDisplaySize(30, 30));
+      rows.add(txt(scene, right - 130, s.y, fmt(p.trophies), 24, "#ffd93b", [0, 0.5]));
+      const hit = scene.add.zone(cx, s.y, rowW - 28, CARD - 142).setInteractive({ useHandCursor: true });
+      hit.on("pointerup", (ptr: Phaser.Input.Pointer) => {
+        if (!inView(ptr) || ptr.getDistance() >= 12 * RES) return;
+        sfx("click");
+        void openProfile(scene, p.id);
+      });
+      rows.add(hit);
+    }
+  };
+  const cached = leagueTopCache && Date.now() - leagueTopCache.at < 60_000 ? leagueTopCache.top : null;
+  if (cached) fill(cached);
+  else
+    getLeagueTop().then(
+      (t) => {
+        leagueTopCache = { at: Date.now(), top: t };
+        fill(t);
+      },
+      () => rows.active && slots.forEach((s) => !s.hidden && s.status.active && s.status.setText("Couldn't load")),
+    );
+
+  // Scroll by dragging or with the wheel, clipped to the list; it opens on your own league.
+  const minY = Math.min(viewTop, viewTop - (list.length * STEP + 8 - viewH));
+  const curIdx = list.findIndex((l) => l.id === cur.id);
+  rows.y = Phaser.Math.Clamp(viewTop - (curIdx * STEP + CARD / 2 - viewH / 2), minY, viewTop);
+  const mask = scene.make.graphics({}, false).fillRect(cx - w / 2 + 20, viewTop, w - 40, viewH);
+  rows.setMask(mask.createGeometryMask());
+  let startY = NaN;
+  const down = (p: Phaser.Input.Pointer) => (startY = inView(p) ? rows.y : NaN);
+  const move = (p: Phaser.Input.Pointer) => {
+    if (p.isDown && !Number.isNaN(startY)) rows.y = Phaser.Math.Clamp(startY + (p.y - p.downY) / RES, minY, viewTop);
+  };
+  const wheel = (_p: unknown, _o: unknown, _dx: number, dy: number) => (rows.y = Phaser.Math.Clamp(rows.y - dy, minY, viewTop));
+  scene.input.on("pointerdown", down).on("pointermove", move).on("wheel", wheel);
+  m.once("destroy", () => {
+    scene.input.off("pointerdown", down).off("pointermove", move).off("wheel", wheel);
+    rows.destroy();
+    mask.destroy();
+  });
+  m.add(txt(scene, cx, footY, "Promotion rewards are paid once. Tap a top player for their profile.", 18, "#8f9ad0"));
   return m;
 }
 

@@ -111,12 +111,22 @@ The leagues list (tap the badge in the lobby's top bar) was rebuilt in `scenes/l
 The old one had overlapping parts: the reward labels ran three lines tall and overflowed their
 rows, the footer sat on the frame's bottom rim, and the frame's side gems covered the row ends.
 
-- **Size:** the panel is 720 wide and `min(H - 110, 1270)` tall. Row height comes from the
-  space left between the header and the footer, so all 11 leagues fit in both layouts.
+- **Size:** the panel is 720 wide and `min(H - 110, 1270)` tall.
+- **Scrolling cards:** each league is a 236 px card, highest first; about 3 fit on a phone and
+  the rest scroll (drag or wheel), clipped under the header. The list opens on your league.
+  The card container has the dialog's depth and is added after it, so dialogs opened later
+  (a profile, the daily reward) draw on top.
 - **Header card:** your badge, league name, trophies, a "next: <league>" hint, the progress
   bar and "N more trophies to promote", on a card in your league's colour. Your league's
   trophy rule (or Society dues) sits under the card.
-- **Rows in league colour:** each row is filled with its league's colour (`tintPanel`): full
+- **Top player:** the bottom strip of each card shows the player on top of that league right now
+  (avatar, name, trophies), or "No one here yet". Tap it for their profile. The Society card
+  says "Members only" unless you're a member. Data from `GET /api/leagues/top`, cached 1 minute.
+  A public league counts players from its gate up to the next public gate; Society members past
+  their society's gate count only in the Society. Bronze needs at least 1 trophy.
+- **Card text:** league name without " League", then the gate and "Trophies from wave N" on two
+  short lines so they stay clear of the reward.
+- **Cards in league colour:** each card is filled with its league's colour (`tintPanel`): full
   strength for leagues you've reached, muted above. Rows are 160 px narrower than the panel,
   so the frame's side gems no longer cover them.
 - **Your league:** its row gets a rim in the league's colour over a navy outline, and wings on

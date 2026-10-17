@@ -252,6 +252,13 @@ export interface ArenaTop {
 
 export const getArenaTop = (arena: string) => get<ArenaTop>(`/arenas/${encodeURIComponent(arena)}/top`);
 
+/** The top player in each league right now, by league id (null: nobody there, or a society you're not in). */
+export interface LeagueTop {
+  top: Record<string, { id: number; name: string; trophies: number; hero: string | null; avatar?: string | null } | null>;
+}
+
+export const getLeagueTop = () => get<LeagueTop>("/leagues/top");
+
 export async function startBattle(arena: string) {
   return (await post<{ battleId: number }>("/battles", { arena })).battleId;
 }

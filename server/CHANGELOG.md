@@ -3,6 +3,7 @@
 ## 1.6.0
 - League revamp (v2.9): solo-run trophies follow the player's league (`runTrophies`), only in their two highest arenas (`trophyArena`); the finish response adds `trophyRules`. Abandoned solo runs are settled as a wave-0 loss on the next `POST /battles` (`settleAbandoned`).
 - Secret Society: `POST /society/join` pays the entry fee; dues are taken on profile load (`settleSociety`) with an inbox note for each payment or lapse. The leaderboard rows add `society`.
+- `GET /leagues/top` (signed in): the top player in each league (id, name, trophies, hero, avatar). Society members past the gate count only in their society, which is sent only to its members.
 - Player profiles: `GET /players/:id` (signed in) returns a `PublicProfile` (name, avatar, hero, trophies, best wave, ranked stats, society, leagues reached, story badges, last arena, deck with levels, join date). 404 for unknown or banned players.
 - Config hotfix `2.9.0-leagues` replaces saved leagues with the new defaults once. `ECONOMY.trophiesPerWave`, `trophyOffset` and `trophyMaxLoss` are removed.
 - Migration `0011_close_abandoned_battles.sql`: closes solo runs abandoned before this release without a penalty. `MIN_CLIENT` 2.9.0.
