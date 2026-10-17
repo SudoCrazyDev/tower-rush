@@ -6,9 +6,14 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 [ROADMAP.md](../../ROADMAP.md).
 
 ```
- v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          v1.3.0            v2.0.0              next
- Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► Branding ────────► The Grand ────────► balance, then
- Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Revamp, Oct 9       Books 2–4 (TBD)
+ v1.0.0            v1.1.0                   QoL          v1.2.0       v1.2.1          v1.3.0            v2.0.0
+ Launch build ───► Supporting Cast ───────► polish ────► Stories ───► Knights ──────► Branding ────────► The Grand ───┐
+ Oct 3–5           Arrival, Oct 6           Oct 6        Oct 6        hotfix, Oct 6   Revamp, Oct 6     Revamp, Oct 9  │
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+│ v2.1.0           v2.2.0      v2.3.0       v2.4.0           v2.5.0        v2.6.0        v2.7.0          v2.8.0           v2.9.0          next
+└► Chaos ────────► Sand & ───► The Iron ──► The Silver ────► Email + ────► Install ───► The Great ────► Beta ─────────► League ───────► balance, then
+   Corrupted,      Sea,        Oath,        Tribunal,        Turnstile,    (PWA),        Awakening,      Berserker,       Revamp,         Book 3
+   Oct 10          Oct 11      Oct 11       Oct 12           Oct 13        Oct 13        Oct 14          Oct 17           Oct 17
 ```
 
 | Version | Title | Shipped | Git | Design doc |
@@ -27,6 +32,16 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v2.3.0 | **The Iron Oath** | 2026-10-11 | tag `v2.3.0` / `game-v2.3.0` | [v2.3](v2.3-the-iron-oath/README.md) |
 | v2.4.0 | **The Silver Tribunal** (Book 2 finale) | 2026-10-12 | tag `game-v2.4.0` (API `api-v1.1.0`) | [v2.4](v2.4-the-silver-tribunal/README.md) |
 | v2.4.1 | Story hotfixes: Throne of Dust free move, Iron Oath families, Walking Forge rework (legs stop it and regrow, faster furnace), Colossus 5% absorb | 2026-10-12 | tag `game-v2.4.1` (API `api-v1.1.1`) | [game CHANGELOG](../../game/CHANGELOG.md) |
+| v2.5.0 | Email, password recovery and Turnstile (2.5.1–2.5.3: art for the sign-in panels) | 2026-10-13 | (API `api-v1.2.0`, `MIN_CLIENT` 2.5.0) | [game CHANGELOG](../../game/CHANGELOG.md) |
+| v2.6.0 | Installable app (PWA); 2.6.1 Install app buttons; 2.6.2 button shrink fix | 2026-10-13 | tags `game-v2.6.0` to `game-v2.6.2` | [game CHANGELOG](../../game/CHANGELOG.md) |
+| v2.7.0 | **The Great Awakening** | 2026-10-14 | tag `game-v2.7.0` (API `api-v1.3.0`) | [v2.7](v2.7-the-great-awakening/README.md) |
+| v2.7.1 | Portal under a locked board | 2026-10-14 | tag `game-v2.7.1` | [game CHANGELOG](../../game/CHANGELOG.md) |
+| v2.7.2 | Vampire's Kiss pays on hit, Queen's Gambit drains for mana (2.7.3: GROUP: RACE in the deck) | 2026-10-15 | tag `game-v2.7.2` (API `api-v1.3.1`, `MIN_CLIENT` 2.7.2) | [game CHANGELOG](../../game/CHANGELOG.md) |
+| v2.8.0 | **Beta Release: Beta Berserker** (QoL 2.8.1 to 2.8.5) | 2026-10-17 | tag `game-v2.8.5` (API `api-v1.4.0`, website `website-v1.4.0`, `MIN_CLIENT` 2.8.0) | [v2.8](v2.8-beta-berserker/README.md) |
+| — | Community funding, Wiki, Stories and Support pages | 2026-10-17 | API `api-v1.5.0` / `api-v1.5.1`, admin `admin-v1.4.0`, website `website-v1.5.0` | — |
+| v2.8.6 | Unit Lab TEST ★5 in every build | 2026-10-17 | tag `game-v2.8.6` | [game CHANGELOG](../../game/CHANGELOG.md) |
+| — | API 1.5.2: CORS allows PATCH (admin player edits) | 2026-10-17 | tag `api-v1.5.2` | — |
+| v2.9.0 | **League Revamp**, player profiles, scrolling leagues list | 2026-10-17 | tag `game-v2.9.0` (API `api-v1.6.0`, admin `admin-v1.5.0`, website `website-v1.6.0`, `MIN_CLIENT` 2.9.0) | [v2.9](v2.9-league-revamp/README.md) |
 | next | Balance pass, Book 3 | — | — | — |
 
 ---
@@ -144,11 +159,8 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 8 portraits, 3 arenas, 16 story panels, 2 covers and the entangled status icon.
 [Design doc](v2.1-chaos-corrupted/README.md) · [Promo kit](v2.1-chaos-corrupted/PROMO.md)
 
-## Next
+## Shipped since v2.1 (short notes)
 
-- **v1.2.x balance pass:** run the simulator over the story chapters (wave HP is first-guess),
-  add the "win a story chapter" quest to the live config, and teach the PvP bot where to place
-  Muse and the Rogue Knight.
 - **v2.2.0 "Sand & Sea" (live 2026-10-11):** Book 2 Story 2 "The Drowned Coast" and Story 3 "The Throne of
   Dust", pitched in the [saga plan](concepts/forsakens-saga.md). Art budget: about 350 Higgsfield
   credits (about 450 with retries), stills and in-game animation clips included. Promo reuses game
@@ -162,8 +174,16 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 - **v2.8.3 (2026-10-16):** Orc ability effects. A Grunt stands in a fire ring that grows with each Berserker tier, and every new multiplier (x2, x4, x7, then each 5 waves past 30) shows a red burst and "BERSERK xN!". A frenzied Headhunter (wave 20+) stands in a lightning ring and calls "FRENZY!", and his focus spears fly red and snap a reticle onto the target. Units sped up by War Drums show the attack-speed ring and badge in drum orange, red at the board-wide stage.
 - **v2.8.4 (2026-10-16):** the five Orcs were redrawn as chibi busts (big head, waist-up) like every other unit, with new idle and attack animations. The first full-body art read too small on the board.
 - **v2.8.5 (2026-10-16):** the Grunt was redrawn with a rounded silhouette inside the frame (he read as a square tile), and new units now follow a written board-art style guide ([assets/UNIT_ART_STYLE.md](../../assets/UNIT_ART_STYLE.md)).
-- **v2.9.0 "League Revamp" (on staging 2026-10-17, not on production yet; game 2.9.0, API 1.6.0, admin 1.5.0, website 1.6.0):** per-league minimum waves with uncapped gains and real losses, longer gates, Mythic and Immortal leagues, a two-highest-arenas trophy lock, a rage-quit loss and the hidden Secret Society League with an entry fee and monthly dues. See [v2.9](v2.9-league-revamp/README.md).
+- **v2.9.0 "League Revamp" (live 2026-10-17; game 2.9.0, API 1.6.0, admin 1.5.0, website 1.6.0):** per-league minimum waves with uncapped gains and real losses, longer gates, Mythic and Immortal leagues, a two-highest-arenas trophy lock, a rage-quit loss and the hidden Secret Society League with an entry fee and monthly dues. See [v2.9](v2.9-league-revamp/README.md).
+- **v2.9.0 also shipped player profiles** (tap a leaderboard row or your own avatar: hero and 5 deck units on a stage, stats and badges) and a **scrolling leagues list** with each league's top player.
+
+## Next
+
+- **v1.2.x balance pass:** run the simulator over the story chapters (wave HP is first-guess),
+  add the "win a story chapter" quest to the live config, and teach the PvP bot where to place
+  Muse and the Rogue Knight.
+- **Awakenings for the rest:** supports and the units still without awakened art.
+- **Arena music:** the v2.8 music player is coded but has no tracks yet.
 - **Later:** Book 3 (pitched in the saga plan; the Book 3 finale reveals the mastermind).
 - Ideas waiting for a release are in the root [ROADMAP.md](../../ROADMAP.md).
-- Fantasy features (ideas only, not scheduled): [World Boss](fantasy/world-boss.md).
 - Parked for later: [battle recording and replay checks](concepts/battle-recording.md).

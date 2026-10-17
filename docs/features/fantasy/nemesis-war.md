@@ -1,6 +1,6 @@
-# The Nemesis War (retention pitch)
+# The Nemesis War (fantasy concept)
 
-> Status: **pitch**. Not on the roadmap yet.
+> Status: **fantasy**. Not planned, not on the roadmap.
 > Pitch video: [nemesis-war/nemesis-war-pitch.mp4](nemesis-war/nemesis-war-pitch.mp4) (vertical, 61 s). Source: `roadmap-video/src/promo/Nemesis.tsx`. Render with `npm run promo:nm` from `roadmap-video/`.
 
 ## The pitch

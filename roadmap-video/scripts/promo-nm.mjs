@@ -1,4 +1,4 @@
-// Renders "The Nemesis War" retention pitch into docs/features/concepts/nemesis-war.
+// Renders "The Nemesis War" fantasy concept pitch into docs/features/fantasy/nemesis-war.
 // Usage (from roadmap-video/): npm run promo:nm   (set REMOTION_BROWSER to use an installed Chrome)
 // Shares public/cm with the other concept pitches, so it runs promo-cc.mjs --copy-only first.
 import { cpSync, mkdirSync } from "node:fs";
@@ -15,7 +15,7 @@ cpSync(`${art}/emotes/goblin_laugh.webp`, `${pub}/emotes/goblin_laugh.webp`);
 cpSync(`${art}/locations/world_map.webp`, `${pub}/world_map.webp`);
 
 if (process.argv[2] === "--copy-only") process.exit(0);
-const out = "../docs/features/concepts/nemesis-war";
+const out = "../docs/features/fantasy/nemesis-war";
 mkdirSync(out, { recursive: true });
 const browser = process.env.REMOTION_BROWSER ? ` --browser-executable="${process.env.REMOTION_BROWSER}"` : "";
 execSync(`npx remotion render src/index.ts nm-pitch ${out}/nemesis-war-pitch.mp4${browser}`, { stdio: "inherit" });

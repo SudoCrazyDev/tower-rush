@@ -43,11 +43,11 @@ export const RemotionRoot = () => (
     <Still id="rb-banner" component={RbBanner} width={1500} height={500} />
     <Still id="rb-icon" component={RbIcon} width={1024} height={1024} />
     <Composition id="rb-reveal" component={RbReveal} durationInFrames={REVEAL_LEN} fps={30} width={1080} height={1920} />
-    {/* Fantasy concept: Command Mode (docs/features/concepts/command-mode.md) */}
+    {/* Fantasy concept: Command Mode (docs/features/fantasy/command-mode.md) */}
     <Composition id="cm-pitch" component={CommandMode} durationInFrames={CM_LEN} fps={30} width={1080} height={1920} />
-    {/* Fantasy concept: Crown Chess (docs/features/concepts/crown-chess.md) */}
+    {/* Fantasy concept: Crown Chess (docs/features/fantasy/crown-chess.md) */}
     <Composition id="cc-pitch" component={CrownChess} durationInFrames={CC_LEN} fps={30} width={1080} height={1920} />
-    {/* Retention pitch: The Nemesis War (docs/features/concepts/nemesis-war.md) */}
+    {/* Fantasy concept: The Nemesis War (docs/features/fantasy/nemesis-war.md) */}
     <Composition id="nm-pitch" component={Nemesis} durationInFrames={NM_LEN} fps={30} width={1080} height={1920} />
   </>
 );

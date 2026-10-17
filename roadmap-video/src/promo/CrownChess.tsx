@@ -5,7 +5,7 @@ import { Backdrop, Board, body, Caption, chunky, clamp, GOLD, GREEN, March, NAVY
 /**
  * Concept pitch for a fantasy (unplanned) game mode: "Crown Chess", an auto-chess mode in the
  * style of Magic Chess / Dota Auto Chess / TFT, fitted to a tower defense board.
- * See docs/features/concepts/crown-chess.md. scripts/promo-cc.mjs copies the art into public/cm.
+ * See docs/features/fantasy/crown-chess.md. scripts/promo-cc.mjs copies the art into public/cm.
  */
 
 const COST: Record<string, number> = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };

@@ -119,7 +119,7 @@ All of this exists in `assets/` and is converted into `game/public/assets/`:
     Builds is connected.
   - Ideas for later: a custom domain, and the Paid plan when traffic grows (then raise the
     password hash cost).
-- Mobile: wrap with Capacitor for app stores; add a PWA manifest for install-to-home-screen.
+- Mobile: ~~PWA manifest for install-to-home-screen~~ done (game 2.6.0, install buttons in 2.6.1). Still to do: wrap with Capacitor for app stores.
 - Performance: the art is 250 MB of WebP (about 130 MB of it HD sheets). A battle only loads its
   deck, arena and hero, but packing sheets into atlases would cut the number of requests.
 

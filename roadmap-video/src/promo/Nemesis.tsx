@@ -5,7 +5,7 @@ import { Board, body, Caption, chunky, clamp, GOLD, GREEN, NAVY, OnPad, along, P
 /**
  * Retention pitch: "The Nemesis War". Monsters that escape remember you, grow, hunt you and your
  * friends, and every week the worst of them merge into a Warlord the whole player base fights.
- * See docs/features/concepts/nemesis-war.md. scripts/promo-nm.mjs copies the art into public/cm.
+ * See docs/features/fantasy/nemesis-war.md. scripts/promo-nm.mjs copies the art into public/cm.
  */
 
 const PURPLE = "#b45cff";

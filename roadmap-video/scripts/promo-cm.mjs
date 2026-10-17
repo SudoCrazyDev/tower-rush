@@ -1,4 +1,4 @@
-// Renders the "Command Mode" fantasy concept pitch into docs/features/concepts/command-mode.
+// Renders the "Command Mode" fantasy concept pitch into docs/features/fantasy/command-mode.
 // Usage (from roadmap-video/): npm run promo:cm   (set REMOTION_BROWSER to use an installed Chrome)
 import { cpSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
@@ -19,7 +19,7 @@ cpSync(`${art}/locations/arena_meadow.webp`, `${pub}/arena.webp`);
 cpSync("../assets/brand/logo.png", `${pub}/logo.png`);
 
 if (process.argv[2] === "--copy-only") process.exit(0);
-const out = "../docs/features/concepts/command-mode";
+const out = "../docs/features/fantasy/command-mode";
 mkdirSync(out, { recursive: true });
 const browser = process.env.REMOTION_BROWSER ? ` --browser-executable="${process.env.REMOTION_BROWSER}"` : "";
 execSync(`npx remotion render src/index.ts cm-pitch ${out}/command-mode-pitch.mp4${browser}`, { stdio: "inherit" });

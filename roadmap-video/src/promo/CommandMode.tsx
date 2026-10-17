@@ -6,7 +6,7 @@ import { loadFont as loadNunito } from "@remotion/google-fonts/Nunito";
 /**
  * Concept pitch for a fantasy (unplanned) game mode: "Command Mode", a Bloons-TD-style
  * placement mode with a hand-picked squad and no random merges.
- * See docs/features/concepts/command-mode.md. scripts/promo-cm.mjs copies the art into public/cm.
+ * See docs/features/fantasy/command-mode.md. scripts/promo-cm.mjs copies the art into public/cm.
  */
 
 const { fontFamily: DISPLAY } = loadLilita();

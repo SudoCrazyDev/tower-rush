@@ -1,4 +1,4 @@
-// Renders the "Crown Chess" fantasy concept pitch into docs/features/concepts/crown-chess.
+// Renders the "Crown Chess" fantasy concept pitch into docs/features/fantasy/crown-chess.
 // Usage (from roadmap-video/): npm run promo:cc   (set REMOTION_BROWSER to use an installed Chrome)
 // Shares public/cm with the Command Mode pitch, so it runs promo-cm.mjs --copy-only first.
 import { cpSync, mkdirSync } from "node:fs";
@@ -20,7 +20,7 @@ for (const h of ["young_king", "dark_knight", "elf_archmage", "gnome_mech", "gri
 }
 
 if (process.argv[2] === "--copy-only") process.exit(0);
-const out = "../docs/features/concepts/crown-chess";
+const out = "../docs/features/fantasy/crown-chess";
 mkdirSync(out, { recursive: true });
 const browser = process.env.REMOTION_BROWSER ? ` --browser-executable="${process.env.REMOTION_BROWSER}"` : "";
 execSync(`npx remotion render src/index.ts cc-pitch ${out}/crown-chess-pitch.mp4${browser}`, { stdio: "inherit" });
