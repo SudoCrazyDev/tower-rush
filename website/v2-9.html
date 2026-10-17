@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>v2.9 League Revamp | Crown &amp; Keep: Tower Defense</title>
+  <meta name="description" content="Release 2.9 of Crown &amp; Keep: every league has a minimum wave, trophies can be lost, longer league gates, the new Mythic and Immortal leagues, and trophies only in your two highest arenas." />
+  <meta name="theme-color" content="#0a0f2c" />
+  <meta property="og:title" content="v2.9 League Revamp | Crown &amp; Keep: Tower Defense" />
+  <meta property="og:description" content="Trophies must be earned now. Reach your league's wave or lose them." />
+  <meta property="og:image" content="https://assets.crownnkeep.com/brand/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="brand/favicon-64.png" />
+  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://assets.crownnkeep.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=2.8.3" />
+  <style>
+    .v28 .section { padding-top: 56px; padding-bottom: 24px; }
+    .v28 .v28__hero { padding-top: 140px; padding-bottom: 24px; }
+    .v28__hero .release__meta { justify-content: center; margin-bottom: 14px; }
+    .v28__hero .section__head { margin-bottom: 20px; }
+    .v28__back { text-align: center; margin: 0 0 18px; }
+    .v28__back a { color: var(--gold); font-weight: 800; text-decoration: none; }
+    .v28__nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+    .v28__nav a { padding: 9px 16px; border-radius: 999px; text-decoration: none; font-weight: 800; font-size: 14px; color: var(--muted); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 1px var(--line); }
+    .v28__nav a:hover { color: var(--text); box-shadow: inset 0 0 0 2px var(--gold); }
+    .v28__box { background: var(--panel); border-radius: 22px; padding: 28px 32px; box-shadow: inset 0 0 0 1px var(--line); max-width: 920px; margin: 0 auto; }
+    .v28__box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; color: var(--muted); }
+    .v28__box li { position: relative; padding-left: 26px; }
+    .v28__box li::before { content: "\2694"; position: absolute; left: 0; color: var(--gold); }
+    .v28__box b { color: var(--text); }
+    .v28__box p { color: var(--muted); margin: 0 0 12px; }
+    .v28__note { max-width: 920px; margin: 18px auto 0; color: var(--muted); font-size: 15px; }
+    .v28__note b { color: var(--text); }
+    .v28__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; max-width: 920px; margin: 0 auto; }
+    .v28__steps div { background: var(--panel); border-radius: 18px; padding: 18px; box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); }
+    .v28__steps b { display: block; font: 400 30px/1 var(--display); color: var(--gold); margin-bottom: 6px; }
+    @media (max-width: 760px) {
+      .v28__box { padding: 20px 18px; }
+      .v28__steps { grid-template-columns: 1fr; }
+    }
+    .lg__wrap { overflow-x: auto; max-width: 920px; margin: 0 auto; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line); background: var(--panel); }
+    .lg__table { width: 100%; border-collapse: collapse; }
+    .lg__table th, .lg__table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 15px; white-space: nowrap; }
+    .lg__table th { color: var(--gold); font-weight: 800; }
+    .lg__table td b { color: var(--text); }
+    .lg__table tr.is-new td b::after { content: " NEW"; color: var(--gold); font-size: 11px; font-weight: 900; }
+  </style>
+</head>
+<body>
+  <!-- ============ NAV ============ -->
+  <header class="nav is-solid" id="nav">
+    <a class="nav__brand" href="index.html" aria-label="Crown &amp; Keep home">
+      <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" />
+    </a>
+    <nav class="nav__links" id="navLinks">
+      <!-- <a href="index.html#how">How to play</a> -->
+      <!-- <a href="index.html#codex">Units</a> -->
+      <!-- <a href="index.html#arenas">Arenas</a> -->
+      <!-- <a href="index.html#modes">Modes</a> -->
+      <!-- <a href="index.html#pvp">PvP</a> -->
+      <a href="index.html#news">News</a>
+      <a href="wiki.html">Wiki</a>
+      <a href="stories.html">Stories</a>
+      <a href="release-notes.html" class="is-active" aria-current="page">Release notes</a>
+      <a href="support.html">Support us</a>
+    </nav>
+    <a class="btn btn--play btn--sm" data-play href="#">Play free</a>
+    <button class="nav__burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+
+  <main id="top" class="v28">
+    <section class="section v28__hero">
+      <div class="section__head">
+        <div class="release__meta"><span class="release__ver">v2.9.0</span><time datetime="2026-10-17">Oct 17, 2026</time><span class="pill pill--live"><i></i> Latest</span></div>
+        <span class="eyebrow">Release 2.9</span>
+        <h2>League Revamp</h2>
+        <p>Trophies must be earned now. Every league has a minimum wave: reach it and you win trophies, fall short and you lose them. The gates are longer, two new leagues sit above Champion, and one more league is never spoken of.</p>
+      </div>
+      <p class="v28__back"><a href="release-notes.html#v2-9-0">&larr; Back to the release notes</a></p>
+      <nav class="v28__nav" aria-label="Jump to a section">
+        <a href="#rules"><b>Trophy rules</b></a>
+        <a href="#ladder">The ladder</a>
+        <a href="#arenas">Arena lock</a>
+        <a href="#quit">Leaving a run</a>
+        <a href="#secret">???</a>
+      </nav>
+    </section>
+
+    <section class="section" id="rules">
+      <div class="section__head">
+        <span class="eyebrow">Arena runs</span>
+        <h2>Win them or lose them</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>A minimum wave per league.</b> Reach it and the run wins 5 trophies, plus more for every wave past it.</li>
+          <li><b>No cap on gains.</b> A great deck that goes deep earns as much as it can reach.</li>
+          <li><b>Fall short and you lose trophies.</b> The further short, the more you lose, up to your league's limit.</li>
+          <li><b>Gold League examples (minimum wave 12):</b> wave 40 wins +61, wave 12 wins +5, wave 8 loses &minus;17.</li>
+          <li><b>Ranked PvP is unchanged.</b></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="ladder">
+      <div class="section__head">
+        <span class="eyebrow">Longer gates</span>
+        <h2>The league ladder</h2>
+        <p>Every gate past Bronze is higher, so some players start this release a league lower. Promotion rewards you already got stay yours and are never paid twice.</p>
+      </div>
+      <div class="lg__wrap">
+      <table class="lg__table">
+        <thead><tr><th>League</th><th>Trophies</th><th>Min wave</th><th>Per wave past it</th><th>Per wave short</th><th>Most lost</th></tr></thead>
+        <tbody>
+          <tr><td><b>Bronze</b></td><td>0</td><td>5</td><td>+3</td><td>&minus;1</td><td>&minus;5</td></tr>
+          <tr><td><b>Silver</b></td><td>500</td><td>8</td><td>+3</td><td>&minus;2</td><td>&minus;12</td></tr>
+          <tr><td><b>Gold</b></td><td>1,200</td><td>12</td><td>+2</td><td>&minus;3</td><td>&minus;18</td></tr>
+          <tr><td><b>Platinum</b></td><td>2,200</td><td>16</td><td>+2</td><td>&minus;3</td><td>&minus;22</td></tr>
+          <tr><td><b>Diamond</b></td><td>3,500</td><td>20</td><td>+2</td><td>&minus;4</td><td>&minus;26</td></tr>
+          <tr><td><b>Master</b></td><td>5,000</td><td>25</td><td>+1</td><td>&minus;4</td><td>&minus;30</td></tr>
+          <tr><td><b>Champion</b></td><td>7,000</td><td>30</td><td>+1</td><td>&minus;5</td><td>&minus;35</td></tr>
+          <tr class="is-new"><td><b>Mythic</b></td><td>10,000</td><td>36</td><td>+1</td><td>&minus;6</td><td>&minus;40</td></tr>
+          <tr class="is-new"><td><b>Immortal</b></td><td>15,000</td><td>42</td><td>+1</td><td>&minus;7</td><td>&minus;45</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="v28__note"><b>Mythic</b> and <b>Immortal</b> are new. Reaching Mythic pays 6,000 coins, 400 gems and a Mythic Chest; Immortal pays 10,000 coins, 600 gems and a Mythic Chest.</p>
+    </section>
+
+    <section class="section" id="arenas">
+      <div class="section__head">
+        <span class="eyebrow">Arena lock</span>
+        <h2>Your two highest arenas</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>Trophies count only in your two highest unlocked arenas.</b> Lower arenas still pay coins and gems, but never trophies.</li>
+          <li><b>The arena card tells you.</b> It shows the wave you need, or "Gold only" when that arena gives no trophies.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="quit">
+      <div class="section__head">
+        <span class="eyebrow">Fair play</span>
+        <h2>Leaving a run</h2>
+      </div>
+      <div class="v28__box">
+        <ul>
+          <li><b>A run you leave counts as a loss.</b> Close the game mid-run, or start playing on another device, and that run takes your league's biggest loss when your next run starts.</li>
+          <li><b>Stories are not affected.</b></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="secret">
+      <div class="section__head">
+        <span class="eyebrow">By invitation only</span>
+        <h2>???</h2>
+      </div>
+      <div class="v28__box">
+        <p>There is one more league. It has no gate on the ladder, and nobody climbs into it. Those who are worthy will be asked.</p>
+        <p>No one can buy their way in.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img crossorigin="anonymous" src="https://assets.crownnkeep.com/ui/logo.webp?v=1.3.0" alt="Crown &amp; Keep" loading="lazy" />
+    <nav>
+      <a href="index.html#codex">Units</a><a href="index.html#arenas">Arenas</a><a href="index.html#modes">Modes</a><a href="index.html#pvp">PvP</a><a href="index.html#news">News</a><a href="wiki.html">Wiki</a><a href="stories.html">Stories</a><a href="release-notes.html">Release notes</a><a href="support.html">Support us</a><a data-play href="#">Play</a>
+    </nav>
+    <div class="footer__social" aria-label="Community">
+      <a class="social social--discord" href="https://discord.gg/q7wq9DCfE" target="_blank" rel="noopener" aria-label="Join our Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.3a18.2 18.2 0 0 0-5.6 0L8.6 3a19.5 19.5 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18.1a19.8 19.8 0 0 0 6 3l1.3-2a12.8 12.8 0 0 1-2-1l.5-.4a14 14 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.7 19.7 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7ZM8 15.4c-1.2 0-2.2-1.1-2.2-2.4S6.8 10.6 8 10.6s2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>Discord</a>
+      <a class="social social--facebook" href="https://www.facebook.com/profile.php?id=61595253580178" target="_blank" rel="noopener" aria-label="Follow us on Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12Z"/></svg>Facebook</a>
+    </div>
+    <p>&copy; 2026 Crown &amp; Keep. All rights reserved.</p>
+  </footer>
+
+  <script>
+    (() => {
+      const GAME_URL = "https://game.crownnkeep.com/";
+      document.querySelectorAll("[data-play]").forEach((a) => { a.href = GAME_URL; a.target = "_blank"; a.rel = "noopener"; });
+      const burger = document.getElementById("burger"), links = document.getElementById("navLinks");
+      burger.addEventListener("click", () => burger.setAttribute("aria-expanded", links.classList.toggle("is-open")));
+    })();
+  </script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 ## 1.6.0
 - Leagues: the trophy card, home ladder and wiki explain the v2.9 rules (each league's min wave, no gain cap, two highest arenas only), with Mythic and Immortal added. The Secret Society shows only as "??? League, Invite only".
+- New release page `v2-9.html` (League Revamp: trophy rules, the league ladder table, arena lock, leaving a run, and a "???" teaser that never names the Society). Release notes get v2.9.0 as the latest (v2.3 moves to the history), and the home page gets a v2.9 news post and live pill. Cache queries on `data/game.js` and `app.js` bumped to `?v=2.9.0`.
 
 ## 1.5.0
 - New page `support.html` ("Support us", in the top menu and footer of every page): totals, monthly running costs, each goal category with progress bars, rollover and donor names, the general fund and the latest supporters, all from the API's `/api/funding`. Donate opens a dialog: amount (with a "finish it" amount), wall name or Anonymous, then a `CK-XXXX` code with the GCash QR and peso amount (or a Ko-fi link once a handle is set). Needs API 1.5.0.

@@ -15,6 +15,7 @@ document and a promo kit for social media. The release timeline is in [ROADMAP.m
 | v2.4.0 | **The Silver Tribunal** | Testing | [README.md](v2.4-the-silver-tribunal/README.md) | [PROMO.md](v2.4-the-silver-tribunal/PROMO.md) |
 | v2.7.0 | **The Great Awakening** | In progress | [README.md](v2.7-the-great-awakening/README.md) | [PROMO.md](v2.7-the-great-awakening/PROMO.md) |
 | v2.8.0 | **Beta Release: Beta Berserker** | Live (2026-10-17) | [README.md](v2.8-beta-berserker/README.md) | [PROMO.md](v2.8-beta-berserker/PROMO.md) |
+| v2.9.0 | **League Revamp** | Testing (staging 2026-10-17) | [README.md](v2.9-league-revamp/README.md) | [PROMO.md](v2.9-league-revamp/PROMO.md) |
 
 ## Conventions
 

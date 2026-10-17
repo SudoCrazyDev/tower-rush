@@ -1,6 +1,6 @@
 # v2.9.0 "League Revamp"
 
-Status: built and tested locally 2026-10-17 (game 2.9.0, API 1.6.0, admin 1.5.0, website 1.6.0, MIN_CLIENT 2.9.0, migration 0011). Not deployed yet.
+Status: on staging 2026-10-17 (commit 483cf97; game 2.9.0, API 1.6.0, admin 1.5.0, website 1.6.0, MIN_CLIENT 2.9.0, migration 0011 applied to staging D1). Not on production yet. Promo kit: [PROMO.md](PROMO.md).
 
 Trophies were too easy to earn. Every run past wave 6 gained trophies in any league and any arena,
 and the most a run could lose was 15. This release makes trophies something you earn.
