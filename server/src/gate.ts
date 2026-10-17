@@ -52,11 +52,12 @@ export function outdated(version: string | undefined, min: string) {
 /**
  * Game requests must send X-Client-Version (WebSockets: `v=` in the query) at or above
  * MIN_CLIENT, else 426. A missing header counts as outdated, so old clients are forced to
- * update. Exempt: /api/admin (the admin panel has its own version) and CORS preflights.
+ * update. Exempt: /api/admin (the admin panel has its own version), /api/funding (the website
+ * and the Ko-fi webhook) and CORS preflights.
  */
 export const versionGate: MiddlewareHandler<AppEnv> = async (c, next) => {
   const path = c.req.path;
-  if (c.req.method === "OPTIONS" || path.startsWith("/api/admin")) return next();
+  if (c.req.method === "OPTIONS" || path.startsWith("/api/admin") || path.startsWith("/api/funding")) return next();
   const min = c.env.MIN_CLIENT;
   if (min && outdated(c.req.header("x-client-version") ?? c.req.query("v"), min)) {
     return c.json({ error: "Update required", minClient: min }, 426);

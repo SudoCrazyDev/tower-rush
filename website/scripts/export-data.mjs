@@ -7,7 +7,7 @@ import { DEFAULT_MONSTERS, DEFAULT_BOSSES } from "../../shared/monsters.ts";
 import { DEFAULT_ARENAS } from "../../shared/arenas.ts";
 import { DEFAULT_LEAGUES } from "../../shared/leagues.ts";
 import { kitPrimary, kitSummary, perkSummary } from "../../shared/kit.ts";
-import { DEFAULT_HEROES, heroAbilityText } from "../../shared/heroes.ts";
+import { DEFAULT_HEROES, HERO_POWERS, heroAbilityText } from "../../shared/heroes.ts";
 import { RACES } from "../../shared/races.ts";
 import { ECONOMY, DEFAULT_CHESTS } from "../../shared/economy.ts";
 import { DEFAULT_PVP, PVP_MODE_INFO } from "../../shared/pvp.ts";
@@ -15,8 +15,10 @@ import { EFFECTS, auraBonus, buffBonus } from "../../shared/effects.ts";
 import {
   SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
 } from "../../shared/support.ts";
-import { storyUnlocking } from "../../shared/stories.ts";
-import { awakenBoostText, awakenDamageMult, awakenSpeedMult, mayAwaken, ultName, ultText } from "../../shared/awakened.ts";
+import { storyUnlocking, DEFAULT_BOOK, DEFAULT_BOOK2, SAGA, BADGES } from "../../shared/stories.ts";
+import { PERKS } from "../../shared/perks.ts";
+import { DEFAULT_QUESTS, DEFAULT_LOGIN_REWARDS, QUEST_GOALS } from "../../shared/daily.ts";
+import { awakenBoostText, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultName, ultText } from "../../shared/awakened.ts";
 import { liveDef, orcText, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../shared/reworks.ts";
 
 // Which art exists (awakened portraits, arena videos) comes from the live asset index on R2.
@@ -145,6 +147,7 @@ function cardInfo(u) {
     awakeText: awakens ? `Awakened: ${awakenBoostText(u.id)}` : null,
     ultName: awakens ? ultName(u.id) : null,
     ultText: awakens ? ultText(u.id) : null,
+    ultEvery: awakens ? ultEvery(u.id) : null,
     unlock: (() => {
       const s = storyUnlocking(u.id);
       return s ? `Unlock it in Story ${s.number}: ${s.story.title}` : "Find this card in chests";
@@ -157,7 +160,7 @@ const out = {
   monsters: DEFAULT_MONSTERS,
   bosses: DEFAULT_BOSSES,
   arenas: DEFAULT_ARENAS,
-  heroes: DEFAULT_HEROES.map((h) => ({ ...h, ability: heroAbilityText(h) })),
+  heroes: DEFAULT_HEROES.map((h) => ({ ...h, abilityName: h.ability, powerLabel: HERO_POWERS[h.power]?.label, ability: heroAbilityText(h) })),
   leagues: DEFAULT_LEAGUES,
   leagueBadges: index.atlas.leagues, // league badge art on R2: ui/league_0 .. n-1
   // How trophies move: arena runs (battleRewards) and Ranked PvP.
@@ -166,6 +169,31 @@ const out = {
   pvp: { rules: DEFAULT_PVP.rules, sends: DEFAULT_PVP.sends.filter((s) => s.enabled), tiers: DEFAULT_PVP.tiers, modes: PVP_MODE_INFO },
   awakened: index.portraits_awakened,
   videos: index.videos,
+  // The wiki page (wiki.html): rules, numbers and stories the home page doesn't show.
+  wiki: {
+    economy: ECONOMY,
+    races: Object.fromEntries(Object.entries(RACES).map(([k, r]) => [k, { label: r.label, color: hex(r.color) }])),
+    archetypes: ARCHETYPES,
+    styles: STYLES,
+    perks: PERKS,
+    chests: DEFAULT_CHESTS.filter((c) => c.enabled),
+    quests: DEFAULT_QUESTS.filter((q) => q.enabled).map((q) => ({ text: QUEST_GOALS[q.goal].text.replace("{n}", q.target), reward: q.reward })),
+    login: DEFAULT_LOGIN_REWARDS,
+    badges: BADGES,
+    bossBanners: index.boss_banners, // wide boss art on R2: boss_banners/{id}
+    // stories.html: sagas hold books, books hold stories. One saga so far; later ones join this list.
+    sagas: [{ title: SAGA, books: [DEFAULT_BOOK, DEFAULT_BOOK2].map((b) => ({
+      title: b.title,
+      stories: b.stories.map((st) => ({
+        id: st.id, title: st.title, blurb: st.blurb, cover: st.cover, trophies: st.trophies, replayCards: st.replayCards,
+        chapters: st.chapters.map((c) => ({
+          title: c.title, waves: c.waves.length, art: c.art, panel: c.intro?.[0]?.image ?? null, rules: !!c.rules,
+          bosses: c.waves.filter((w) => w.boss).map((w) => w.boss),
+          monsters: [...new Set(c.waves.flatMap((w) => (w.spawns ?? []).map((sp) => sp.id)))],
+        })),
+      })),
+    })) }],
+  },
 };
 mkdirSync(new URL("../data/", import.meta.url), { recursive: true });
 writeFileSync(new URL("../data/game.js", import.meta.url), `window.GAME_DATA = ${JSON.stringify(out)};

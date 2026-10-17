@@ -15,6 +15,7 @@ import { UNIT_BY_ID, maxCardLevel } from "../../shared/units.ts";
 import { emptyReward, mailProblems } from "../../shared/mail.ts";
 import type { Reward } from "../../shared/daily.ts";
 import { ART_STATUSES, type ArtStatus } from "../../shared/art-requests.ts";
+import { fundingAdmin } from "./funding.ts";
 
 export const admin = new Hono<AppEnv>();
 
@@ -576,6 +577,10 @@ admin.put("/art/:id", async (c) => {
   );
   return c.json({ id, url, status, notes, updatedAt: Date.now() });
 });
+
+// ---------------------------------------------------------------- community funding
+
+admin.route("/funding", fundingAdmin);
 
 admin.get("/audit", async (c) => {
   const page = Math.max(0, Number(c.req.query("page")) || 0);

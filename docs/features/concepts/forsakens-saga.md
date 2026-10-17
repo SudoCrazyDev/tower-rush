@@ -18,8 +18,8 @@
 - **Book 2, "Chaos Corrupted"** (5 stories): every land has a guardian and an Orb, its heart. In each
   land the chaos finds a hero with a **righteous wound** and twists that hero's sense of justice. When
   the Keeper cleanses an Orb, a **violet shard** escapes it. A hidden hand collects the shards.
-- **Book 3** (5 stories, title TBD): the shards are used. Chaos breaks loose across every land.
-  **Book 3 Story 5 reveals the mastermind** (see section 6).
+- **Book 3, "Justice"** (5 stories): the shards are used. Chaos breaks loose across every land.
+  **Book 3 Story 5 reveals the mastermind** (see section 6). Stories 1-4 are pitched in section 7.
 
 ### The justice thread
 Each fallen hero holds one twisted face of justice. Together they foreshadow the mastermind, a being
@@ -310,6 +310,251 @@ Book 2). A card back showing the broken scales is open: the game has no card-bac
 - It once sat in the Silver Tribunal beside Argent (Book 2 Story 5, panel 6).
 - Open question: is it a new character or an existing unit in the roster? If it is an existing unit,
   its card and description need quiet hints from Book 2 onward.
-- Book 3 Stories 1-4: TBD. Natural setup: the lands of Books 1-2 fall again, and the Keeper gathers
-  the healed heroes (Aelyria, Corvaline, Bako, Durgrim and Argent) as allies.
+- Book 3 Stories 1-4: pitched in section 7. The Keeper leaves the lands of Books 1-2 for the races
+  the old stories called monsters. The healed heroes (Aelyria, Corvaline, Bako, Durgrim and Argent)
+  appear as allies.
 - Sefa can wake from her statue in Book 3 (decided 2026-10-10).
+
+---
+
+## 7. Book 3: "Justice", Stories 1-4 (pitch v2)
+
+**Status:** pitch, not approved. v1 (Shades and the Halved) was rejected on 2026-10-16: Book 3 must be
+built on the game's own races. The no-angels rule from Book 2 Story 5 still holds, so the
+**celestial** race stays out of Book 3.
+
+### The book's spine
+The mastermind was torn between the justice of Good and the justice of Evil. Book 3 shows the
+Keeper both. Books 1-2 were fought in the "good" kingdoms: Candy, Elven Wilds, Drowned Coast,
+Sunspire, Emberhold, Aurelion. Book 3 goes to the races those kingdoms call monsters.
+
+The Voice has opened the **Last Assize** with the five shards. Its scales judge in two ways:
+- **The white pan** judges the "evil" races guilty by birth. Its army, **the Pale Host**, is white
+  chaos poured into soldiers of the good races (human, elf and construct): inquisitors, lancers and
+  brass wardens who march to unmake orcs, goblins, the dead, dragons and demons.
+- **The black pan** judges the good kingdoms guilty of their crimes (the broken Iron Oath, the
+  slaves of Sunspire) and whispers to each "monster" race: *they will always call you monsters, so be
+  monsters.* Its champions are black-chaos members of that story's race.
+
+In every story the Keeper, a hero of the good kingdoms, must protect a "monster" race from the Pale
+Host **and** stop that race's own vengeance. Each race has its own law, and each story's justice is
+that law.
+
+| Story | Land | Races | Their law (the story's justice) | Card(s) the race already has |
+|---|---|---|---|---|
+| S1 | The Ashfang Steppe | **Orc, Goblin** | **Honor:** a wrong is answered face to face. | Witch Doctor, Goblin Bomber, hero Orc Warchief |
+| S2 | The Barrows of Nightmere | **Undead** | **Remembrance:** the dead are owed their names. | Lantern Ghost, Bone Necromancer, Echo Spirit, Vampire Countess, hero Dark Knight |
+| S3 | The Skyreach | **Dragon, Giant** | **Innocence:** no child carries its parents' guilt. | Storm Whelp, Dragon Egg, Ogre Chef, Cyclops Smith, Void Titan |
+| S4 | The Underforge and Cogwhistle | **Demon, Gnome** | **Contract:** the letter of the law against its spirit. | Imp Hunter, Portal Imp, Tesla Gnome, Gear Engineer, Gnome Brewer, hero Gnome Mech |
+
+Races with few cards (orc 1, goblin 1, demon 2, dragon 2) get **two new cards per story**, as the
+dwarves did in Book 2 Story 4. Beast, sylvan and elemental are kept for the Story 5 Assize, where
+every race stands in the court.
+
+### Story shapes (Book 3)
+| Story | Ch 1 | Ch 2 | Ch 3 | The guardian is... | The race's fate |
+|---|---|---|---|---|---|
+| S1 | Waves + **Warband rage** | **Grudge Moot** (one life, honor rules) | **Two fronts**: the Pale Host and the orc raiders | the Warchief's honor | the warband rides with the Keeper |
+| S2 | **Raise the fallen** | **Blood pact** (spend lives for power) | **Roll of names** vs the Pale Inquisitor | the graves | the dead lie down, named |
+| S3 | **Giant's stride** (2-slot units) | **The egg** (protect, then hatch) | **Dragonfire** and a mother's return | a dragon egg | the hatchling stays with the giants |
+| S4 | **Imp contracts** (bonus now, cost later) | **Overclock** (gnome machines) | **Loopholes** vs the Archduke | the contract itself | the demons tear up the Voice's contract |
+
+---
+
+### Story 1: "Born Guilty" (Orcs and Goblins)
+
+**Logline:** The Pale Host crusades across the Ashfang Steppe to unmake the orcs and goblins, guilty
+by birth. The young orcs answer the black voice and want to burn the human villages first. The
+Keeper must defend the orcs from the crusade, and the humans from the orcs.
+
+**Bridge from Book 2:** violet chaos falls on every land. Over the eastern steppe it falls white.
+A goblin messenger reaches the Candy King's court half-burned: "The shining ones are killing us."
+
+**Cast**
+- **Warchief Gorrak Ashfang** (the Orc Warchief hero). Old, scarred, tired of war.
+- **Mother Ozza** (the Witch Doctor). Gorrak's shaman and the keeper of orc law.
+- **Snikkit** (a Goblin Bomber). Guide and comic relief. He does not trust "the pink ones".
+- **Ruk the Unbowed** (black-chaos orc champion). Gorrak's son. He heard the black voice.
+- **Lance-Inquisitor Halvane** (Pale Host boss). A human paladin in white chaos armor.
+
+**Chapters**
+| # | Chapter | Format | Beat |
+|---|---|---|---|
+| 1 | The Rustwarrens | 10 waves, boss: Halvane (escapes) | The Pale Host storms the goblin warrens. You fight with a loaned **Event deck** of orcs and goblins. Snikkit: "Why help us? Your songs say we eat babies." |
+| 2 | The Grudge Moot | 8 waves, boss: Ruk. **Honor rules** | Orc law: an outsider may speak at the war council only after a trial. One life only. No unit may be moved after placement ("an orc does not retreat"). Ruk is the last challenger. |
+| 3 | Two Warbands | 15 waves, then Halvane and Ruk. **Two fronts** | The Pale Host comes from the west and Ruk's raiders from the east, and both want the same valley. Mid-boss, Gorrak walks onto the field unarmed and faces his son. Ruk falters. Rally: Gorrak's warband and the goblin bombers. |
+
+**Ending (draft beats)**
+1. Halvane falls. His white armor cracks, and under it is a frightened young knight.
+2. Ruk raises his axe over the beaten paladin. Gorrak: "Orc law. Face to face. He is beaten. It is
+   done."
+3. Ruk lowers the axe. The knight is sent home alive, to tell his kingdom who spared him.
+4. Mother Ozza: "The voice told my son we were monsters. It told the knight the same."
+5. Cliffhanger: in the west, the old barrows open, and the dead stand up. "The scales tip again."
+
+**New mechanics**
+| Mechanic | Where | What it does |
+|---|---|---|
+| **Warband rage** (headline) | all chapters | Orc units grow stronger each wave they stay in the same slot. Moving one resets it. |
+| **Honor rules** | Ch 2 | One life. Placed units cannot be moved. |
+| **Two fronts** | Ch 3 | Two paths with different enemies: the Pale Host (resists fire) and the orc raiders (resist frost). Placement and element choice decide each front. |
+| **Smite** | Halvane | White light that stuns the unit with the most kills. |
+
+**Rewards:** two new cards, **Orc Berserker** (orc; Warband rage) and **Goblin Sapper** (goblin;
+plants bombs on the path), the story card **Gorrak, the Unbowed**, and the badge **Face to Face**.
+
+---
+
+### Story 2: "The Debt of the Dead" (Undead)
+
+**Logline:** Under the Barrows of Nightmere lie the soldiers of every old war, buried without names by
+the kingdoms they died for. The Pale Host comes to burn the barrows clean. The black voice wakes the
+dead and tells them to march on the living and take back what they are owed.
+
+**Bridge from Story 1:** the open barrows from the Story 1 cliffhanger. Gorrak sends Snikkit with the
+Keeper: "My grandfather lies there. He fought for the humans once."
+
+**Cast**
+- **Countess Morwenna** (the Vampire Countess). Lady of the barrows. She keeps the dead asleep.
+- **The Dark Knight** (hero). A human knight who died in the Candy Kingdom's first war and was never
+  buried at home.
+- **The Gravewarden** (a Bone Necromancer). Morwenna's keeper of the roll of names.
+- **The Hollow King** (black-chaos undead champion). A crown of black chaos on a nameless skeleton.
+- **High Inquisitor Vaux** (Pale Host boss). An elf inquisitor with a white torch.
+
+**Chapters**
+| # | Chapter | Format | Beat |
+|---|---|---|---|
+| 1 | The Burning Barrows | 10 waves, boss: a Pale Warden. **Raise the fallen** | The Pale Host sets the barrows alight. Pale soldiers killed by undead units rise and walk back up the path, fighting the next ones. |
+| 2 | The Countess's Price | 12 waves, boss: the Hollow King. **Blood pact** | Morwenna will help, for a price. Between waves you may give her lives for mana or a free unit. The Hollow King marches the waking dead out of the barrows. |
+| 3 | The Roll of Names | 15 waves, then Vaux. **Roll of names** | Lantern Ghosts carry the names of the dead along the path. Each one that reaches the end puts a name back on the roll. Mid-boss, the Dark Knight reads his own name from the roll, and the Hollow King's army stops to listen. Rally: the named dead. |
+
+**Ending (draft beats)**
+1. Vaux's torch goes out. The barrows stop burning.
+2. The Gravewarden reads the roll aloud: every name, orc and human and elf.
+3. The Hollow King has no name, so he has no anger left. He sits down and is still.
+4. Morwenna: "We never wanted the living. We wanted to be remembered."
+5. The Dark Knight finally goes home to the Candy Kingdom and lies down in its graveyard.
+6. Cliffhanger: in the Skyreach, dwarves sharpen their axes. "A dragon egg has been found."
+
+**New mechanics**
+| Mechanic | Where | What it does |
+|---|---|---|
+| **Raise the fallen** (headline) | Ch 1, 3 | A monster killed by an undead unit rises as a skeleton that walks back up the path and fights. |
+| **Blood pact** | Ch 2 | Spend a life between waves for mana or a free unit. |
+| **Roll of names** | Ch 3 | Lantern Ghost walkers cross the path. Each one that gets through adds to the first-clear reward and weakens the Hollow King. |
+| **White torch** | Vaux | Deals double damage to undead units. Build with other races too. |
+
+**Rewards:** two new cards, **Banshee** (undead; her wail slows a stretch of path) and **Grave
+Digger** (undead; raises the first monster killed each wave), the story card **Morwenna, the
+Remembering**, and the badge **Every Name**.
+
+---
+
+### Story 3: "The Last Egg" (Dragons and Giants)
+
+**Logline:** Three hundred years ago dragons burned Emberhold. Now the last dragon egg in the world
+has been found in the Skyreach, guarded by the giants. The Pale Host wants it smashed ("a dragon is
+guilty before it hatches"), and every dwarf has a reason to agree. Durgrim and Brakka must decide what
+justice is owed to a child.
+
+**Bridge from Story 2:** the axes from the Story 2 cliffhanger. Brakka finds the Keeper: "Father has
+not slept since the egg was found."
+
+**Cast**
+- **Old Brontes** (a Cyclops Smith). Eldest of the Skyreach giants and the egg's guardian.
+- **Gulla** (an Ogre Chef). Brontes's loud, kind cook.
+- **The egg** (the Dragon Egg card) and, after it hatches, **Ember** (a Storm Whelp).
+- **Durgrim and Brakka** (dwarves). Durgrim's city was burned by this egg's grandmother.
+- **Skarnoth, the Ash Mother** (black-chaos dragon). The egg's mother, back from the edge of the
+  world and mad with grief.
+- **Prime Warden Aurex** (Pale Host boss). A brass construct general from Aurelion's old armory.
+
+**Chapters**
+| # | Chapter | Format | Beat |
+|---|---|---|---|
+| 1 | The Skyreach Pass | 12 waves, boss: a Pale Warden. **Giant's stride** | The Pale Host climbs the pass. Giants fight beside you. Giant units take two slots and hit everything around them. |
+| 2 | The Egg | 12 waves, boss: Aurex. **Protect the egg** | The egg sits beside the path. The Pale Host goes for it, not for the exit. At wave 8 it hatches, and **Ember** joins as a unit that grows every wave. Durgrim watches, axe in hand, and does nothing. |
+| 3 | The Ash Mother | 15 waves, then Skarnoth. **Dragonfire** | Skarnoth thinks the giants stole her egg. Her breath sweeps whole rows. She cannot be beaten, only shown her child: keep Ember alive until she sees it. Mid-boss, Durgrim steps between Ember and the Pale Host's last bolt. |
+
+**Ending (draft beats)**
+1. Ember flies to its mother. The black chaos burns out of Skarnoth's eyes.
+2. Skarnoth sees Durgrim, wounded, standing over her child. She knows the smell of Emberhold.
+3. Durgrim: "Your mother burned my city. You are not your mother. Neither is this one."
+4. Skarnoth bows her head to a dwarf, the first dragon in three centuries to do so.
+5. Ember stays with the giants, to be raised in the Skyreach.
+6. Cliffhanger: the road to the Hollow Court runs through the Underforge. "The demons signed a
+   contract with it, long ago."
+
+**New mechanics**
+| Mechanic | Where | What it does |
+|---|---|---|
+| **Giant's stride** (headline) | Ch 1, 3 | Giant units take 2 slots and splash everything next to them. |
+| **Protect the egg** | Ch 2 | The egg has HP and sits beside the path. Some Pale monsters leave the path for it. |
+| **Hatchling** | Ch 2, 3 | Ember starts tiny and gains a level each wave it survives. |
+| **Dragonfire** | Skarnoth | A breath sweeps one full row of slots. A glow warns of the row first. |
+
+**Rewards:** two new cards, **Frost Wyrmling** (dragon; grows each wave it stays on the board) and
+**Hill Giant** (giant; 2 slots), the story card **Ember, the Last Egg**, and the badge **Not Your
+Mother's Sins**.
+
+---
+
+### Story 4: "The Infernal Contract" (Demons and Gnomes)
+
+**Logline:** The only road to the Hollow Court runs through the Underforge, where the demons keep the
+Ledger: every promise ever made, all binding. Long ago the Voice signed a contract with the demons,
+and they must guard its road. The Keeper needs the gnomes of Cogwhistle to build a way through, and a
+loophole to break a contract that cannot be broken.
+
+**Bridge from Story 3:** the Underforge from the Story 3 cliffhanger. Argent joins the Keeper: "A
+contract is a law. I know how laws break."
+
+**Cast**
+- **Fizzwick Gearlock** (the Gnome Mech hero). Inventor of Cogwhistle. Talks fast, builds faster.
+- **The Portal Imps**. The Portal Wizard's portals in Book 1 were their work, bought by contract.
+- **Argent, the Merciful** (ally). The clockwork judge, now arguing for the defense.
+- **Archduke Malphas the Bound** (demon boss). Keeper of the Ledger. He does not want to fight. His
+  contract makes him.
+- **The Pale Notary** (Pale Host captain). A human clerk in white chaos who reads out the clauses.
+
+**Chapters**
+| # | Chapter | Format | Beat |
+|---|---|---|---|
+| 1 | The Ledger Gate | 10 waves, boss: the Pale Notary. **Imp contracts** | Before each wave an imp offers a deal: a bonus now for a cost later (more mana now, a stronger boss later). Signed deals are shown on the Ledger. |
+| 2 | Cogwhistle | 12 waves, boss: a demon foreman. **Overclock** | The gnomes build a drill to cut past the Ledger Gate. Gnome units can overclock (double speed) until they overheat and shut down. |
+| 3 | The Bound Archduke | 15 waves, then Malphas. **Loopholes** | Malphas's contract has clauses, shown on screen ("No fire may touch me", "I fall only if three elements strike as one"). Each clause you meet breaks one link of his binding. Argent reads them out. Rally: the imps, who sold the portals and want their names back. |
+
+**Ending (draft beats)**
+1. The last clause breaks. Malphas is free, and for the first time in a thousand years he chooses not
+   to fight.
+2. Malphas opens the Ledger at the Voice's page. The signature is a broken pair of scales.
+3. Argent: "The letter of a contract binds. Its spirit is what we owe each other."
+4. Malphas tears the page out. The road to the Hollow Court opens.
+5. On it stand orcs, goblins, the named dead, giants, a young dragon, gnomes and demons, beside
+   elves, humans, dwarves and the people of the coast and the desert.
+6. The two-toned voice: "You brought them all. Good and evil. Now I can weigh them all at once."
+   To be continued in Story 5.
+
+**New mechanics**
+| Mechanic | Where | What it does |
+|---|---|---|
+| **Imp contracts** (headline) | Ch 1, 3 | Before a wave, optionally sign a deal: a bonus now and a stated cost on a later wave. |
+| **Overclock** | Ch 2 | Tap a gnome unit to double its speed until it overheats (shuts down for a few seconds). |
+| **Loopholes** | Malphas | Clauses on the boss. Each one met breaks a link of his shield. They reward varied decks and elements. |
+| **Recite** | The Pale Notary | Declares a clause for the wave, like the Prosecutor's laws, but it binds the monsters too. |
+
+**Rewards:** two new cards, **Contract Devil** (demon; trade a life for a big hit) and **Rocket
+Gnome** (gnome; long-range splash), the story card **Malphas, Unbound**, and the badge **Fine
+Print**.
+
+### Open questions
+- **Names:** Gorrak, Ozza, Snikkit, Morwenna, Brontes, Gulla, Ember, Skarnoth, Fizzwick and Malphas are
+  drafts. If the existing cards should keep their current names, the characters can be "the Orc
+  Warchief", "the Vampire Countess" and so on.
+- **New cards:** 8 new units (2 per story). Each needs art, a sheet and balance.
+- **Engine work:** two paths with different enemies (S1), monsters walking back up the path (S2),
+  2-slot units (S3) and pre-wave deals (S4) are new. The egg reuses the cage idea, and Event decks
+  already exist.
+- **Sefa** can still wake in Book 3. Story 5's Assize is the natural place.
+

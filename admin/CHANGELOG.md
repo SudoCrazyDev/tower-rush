@@ -1,5 +1,8 @@
 # Admin changelog
 
+## 1.4.0
+- Funding page: add, edit, order and archive goals (monthly ones for running costs); see pledges waiting for payment and mark them Received (with the GCash reference) or Drop them; log a donation by hand; move a donation to another goal or reject it; upload the GCash QR and set the account name, PHP per USD and the optional Ko-fi handle. Needs API 1.5.0.
+
 ## 1.3.0
 - Marketing plan page: the 9-week social calendar (2026-10-19 to 2026-12-20) for the remaining Higgsfield credits, with still and clip prompts, copy buttons for TikTok, FB Reels, X, the FB feed and Discord. Each paid day shows its 12s reel with the hook and a PLAY FREE NOW end card (player plus download), a no-text copy, still and raw clips, stored as `mkt:` art rows (process-art skips them); all 45 reels are generated and hosted under assets `marketing/`.
 

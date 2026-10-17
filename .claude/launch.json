@@ -122,6 +122,19 @@
       "port": 5191
     },
     {
+      "name": "website-alt",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5195",
+        "--directory",
+        "website"
+      ],
+      "port": 5195,
+      "autoPort": false
+    },
+    {
       "name": "game-dist",
       "runtimeExecutable": "python",
       "runtimeArgs": [

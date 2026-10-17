@@ -1,5 +1,11 @@
 # Website changelog
 
+## 1.5.0
+- New page `support.html` ("Support us", in the top menu and footer of every page): totals, monthly running costs, each goal category with progress bars, rollover and donor names, the general fund and the latest supporters, all from the API's `/api/funding`. Donate opens a dialog: amount (with a "finish it" amount), wall name or Anonymous, then a `CK-XXXX` code with the GCash QR and peso amount (or a Ko-fi link once a handle is set). Needs API 1.5.0.
+- New page `wiki.html` (Wiki, in the top menu and footer): every unit with filters and full info, rarities and elements, awakening, PvP modes, leagues (same tinted card frames as the home page ladder), chests, the daily login calendar and every race. Data from `data/game.js` through the shared `wiki-kit.js`.
+- New page `stories.html` (Stories): each saga, book, story and chapter with the story bosses, foes, unlockable cards and badges, so new sagas get their own tab.
+- Gold gauntlet mouse cursor on every page (`brand/cursor_point.png`, and `brand/cursor_press.png` over links and buttons). Cache query on `styles.css` bumped to `?v=2.8.3`.
+
 ## 1.4.2
 - Hero: Discord and Facebook buttons under the Play / Trailer / Install row. Cache query on `styles.css` bumped to `?v=2.8.2`.
 - Top menu shows only News and Release notes on every page. The section links (How to play, Units, Heroes, Arenas, Bosses, Modes, PvP, Leagues) are commented out in the HTML, not deleted, so they can come back.

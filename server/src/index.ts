@@ -9,6 +9,7 @@ import { player } from "./player.ts";
 import { admin } from "./admin.ts";
 import { pvp } from "./pvp.ts";
 import { play } from "./play.ts";
+import { funding } from "./funding.ts";
 import { corsMiddleware, versionGate } from "./gate.ts";
 
 export { Matchmaker, MatchRoom } from "./pvp.ts";
@@ -33,6 +34,7 @@ app.use("/api/*", async (c, next) => {
 app.route("/api/admin", admin);
 app.route("/api/pvp", pvp);
 app.route("/api/play", play);
+app.route("/api/funding", funding);
 app.route("/api", player);
 app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 

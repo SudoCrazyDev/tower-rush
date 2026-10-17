@@ -1,0 +1,87 @@
+/* Support page (support.html, support.js): funding goals, supporter wall and the donate dialog. */
+.sup__intro { padding-top: 140px; padding-bottom: 24px; }
+.sup__intro .section__head { margin-bottom: 28px; }
+.sup__totals { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+.sup__totals div { min-width: 150px; padding: 14px 20px; border-radius: var(--radius); text-align: center; background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 1px var(--line); }
+.sup__totals b { display: block; font: 400 34px/1.1 var(--display); color: var(--gold); }
+.sup__totals span { color: var(--muted); font-size: 14px; }
+.sup__kofi { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 22px; }
+.sup__kofi span { color: var(--muted); font-size: 14px; }
+/* Ko-fi: the site's gold button with Ko-fi's cup, so it matches the brand instead of Ko-fi's widget. */
+.btn--kofi { text-decoration: none; }
+.btn--kofi svg { width: 24px; height: 24px; }
+.sup__how { max-width: 720px; margin: 0 auto; text-align: center; color: var(--muted); }
+.sup__how b { color: var(--text); }
+.sup__status { text-align: center; color: var(--muted); padding: 24px 0; }
+
+.sup__goals { padding-top: 24px; max-width: 1040px; display: flex; flex-direction: column; gap: 36px; }
+.sup-cat__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.sup-cat__head h3 { font-size: 30px; text-shadow: 0 3px 0 rgba(0, 0, 0, .35); }
+.sup-cat__note { color: var(--muted); font-size: 14px; font-weight: 800; }
+.sup-cat__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.sup-cat--monthly .sup-cat__head h3 { color: var(--gold-text); }
+
+.sup-goal { display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 1px var(--line), 0 6px 0 rgba(0, 0, 0, .25); }
+.sup-goal.is-done { box-shadow: inset 0 0 0 2px rgba(94, 224, 90, .45), 0 6px 0 rgba(0, 0, 0, .25); }
+.sup-goal__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sup-goal__top h4 { margin: 0; font: 400 21px/1.15 var(--display); letter-spacing: .4px; }
+.sup-goal__need { flex: none; font-weight: 900; font-size: 14px; color: var(--gold); white-space: nowrap; }
+.sup-goal__badge { flex: none; padding: 3px 10px; border-radius: 999px; font-weight: 900; font-size: 13px; color: #0b2a0a; background: var(--green); }
+.sup-goal__desc { color: var(--muted); font-size: 15px; }
+.sup-bar { height: 14px; border-radius: 999px; overflow: hidden; background: rgba(0, 0, 0, .35); box-shadow: inset 0 0 0 1px var(--line); }
+.sup-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--gold-2), var(--gold)); transition: width .6s ease; }
+.sup-goal.is-done .sup-bar span { background: linear-gradient(90deg, #2fb32b, var(--green)); }
+.sup-goal__foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; }
+.sup-goal__amt { color: var(--muted); font-size: 15px; }
+.sup-goal__amt b { color: var(--text); font-size: 18px; }
+.sup-goal__carry { display: block; font-size: 12px; color: var(--blue); }
+.sup-goal__donors { font-size: 14px; color: var(--tan); border-top: 1px solid var(--line); padding-top: 8px; }
+
+.sup-general { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; padding: 22px; border-radius: var(--radius); background: linear-gradient(180deg, rgba(255, 201, 60, .12), rgba(255, 157, 26, .05)); box-shadow: inset 0 0 0 1px rgba(255, 201, 60, .35); }
+.sup-general h3 { font-size: 26px; margin-bottom: 6px; }
+.sup-general p { color: var(--muted); max-width: 560px; }
+.sup-general__side { display: flex; align-items: center; gap: 14px; }
+.sup-general__side b { font: 400 30px/1 var(--display); color: var(--gold); }
+
+.sup__wall { padding-top: 40px; max-width: 900px; }
+.sup__wall .section__head { margin-bottom: 20px; }
+.sup__recent { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.sup__recent li { padding: 10px 14px; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); font-size: 15px; }
+.sup__recent b { color: var(--gold-text); }
+.sup__recent span { color: var(--green); font-weight: 900; }
+.sup__recent em { display: block; font-style: normal; color: var(--muted); font-size: 13px; }
+
+/* ---------- donate dialog ---------- */
+.sup-modal { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 26px 22px 22px; border: 0; border-radius: var(--radius); color: var(--text); background: linear-gradient(180deg, var(--panel-2), var(--bg-2)); box-shadow: inset 0 0 0 1px var(--line), 0 24px 60px rgba(0, 0, 0, .6); }
+.sup-modal::backdrop { background: rgba(5, 8, 25, .75); backdrop-filter: blur(3px); }
+.sup-modal h3 { font-size: 26px; margin: 6px 0 4px; }
+.sup-modal__close { position: absolute; top: 8px; right: 10px; margin: 0; }
+.sup-modal__close button { border: 0; background: none; color: var(--muted); font-size: 30px; line-height: 1; cursor: var(--cur-press); padding: 4px 8px; }
+.sup-modal__close button:hover { color: var(--text); }
+.sup-modal__left { color: var(--gold); font-weight: 800; margin-bottom: 12px; }
+.sup-modal__php { color: var(--muted); font-size: 14px; min-height: 1.4em; margin-top: -4px; }
+.sup-modal__note { color: var(--muted); font-size: 14px; margin: 14px 0; }
+.sup-amounts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sup-amounts button { flex: 1 0 64px; padding: 10px 6px; border: 0; border-radius: 12px; cursor: var(--cur-press); font: 900 18px/1.1 var(--body); color: var(--text); background: rgba(0, 0, 0, .3); box-shadow: inset 0 0 0 1px var(--line); }
+.sup-amounts button small { display: block; font-size: 11px; color: var(--gold); }
+.sup-amounts button.is-on { color: #2b1600; background: linear-gradient(180deg, var(--gold), var(--gold-2)); box-shadow: none; }
+.sup-amounts button.is-on small { color: #2b1600; }
+.sup-field { display: block; font-size: 14px; font-weight: 800; color: var(--muted); margin-bottom: 12px; }
+.sup-field input { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; border: 0; border-radius: 10px; font: 700 16px var(--body); color: var(--text); background: rgba(0, 0, 0, .35); box-shadow: inset 0 0 0 1px var(--line); }
+.sup-field input:focus { outline: 2px solid var(--gold); }
+.sup-field input:disabled { opacity: .5; }
+.sup-check { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 14px; cursor: var(--cur-press); }
+.sup-methods { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 15px; }
+.sup-methods:empty { display: none; }
+.sup-error { color: #ff8095; font-size: 14px; min-height: 1.2em; margin-bottom: 8px; }
+.sup-modal .btn--play { width: 100%; }
+.sup-code { color: var(--gold); letter-spacing: 1px; font-family: ui-monospace, Consolas, monospace; }
+.sup-steps { margin: 12px 0; padding-left: 20px; display: grid; gap: 4px; }
+.sup-qr { width: min(260px, 100%); margin: 6px auto 6px; border-radius: 14px; background: #fff; padding: 8px; }
+.sup-qr__name { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+#supGcash .btn--ghost { display: flex; width: fit-content; margin: 0 auto; }
+
+@media (max-width: 700px) {
+  .sup__intro { padding-top: 110px; }
+  .sup-cat__list { grid-template-columns: 1fr; }
+}

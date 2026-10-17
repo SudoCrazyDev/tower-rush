@@ -1,5 +1,12 @@
 # API changelog
 
+## 1.5.0
+- Community funding (`src/funding.ts`, `shared/funding.ts`, migration `0009_funding.sql`): goals, donations and payment settings in D1. Amounts are US cents; GCash pesos convert at `php_per_usd`.
+- Public `/api/funding` (exempt from the `MIN_CLIENT` gate): `GET /` goal progress, supporters and the general fund; `GET /gcash-qr` the uploaded QR image; `POST /pledge` (rate limited) makes a pending pledge with a `CK-XXXX` code; `POST /kofi` is the Ko-fi webhook, checked against the `KOFI_VERIFICATION_TOKEN` secret, which credits a pledge by the code in the message or else the general fund.
+- Goals in a category fill in order; money past a target flows to the next open goal, then the general fund. Monthly goals (running costs) count only this month's gifts.
+- Admin `/api/admin/funding`: goals CRUD, log a donation, confirm/reject/move a donation, payment settings (Ko-fi handle, GCash name and QR, PHP per USD). All writes are audited.
+- `ALLOWED_ORIGINS` adds crownnkeep.com and www (staging: staging.crownnkeep.com) for the Support page.
+
 ## 1.4.1
 - New registered accounts (`/auth/register`, including guest upgrades and invites) are announced in the Discord #new-recruits channel through the `DISCORD_SIGNUP_WEBHOOK` secret (`src/discord.ts`). Only the username goes out, never the email; the post runs in `waitUntil`, so Discord can never slow down or fail a sign-up. Guests are not announced.
 

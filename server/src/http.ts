@@ -29,6 +29,8 @@ export interface Bindings {
   TURNSTILE_SECRET?: string;
   /** Secret, set with `wrangler secret put`. Discord webhook for #new-recruits sign-up posts (discord.ts). */
   DISCORD_SIGNUP_WEBHOOK?: string;
+  /** Secret, set with `wrangler secret put`. Ko-fi > Settings > API verification token (funding.ts). */
+  KOFI_VERIFICATION_TOKEN?: string;
   /** Secret, set with `wrangler secret put`. Creates the first admin when there is none. */
   ADMIN_PASSWORD?: string;
 }
