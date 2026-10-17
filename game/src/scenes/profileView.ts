@@ -39,8 +39,8 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
   const mh = Math.min(H - 24, 1620);
   const m = modal(scene, mw, mh, "PROFILE", () => {});
   const { cx, cy } = m;
-  const left = cx - mw / 2 + 40;
-  const right = cx + mw / 2 - 40;
+  const left = cx - mw / 2 + 56;
+  const right = cx + mw / 2 - 56;
   const top = cy - mh / 2 + 120;
 
   // Header: avatar, name, league.
@@ -84,7 +84,7 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
   // Stage: the hero behind, the deck in front, all idling.
   const stTop = sy + 64;
   const stH = Math.min(820, mh - (stTop - (cy - mh / 2)) - 360);
-  stage(scene, m, p, left, stTop, right - left, stH);
+  stage(scene, m, p, left + 12, stTop, right - left - 24, stH);
 
   // Badges.
   const by = stTop + stH + 30;
@@ -95,7 +95,7 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
 function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicProfile, x: number, y: number, w: number, h: number) {
   const g = scene.add.graphics();
   const bg = scene.add.graphics();
-  bg.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRoundedRect(x, y, w, h, 22);
+  bg.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRoundedRect(x, y, w, h, 10);
   m.add(bg);
   // Backdrop: the arena they last played, cropped to cover the stage and dimmed under the cast.
   const arena = p.arena && ARENA_BY_ID[p.arena] ? p.arena : arenaForTrophies(p.trophies).id;
@@ -119,13 +119,16 @@ function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicPr
     scene.load.once(`filecomplete-image-${artKey}`, showArt);
     scene.load.image(artKey, `${BASE}locations/arena_${arena}.webp`);
   }
-  g.lineStyle(4, 0xffd93b, 0.9).strokeRoundedRect(x, y, w, h, 22);
+  // Inset frame: a thick navy rim with a gold inner line, so the stage sits inside the dialog
+  // (it also hides the square corners of the cropped arena art).
+  g.lineStyle(12, NAVY, 1).strokeRoundedRect(x, y, w, h, 10);
+  g.lineStyle(3, 0xffd93b, 0.9).strokeRoundedRect(x + 6, y + 6, w - 12, h - 12, 8);
   // Floor.
   const floorY = y + h * 0.78;
   g.fillStyle(0x0d1030, 0.7).fillEllipse(x + w / 2, floorY + 10, w * 0.92, h * 0.34);
   g.fillStyle(0xffd93b, 0.08).fillEllipse(x + w / 2, floorY - h * 0.2, w * 0.5, h * 0.5);
   m.add(g);
-  m.add(txt(scene, x + 24, y + 26, "CURRENT DECK", 24, "#fff4c2", [0, 0.5]));
+  m.add(txt(scene, x + 26, y + 34, "CURRENT DECK", 24, "#fff4c2", [0, 0.5]));
 
   const loading = txt(scene, x + w / 2, y + h / 2, "…", 40, "#c9d2ff");
   m.add(loading);
@@ -146,7 +149,7 @@ function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicPr
         s.play({ key, startFrame: 0 });
         m.add(s);
       }
-      m.add(txt(scene, x + w - 24, y + 26, HERO_BY_ID[hero].name, 22, "#c9d2ff", [1, 0.5]));
+      m.add(txt(scene, x + w - 26, y + 34, HERO_BY_ID[hero].name, 22, "#c9d2ff", [1, 0.5]));
     }
     // Front row in a shallow arc: outer units a little higher (further back).
     const n = units.length;
