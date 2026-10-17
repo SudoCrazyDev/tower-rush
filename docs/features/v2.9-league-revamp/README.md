@@ -52,6 +52,9 @@ which replaces the saved leagues with `DEFAULT_LEAGUES` once. Admin edits after 
 
 ## 3. Arena lock
 
+> **Lifted in 2.9.1 (API 1.6.1).** Every unlocked arena wins or loses trophies again, by the
+> league's `minWave`. The text below describes 2.9.0 only.
+
 A solo run wins or loses trophies only in the player's **two highest unlocked arenas**
 (`trophyArena` in `shared/arenas.ts`). Lower arenas still pay gold and gems, but trophies stay at 0.
 This stops strong players farming trophies in Royal Meadow. The arena card and the arena info

@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.6.1
+- Hotfix (game 2.9.1): `trophyArena` counts every unlocked arena, not only the player's two highest. Solo-run gains and losses (and the abandoned-run loss) follow the league's `minWave` in any arena the player has unlocked. No migration, no `MIN_CLIENT` change.
+
 ## 1.6.0
 - League revamp (v2.9): solo-run trophies follow the player's league (`runTrophies`), only in their two highest arenas (`trophyArena`); the finish response adds `trophyRules`. Abandoned solo runs are settled as a wave-0 loss on the next `POST /battles` (`settleAbandoned`).
 - Secret Society: `POST /society/join` pays the entry fee; dues are taken on profile load (`settleSociety`) with an inbox note for each payment or lapse. The leaderboard rows add `society`.

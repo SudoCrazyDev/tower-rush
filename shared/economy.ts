@@ -155,7 +155,7 @@ export const CHESTS: ChestDef[] = structuredClone(DEFAULT_CHESTS);
 /**
  * Rewards for a finished run, computed by the server and shown by the client. Trophies follow
  * the player's league (`league`, see runTrophies in leagues.ts); null when the run can't earn
- * or lose trophies (an arena below the player's two highest).
+ * or lose trophies (an arena the player hasn't unlocked).
  */
 export function battleRewards(wave: number, bossesKilled: number, arenaIndex: number, league: LeagueDef | null) {
   const e = ECONOMY;

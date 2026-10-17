@@ -107,7 +107,7 @@ export function arenaInfo(scene: Phaser.Scene, arena: ArenaDef, tab: Tab = "deta
     const lines: [string, string][] = [
       ["item:coins", `${perWave % 1 ? perWave.toFixed(1) : perWave} coins per wave` + (idx ? ` (+${Math.round(idx * e.arenaCoinBonus * 100)}% arena bonus)` : "")],
       ["item:gems", `Boss every ${e.bossEvery} waves: +${e.coinsPerBoss} coins, +${e.gemsPerBoss} gems`],
-      ["item:trophy", trophyArena(arena.id, profile.trophies) ? `Win trophies from wave ${playerLeague(profile).minWave} (your league)` : "No trophies here: only your two highest arenas count"],
+      ["item:trophy", trophyArena(arena.id, profile.trophies) ? `Win trophies from wave ${playerLeague(profile).minWave} (your league)` : "No trophies here until this arena is unlocked"],
     ];
     const lx = m.cx - MW / 2 + 70;
     lines.forEach(([icon, text], i) => {

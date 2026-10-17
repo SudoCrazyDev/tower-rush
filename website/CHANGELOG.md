@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.6.1
+- Game 2.9.1 hotfix: the trophy card and wiki say every unlocked arena counts; release notes get a v2.9.1 hotfix block and mark the arena lock as lifted. Cache queries on `app.js` and `wiki.js` bumped to `?v=2.9.1`.
+
 ## 1.6.0
 - v2.9 player profiles and the new leagues list: new sections on `v2-9.html` (Player profiles, The leagues list, in the jump nav), an "Also new" list in the v2.9.0 release notes, a line in the home page news post, and a wiki section "Player profiles and badges" (what a profile shows, every story badge). Cache query on `wiki.js` bumped to `?v=2.9.0`.
 - Trailer: "Watch trailer" plays the new 30-second trailer (`video/trailer_v2.mp4`, 1080p re-encoded to 18 MB with faststart) with its own poster frame (`video/trailer_v2.webp`). The old `video/trailer.mp4` stays in R2.

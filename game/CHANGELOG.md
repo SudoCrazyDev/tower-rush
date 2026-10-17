@@ -2,6 +2,10 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.1
+- Hotfix: every unlocked arena wins or loses trophies again, by your league's minimum wave. 2.9.0 limited trophies to your two highest arenas. Arena card, arena info and What's new text updated.
+- Needs API 1.6.1.
+
 ## 2.9.0 "League Revamp"
 - Each league has a minimum wave for solo runs: reach it to win trophies (no cap), fall short and you lose them. Longer league gates (some players drop a league), plus the new Mythic (10,000) and Immortal (15,000) leagues. Details in `docs/features/v2.9-league-revamp/`.
 - Trophies only count in your two highest arenas; lower arenas pay gold only. The arena card, arena info and the run result say which rule applied.

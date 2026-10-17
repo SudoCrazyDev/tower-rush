@@ -296,7 +296,7 @@
     secret_society: ["mythic", "grayscale(1) brightness(.45)"],
   };
   section("leagues", "Leagues", "ui/league_0.webp", `
-    <p class="lead">Trophies come from arena runs and Ranked PvP. Each league sets a minimum wave: an arena run that reaches it wins ${D.trophies.base} trophies plus more for every wave past it, with no cap. A run that falls short loses trophies, up to the league's max loss. Only your two highest arenas count. Each league pays its reward once.</p>
+    <p class="lead">Trophies come from arena runs and Ranked PvP. Each league sets a minimum wave: an arena run that reaches it wins ${D.trophies.base} trophies plus more for every wave past it, with no cap. A run that falls short loses trophies, up to the league's max loss. Every unlocked arena counts. Each league pays its reward once.</p>
     <div class="ladder2">${D.leagues.map((l) => { const [frame, tint] = LEAGUE_FRAME[l.id] ?? ["common", "none"]; return `<div class="rung2" style="--c:${l.color};--frame:url(${ART}/cards/frame_${frame}.webp);--tint:${tint}">
       ${img(l.icon < D.leagueBadges ? `ui/league_${l.icon}.webp` : "items/trophy.webp", l.name)}
       <b>${l.name.replace(/ League$/, "")}<i>League</i></b><small>${l.hidden ? "Invite only" : `${img("items/trophy.webp", "", "ic")}${fmt(l.trophies)} · wave ${l.minWave}`}</small><span>${l.hidden ? "<em>No one speaks of it</em>" : l.reward.coins || l.reward.gems || l.reward.chest ? reward(l.reward) : "<em>Starting league</em>"}</span></div>`; }).join("")}</div>

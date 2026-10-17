@@ -325,7 +325,7 @@
   };
   const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `&minus;${-n}` : "0");
   $("#trophyEarn").innerHTML = [
-    ["items/trophy.webp", "Arena battles", `Each league sets a minimum wave. Reach it to win trophies, with no cap for great runs; fall short and you lose them. Only your two highest arenas count.`,
+    ["items/trophy.webp", "Arena battles", `Each league sets a minimum wave. Reach it to win trophies, with no cap for great runs; fall short and you lose them. Every unlocked arena counts.`,
       [[`Gold League, wave 30`, signed(leagueRun("gold", 30))], [`Gold League, wave 12`, signed(leagueRun("gold", 12))], [`Gold League, wave 6`, signed(leagueRun("gold", 6))]]],
     ["ui/icon_pvp.webp", "Ranked PvP", "Win a Ranked duel to take trophies. Beat a higher-ranked rival and you win more, and lose less.",
       [["Win", signed(R.trophyWin)], ["Lose", signed(-R.trophyLoss)]]],

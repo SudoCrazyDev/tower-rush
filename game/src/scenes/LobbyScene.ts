@@ -598,7 +598,7 @@ export class LobbyScene extends Phaser.Scene {
     this.closeButton(group);
     group.add(txt(this, 0, 186, a.name, 46));
     group.add(txt(this, 0, 226, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
-    // v2.9: the trophy rule for a run here (only the two highest arenas count).
+    // v2.9: the trophy rule for a run here (every unlocked arena counts since 2.9.1).
     if (!locked) {
       const counts = trophyArena(a.id, profile.trophies);
       group.add(txt(this, 0, 258, counts ? `Reach wave ${playerLeague(profile).minWave} to win trophies` : "Gold only: no trophies in this arena", 22, counts ? "#ffd27a" : "#8f9ad0"));

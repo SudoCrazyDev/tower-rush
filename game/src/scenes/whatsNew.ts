@@ -37,7 +37,7 @@ function show(scene: Phaser.Scene) {
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
   m.add(txt(scene, m.cx, m.cy + 150, "Each league has a minimum wave: reach it to win trophies, fall short and you lose them.", 26, "#ffffff").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 210, "Longer league gates (some players drop a league), plus Mythic and Immortal leagues.", 26, "#c9d2ff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 280, "Trophies only in your two highest arenas. And a league no one talks about...", 26, "#ff9df0").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 280, "Trophies in every unlocked arena. And a league no one talks about...", 26, "#ff9df0").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 345, "New: player profiles. Tap anyone on the leaderboard to see their deck and badges.", 26, "#7fffd4").setWordWrapWidth(600));
   m.add(button(scene, m.cx, m.cy + 445, 320, 96, "LET'S GO!", "green", () => m.close()));
 }
