@@ -18,6 +18,8 @@ import type { PublicProfile } from "../../../shared/profile.ts";
 export const getPlayer = (id: number) => get<PublicProfile>(`/players/${id}`);
 
 const UNIT_PX = 180;
+/** The dialog panel's inner navy (ui:panel_dialog), for fading the stage art into it. */
+const PANEL = 0x0f2452;
 const HERO_PX = 380;
 
 /** Fetch player `id` and open their profile. */
@@ -95,7 +97,7 @@ export function profileModal(scene: Phaser.Scene, p: PublicProfile, onEditAvatar
 function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicProfile, x: number, y: number, w: number, h: number) {
   const g = scene.add.graphics();
   const bg = scene.add.graphics();
-  bg.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRoundedRect(x, y, w, h, 10);
+  bg.fillGradientStyle(0x2b2f6e, 0x2b2f6e, 0x14183a, 0x14183a, 1).fillRect(x, y, w, h);
   m.add(bg);
   // Backdrop: the arena they last played, cropped to cover the stage and dimmed under the cast.
   const arena = p.arena && ARENA_BY_ID[p.arena] ? p.arena : arenaForTrophies(p.trophies).id;
@@ -113,16 +115,22 @@ function stage(scene: Phaser.Scene, m: Phaser.GameObjects.Container, p: PublicPr
     img.setScale(s).setCrop(cx0, cy0, cw, ch);
     img.setPosition(x + w / 2 + (img.width / 2 - (cx0 + cw / 2)) * s, y + h / 2 + (img.height / 2 - (cy0 + ch / 2)) * s);
     backdrop.add([img, scene.add.rectangle(x + w / 2, y + h / 2, w, h, 0x0d1030, 0.35)]);
+    // Feather every edge into the dialog's navy so the art blends in instead of ending in a hard line.
+    const f = scene.add.graphics();
+    const T = Math.min(80, h * 0.16);
+    const S = Math.min(40, w * 0.06);
+    f.fillGradientStyle(PANEL, PANEL, PANEL, PANEL, 1, 1, 0, 0).fillRect(x, y, w, T);
+    f.fillGradientStyle(PANEL, PANEL, PANEL, PANEL, 0, 0, 1, 1).fillRect(x, y + h - T, w, T);
+    f.fillGradientStyle(PANEL, PANEL, PANEL, PANEL, 1, 0, 1, 0).fillRect(x, y, S, h);
+    f.fillGradientStyle(PANEL, PANEL, PANEL, PANEL, 0, 1, 0, 1).fillRect(x + w - S, y, S, h);
+    backdrop.add(f);
   };
   if (scene.textures.exists(artKey)) showArt();
   else {
     scene.load.once(`filecomplete-image-${artKey}`, showArt);
     scene.load.image(artKey, `${BASE}locations/arena_${arena}.webp`);
   }
-  // Inset frame: a thick navy rim with a gold inner line, so the stage sits inside the dialog
-  // (it also hides the square corners of the cropped arena art).
-  g.lineStyle(12, NAVY, 1).strokeRoundedRect(x, y, w, h, 10);
-  g.lineStyle(3, 0xffd93b, 0.9).strokeRoundedRect(x + 6, y + 6, w - 12, h - 12, 8);
+  // No frame: the arena art runs edge to edge inside the dialog's margin.
   // Floor.
   const floorY = y + h * 0.78;
   g.fillStyle(0x0d1030, 0.7).fillEllipse(x + w / 2, floorY + 10, w * 0.92, h * 0.34);

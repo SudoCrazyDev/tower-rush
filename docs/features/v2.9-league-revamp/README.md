@@ -143,7 +143,7 @@ A character page for any player, in the spirit of an AQWorlds character page.
 - **Stage (CURRENT DECK):** the player's hero idles large in the back; the 5 deck units idle in a
   shallow arc in front, each with a rarity-coloured shadow and a "Lv N" pill.
   The backdrop is the arena the player last picked (`profile.arena`, else their highest unlocked
-  arena), cropped to cover the stage and dimmed. The dialog fills nearly the whole screen. Sheets load on demand
+  arena), cropped to cover the stage, dimmed, and faded into the dialog's navy on every edge (no frame). The dialog fills nearly the whole screen. Sheets load on demand
   (`loadSheet`); units start on staggered frames so they don't breathe in lockstep. A unit with no
   idle sheet bobs its static art instead. Tap a unit for its name and level.
 - **Badges (n):** earned only: every league reached (promotions paid, plus the current league),
