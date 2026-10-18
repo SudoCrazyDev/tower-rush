@@ -5,7 +5,7 @@ import { freshDaily, utcDay, type DailyState, type LoginState, type Reward } fro
 import { LEAGUES, societyInvite, unpaidLeagues } from "./leagues.ts";
 import type { OfferDef } from "./offers.ts";
 import { PVP } from "./pvp.ts";
-import { CHEST_RARITIES, RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, canDrop, rarityIndex, upgradeCost, maxCardLevel, type ChestRarity, type Rarity } from "./units.ts";
+import { CHEST_RARITIES, RARITY_ORDER, RARITY_STATS, UNITS, UNIT_BY_ID, GIFT_UNITS, canDrop, rarityIndex, upgradeCost, maxCardLevel, type ChestRarity, type Rarity } from "./units.ts";
 import { BOOK, REPLAY_CARDS_PER_DAY, findChapter, newStoryProgress, storyFinished, type StoryProgress } from "./stories.ts";
 
 export interface CardState {
@@ -108,9 +108,20 @@ export const AVATAR_RE = /^avatar_\d{1,3}$/;
 export const TUTORIAL_PARTS = ["battle", "deck"] as const;
 export type TutorialPart = (typeof TUTORIAL_PARTS)[number];
 
+/** v2.10: every player owns the gift units, at least at their gift card level. */
+export function giveGiftUnits(cards: Record<string, CardState>) {
+  for (const [id, level] of Object.entries(GIFT_UNITS)) {
+    if (!UNIT_BY_ID[id]) continue;
+    const c = cards[id];
+    if (!c) cards[id] = { level, copies: 0 };
+    else if (c.level < level) c.level = level;
+  }
+}
+
 export function newProfile(): Profile {
   const cards: Record<string, CardState> = {};
   for (const id of ECONOMY.starterCards) cards[id] = { level: 1, copies: 0 };
+  giveGiftUnits(cards);
   return {
     coins: ECONOMY.startingCoins,
     gems: ECONOMY.startingGems,

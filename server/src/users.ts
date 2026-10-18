@@ -1,5 +1,5 @@
 import { one, run } from "./db.ts";
-import { AVATAR_RE, newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
+import { AVATAR_RE, giveGiftUnits, newProfile, ownsHero, type Profile } from "../../shared/profile.ts";
 import { UNIT_BY_ID, deckable } from "../../shared/units.ts";
 import { newStoryProgress } from "../../shared/stories.ts";
 import { HEROES, HERO_BY_ID } from "../../shared/heroes.ts";
@@ -33,6 +33,8 @@ export function readProfile(row: UserRow): Profile {
   const p = { ...newProfile(), ...JSON.parse(row.profile) } as Profile;
   // Cards/deck entries for units that were removed from the config.
   for (const id of Object.keys(p.cards)) if (!UNIT_BY_ID[id]) delete p.cards[id];
+  // v2.10: gift units (shared/units.ts GIFT_UNITS) for players who joined before them.
+  giveGiftUnits(p.cards);
   const valid = p.deck.filter((id) => p.cards[id] && deckable(UNIT_BY_ID[id]));
   if (valid.length !== 5) {
     const fill = Object.keys(p.cards).filter((id) => deckable(UNIT_BY_ID[id]) && !valid.includes(id));
