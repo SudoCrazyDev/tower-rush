@@ -4,7 +4,7 @@ import { fxBusy, fxKey, fxSprite, fxTrack, hasFx } from "./vfx";
 import { ELEMENT_COLOR, boostMult, type UnitDef } from "../data/units";
 import { EFFECTS } from "../../../shared/effects.ts";
 import { steam } from "./ultFx";
-import { mayAwaken, ultEvery, ultOf } from "../../../shared/awakened.ts";
+import { MURC_NAMES, mayAwaken, ultEvery, ultOf } from "../../../shared/awakened.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
 import { BETA_SUPPORT, REWORKS } from "../../../shared/reworks.ts";
 import { canBecome, isSupport, mirrorInterval, neighbours } from "../../../shared/support.ts";
@@ -102,7 +102,7 @@ export class Unit {
       }
       scene.tweens.add({ targets: this.aura, scale: { from: 0.85, to: 1.12 }, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: 700, ease: "Sine.InOut" });
     }
-    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${unitArt(this.def.id)}_idle`));
+    this.sprite = scene.add.sprite(p.x, p.y, animKey(this.folder, `${this.art}_idle`));
     this.sprite.setScale(this.baseScale).setOrigin(0.5, 0.62);
     this.playIdle();
     this.pips = scene.add.graphics();
@@ -123,6 +123,12 @@ export class Unit {
   /** Sprite scale for the current art (base and awakened sheets can differ in frame size). */
   get baseScale() {
     return sheetScale(this.folder, this.px);
+  }
+
+  /** The art name for its sheets: a True Despair Murcielago has his own awakened art (when it is loaded). */
+  get art() {
+    if (this.awakened && this.sim.murc === "despair" && this.scene.anims.exists(animKey("units_awakened", "murcielago_despair_idle"))) return "murcielago_despair";
+    return unitArt(this.def.id);
   }
 
   /** Awakened art is loaded on demand; until it arrives the base art stands in. */
@@ -302,7 +308,7 @@ export class Unit {
   }
 
   playIdle() {
-    const key = animKey(this.folder, `${unitArt(this.def.id)}_idle`);
+    const key = animKey(this.folder, `${this.art}_idle`);
     const was = this.sprite.anims.currentAnim?.key;
     this.sprite.play(key, true);
     // Switching to the late-loaded awakened art: its frames may be a different size.
@@ -313,7 +319,7 @@ export class Unit {
   }
 
   playOnce(anim: "attack" | "skill", timeScale = 1) {
-    const key = animKey(this.folder, `${unitArt(this.def.id)}_${anim}`);
+    const key = animKey(this.folder, `${this.art}_${anim}`);
     if (!this.scene.anims.exists(key)) {
       // No clean clip for this action: squash and stretch the idle instead.
       const s = this.baseScale;
@@ -638,6 +644,28 @@ export class Unit {
       if (s.absorbed !== this.tallySeen) {
         this.tallySeen = s.absorbed;
         (this.tally.list[1] as Phaser.GameObjects.Text).setText(String(s.absorbed));
+        sc.tweens.add({ targets: this.tally, scale: { from: 1.5, to: 1 }, duration: 260 });
+      }
+    }
+    // v2.10 Murcielago: the ultimate he rolled, over his head.
+    if (this.awakened && this.sim.murc) {
+      if (!this.tally) {
+        const color = this.sim.murc === "despair" ? "#c8c8c8" : "#5dffb0";
+        this.tally = sc.add.container(0, 0, [txt(sc, 0, 0, MURC_NAMES[this.sim.murc].toUpperCase(), 16, color)]);
+      }
+      this.tally.setPosition(x, y - this.px * 0.7).setDepth(depth + 2);
+    }
+    // v2.10 Surgeon of Death: a cube and the Surgeons merged into him.
+    if (this.awakened && ultOf(this.def.id)?.id === "surgeon_of_death") {
+      if (!this.tally) {
+        const cube = sc.add.rectangle(-16, 0, 16, 16, 0x9ff6ff, 0.95).setStrokeStyle(3, 0xffffff).setAngle(45);
+        const label = txt(sc, 4, 0, "x1", 22, "#7ff3ff", [0, 0.5]);
+        this.tally = sc.add.container(0, 0, [cube, label]);
+      }
+      this.tally.setPosition(x + 30, y - this.px * 0.62).setDepth(depth + 2);
+      if (s.surgeons !== this.tallySeen) {
+        this.tallySeen = s.surgeons;
+        (this.tally.list[1] as Phaser.GameObjects.Text).setText(`x${s.surgeons}`);
         sc.tweens.add({ targets: this.tally, scale: { from: 1.5, to: 1 }, duration: 260 });
       }
     }

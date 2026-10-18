@@ -32,6 +32,14 @@ export const REWORKS = {
   spirit_walker: { spirit: { chance: 0.76, extra: 4, radius: 120, push: 35, bossPush: 17.5 } },
   /** Kodo Beasts: never attack. War Drums attack speed (added to haste: ×1.2 = +0.2); the best one a unit gets counts. */
   kodo_beasts: { drums: { near: 0.2, midAt: 0.5, mid: 1.4, farAt: 0.88, far: 2 } },
+  // v2.10 Heart Surgeon.
+  /**
+   * Heart Surgeon: keeps one Room (`radius` px) on the path, somewhere between `from` and `to` of it. Monsters inside take
+   * (`dps` + `perKill` × kills) × his hit per second; kills = monsters that died inside his Room (anyone's kill).
+   */
+  heart_surgeon: { room: { radius: 90, dps: 1, perKill: 0.05, from: 0.05, to: 0.4 } },
+  /** Murcielago: Resurreccion. Each attack has `chance` to awaken him at once, at max rank (if the game has the art). */
+  murcielago: { resurreccion: { chance: 0.0108 } },
 } as const;
 
 /** v2.8: Peon and Kodo Beasts. Their kit is "buff" (no attack of their own), but they give no generic buff: the Sim runs their own rules. */
@@ -134,6 +142,26 @@ export function orcText(id: string): { arch: string; lines: string[]; stat?: [st
       return {
         arch: "Spirit lantern at the leading monster",
         lines: [`Ancestral Spirit: ${pct(s.chance)} per hit to push the target and up to ${s.extra} monsters near it (${s.radius}px) back ${s.push}px (bosses ${s.bossPush}px).`],
+      };
+    }
+    case "heart_surgeon": {
+      const r = REWORKS.heart_surgeon.room;
+      return {
+        arch: "Sword slash at the leading monster",
+        lines: [
+          `Room: keeps a ${r.radius}px Room on the path. Monsters inside take ${pct(r.dps)} of his hit per second, +${pct(r.perKill)} for every monster that ever died inside it.`,
+          `Awakened (Surgeon of Death): every other Heart Surgeon merges into him. He opens 4 Rooms that share one kill count; a boss entering a Room takes Scalpel: hit × Surgeons merged × Room kills, through its shield (once per Room).`,
+        ],
+      };
+    }
+    case "murcielago": {
+      const r = REWORKS.murcielago.resurreccion;
+      return {
+        arch: "Green cero at the leading monster",
+        lines: [
+          `Resurrección: every attack has a ${pct(r.chance)} chance to awaken him at once, at max rank.`,
+          `Awakened, he rolls one of three ultimates: Dark Zero, Lanza del Relámpago or True Despair (see his ultimate).`,
+        ],
       };
     }
     case "kodo_beasts": {

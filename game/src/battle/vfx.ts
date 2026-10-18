@@ -229,9 +229,13 @@ const PROJ_IMPACT: Record<string, string> = {
   void_rift: "impact_void_rift",
   dragon_flame: "impact_dragon_flame",
   chrono_gear: "impact_chrono_gear",
+  slash: "impact_slash",
+  cero: "impact_lanza",
 };
 /** v2.8 projectiles whose art may not be built yet: drawn with an existing projectile until then. */
-const PROJ_FALLBACK: Record<string, string> = { lantern: "arcane_orb", void_rift: "arcane_orb", dragon_flame: "fireball", chrono_gear: "arcane_orb" };
+const PROJ_FALLBACK: Record<string, string> = { lantern: "arcane_orb", void_rift: "arcane_orb", dragon_flame: "fireball", chrono_gear: "arcane_orb", slash: "arcane_orb", cero: "arcane_orb" };
+/** Projectiles drawn larger than the usual 56px (the slash wave is wide). */
+const PROJ_SIZE: Record<string, number> = { slash: 96, cero: 60 };
 /** Projectiles that turn in flight instead of pointing along it. */
 const SPIN_PROJ = new Set(["chrono_gear"]);
 /** v2.8: units with their own impact on top of the usual one (Monkey King's staff). */
@@ -565,7 +569,7 @@ export class ShotView {
       const proj = !hasFx(scene, `proj_${def.proj}`) && PROJ_FALLBACK[def.proj] ? PROJ_FALLBACK[def.proj] : def.proj;
       const tex = proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${proj}`;
       this.img = scene.add.image(x, y, tex).setDepth(2000);
-      this.img.setScale((proj === "spark" ? 40 : 56) / Math.max(1, this.img.width));
+      this.img.setScale((proj === "spark" ? 40 : (PROJ_SIZE[proj] ?? 56)) / Math.max(1, this.img.width));
       this.projSpin = SPIN_PROJ.has(def.proj);
     }
   }

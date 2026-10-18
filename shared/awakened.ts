@@ -46,7 +46,9 @@ export type UltId =
   | "star_merger"
   | "frozen_fields"
   | "black_hole"
-  | "big_ben";
+  | "big_ben"
+  | "surgeon_of_death"
+  | "resurreccion";
 
 export interface UltDef {
   id: UltId;
@@ -106,7 +108,27 @@ export const ULTIMATES: Record<UltId, UltDef> = {
   // `pull`: px/s toward the centre. `execute`: the Void Titan's execute chance once awakened.
   black_hole: { id: "black_hole", name: "Black Hole", mode: "timer", every: 35, params: { holes: 2, radius: 120, duration: 25, pull: 90, execute: 0.1 } },
   big_ben: { id: "big_ben", name: "Big Ben", mode: "timer", every: 45, params: { targets: 4, speed: 0.8, duration: 12 } },
+  // Heart Surgeon: `rooms` Rooms evenly along the path, sharing one kill count. Scalpel (once per Room per boss):
+  // his hit × Surgeons merged × Room kills (at least `minKills`), through the boss's shield.
+  surgeon_of_death: { id: "surgeon_of_death", name: "Surgeon of Death", mode: "field", every: 0, params: { rooms: 4, minKills: 1, from: 0.05, to: 0.75 } },
+  // Murcielago rolls one variant when he awakens (SimUnit.murc). "secs" = seconds since he was summoned.
+  // Dark Zero: every attack is a beam (`width` px) through the target to the edge: hit x secs to all on the line.
+  // Lanza: `lanza` chance per attack for hit x secs x kills to the target; `rapid` chance of `rapidMin`-`rapidMax` lances.
+  // True Despair: x`despairDmg` x N damage, x(`despairSpd` + N) speed (N = Murcielagos on the board); every awakened
+  // Murcielago x`allyDmg` damage, x`allySpd` speed; adjacent other units deal /`nearDmg` and attack /`nearSpd`.
+  resurreccion: {
+    id: "resurreccion",
+    name: "Resurrección",
+    mode: "passive",
+    every: 0,
+    params: { width: 34, lanza: 0.45, rapid: 0.18, rapidMin: 3, rapidMax: 5, despairDmg: 6, despairSpd: 4, allyDmg: 1.2, allySpd: 1.4, nearDmg: 1.7, nearSpd: 1.2 },
+  },
 };
+
+/** Murcielago's three awakened ultimates (one is rolled per awakened unit). */
+export type MurcVariant = "zero" | "lanza" | "despair";
+export const MURC_VARIANTS: MurcVariant[] = ["zero", "lanza", "despair"];
+export const MURC_NAMES: Record<MurcVariant, string> = { zero: "Dark Zero", lanza: "Lanza del Relámpago", despair: "True Despair" };
 
 /** Ultimates an Echo Spirit can't repeat (a second copy would change nothing or stack oddly). */
 export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll", "moonshine", "reborn", "shadow_clones", "tidal_wave", "frozen_fields", "black_hole", "big_ben"]);
@@ -164,6 +186,9 @@ export const AWAKENINGS: Record<string, Awakening> = {
   // mythic
   void_titan: { damage: 3, speed: 3, ult: "black_hole" },
   chrono_mage: { damage: 1, speed: 4, ult: "big_ben" },
+  heart_surgeon: { damage: 3, speed: 3, ult: "surgeon_of_death" },
+  // Murcielago keeps his base damage and speed: his ultimates bring the power.
+  murcielago: { damage: 1, speed: 1, ult: "resurreccion" },
 };
 
 /** Awakened damage and speed multipliers for a unit id (its own, or the generic ones). */
@@ -259,6 +284,10 @@ export function ultText(id: string): string {
       return `Every ${u.every}s: opens ${p.holes} black holes on the path for ${p.duration}s (${p.radius}px). Monsters caught can't move and are pulled to the centre. Execute chance rises to ${pct(p.execute)}.`;
     case "big_ben":
       return `Every ${u.every}s: ${p.targets} random units attack ${x(1 + p.speed)} as fast for ${p.duration}s, then rank up by 1 (reaching max rank, they awaken).`;
+    case "resurreccion":
+      return `Awakened, he rolls one of three. Dark Zero: every attack is a beam through the whole line for his hit × seconds since summoned. Lanza del Relámpago: ${pct(p.lanza)} per attack, a lance for his hit × seconds × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row). True Despair: ×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed (N = Murciélagos), awakened Murciélagos ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed.`;
+    case "surgeon_of_death":
+      return `Passive: there can only be one. Every other Heart Surgeon on the board, and every new one, merges into him with its Room kills. He opens ${p.rooms} Rooms that share one kill count. Scalpel: a boss entering a Room takes his hit × Surgeons merged × Room kills, through its shield (once per Room).`;
   }
 }
 

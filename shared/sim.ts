@@ -47,7 +47,7 @@ import { LAWS, LAW_IDS, TRIBUNAL, panOf, type CellState, type LawId } from "./tr
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
-import { NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type UltId } from "./awakened.ts";
+import { MURC_VARIANTS, NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type MurcVariant, type UltId } from "./awakened.ts";
 import { castUltimate, hatchReborn, ultimateAttack, type UltCtx } from "./ultimates.ts";
 import { BETA_SUPPORT, REWORKS, drumStage, gruntMult, gruntStep, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
@@ -119,7 +119,7 @@ export interface SimLogEntry {
 }
 
 export type ManaSource = "kill" | "wave" | "harvest" | "brew" | "pulse" | "lantern" | "ultimate" | "echo" | "plunder" | "hero" | "income" | "other";
-export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald" | "berserk" | "pillage";
+export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald" | "berserk" | "pillage" | "surgeon" | "scalpel" | "resurreccion";
 
 /**
  * Structured events for a renderer, drained with drainEvents(). Unit uids are stable per
@@ -166,7 +166,7 @@ export type SimEvent =
    * An ultimate fired. `strike` and `mana` are the generic ones; `special` is a unit's own (v2.7, shared/ultimates.ts):
    * `ult` names it, `points` are where it lands (spear line, bombs, cannonballs) and `targets` the monsters it picked.
    */
-  | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana" | "special"; ult?: UltId; x: number; y: number; radius: number; points?: Pt[]; targets?: number[] }
+  | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana" | "special"; ult?: UltId; x: number; y: number; radius: number; points?: Pt[]; targets?: number[]; variant?: MurcVariant }
   | { type: "encore"; t: number; x: number; y: number; radius: number; strike: boolean; ult?: UltId }
   | { type: "herald_cry"; t: number; uid: number | null }
   /** A shot arrived but its target was already gone (play an impact). */
@@ -476,6 +476,12 @@ export class SimUnit {
   kills = 0;
   /** v2.7 Star Merger (Star Astronomer): ranks of the astronomers merged into it. */
   absorbed = 0;
+  /** v2.10 Heart Surgeon: monsters that died inside its Rooms, and the Surgeons merged into it (itself included). */
+  roomKills = 0;
+  surgeons = 1;
+  /** v2.10 Murcielago: the ultimate rolled when he awakened, and when he was summoned (rank-ups and Resurreccion keep it). */
+  murc: MurcVariant | null = null;
+  summonedAt = 0;
   /** v2.7 Frozen Fields (Crystal Queen): holds the ice instead of attacking until then. */
   frostUntil = 0;
   /** v2.7 Big Ben (Chrono Mage): attacks faster until then, then ranks up. */
@@ -668,7 +674,7 @@ export interface SimShot {
  */
 export interface SimField {
   id: number;
-  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive" | "plague" | "skeleton" | "blackhole";
+  kind: "puddle" | "mushroom" | "doll" | "vine" | "vineyard" | "hive" | "plague" | "skeleton" | "blackhole" | "room";
   unit: SimUnit;
   path: Path;
   /** Centre along the path, and its foot point. */
@@ -686,6 +692,8 @@ export interface SimField {
   next: number;
   /** Vine: when it started holding monsters (0 = not yet). */
   held: number;
+  /** v2.10 Room (Heart Surgeon): bosses this Room has already cut with Scalpel. */
+  cut?: Set<number>;
 }
 
 /** Short-lived marks for the Playground's arena view. */
@@ -1140,6 +1148,8 @@ export class Sim {
     // `awake`: awakens below max rank too (Retribution's Shield Knight), if the game has the art.
     const awakened = this.awakensAt(id, rank) || (awake && !isSupport(unitPrimary(id)) && mayAwaken(id) && !!this.o.awakens?.(id));
     const u = this.adopt(new SimUnit({ id, rank, awakened }, slot, pos, this.levelOf(id), this.powerOf(id), 0.3 + this.rand() * 0.4, 0));
+    u.summonedAt = this.now;
+    if (u.awakened && id === "murcielago") u.murc = MURC_VARIANTS[Math.floor(this.rand() * MURC_VARIANTS.length)];
     this.units[slot] = u;
     this.recomputeBuffs();
     if (awakened) {
@@ -1152,6 +1162,16 @@ export class Sim {
   /** Swap a unit onto another tile (a Mime copy, a Mirror Slime turning): same slot, new unit, new uid. */
   protected become(u: SimUnit, id: string, rank: number, why: "copy" | "mirror" | "awaken" | "rank" = "copy", awake = false) {
     const v = this.place(id, rank, u.slot, { x: u.x, y: u.y }, awake);
+    // A Heart Surgeon that ranks up or awakens keeps its Room kills.
+    if (id === u.def.id) {
+      v.roomKills = u.roomKills;
+      v.surgeons = u.surgeons;
+      // Murcielago keeps his clock and his kills (his ultimates scale with both).
+      if (id === "murcielago") {
+        v.summonedAt = u.summonedAt;
+        v.kills = u.kills;
+      }
+    }
     this.emit({ type: "become", t: this.now, uid: v.uid, gone: u.uid, why, id, rank, slot: v.slot, x: v.x, y: v.y, awakened: v.awakened });
     return v;
   }
@@ -1567,17 +1587,18 @@ export class Sim {
   }
 
   /** Apply damage; returns true if it killed. */
-  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly ActivePerk[]; crit?: boolean; color?: string } = {}) {
+  private hurt(m: SimMonster, amount: number, src: Source, opts: { sure?: boolean; quiet?: boolean; perks?: readonly ActivePerk[]; crit?: boolean; color?: string; pierce?: boolean } = {}) {
     if (m.dead) return false;
     if (m.shelled || m.family) return false;
     // Story 3: masked monsters are immune; an unmasked civilian is only counted as hit, never hurt.
     if ((m.masked || m.civilian) && this.facelessHurt(m)) return false;
-    if (this.now < m.shieldUntil) {
+    // v2.10 `pierce` (Scalpel) cuts through a boss's shield and block.
+    if (this.now < m.shieldUntil && !opts.pierce) {
       this.blocked += amount;
       if (!opts.quiet) this.callout("block", "BLOCK", "#9fb4ff", m.pos.x, m.pos.y - 20);
       return false;
     }
-    if (!opts.sure && m.boss?.block && this.rand() < m.boss.block) {
+    if (!opts.sure && !opts.pierce && m.boss?.block && this.rand() < m.boss.block) {
       this.blocked += amount;
       if (!opts.quiet) this.callout("block", "BLOCK", "#9fb4ff", m.pos.x, m.pos.y - 20);
       return false;
@@ -1628,6 +1649,7 @@ export class Sim {
     if (killer) killer.kills++;
     if (m.raiseBy) this.raiseDead(m);
     if (m.kissBy) this.kissPays(m);
+    if (this.fields.length) this.roomKill(m);
     this.gainMana(m.mana, null, null, "kill");
     const p = m.pos;
     this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
@@ -2123,6 +2145,8 @@ export class Sim {
     const keep = luck > 0 && this.rand() < luck;
     if (keep) this.counts.lucky++;
     const u = this.place(keep ? x.def.id : this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, to);
+    // Two Heart Surgeons merging into a Heart Surgeon pool their Room kills.
+    if (u.def.id === x.def.id) u.roomKills = x.roomKills + y.roomKills;
     this.flagBorn(u, "no_merge");
     this.counts.merges++;
     if (u.awakened) this.counts.awakens++;
@@ -2296,7 +2320,7 @@ export class Sim {
     const base = this.equal && this.now < this.equal.until ? (this.equal.dmg.get(u) ?? u.stats.damage) : u.stats.damage;
     // v2.7 Luna's Blessing: each one on the unit adds damage. Star Merger: each absorbed rank too.
     const blessed = u.blessings.length ? base * (1 + ULTIMATES.moonshine.params.damage * this.blessed(u)) : base;
-    return u.absorbed ? blessed * (1 + ULTIMATES.star_merger.params.damage * u.absorbed) : blessed;
+    return (u.absorbed ? blessed * (1 + ULTIMATES.star_merger.params.damage * u.absorbed) : blessed) * this.despair(u)[0];
   }
 
   /** v2.7 Luna's Blessings on a unit right now (expired ones are dropped). */
@@ -3296,6 +3320,7 @@ export class Sim {
     }
     // v2.7: units that keep things on the path (vines, hives, mushrooms).
     if (u.def.id === "vine_druid") this.tendVines(u, dt);
+    if (u.def.id === "heart_surgeon") this.tendRooms(u);
     if (u.awakened && ultOf(u.def.id)?.mode === "field") this.tendField(u, dt);
     if (noOwnAttack(u.def.id, u.awakened)) return;
     const every = u.awakened ? ultEvery(u.def.id) : 0;
@@ -3325,6 +3350,7 @@ export class Sim {
     else if (now < u.jamUntil) return;
     if (u.blessings.length) rate *= 1 + ULTIMATES.moonshine.params.speed * this.blessed(u);
     if (u.absorbed) rate *= 1 + ULTIMATES.star_merger.params.speed * u.absorbed;
+    rate *= this.despair(u)[1];
     if (now < u.benUntil) rate *= 1 + ULTIMATES.big_ben.params.speed;
     // v2.8 Headhunter: Berserker Upgrade attack speed from a late wave on.
     const hh = u.def.id === "headhunter" ? REWORKS.headhunter.upgrade : null;
@@ -3608,6 +3634,21 @@ export class Sim {
         if (v?.def.id === "shield_knight" && !v.awakened && free(v) && this.o.awakens?.(v.def.id)) this.become(v, v.def.id, v.rank, "awaken", true);
       }
     }
+    // Surgeon of Death: there can only be one. Every other Heart Surgeon merges into the awakened one, Room kills and all.
+    const surgeon = this.units.find((v) => v?.awakened && !v.dragging && ultOf(v.def.id)?.id === "surgeon_of_death");
+    if (surgeon) {
+      const merged = this.units.filter((v): v is SimUnit => !!v && v !== surgeon && v.def.id === surgeon.def.id && free(v));
+      if (merged.length) {
+        for (const v of merged) {
+          this.units[v.slot] = null;
+          surgeon.surgeons += v.surgeons;
+          surgeon.roomKills += v.roomKills;
+        }
+        this.recomputeBuffs();
+        this.callout("surgeon", `SURGEONS x${surgeon.surgeons}`, "#7ff3ff", surgeon.x, surgeon.y - 60, surgeon.uid);
+        this.emit({ type: "ultimate", t: now, uid: surgeon.uid, kind: "special", ult: "surgeon_of_death", x: surgeon.x, y: surgeon.y, radius: 0, points: merged.map((v) => ({ x: v.x, y: v.y })), targets: merged.map((v) => v.uid) });
+      }
+    }
     // Star Merger: every other Star Astronomer merges into the awakened one.
     const star = this.units.find((v) => v?.awakened && !v.dragging && ultOf(v.def.id)?.id === "star_merger");
     if (!star) return;
@@ -3651,6 +3692,90 @@ export class Sim {
       if (m.boss && now >= f.held + v.bossHold) continue;
       m.dist = at;
     }
+  }
+
+  /**
+   * v2.10 Heart Surgeon: one Room on the path (awakened: Surgeon of Death's Rooms, evenly along it). A new Room goes to
+   * the spot furthest from the other Surgeons' Rooms (a few seeded tries), so several Surgeons spread out.
+   */
+  private tendRooms(u: SimUnit) {
+    const r = REWORKS.heart_surgeon.room;
+    const mine = this.fields.filter((f) => f.kind === "room" && f.unit === u && this.now < f.until);
+    const want = u.awakened ? ULTIMATES.surgeon_of_death.params.rooms : 1;
+    if (mine.length === want) return;
+    for (const f of mine) f.until = this.now;
+    if (u.awakened) {
+      const sp = ULTIMATES.surgeon_of_death.params;
+      const per = Math.ceil(want / this.paths.length);
+      for (let i = 0; i < want; i++) {
+        const path = this.paths[i % this.paths.length];
+        const k = Math.floor(i / this.paths.length);
+        this.addField("room", u, path, path.length * (sp.from + ((sp.to - sp.from) * (k + 0.5)) / per), { radius: r.radius, until: Infinity, dps: 0 }).cut = new Set();
+      }
+      return;
+    }
+    const others = this.fields.filter((f) => f.kind === "room" && this.now < f.until);
+    let best: { path: Path; dist: number; gap: number } | null = null;
+    for (let i = 0; i < 6; i++) {
+      const path = this.paths[Math.floor(this.rand() * this.paths.length)];
+      const dist = path.length * (r.from + this.rand() * (r.to - r.from));
+      const at = path.at(dist);
+      const gap = others.reduce((g, f) => Math.min(g, Math.hypot(f.x - at.x, f.y - at.y)), Infinity);
+      if (!best || gap > best.gap) best = { path, dist, gap };
+    }
+    this.addField("room", u, best!.path, best!.dist, { radius: r.radius, until: Infinity, dps: 0 }).cut = new Set();
+  }
+
+  /**
+   * v2.10 True Despair: [damage, speed] multipliers on `u` from the awakened Murcielagos that rolled it. Their own boost
+   * grows with the Murcielagos on the board; every awakened Murcielago gets the ally boost per Despair; other units
+   * next to a Despair are weakened.
+   */
+  private despair(u: SimUnit): [number, number] {
+    let n = 0;
+    let despairs = 0;
+    let near = false;
+    for (const v of this.units) {
+      if (v?.def.id !== "murcielago") continue;
+      n++;
+      if (v.murc !== "despair" || !v.awakened || v.dragging) continue;
+      despairs++;
+      if (v !== u && neighbours(v.slot).includes(u.slot)) near = true;
+    }
+    if (!despairs) return [1, 1];
+    const p = ULTIMATES.resurreccion.params;
+    if (u.def.id !== "murcielago") return near ? [1 / p.nearDmg, 1 / p.nearSpd] : [1, 1];
+    let dmg = 1;
+    let spd = 1;
+    if (u.awakened) {
+      dmg *= Math.pow(p.allyDmg, despairs);
+      spd *= Math.pow(p.allySpd, despairs);
+    }
+    if (u.awakened && u.murc === "despair") {
+      dmg *= p.despairDmg * n;
+      spd *= p.despairSpd + n;
+    }
+    return [dmg, spd];
+  }
+
+  /** v2.10: a monster that dies inside a Heart Surgeon's Room adds to that Surgeon's kills (once per Surgeon). */
+  private roomKill(m: SimMonster) {
+    const counted = new Set<SimUnit>();
+    for (const f of this.fields) {
+      if (f.kind !== "room" || this.now >= f.until || counted.has(f.unit) || !this.inField(f, m)) continue;
+      counted.add(f.unit);
+      f.unit.roomKills++;
+    }
+  }
+
+  /** v2.10 Scalpel: an awakened Heart Surgeon's Room cuts a boss that enters it, once, through its shield. */
+  private scalpel(f: SimField, m: SimMonster) {
+    const u = f.unit;
+    const p = ULTIMATES.surgeon_of_death.params;
+    const dmg = this.hitOf(u) * u.surgeons * Math.max(p.minKills, u.roomKills);
+    this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "special", ult: "surgeon_of_death", x: m.pos.x, y: m.pos.y, radius: f.radius, points: [{ x: f.x, y: f.y }], targets: [m.uid] });
+    this.callout("scalpel", "SCALPEL!", "#7ff3ff", m.pos.x, m.pos.y - 70);
+    this.hurt(m, dmg, u.slot, { sure: true, pierce: true, perks: u.perks, crit: true, color: "#7ff3ff" });
   }
 
   /** Vine Druid: one prickly vine at a time, grown just ahead of the front monster. Awakened, she also keeps her vineyard. */
@@ -3754,6 +3879,22 @@ export class Sim {
             f.next = now + 0.5;
             const m = inside[Math.floor(this.rand() * inside.length)];
             this.view({ type: "zap", t: now, kind: "storm", n: 0, x: f.x, y: f.y - 60, x2: m.pos.x, y2: m.pos.y, color: "#fff27a" });
+          }
+          break;
+        }
+        case "room": {
+          // Heart Surgeon's Room: (dps + perKill x kills) x his hit per second to everything inside; awakened, Scalpel on bosses.
+          const r = REWORKS.heart_surgeon.room;
+          const u = f.unit;
+          const dps = this.hitOf(u) * (r.dps + r.perKill * u.roomKills);
+          for (const m of live) {
+            if (!this.inField(f, m)) continue;
+            if (u.awakened && m.boss && f.cut && !f.cut.has(m.uid)) {
+              f.cut.add(m.uid);
+              this.scalpel(f, m);
+              if (m.dead) continue;
+            }
+            this.hurt(m, dps * dt, u.slot, { sure: true, quiet: true, perks: u.perks });
           }
           break;
         }
@@ -3928,6 +4069,13 @@ export class Sim {
         const side = i % 2 ? 1 : -1;
         this.shots.push({ unit: u, damage: damage * cp.damage, target, x: u.x + side * cp.gap, y: u.y - 30, aim: target.pos, speed: 1100 });
       }
+    }
+    // v2.10 Murcielago: Resurreccion may awaken him mid-attack, at max rank.
+    if (u.def.id === "murcielago" && !u.awakened && mayAwaken(u.def.id) && this.o.awakens?.(u.def.id) && this.rand() < REWORKS.murcielago.resurreccion.chance) {
+      const v = this.become(u, u.def.id, maxRank(), "awaken", true);
+      this.callout("resurreccion", "RESURRECCIÓN!", "#5dffb0", v.x, v.y - 70, v.uid);
+      this.emit({ type: "ultimate", t: now, uid: v.uid, kind: "special", ult: "resurreccion", x: v.x, y: v.y, radius: 0, variant: v.murc ?? undefined });
+      return;
     }
     // v2.7: a passive ultimate (Multi-Shot, Tesla Coil) changes every attack.
     if (u.awakened && ultimateAttack(this.ultCtx, u, target, damage)) return;

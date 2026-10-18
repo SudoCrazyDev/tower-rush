@@ -872,6 +872,11 @@ export class BattleScene extends Phaser.Scene {
     if (this.awakenedRequested.has(id) || !canAwaken(id)) return;
     this.awakenedRequested.add(id);
     for (const anim of ["idle", "attack", "skill"]) loadSheet(this, "units_awakened", `${id}_${anim}`);
+    // v2.10: a Murcielago may roll True Despair, which has its own art.
+    if (id === "murcielago") {
+      this.awakenedRequested.add("murcielago_despair");
+      for (const anim of ["idle", "attack"]) loadSheet(this, "units_awakened", `murcielago_despair_${anim}`);
+    }
     this.load.start();
   }
 
@@ -1531,7 +1536,8 @@ export class BattleScene extends Phaser.Scene {
         u?.playOnce("skill");
         if (e.kind === "special") {
           // v2.7 Star Merger: the absorbed astronomers leave the board.
-          if (e.ult === "star_merger") for (const g of e.targets ?? []) this.dropUnit(g);
+          // v2.10 Surgeon of Death (radius 0: the merge, not a Scalpel): the merged Surgeons leave too.
+          if (e.ult === "star_merger" || (e.ult === "surgeon_of_death" && e.radius <= 0)) for (const g of e.targets ?? []) this.dropUnit(g);
           playUltimate(this, e, u?.sprite);
           break;
         }

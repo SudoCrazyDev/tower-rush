@@ -360,6 +360,42 @@ export function ultimateAttack(ctx: UltCtx, u: SimUnit, target: SimMonster, dama
       ctx.emit({ type: "ultimate", t: ctx.now, uid: u.uid, kind: "special", ult: "black_plague", x: points[0].x, y: points[0].y, radius: p.radius, points });
       return true;
     }
+    case "resurreccion": {
+      // Murcielago: the variant he rolled when he awakened. True Despair changes his numbers, not his attack.
+      const secs = Math.max(1, ctx.now - u.summonedAt);
+      const from: Pt = { x: u.x, y: u.y - 30 };
+      if (u.murc === "zero") {
+        // Dark Zero: a beam from him through the target to the edge of the arena; everything on the line is hit.
+        const dx = target.pos.x - from.x;
+        const dy = target.pos.y - from.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const [ux, uy] = [dx / len, dy / len];
+        const end = { x: from.x + ux * 2400, y: from.y + uy * 2400 };
+        const hit = ctx.targets().filter((m) => {
+          const t = (m.pos.x - from.x) * ux + (m.pos.y - from.y) * uy;
+          return t > 0 && Math.abs((m.pos.x - from.x) * uy - (m.pos.y - from.y) * ux) <= p.width + m.size * 0.5;
+        });
+        ctx.emit({ type: "ultimate", t: ctx.now, uid: u.uid, kind: "special", ult: "resurreccion", x: target.pos.x, y: target.pos.y, radius: p.width, points: [from, end], targets: hit.map((m) => m.uid), variant: "zero" });
+        for (const m of hit) ctx.hurt(u, m, damage * secs);
+        return true;
+      }
+      if (u.murc === "lanza") {
+        if (ctx.rand() >= p.lanza) return false;
+        // Lanza del Relampago: one lance (or a rapid volley) at the target; the next one finds a new target if it falls.
+        const n = ctx.rand() < p.rapid ? p.rapidMin + Math.floor(ctx.rand() * (p.rapidMax - p.rapidMin + 1)) : 1;
+        const hit: number[] = [];
+        let m: SimMonster | null = target;
+        for (let i = 0; i < n; i++) {
+          if (!m || m.dead) m = ctx.pick("first");
+          if (!m) break;
+          hit.push(m.uid);
+          ctx.hurt(u, m, damage * secs * Math.max(1, u.kills), { crit: true });
+        }
+        ctx.emit({ type: "ultimate", t: ctx.now, uid: u.uid, kind: "special", ult: "resurreccion", x: target.pos.x, y: target.pos.y, radius: 1, points: [from], targets: hit, variant: "lanza" });
+        return true;
+      }
+      return false;
+    }
     case "tesla_coil": {
       const all = ctx.targets();
       const first = all[Math.floor(ctx.rand() * all.length)];

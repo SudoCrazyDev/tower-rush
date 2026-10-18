@@ -82,7 +82,10 @@ export type Proj =
   | "lantern"
   | "void_rift"
   | "dragon_flame"
-  | "chrono_gear";
+  | "chrono_gear"
+  // v2.10: Heart Surgeon's sword slash wave, Murcielago's green cero.
+  | "slash"
+  | "cero";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -132,6 +135,8 @@ export const PROJECTILES: Proj[] = [
   "void_rift",
   "dragon_flame",
   "chrono_gear",
+  "slash",
+  "cero",
 ];
 
 export interface UnitDef {
@@ -453,6 +458,10 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "dragon_flame", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
   U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "chrono_gear", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
   { ...U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"), weapon: "sig_monkey_king" },
+  // v2.10: Heart Surgeon keeps a Room on the path (shared/reworks.ts); awakened, Surgeon of Death (shared/awakened.ts).
+  U("heart_surgeon", "Heart Surgeon", "mythic", "arcane", "shot", "slash", "Every room is his operating table.", "human", "heavy", "true_strike"),
+  // v2.10: Murcielago may release himself mid-fight (shared/reworks.ts); awakened, one of three ultimates (shared/awakened.ts).
+  U("murcielago", "Murciélago", "mythic", "arcane", "shot", "cero", "Despair has no bottom.", "demon", "balanced", "true_strike"),
   // v1.2 Stories: Princess Muse, the Story 1 reward and the first Event card.
   { ...U("princess_muse", "Princess Muse", "event", "arcane", "aura", "arcane_orb", "A round on the house, and the whole bar fights harder.", "human", "balanced", "none"), role: "Barkeeper" },
   // v1.2 Stories: Story 2's Knights and Mercenaries. Pentagonal and Rogue Knight are its reward
@@ -494,7 +503,7 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
  */
 /** v2.8 "Beta Berserker": the Orc units. */
 export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS];
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago"];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
 }

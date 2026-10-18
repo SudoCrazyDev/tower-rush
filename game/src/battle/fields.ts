@@ -1,13 +1,13 @@
 /**
  * v2.7 field layer: draws what units leave on the path (Sim.fields: puddles, mushrooms, rag dolls,
- * prickly vines, vineyards, hives, black holes) one sprite per field id, plus the Scorched Earth glow
+ * prickly vines, vineyards, hives, black holes, Heart Surgeon Rooms) one sprite per field id, plus the Scorched Earth glow
  * (Sim.scorch) and the Frozen Fields ice (Sim.frost).
  * Every texture use is guarded; a missing vfx falls back to a plain shape.
  */
 import Phaser from "phaser";
 import type { Sim, SimField } from "../../../shared/sim.ts";
 import { fxKey, hasFx } from "./vfx";
-import { ARENA_W, ARENA_H } from "../ui";
+import { ARENA_W, ARENA_H, txt } from "../ui";
 
 type Obj = Phaser.GameObjects.Image | Phaser.GameObjects.Ellipse;
 type Scene = Phaser.Scene & { sim: Sim };
@@ -20,6 +20,8 @@ interface Entry {
   grown: boolean;
   /** Natural scale the idle tweens pulse around. */
   base: number;
+  /** Room: the kill count last drawn. */
+  seen: number;
 }
 
 const GROUND_DEPTH = 50;
@@ -164,6 +166,36 @@ export class FieldLayer {
         sc.tweens.add({ targets: obj, scaleX: { from: 0.94, to: 1.06 }, scaleY: { from: 0.94, to: 1.06 }, duration: 600, yoyo: true, repeat: -1, ease: "Sine.InOut" });
         break;
       }
+      case "room": {
+        // Heart Surgeon's Room: a translucent cyan dome over a glowing floor ring, its kill count on top.
+        const aw = f.unit.awakened;
+        const r = f.radius;
+        obj = sc.add.ellipse(f.x, f.y, r * 2, r * 1.2, 0x5fd8ff, aw ? 0.2 : 0.14).setStrokeStyle(aw ? 5 : 3, aw ? 0x7ff3ff : 0xbff4ff, 0.9).setDepth(GROUND_DEPTH + 1);
+        const dome = sc.add.graphics().setPosition(f.x, f.y).setDepth(prop + 1);
+        dome.fillStyle(0x8fe6ff, aw ? 0.16 : 0.1).fillEllipse(0, -r * 0.35, r * 2, r * 1.7);
+        dome.lineStyle(aw ? 4 : 3, 0xdffaff, 0.55).strokeEllipse(0, -r * 0.35, r * 2, r * 1.7);
+        // A highlight arc on the upper left, like light on glass.
+        dome.lineStyle(5, 0xffffff, 0.45).beginPath();
+        dome.arc(0, -r * 0.35, r * 0.78, Math.PI * 1.08, Math.PI * 1.42);
+        dome.strokePath();
+        dome.setScale(1, 0.85);
+        extra.push(dome);
+        sc.tweens.add({ targets: dome, alpha: { from: 0.75, to: 1 }, duration: 900 + (f.id % 4) * 120, yoyo: true, repeat: -1, ease: "Sine.InOut" });
+        // A scan line sweeps the floor.
+        const scan = sc.add.graphics().setPosition(f.x, f.y).setDepth(GROUND_DEPTH + 2);
+        scan.lineStyle(3, 0xffffff, 0.6).beginPath();
+        scan.arc(0, 0, r * 0.92, 0, Math.PI * 0.5);
+        scan.strokePath();
+        scan.setScale(1, 0.6);
+        extra.push(scan);
+        sc.tweens.add({ targets: scan, angle: 360, duration: aw ? 1600 : 2600, repeat: -1 });
+        const label = txt(sc, f.x, f.y - r * 1.55, `✚ ${f.unit.roomKills}`, aw ? 24 : 20, aw ? "#7ff3ff" : "#dffaff").setDepth(1600);
+        extra.push(label);
+        // The dome opens from the floor up.
+        dome.setScale(0.2, 0.1);
+        sc.tweens.add({ targets: dome, scaleX: 1, scaleY: 0.85, duration: 420, ease: "Back.Out" });
+        break;
+      }
       default: {
         // hive
         const img = this.image("beehive", f.x, f.y);
@@ -181,7 +213,7 @@ export class FieldLayer {
       obj.setScale(to * 0.3, toY * 0.3);
       sc.tweens.add({ targets: obj, scaleX: to, scaleY: toY, duration: 260, ease: "Back.Out" });
     }
-    return { f, obj, extra, grown: false, base };
+    return { f, obj, extra, grown: false, base, seen: f.kind === "room" ? f.unit.roomKills : 0 };
   }
 
   private tick(e: Entry, now: number) {
@@ -208,6 +240,23 @@ export class FieldLayer {
         const sx = o.scaleX;
         const sy = o.scaleY;
         this.scene.tweens.add({ targets: o, scaleX: sx * 1.05, scaleY: sy * 1.08, duration: 700, yoyo: true, repeat: -1, ease: "Sine.InOut" });
+      }
+    } else if (f.kind === "room") {
+      const kills = f.unit.roomKills;
+      if (kills !== e.seen) {
+        e.seen = kills;
+        const label = e.extra[2] as Phaser.GameObjects.Text;
+        label.setText(`✚ ${kills}`);
+        this.scene.tweens.add({ targets: label, scale: { from: 1.4, to: 1 }, duration: 220 });
+        // A ripple on the floor for every kill inside.
+        const rip = this.scene.add.ellipse(f.x, f.y, f.radius * 0.6, f.radius * 0.36).setStrokeStyle(3, 0x7ff3ff, 0.9).setDepth(GROUND_DEPTH + 2);
+        this.scene.tweens.add({ targets: rip, scaleX: 3.3, scaleY: 3.3, alpha: 0, duration: 420, onComplete: () => rip.destroy() });
+      }
+      if (f.unit.awakened && Math.random() < 0.12) {
+        // Light cubes drift up inside the awakened Rooms.
+        const cx = f.x + (Math.random() - 0.5) * f.radius * 1.4;
+        const cube = this.scene.add.rectangle(cx, f.y - Math.random() * 20, 9, 9, 0x9ff6ff, 0.85).setStrokeStyle(2, 0xffffff, 0.9).setAngle(45).setDepth(100 + f.y + 2);
+        this.scene.tweens.add({ targets: cube, y: cube.y - 70 - Math.random() * 40, angle: 225, alpha: 0, duration: 1100, onComplete: () => cube.destroy() });
       }
     } else if (f.kind === "vine") {
       o.setAngle(f.held > 0 ? Math.sin(now * 40) * 4 : 0);
