@@ -80,6 +80,24 @@ export function fpsMeter(game: Phaser.Game) {
     }, 500);
   }
 
+  // Every 2 s: frames drawn @ how far the scrolling list (the masked container) is scrolled.
+  const history: string[] = [];
+  let lastScene = "";
+  let histFrames = 0;
+  setInterval(() => {
+    const s = game.scene.getScenes(true)[0];
+    const key = s?.scene.key ?? "";
+    if (key !== lastScene) {
+      lastScene = key;
+      history.length = 0;
+    } else {
+      const list = (s?.children.list as Obj[] | undefined)?.find((o) => o.mask) as unknown as { y: number } | undefined;
+      history.push(`${Math.round((total.frames - histFrames) / 2)}${list ? "@" + Math.round(-list.y) : ""}`);
+      if (history.length > 8) history.shift();
+    }
+    histFrames = total.frames;
+  }, 2000);
+
   setInterval(() => {
     const now = performance.now();
     const since = now - 1000;
@@ -109,6 +127,7 @@ export function fpsMeter(game: Phaser.Game) {
       `${scene}  ${game.canvas.width}x${game.canvas.height} dpr ${devicePixelRatio}\n` +
       `v${__APP_VERSION__} ${pipeline}\n` +
       gpu.slice(0, 48) +
+      (history.length ? "\nfps@scroll " + history.join(" ") : "") +
       (probeLines.length ? "\n" + probeLines.join("\n") : "");
   }, 500);
 }
@@ -157,12 +176,17 @@ async function probe(
     ["no text", () => hide(all.filter((o) => o.type === "Text"))],
     ["no fullscreen", () => hide(top.filter(big))],
     ["list only", () => hide(top.filter((o) => !o.mask))],
+    ["no card art", () => hide(all.filter((o) => /^(portrait|card|element|hero_portrait)/.test((o as unknown as Phaser.GameObjects.Image).texture?.key ?? "")))],
     ["nothing", () => hide(top)],
+    ["base again", () => () => {}],
   ];
   const lines: string[] = [];
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   for (const [name, apply] of tests) {
-    if (!scene.sys.isActive()) break;
+    if (!scene.sys.isActive()) {
+      show([`probe ${scene.scene.key} stopped: screen left or restarted`, ...lines]);
+      return;
+    }
     const undo = apply();
     await sleep(600);
     const t0 = performance.now();
