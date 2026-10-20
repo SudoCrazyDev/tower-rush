@@ -30,8 +30,10 @@ export function fpsMeter(game: Phaser.Game) {
 
   // Screen refresh rate: every rAF callback, whether or not the game draws on it.
   const vsyncs: number[] = [];
+  const total = { vsyncs: 0, frames: 0 };
   const tick = (t: number) => {
     vsyncs.push(t);
+    total.vsyncs++;
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -44,6 +46,7 @@ export function fpsMeter(game: Phaser.Game) {
   game.events.on(Phaser.Core.Events.POST_RENDER, () => {
     const now = performance.now();
     frames.push({ t: now, cpu: now - stepStart, calls });
+    total.frames++;
     calls = 0;
   });
 
@@ -62,6 +65,19 @@ export function fpsMeter(game: Phaser.Game) {
     const info = gl.getExtension("WEBGL_debug_renderer_info");
     gpu = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER));
     pipeline = r.pipelines.current?.name ?? "";
+  }
+
+  const probeKey = new URLSearchParams(location.search).get("probe");
+  let probeLines: string[] = [];
+  if (probeKey) {
+    probeLines = [`probe: open ${probeKey}, then hands off`];
+    const wait = setInterval(() => {
+      const s = game.scene.getScenes(true).find((x) => x.scene.key === probeKey);
+      if (!s) return;
+      clearInterval(wait);
+      probeLines = [`probe ${probeKey}: running...`];
+      setTimeout(() => probe(s, total, (lines) => (probeLines = lines)), 3000);
+    }, 500);
   }
 
   setInterval(() => {
@@ -92,6 +108,73 @@ export function fpsMeter(game: Phaser.Game) {
       `cpu ${cpuAvg.toFixed(1)}ms  max ${cpuMax.toFixed(1)}ms  draws ${callsAvg.toFixed(0)}\n` +
       `${scene}  ${game.canvas.width}x${game.canvas.height} dpr ${devicePixelRatio}\n` +
       `v${__APP_VERSION__} ${pipeline}\n` +
-      gpu.slice(0, 48);
+      gpu.slice(0, 48) +
+      (probeLines.length ? "\n" + probeLines.join("\n") : "");
   }, 500);
+}
+
+type Obj = Phaser.GameObjects.GameObject & Partial<Phaser.GameObjects.Components.Visible & Phaser.GameObjects.Components.BlendMode & Phaser.GameObjects.Components.Mask>;
+
+/**
+ * `?fps&probe=Deck`: once that scene opens, hide one part of it at a time for about three seconds and
+ * record the screen's frame rate, so a single screenshot shows what a slow phone chokes on.
+ */
+async function probe(
+  scene: Phaser.Scene,
+  total: { vsyncs: number; frames: number },
+  show: (lines: string[]) => void,
+) {
+  const all: Obj[] = [];
+  const walk = (list: Phaser.GameObjects.GameObject[]) =>
+    list.forEach((o) => {
+      all.push(o as Obj);
+      const kids = (o as Phaser.GameObjects.Container).list;
+      if (kids) walk(kids);
+    });
+  walk(scene.children.list);
+  const top = scene.children.list as Obj[];
+  const masked = top.filter((o) => o.mask);
+  const isAdd = (o: Obj) => o.blendMode === Phaser.BlendModes.ADD || o.blendMode === "ADD";
+  const big = (o: Obj) => {
+    const b = (o as unknown as Phaser.GameObjects.Image).getBounds?.();
+    return !!b && b.width * b.height > scene.scale.width * scene.scale.height * 0.5;
+  };
+
+  const hide = (objs: Obj[]) => {
+    const was = objs.map((o) => o.visible);
+    objs.forEach((o) => o.setVisible?.(false));
+    return () => objs.forEach((o, i) => o.setVisible?.(was[i] ?? true));
+  };
+  const tests: [string, () => () => void][] = [
+    ["base", () => () => {}],
+    ["no list", () => hide(masked)],
+    ["no mask", () => {
+      const m = masked.map((o) => o.mask!);
+      masked.forEach((o) => o.clearMask?.());
+      return () => masked.forEach((o, i) => o.setMask?.(m[i]));
+    }],
+    ["no ADD glows", () => hide(all.filter(isAdd))],
+    ["no text", () => hide(all.filter((o) => o.type === "Text"))],
+    ["no fullscreen", () => hide(top.filter(big))],
+    ["list only", () => hide(top.filter((o) => !o.mask))],
+    ["nothing", () => hide(top)],
+  ];
+  const lines: string[] = [];
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  for (const [name, apply] of tests) {
+    if (!scene.sys.isActive()) break;
+    const undo = apply();
+    await sleep(600);
+    const t0 = performance.now();
+    const v0 = total.vsyncs;
+    const f0 = total.frames;
+    await sleep(2000);
+    const secs = (performance.now() - t0) / 1000;
+    const hz = (total.vsyncs - v0) / secs;
+    const fps = (total.frames - f0) / secs;
+    undo();
+    lines.push(`${name.padEnd(13)} ${fps.toFixed(0).padStart(3)} fps ${hz.toFixed(0).padStart(3)} Hz`);
+    show([`probe ${scene.scene.key}:`, ...lines, "..."]);
+  }
+  show([`probe ${scene.scene.key} done:`, ...lines]);
 }

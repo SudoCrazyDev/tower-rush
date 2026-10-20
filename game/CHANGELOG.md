@@ -6,7 +6,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Fix: smooth frame pacing on phones, most visible when scrolling the Deck. 2.8.1's frame limit of exactly 60 made Phaser skip a frame whenever the smoothed frame time came in a hair under 1000/60, so 60 Hz phones ran at 30-40 fps with uneven pacing (90 Hz ones at 45). The limit is now 62: 60 Hz screens hold a steady 60, and 90/120 Hz screens still draw at an even 45/60.
 - Fix: the Deck page scrolls smoothly on low-end phones. Phaser's Mobile Pipeline (on by default for Android and iOS) batched one texture at a time, so every card frame, portrait and label was its own draw call: about 550 a frame on a full collection, against about 40 now. `?mobilepipe` turns it back on for comparison. Battles and other screens draw with the batched pipeline on phones too.
 - The Deck collection only draws cards near the visible area (cull margin 260, was 600).
-- Tester overlay: `?fps` shows frames drawn vs the screen's refresh rate, frame time, hitches, CPU time, draw calls, scene, version and GPU. It stays on (installed app too) until `?fps=0`.
+- Tester overlay: `?fps` shows frames drawn vs the screen's refresh rate, frame time, hitches, CPU time, draw calls, scene, version and GPU. It stays on (installed app too) until `?fps=0`. `&probe=Deck` (any scene key) hides one part of that screen at a time once it opens (list, mask, ADD glows, text, full-screen layers, everything) and lists the fps for each.
 - Game only; no API change, `MIN_CLIENT` unchanged.
 
 ## 2.9.1
