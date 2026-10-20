@@ -8,10 +8,11 @@ import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, E
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
-import { awakenDamageMult, awakenSpeedMult, ultEvery, ultName, ultOf, ultText, ULTIMATES } from "../../../shared/awakened.ts";
+import { awakenDamageMult, awakenSpeedMult, MURC_NAMES, MURC_VARIANTS, murcText, ultEvery, ultName, ultOf, ultText, ULTIMATES } from "../../../shared/awakened.ts";
 import { liveDef, orcText, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../../shared/reworks.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
+import { RES } from "../display";
 import { W, H, WIDE, txt, button, iconButton, cardView, heroCardView, modal, fmt, pressable, attempt, elementIcon, fitImage, rewardPop } from "../ui";
 import { topBar } from "./LobbyScene";
 import { storyUnlocking } from "../../../shared/stories.ts";
@@ -587,11 +588,13 @@ export class DeckScene extends Phaser.Scene {
     const level = owned?.level ?? 1;
     const info = this.add.container(0, 0);
     const stats = this.statsTab(def, level, cx, cy - 120);
+    let awakeScrollSync: (() => void) | undefined;
     const show = (t: "info" | "stats") => {
       DeckScene.cardTab = t;
       for (const x of tabs) x.c.paint(x.t === t);
       info.setVisible(t === "info");
       stats.setVisible(t === "stats");
+      awakeScrollSync?.();
     };
     const tabs = (["info", "stats"] as const).map((t, i) => {
       const c = chip(this, cx + (i ? 115 : -115), cy - 190, 210, 60, t === "info" ? "DETAILS" : "STATS");
@@ -611,9 +614,10 @@ export class DeckScene extends Phaser.Scene {
       const label = txt(this, cx + 196, cardY + 28, `AWAKENS\nAT RANK ${maxRank()}`, 18, "#ffd93b");
       m.add(label);
       // The awakened form's own panel (boosts, ultimate, supports); the other info rows hide while flipped.
-      const awakeText = this.awakenedPanel(def, level, cx, cy - 150);
+      const { panel: awakeText, scroll: awakeScroll } = this.awakenedPanel(m, def, level, cx, cy - 150);
       info.add(awakeText.setVisible(false));
       // Rows hidden on purpose stay hidden when flipping back (visibility is remembered, not forced on).
+      awakeScrollSync = () => awakeScroll.setVisible(awake.visible && info.visible);
       const shown = new Map<Phaser.GameObjects.GameObject, boolean>();
       const flip = () => {
         const showAwake = !awake.visible;
@@ -625,6 +629,8 @@ export class DeckScene extends Phaser.Scene {
         label.setVisible(!showAwake);
         rarityLine.setVisible(!showAwake);
         awakeText.setVisible(showAwake);
+        // Its scrolling ultimate text sits outside the dialog; it follows the DETAILS tab too.
+        awakeScrollSync?.();
         for (const o of rows) o.setVisible(showAwake ? false : (shown.get(o) ?? true));
       };
       for (const c of [card, awake, thumb]) pressable(c, flip);
@@ -820,7 +826,7 @@ export class DeckScene extends Phaser.Scene {
    * merge ranks. Every value comes from unitStats(), so it matches the battle.
    */
   /** v2.7 card back: the awakened form's boosts (with its real numbers at max rank), and its ultimate. */
-  private awakenedPanel(def: UnitDef, level: number, cx: number, top: number) {
+  private awakenedPanel(m: ReturnType<typeof modal>, def: UnitDef, level: number, cx: number, top: number) {
     const c = this.add.container(0, 0);
     const DIM = "#9fb0e0";
     const GOLD = "#ffd93b";
@@ -877,15 +883,61 @@ export class DeckScene extends Phaser.Scene {
     // Dark text on the bright pill: no navy outline (it smears small dark text).
     const tag = txt(this, cx, 0, every > 0 ? `EVERY ${every}s` : field ? "ALWAYS ON" : "PASSIVE", 24, "#1a0c04", [0.5, 0]).setStroke("#1a0c04", 0).setShadow(0, 0, "#000000", 0);
     add(tag, 18);
-    add(txt(this, cx, 0, body.charAt(0).toUpperCase() + body.slice(1), 24, "#ffffff", [0.5, 0]).setWordWrapWidth(500).setAlign("center"), 18);
-    g.fillStyle(0x000000, 0.3).fillRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
-    g.lineStyle(3, 0xffd93b, 0.55).strokeRoundedRect(cx - 270, ultY, 540, y - ultY, 18);
-    g.fillStyle(every > 0 ? 0xffd93b : 0x9ff0ff, 1).fillRoundedRect(cx - tag.width / 2 - 18, tag.y - 6, tag.width + 36, tag.displayHeight + 12, 14);
     c.add(items);
 
-    y += 26;
-    c.add(txt(this, cx, y + 4, "Tap the card to flip back", 18, DIM, [0.5, 0]));
-    return c;
+    // v2.10: the description scrolls inside the box, so a long one never runs out of the dialog. It lives in its own
+    // scene-level container (a mask on a container nested in the dialog doesn't clip), shown and hidden with the panel.
+    const viewTop = y;
+    const bottom = top + 600;
+    const scroll = this.add.container(0, viewTop).setDepth(m.depth + 1).setScrollFactor(0).setVisible(false);
+    let h = 0;
+    const line = (t: Phaser.GameObjects.Text, gap: number) => {
+      scroll.add(t.setY(h).setScrollFactor(0));
+      h += t.displayHeight + gap;
+    };
+    if (def.id === "murcielago") {
+      // Dark Spawn: each awakened form he can roll, with its own art.
+      line(txt(this, cx, 0, "Awakened, he becomes one of three forms:", 22, DIM, [0.5, 0]), 16);
+      for (const v of MURC_VARIANTS) {
+        const art = v === "despair" && this.textures.exists("portrait_awakened:murcielago_despair") ? "portrait_awakened:murcielago_despair" : `portrait_awakened:${def.id}`;
+        const name = txt(this, cx - 120, 0, MURC_NAMES[v].toUpperCase(), 28, GOLD, [0, 0]);
+        const text = txt(this, cx - 120, 0, murcText(v).replace(/^./, (ch) => ch.toUpperCase()), 21, "#ffffff", [0, 0]).setWordWrapWidth(360).setAlign("left");
+        const rowH = Math.max(120, name.displayHeight + 6 + text.displayHeight);
+        if (this.textures.exists(art)) scroll.add(this.add.image(cx - 190, h + 56, art).setDisplaySize(112, 112).setScrollFactor(0));
+        scroll.add(name.setY(h).setScrollFactor(0));
+        scroll.add(text.setY(h + name.displayHeight + 6).setScrollFactor(0));
+        h += rowH + 22;
+      }
+    } else {
+      line(txt(this, cx, 0, body.charAt(0).toUpperCase() + body.slice(1), 24, "#ffffff", [0.5, 0]).setWordWrapWidth(500).setAlign("center"), 18);
+    }
+    const viewH = Math.min(h, bottom - viewTop);
+    const boxBottom = viewTop + viewH + 8;
+    g.fillStyle(0x000000, 0.3).fillRoundedRect(cx - 270, ultY, 540, boxBottom - ultY, 18);
+    g.lineStyle(3, 0xffd93b, 0.55).strokeRoundedRect(cx - 270, ultY, 540, boxBottom - ultY, 18);
+    g.fillStyle(every > 0 ? 0xffd93b : 0x9ff0ff, 1).fillRoundedRect(cx - tag.width / 2 - 18, tag.y - 6, tag.width + 36, tag.displayHeight + 12, 14);
+
+    const minY = viewTop - Math.max(0, h - viewH);
+    const mask = this.make.graphics({}, false).fillRect(cx - 270, viewTop, 540, viewH);
+    scroll.setMask(mask.createGeometryMask());
+    const inView = (p: Phaser.Input.Pointer) => scroll.visible && p.worldY >= viewTop && p.worldY <= viewTop + viewH && Math.abs(p.worldX - cx) <= 270;
+    let startY = NaN;
+    const down = (p: Phaser.Input.Pointer) => (startY = inView(p) ? scroll.y : NaN);
+    const move = (p: Phaser.Input.Pointer) => {
+      if (p.isDown && !Number.isNaN(startY)) scroll.y = Phaser.Math.Clamp(startY + (p.y - p.downY) / RES, minY, viewTop);
+    };
+    const wheel = (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+      if (inView(p)) scroll.y = Phaser.Math.Clamp(scroll.y - dy, minY, viewTop);
+    };
+    this.input.on("pointerdown", down).on("pointermove", move).on("wheel", wheel);
+    m.once("destroy", () => {
+      this.input.off("pointerdown", down).off("pointermove", move).off("wheel", wheel);
+      scroll.destroy();
+      mask.destroy();
+    });
+
+    c.add(txt(this, cx, boxBottom + 12, h > viewH ? "Drag to scroll · tap the card to flip back" : "Tap the card to flip back", 18, DIM, [0.5, 0]));
+    return { panel: c, scroll };
   }
 
   private statsTab(def: UnitDef, level: number, cx: number, top: number) {

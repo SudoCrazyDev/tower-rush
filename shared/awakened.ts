@@ -207,6 +207,14 @@ const x = (v: number) => `×${+v.toFixed(2)}`;
 /** Player-facing name of a unit's ultimate ("Ultimate" for the generic one). */
 export const ultName = (id: string) => ultOf(id)?.name ?? "Ultimate";
 
+/** What one of Dark Spawn's (Murcielago's) three awakened forms does, numbers included. */
+export function murcText(v: MurcVariant): string {
+  const p = ULTIMATES.resurreccion.params;
+  if (v === "zero") return "every attack is a beam through the whole line for his hit × seconds since summoned.";
+  if (v === "lanza") return `${pct(p.lanza)} per attack, a lance for his hit × seconds × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row).`;
+  return `×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed (N = Dark Spawns), awakened Dark Spawns ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed.`;
+}
+
 /** Player-facing description of a unit's ultimate, numbers included. */
 export function ultText(id: string): string {
   const u = ultOf(id);
@@ -282,7 +290,7 @@ export function ultText(id: string): string {
     case "big_ben":
       return `Every ${u.every}s: ${p.targets} random units attack ${x(1 + p.speed)} as fast for ${p.duration}s, then rank up by 1 (reaching max rank, they awaken).`;
     case "resurreccion":
-      return `Awakened, he rolls one of three. Dark Zero: every attack is a beam through the whole line for his hit × seconds since summoned. Dark Javelin: ${pct(p.lanza)} per attack, a lance for his hit × seconds × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row). True Despair: ×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed (N = Dark Spawns), awakened Dark Spawns ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed.`;
+      return `Awakened, he rolls one of three. ${MURC_VARIANTS.map((v) => `${MURC_NAMES[v]}: ${murcText(v)}`).join(" ")}`;
     case "surgeon_of_death":
       return `Passive: there can only be one. Every other Heart Surgeon on the board, and every new one, merges into him with its Room kills. He opens ${p.rooms} Rooms that share one kill count. Scalpel: a boss entering a Room takes his hit × Surgeons merged × Room kills, through its shield (once per Room).`;
   }
