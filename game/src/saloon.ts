@@ -55,7 +55,10 @@ function glowTextures(scene: Phaser.Scene) {
  * A location art warmed into a lamp-lit saloon: amber wash, vignette, flickering lantern
  * halos (at fractions of the art) and dust drifting through the light.
  */
-export function saloonAmbience(scene: Phaser.Scene, bgKey: string, lanterns: [number, number][], loop?: string, wash = 0.42) {
+export function saloonAmbience(scene: Phaser.Scene, bgKey: string, lanterns: [number, number][], loop?: string, wash = 0.42, additive = true) {
+  // Additive halos look a touch brighter, but some phone GPUs slow to a crawl when a frame keeps
+  // switching blend modes (Deck: ~5 fps with them, 45 without). Normal blending looks nearly the same here.
+  const blend = additive ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL;
   glowTextures(scene);
   const bg = cover(scene, bgKey, 0, loop);
   scene.add.rectangle(W / 2, H / 2, W, H, 0x3a1a06, wash);
@@ -63,7 +66,7 @@ export function saloonAmbience(scene: Phaser.Scene, bgKey: string, lanterns: [nu
   for (const [fx, fy] of lanterns) {
     const x = bg.x + (fx - 0.5) * bg.displayWidth;
     const y = bg.y + (fy - 0.5) * bg.displayHeight;
-    const glow = scene.add.image(x, y, GLOW).setTint(0xffa040).setBlendMode(Phaser.BlendModes.ADD).setScale(1.5).setAlpha(0.45);
+    const glow = scene.add.image(x, y, GLOW).setTint(0xffa040).setBlendMode(blend).setScale(1.5).setAlpha(0.45);
     const flicker = () =>
       scene.tweens.add({
         targets: glow,
@@ -83,7 +86,7 @@ export function saloonAmbience(scene: Phaser.Scene, bgKey: string, lanterns: [nu
     scale: { min: 0.3, max: 0.9 },
     alpha: { onEmit: () => 0, onUpdate: (_p: unknown, _k: string, t: number) => Math.sin(t * Math.PI) * 0.55 },
     tint: 0xffd59a,
-    blendMode: "ADD",
+    blendMode: blend,
     frequency: 160,
     advance: 7000,
   });

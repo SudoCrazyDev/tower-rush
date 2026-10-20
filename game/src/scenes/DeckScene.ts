@@ -226,7 +226,7 @@ export class DeckScene extends Phaser.Scene {
     this.upgraded = false;
     this.statusChips = [];
     this.elementChips = [];
-    saloonAmbience(this, "loc:deck_room_background", [[0.15, 0.12], [0.85, 0.12], [0.5, 0.42]], undefined, 0.38);
+    saloonAmbience(this, "loc:deck_room_background", [[0.15, 0.12], [0.85, 0.12], [0.5, 0.42]], undefined, 0.38, false);
 
     // Wide: deck and hero on the left, filters and the collection on the right. Phone: stacked.
     const colW = WIDE ? 760 : W - 40;
@@ -302,7 +302,7 @@ export class DeckScene extends Phaser.Scene {
     for (let i = 0; i < 5; i++) {
       const x = cx + (i - 2) * gap;
       g.fillStyle(0x000000, 0.35).fillRoundedRect(x - size / 2 - 6, cardY - size / 2 - 6, size + 12, size + 12, 16);
-      const halo = this.add.image(x, cardY, GLOW).setTint(0xffb050).setBlendMode(Phaser.BlendModes.ADD).setScale(0.75).setAlpha(0.32);
+      const halo = this.add.image(x, cardY, GLOW).setTint(0xffb050).setScale(0.75).setAlpha(0.32);
       this.slots.push(halo);
     }
     const barY = top + h - (WIDE ? 74 : 64);
@@ -490,7 +490,7 @@ export class DeckScene extends Phaser.Scene {
     const ready = !!owned && canUpgrade(u.id);
     const parts: Phaser.GameObjects.GameObject[] = [];
     if (owned) {
-      const glow = this.add.image(0, 0, GLOW).setTint(ready ? 0x7dff7a : RARITY_STATS[u.rarity].color).setBlendMode(Phaser.BlendModes.ADD).setScale(0.85).setAlpha(ready ? 0.45 : 0.22);
+      const glow = this.add.image(0, 0, GLOW).setTint(ready ? 0x7dff7a : RARITY_STATS[u.rarity].color).setScale(0.85).setAlpha(ready ? 0.45 : 0.22);
       parts.push(glow);
       if (ready) this.tweens.add({ targets: glow, alpha: 0.2, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
     }
