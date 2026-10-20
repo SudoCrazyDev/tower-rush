@@ -32,6 +32,10 @@ Id `murcielago`; the ultimate id stays `resurreccion`.
   - **True Despair:** ×6N damage and ×(4+N) speed (N = Dark Spawns on the board). Awakened Dark Spawns get ×1.2
     damage and ×1.4 speed per Despair. Other neighbours deal ÷1.7 damage and attack ÷1.2 as fast. True Despair
     has its own art.
+- **Live numbers in battle:** under the form's name over his head, Dark Zero shows the seconds since he was summoned,
+  Dark Javelin shows the seconds and his kills, and True Despair shows his current damage and speed multipliers
+  (`Sim.despair()`, public now). The card text gives an example of each formula (a 60s-old Dark Zero hits ×60; two
+  Dark Spawns make True Despair ×12 damage and ×6 speed).
 
 ## 2. Echo Spirit rework
 

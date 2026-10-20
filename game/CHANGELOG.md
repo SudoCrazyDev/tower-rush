@@ -7,6 +7,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Echo Spirit rework: it becomes an exact copy (unit, rank, awakening, 100% stats) of a random neighbour, or any unit if none is adjacent, and re-rolls after every boss wave. Copies merge only with Echo Spirits of the same Echo rank.
 - Original art for both Mythics (base and awakened; True Despair has its own form and card portrait). Replaced art is cache-busted.
 - Awakened card back: the ultimate description scrolls inside its box. Dark Spawn's lists each awakened form with its art.
+- An awakened Dark Spawn shows the number his form runs on over his head: seconds since summoned (Dark Zero), seconds and kills (Dark Javelin), or the live damage and speed multipliers (True Despair). The card text gives an example of each formula.
 - Fix: Heart Surgeon's and Dark Spawn's DETAILS rows no longer overlap the blurb and stats; a card whose rows don't fit drops its blurb.
 - Renames: Murciélago is Dark Spawn, Resurrección is Dark Rebirth, Lanza is Dark Javelin (ids unchanged).
 - Needs API 1.6.2. The Sim changed, so raise `MIN_CLIENT` to 2.9.4 on prod.

@@ -210,9 +210,9 @@ export const ultName = (id: string) => ultOf(id)?.name ?? "Ultimate";
 /** What one of Dark Spawn's (Murcielago's) three awakened forms does, numbers included. */
 export function murcText(v: MurcVariant): string {
   const p = ULTIMATES.resurreccion.params;
-  if (v === "zero") return "every attack is a beam through the whole line for his hit × seconds since summoned.";
-  if (v === "lanza") return `${pct(p.lanza)} per attack, a lance for his hit × seconds × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row).`;
-  return `×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed (N = Dark Spawns), awakened Dark Spawns ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed.`;
+  if (v === "zero") return "every attack is a beam through the whole line for his hit × the seconds since he was summoned (a 60s-old Dark Spawn hits ×60). The seconds count over his head.";
+  if (v === "lanza") return `${pct(p.lanza)} per attack, a lance for his hit × the seconds since he was summoned × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row). Seconds and kills count over his head.`;
+  return `×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed, where N = Dark Spawns on the board (2 of them: ×${p.despairDmg * 2} damage, ×${p.despairSpd + 2} speed). Awakened Dark Spawns ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed. His live multipliers show over his head.`;
 }
 
 /** Player-facing description of a unit's ultimate, numbers included. */

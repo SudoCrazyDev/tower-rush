@@ -3728,9 +3728,9 @@ export class Sim {
   /**
    * v2.10 True Despair: [damage, speed] multipliers on `u` from the awakened Murcielagos that rolled it. Their own boost
    * grows with the Murcielagos on the board; every awakened Murcielago gets the ally boost per Despair; other units
-   * next to a Despair are weakened.
+   * next to a Despair are weakened. Public so the viewer can show the live numbers.
    */
-  private despair(u: SimUnit): [number, number] {
+  despair(u: SimUnit): [number, number] {
     let n = 0;
     let despairs = 0;
     let near = false;

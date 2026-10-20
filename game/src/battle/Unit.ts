@@ -83,6 +83,8 @@ export class Unit {
   private orcLevel = 0;
   private frenzy = false;
   private tallySeen = -1;
+  /** v2.10 Murcielago: the live number shown under his variant name (redrawn only when it changes). */
+  private murcLive = "";
 
   constructor(scene: BattleScene, sim: SimUnit) {
     this.scene = scene;
@@ -651,13 +653,26 @@ export class Unit {
         sc.tweens.add({ targets: this.tally, scale: { from: 1.5, to: 1 }, duration: 260 });
       }
     }
-    // v2.10 Murcielago: the ultimate he rolled, over his head.
+    // v2.10 Murcielago: the ultimate he rolled over his head, and under it the live number it runs on: the seconds since
+    // he was summoned (Dark Zero; Dark Javelin also his kills), or True Despair's damage and speed multipliers.
     if (this.awakened && this.sim.murc) {
-      if (!this.tally) {
-        const color = this.sim.murc === "despair" ? "#c8c8c8" : "#5dffb0";
-        this.tally = sc.add.container(0, 0, [txt(sc, 0, 0, MURC_NAMES[this.sim.murc].toUpperCase(), 16, color)]);
-      }
+      // Kept under ~90px wide so neighbouring Dark Spawns' labels don't run into each other; the numbers grow upward.
+      if (!this.tally) this.tally = sc.add.container(0, 0, [txt(sc, 0, 0, "", 14, "#5dffb0"), txt(sc, 0, -10, "", 16, "#ffffff", [0.5, 1])]);
       this.tally.setPosition(x, y - this.px * 0.7).setDepth(depth + 2);
+      const secs = Math.floor(Math.max(1, sc.sim.now - s.summonedAt));
+      let live: string;
+      if (s.murc === "despair") {
+        const [dmg, spd] = sc.sim.despair(s);
+        live = `x${+dmg.toFixed(1)} DMG
+x${+spd.toFixed(1)} SPD`;
+      } else live = s.murc === "lanza" ? `${secs}s · ${Math.max(1, s.kills)} kills` : `${secs}s`;
+      live = `${s.murc}|${live}`;
+      if (live !== this.murcLive) {
+        this.murcLive = live;
+        const [name, num] = this.tally.list as Phaser.GameObjects.Text[];
+        name.setText(MURC_NAMES[s.murc!].toUpperCase()).setColor(s.murc === "despair" ? "#c8c8c8" : "#5dffb0");
+        num.setText(live.slice(live.indexOf("|") + 1));
+      }
     }
     // v2.10 Surgeon of Death: a cube and the Surgeons merged into him.
     if (this.awakened && ultOf(this.def.id)?.id === "surgeon_of_death") {
