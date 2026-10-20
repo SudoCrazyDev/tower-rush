@@ -16,6 +16,7 @@ import { setOnBanned, setOnOutdated, setToken } from "./api";
 import { showBlocker } from "./authOverlay";
 import { BASE } from "./assets";
 import { initPwa } from "./pwa";
+import { fpsMeter, fpsMeterWanted } from "./fpsMeter";
 
 initPwa();
 
@@ -126,6 +127,7 @@ async function start() {
   }
   // Handy for poking at state from the dev console.
   if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+  if (fpsMeterWanted()) fpsMeter(game);
 }
 
 start();
