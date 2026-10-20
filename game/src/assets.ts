@@ -119,6 +119,8 @@ const REFRESHED: Record<string, string> = {
   "units/murcielago": "2.10.0",
   "portraits/heart_surgeon": "2.10.0",
   "portraits/murcielago": "2.10.0",
+  "units_awakened/heart_surgeon": "2.10.0",
+  "portraits_awakened/heart_surgeon": "2.10.0",
   // v2.8.2: particles and weapons whose flat background had survived as a square behind them.
   "vfx/pt_smoke": "2.8.2",
   "vfx/pt_confetti": "2.8.2",
