@@ -246,7 +246,8 @@ export class DeckScene extends Phaser.Scene {
       listRect = new Phaser.Geom.Rectangle(0, 776, W, H - 776);
     }
 
-    this.view = new ScrollView(this, listRect);
+    // Cull just past the edges: a card reaches ~130 below its centre, headers and shelves sit by their top.
+    this.view = new ScrollView(this, listRect, 260);
     this.bar = topBar(this);
     hangingSign(this, colX, "BATTLE DECK", "~ THE REGULARS' TABLE ~", WIDE ? 520 : 400, WIDE ? 124 : 104);
     iconButton(this, 50, 130, "back", 76, () => this.scene.start("Lobby"));

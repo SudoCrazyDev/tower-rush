@@ -2,6 +2,11 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.2
+- Fix: the Deck page scrolls smoothly on low-end phones. Phaser's Mobile Pipeline (on by default for Android and iOS) batched one texture at a time, so every card frame, portrait and label was its own draw call: about 550 a frame on a full collection, against about 40 now. `?mobilepipe` turns it back on for comparison. Battles and other screens draw with the batched pipeline on phones too.
+- The Deck collection only draws cards near the visible area (cull margin 260, was 600).
+- Game only; no API change, `MIN_CLIENT` unchanged.
+
 ## 2.9.1
 - Hotfix: every unlocked arena wins or loses trophies again, by your league's minimum wave. 2.9.0 limited trophies to your two highest arenas. Arena card, arena info and What's new text updated.
 - Needs API 1.6.1.

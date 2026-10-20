@@ -1,6 +1,6 @@
 {
   "name": "tower-rush",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

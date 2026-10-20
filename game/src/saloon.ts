@@ -244,6 +244,8 @@ export class ScrollView {
   constructor(
     private scene: Phaser.Scene,
     readonly rect: Phaser.Geom.Rectangle,
+    /** How far past the top edge items stay drawn (half that past the bottom); see `cull`. */
+    private cullMargin = 600,
   ) {
     const { x, y, width, height } = rect;
     this.content = scene.add.container(0, y);
@@ -300,7 +302,7 @@ export class ScrollView {
     this.content.y = this.rect.y - this.scroll;
     this.thumbLen = 0;
     this.drawKnob();
-    cull(this.content, this.scroll, this.rect.height);
+    cull(this.content, this.scroll, this.rect.height, this.cullMargin);
   }
 
   /** How far the list is scrolled, to restore it with `scrollTo` after a rebuild. */
@@ -313,7 +315,7 @@ export class ScrollView {
     this.scroll = this.target = Phaser.Math.Clamp(y, 0, this.max);
     this.content.y = this.rect.y - this.scroll;
     this.drawKnob();
-    cull(this.content, this.scroll, this.rect.height);
+    cull(this.content, this.scroll, this.rect.height, this.cullMargin);
   }
 
   private update() {
@@ -326,7 +328,7 @@ export class ScrollView {
     if (this.content.y !== y) {
       this.content.y = y;
       this.drawKnob();
-      cull(this.content, this.scroll, this.rect.height);
+      cull(this.content, this.scroll, this.rect.height, this.cullMargin);
     }
   }
 

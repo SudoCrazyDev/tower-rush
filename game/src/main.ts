@@ -83,7 +83,10 @@ async function start() {
     input: { activePointers: 2 },
     // Production art comes from another origin (the R2 bucket), which allows it with CORS.
     loader: { crossOrigin: "anonymous" },
-    render: { antialias: true, roundPixels: false },
+    // 2.9.2: Phaser's Mobile Pipeline batches one texture at a time, so on phones every card
+    // frame, portrait and label was its own draw call (~550 a frame on Deck vs ~56 batched).
+    // `?mobilepipe` turns it back on for comparison.
+    render: { antialias: true, roundPixels: false, autoMobilePipeline: new URLSearchParams(location.search).has("mobilepipe") },
     // ?timer drives the loop with setTimeout, for testing in background tabs. v2.8.1: limit 60, so
     // 90/120 Hz phones don't draw (and heat up) at twice the frame rate.
     fps: { target: 60, limit: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
