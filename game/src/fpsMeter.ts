@@ -177,6 +177,14 @@ async function probe(
     ["no fullscreen", () => hide(top.filter(big))],
     ["list only", () => hide(top.filter((o) => !o.mask))],
     ["no card art", () => hide(all.filter((o) => /^(portrait|card|element|hero_portrait)/.test((o as unknown as Phaser.GameObjects.Image).texture?.key ?? "")))],
+    ["mobile pipe", () => {
+      // Phaser's one-texture-per-batch pipeline (the phone default before 2.9.2), on everything here.
+      type Piped = Obj & { pipeline?: unknown; setPipeline?: (p: string) => void };
+      const objs = all as Piped[];
+      const prev = objs.map((o) => o.pipeline);
+      objs.forEach((o) => o.setPipeline?.("MobilePipeline"));
+      return () => objs.forEach((o, i) => prev[i] !== undefined && (o.pipeline = prev[i]));
+    }],
     ["nothing", () => hide(top)],
     ["base again", () => () => {}],
   ];
