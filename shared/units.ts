@@ -516,7 +516,7 @@ export function withAdded<T extends { id: string }>(list: T[], defaults: T[], ad
 
 /** Whether a unit can drop from a chest for this player: story units never, story rewards once owned. */
 /** v2.10: units every player is given (at this card level, see giveGiftUnits) that never drop from chests. */
-export const GIFT_UNITS: Readonly<Record<string, number>> = { heart_surgeon: 3, murcielago: 3 };
+export const GIFT_UNITS: Readonly<Record<string, number>> = { heart_surgeon: 1, murcielago: 1 };
 export const canDrop = (u: UnitDef, owns: (id: string) => boolean) => u.enabled && !u.storyOnly && u.rarity !== "event" && !(u.id in GIFT_UNITS) && (!u.storyReward || owns(u.id));
 /** Whether a unit may go in the player's own deck. */
 export const deckable = (u: UnitDef | undefined) => !!u && u.enabled && !u.storyOnly;

@@ -24,7 +24,7 @@ const murcs = (s: Sim) => s.units.filter((u): u is SimUnit => u?.def.id === "mur
 const force = (s: Sim, v: MurcVariant) => murcs(s).forEach((u) => u.awakened && (u.murc = v));
 const ults = (ev: SimEvent[], variant?: string) => ev.filter((e) => e.type === "ultimate" && e.ult === "resurreccion" && (!variant || e.variant === variant));
 
-// Resurreccion: plain Murcielagos awaken themselves (1.08% per attack) and roll a variant.
+// Resurreccion: plain Murcielagos awaken themselves (0.4% per attack) and roll a variant.
 {
   const board: (BoardUnit | null)[] = Array.from({ length: 15 }, (_, i) => (i < 8 ? { id: "murcielago", rank: 1 } : null));
   const s = mk(board, 25);

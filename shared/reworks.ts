@@ -39,7 +39,7 @@ export const REWORKS = {
    */
   heart_surgeon: { room: { radius: 90, dps: 1, perKill: 0.05, from: 0.05, to: 0.4 } },
   /** Murcielago: Resurreccion. Each attack has `chance` to awaken him at once, at max rank (if the game has the art). */
-  murcielago: { resurreccion: { chance: 0.0108 } },
+  murcielago: { resurreccion: { chance: 0.004 } },
 } as const;
 
 /** v2.8: Peon and Kodo Beasts. Their kit is "buff" (no attack of their own), but they give no generic buff: the Sim runs their own rules. */
