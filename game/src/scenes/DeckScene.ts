@@ -698,7 +698,12 @@ export class DeckScene extends Phaser.Scene {
     const blurb = txt(this, cx, cursor - 2, `"${def.blurb}"`, 19, "#c9d2ff", [0.5, 0]).setWordWrapWidth(540).setAlign("center");
     info.add(blurb);
     cursor = blurb.y + blurb.displayHeight;
-    const extra = Math.min(110, Math.max(0, Math.round(cursor + 40 - (cy + 76))));
+    // v2.10: rows too tall for the room above the stat row drop the blurb rather than overlap it.
+    if (cursor + 48 > cy + 76 + 110) {
+      blurb.destroy();
+      cursor = blurb.y;
+    }
+    const extra = Math.min(110, Math.max(0, Math.round(cursor + 48 - (cy + 76))));
 
     const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [

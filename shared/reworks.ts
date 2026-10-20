@@ -149,8 +149,8 @@ export function orcText(id: string): { arch: string; lines: string[]; stat?: [st
       return {
         arch: "Sword slash at the leading monster",
         lines: [
-          `Room: keeps a ${r.radius}px Room on the path. Monsters inside take ${pct(r.dps)} of his hit per second, +${pct(r.perKill)} for every monster that ever died inside it.`,
-          `Awakened (Surgeon of Death): every other Heart Surgeon merges into him. He opens 4 Rooms that share one kill count; a boss entering a Room takes Scalpel: hit × Surgeons merged × Room kills, through its shield (once per Room).`,
+          `Room (${r.radius}px) on the path: ${pct(r.dps)} of his hit per second to monsters inside, +${pct(r.perKill)} per death in it.`,
+          `Awakened: Surgeon of Death (tap the card).`,
         ],
       };
     }
@@ -159,8 +159,8 @@ export function orcText(id: string): { arch: string; lines: string[]; stat?: [st
       return {
         arch: "Green cero at the leading monster",
         lines: [
-          `Dark Rebirth: every attack has a ${pct(r.chance)} chance to awaken him at once, at max rank.`,
-          `Awakened, he rolls one of three ultimates: Dark Zero, Dark Javelin or True Despair (see his ultimate).`,
+          `Dark Rebirth: ${pct(r.chance)} per attack to awaken at once, at max rank.`,
+          `Awakened: one of three forms (tap the card).`,
         ],
       };
     }
