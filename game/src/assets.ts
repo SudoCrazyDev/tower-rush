@@ -128,6 +128,7 @@ const REFRESHED: Record<string, string> = {
   "ui/races/human": "2.9.4",
   "ui/races/elemental": "2.9.4",
   "ui/races/giant": "2.9.4",
+  "ui/races/demon": "2.9.4", // its old badge had a white box around it
   // v2.8.2: particles and weapons whose flat background had survived as a square behind them.
   "vfx/pt_smoke": "2.8.2",
   "vfx/pt_confetti": "2.8.2",
