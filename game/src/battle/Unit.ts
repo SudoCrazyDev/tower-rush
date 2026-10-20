@@ -22,6 +22,9 @@ export const UNIT_PX = 116;
 /** Awakened units stand a little taller. */
 export const AWAKENED_PX = 132;
 
+/** v2.10: an Echo Spirit's copy is drawn pale blue (ghostly), with its own rank in blue pips. */
+const ECHO_TINT = 0xbfefff;
+
 /** Whether a unit has awakened art (and so awakens at max rank). */
 export const canAwaken = (id: string, arch?: string) => (!arch || !isSupport(arch as never)) && mayAwaken(id) && hasAnim("units_awakened", `${id}_idle`);
 
@@ -297,13 +300,14 @@ export class Unit {
   drawPips(x: number, y: number) {
     const g = this.pips;
     g.clear().setDepth(150 + y);
-    const n = this.rank;
+    // v2.10 Echo Spirit copy: its own rank (what it merges as), in ghostly blue.
+    const n = this.sim.echoRank || this.rank;
     const gap = 11;
     const startX = x - ((n - 1) * gap) / 2;
     const py = y + 40;
     for (let i = 0; i < n; i++) {
       g.fillStyle(NAVY, 1).fillCircle(startX + i * gap, py, 6.5);
-      g.fillStyle(n === 7 ? 0xffd93b : ELEMENT_COLOR[this.def.element], 1).fillCircle(startX + i * gap, py, 4.5);
+      g.fillStyle(this.sim.echoRank ? ECHO_TINT : n === 7 ? 0xffd93b : ELEMENT_COLOR[this.def.element], 1).fillCircle(startX + i * gap, py, 4.5);
     }
   }
 
@@ -405,7 +409,7 @@ export class Unit {
       this.steamAt = this.scene.time.now + 350;
       steam(this.scene, this.sprite.x + (Math.random() - 0.5) * 30, this.sprite.y - 50);
     }
-    const env = hot ? (Math.sin(now * 12) > 0 ? 0xff7a4a : 0xff4a2a) : jam ? 0x8a8f9a : under ? 0x6fa8ff : now < s.status.glimmeredUntil ? 0xfff3b0 : now < scene.equalUntil ? 0xa8ffe8 : null;
+    const env = hot ? (Math.sin(now * 12) > 0 ? 0xff7a4a : 0xff4a2a) : jam ? 0x8a8f9a : under ? 0x6fa8ff : now < s.status.glimmeredUntil ? 0xfff3b0 : now < scene.equalUntil ? 0xa8ffe8 : s.echoRank ? ECHO_TINT : null;
     if (env !== null) {
       this.sprite.setTint(env);
       this.sprite.setAlpha(under ? 0.55 + Math.sin(now * 4 + this.slot) * 0.08 : 1);

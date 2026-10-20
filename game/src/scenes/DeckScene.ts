@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { auraBonus, buffBonus, EFFECTS } from "../../../shared/effects.ts";
 import { ARCH_KIND, kitPrimary, kitSummary, perkSummary } from "../../../shared/kit.ts";
 import {
-  SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
+  SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
 } from "../../../shared/support.ts";
 import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
@@ -140,7 +140,7 @@ function supportCell(arch: SupportArch, rank: number, mult: number) {
     case "hourglass":
       return `+${pct(owlCharge(rank, mult))}`;
     case "echo":
-      return pct(echoStrength(rank, mult));
+      return "100%";
     case "herald":
       return `+${pct(Math.min(EFFECTS.herald.max, (EFFECTS.herald.perAwakened + EFFECTS.herald.perRank * (rank - 1)) * mult))}`;
     case "brewer":
@@ -155,7 +155,7 @@ const SUPPORT_STAT: Record<SupportArch, [string, string]> = {
   mirror: ["item:hourglass_speedup", "Seconds between mirrors"],
   lucky: ["item:coins", "Chance a neighbour's merge keeps its unit"],
   hourglass: ["item:hourglass_speedup", "Neighbours' ultimate charge rate"],
-  echo: ["stat:splash", "Strength of the repeated ultimate"],
+  echo: ["stat:damage", "Stats it copies (rank, awakening and all)"],
   herald: ["stat:damage", "Damage for every unit, per awakened unit"],
   brewer: ["item:mana_orb", `Mana every ${EFFECTS.brewer.every}s, plus rank × wave at wave end`],
 };

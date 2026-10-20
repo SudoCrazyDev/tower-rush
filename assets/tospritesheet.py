@@ -19,7 +19,12 @@ frames = []
 for i in idx:
     a = np.asarray(Image.open(os.path.join(tmp, raw[i])).convert("RGB")).astype(np.float32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    if KEY == "magenta":  # magenta (r+b over g) dominance -> alpha, then pull r/b spill down
+    if KEY == "magdist":  # purple/violet characters on magenta: alpha by distance to the screen colour,
+        # no spill clamp (the dominance key below turns purple skin green)
+        d = np.sqrt((r - 255) ** 2 + g ** 2 + (b - 255) ** 2)
+        alpha = np.clip((d - 70) / 50, 0, 1)
+        rgb = a
+    elif KEY == "magenta":  # magenta (r+b over g) dominance -> alpha, then pull r/b spill down
         dom = np.minimum(r, b) - g
         alpha = np.clip(1 - (dom - 40) / 60, 0, 1)
         cap = g + 10

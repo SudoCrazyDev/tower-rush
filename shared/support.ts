@@ -41,8 +41,6 @@ export const luckyChance = (rank: number, mult = 1, e: Effects = EFFECTS) => Mat
 export const owlCharge = (rank: number, mult = 1, e: Effects = EFFECTS) => Math.min(e.hourglass.chargeMax, step(e.hourglass.charge, e.hourglass.chargePerRank, rank) * mult);
 /** Hourglass Owl: attack speed for neighbours that can't fire an ultimate yet. */
 export const owlSpeed = (rank: number, mult = 1, e: Effects = EFFECTS) => Math.min(e.hourglass.speedMax, step(e.hourglass.speed, e.hourglass.speedPerRank, rank) * mult);
-/** Echo Spirit: share of a neighbour's ultimate it repeats. */
-export const echoStrength = (rank: number, mult = 1, e: Effects = EFFECTS) => Math.min(e.echo.max, step(e.echo.strength, e.echo.perRank, rank) * mult);
 /** Banner Herald: damage bonus for every attacking unit, for `awakened` awakened units on the board. */
 export const heraldBonus = (rank: number, awakened: number, mult = 1, e: Effects = EFFECTS) => Math.min(e.herald.max, step(e.herald.perAwakened, e.herald.perRank, rank) * mult * awakened);
 /** Gnome Brewer: mana per brew. */
@@ -71,7 +69,7 @@ export function supportSummary(arch: SupportArch, rank: number, e: Effects = EFF
     case "hourglass":
       return `Neighbours charge ultimates +${pct(owlCharge(rank, mult, e))} (or attack +${pct(owlSpeed(rank, mult, e))} faster)`;
     case "echo":
-      return `Repeats a neighbour's ultimate at ${pct(echoStrength(rank, mult, e))} strength`;
+      return "Becomes an exact copy of a random neighbour (any unit if none) · copies anew after every boss wave";
     case "herald":
       return `All units +${pct(Math.min(e.herald.max, step(e.herald.perAwakened, e.herald.perRank, rank) * mult))} damage per awakened unit`;
     case "brewer":
@@ -86,7 +84,7 @@ export const SUPPORT_TEXT: Record<SupportArch, string> = {
   mirror: "Turns into a neighbour of the same rank",
   lucky: "Neighbours' merges can keep their unit",
   hourglass: "Neighbours charge ultimates faster",
-  echo: "Repeats a neighbour's ultimate",
+  echo: "Becomes a copy of a neighbour",
   herald: "Rallies the army for every awakening",
   brewer: "Brews mana, pays a bonus every wave",
 };

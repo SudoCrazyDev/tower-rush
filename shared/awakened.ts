@@ -118,7 +118,7 @@ export const ULTIMATES: Record<UltId, UltDef> = {
   // Murcielago x`allyDmg` damage, x`allySpd` speed; adjacent other units deal /`nearDmg` and attack /`nearSpd`.
   resurreccion: {
     id: "resurreccion",
-    name: "Resurrección",
+    name: "Dark Rebirth",
     mode: "passive",
     every: 0,
     params: { width: 34, lanza: 0.45, rapid: 0.18, rapidMin: 3, rapidMax: 5, despairDmg: 6, despairSpd: 4, allyDmg: 1.2, allySpd: 1.4, nearDmg: 1.7, nearSpd: 1.2 },
@@ -128,10 +128,7 @@ export const ULTIMATES: Record<UltId, UltDef> = {
 /** Murcielago's three awakened ultimates (one is rolled per awakened unit). */
 export type MurcVariant = "zero" | "lanza" | "despair";
 export const MURC_VARIANTS: MurcVariant[] = ["zero", "lanza", "despair"];
-export const MURC_NAMES: Record<MurcVariant, string> = { zero: "Dark Zero", lanza: "Lanza del Relámpago", despair: "True Despair" };
-
-/** Ultimates an Echo Spirit can't repeat (a second copy would change nothing or stack oddly). */
-export const NO_ECHO: ReadonlySet<UltId> = new Set<UltId>(["primal_roar", "scorched_earth", "overheat", "rag_doll", "moonshine", "reborn", "shadow_clones", "tidal_wave", "frozen_fields", "black_hole", "big_ben"]);
+export const MURC_NAMES: Record<MurcVariant, string> = { zero: "Dark Zero", lanza: "Dark Javelin", despair: "True Despair" };
 
 /** Units that never awaken (even with awakened art). */
 export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller", "peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"]);
@@ -285,7 +282,7 @@ export function ultText(id: string): string {
     case "big_ben":
       return `Every ${u.every}s: ${p.targets} random units attack ${x(1 + p.speed)} as fast for ${p.duration}s, then rank up by 1 (reaching max rank, they awaken).`;
     case "resurreccion":
-      return `Awakened, he rolls one of three. Dark Zero: every attack is a beam through the whole line for his hit × seconds since summoned. Lanza del Relámpago: ${pct(p.lanza)} per attack, a lance for his hit × seconds × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row). True Despair: ×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed (N = Murciélagos), awakened Murciélagos ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed.`;
+      return `Awakened, he rolls one of three. Dark Zero: every attack is a beam through the whole line for his hit × seconds since summoned. Dark Javelin: ${pct(p.lanza)} per attack, a lance for his hit × seconds × his kills (${pct(p.rapid)} for ${p.rapidMin}-${p.rapidMax} in a row). True Despair: ×${p.despairDmg}N damage and ×(${p.despairSpd}+N) speed (N = Dark Spawns), awakened Dark Spawns ×${p.allyDmg} damage and ×${p.allySpd} speed, other neighbours ÷${p.nearDmg} damage and ÷${p.nearSpd} speed.`;
     case "surgeon_of_death":
       return `Passive: there can only be one. Every other Heart Surgeon on the board, and every new one, merges into him with its Room kills. He opens ${p.rooms} Rooms that share one kill count. Scalpel: a boss entering a Room takes his hit × Surgeons merged × Room kills, through its shield (once per Room).`;
   }

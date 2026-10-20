@@ -18,7 +18,7 @@ import { kitPrimary } from "../../../shared/kit.ts";
 import type { HeroDef } from "../data/heroes";
 import { questById, questDone, questText } from "../../../shared/daily.ts";
 import { LEAGUES, playerLeague } from "../../../shared/leagues.ts";
-import { Sim, SIM_DT, type SimEvent, type SimSetup, type SimShot } from "../../../shared/sim.ts";
+import { Sim, SIM_DT, mergeable, type SimEvent, type SimSetup, type SimShot } from "../../../shared/sim.ts";
 import { rewardPopup } from "./daily";
 import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, finishStory, type BattleResult, type StoryResult, type StoryStart } from "../save";
@@ -939,7 +939,7 @@ export class BattleScene extends Phaser.Scene {
           return;
         }
         if (other === u.sim) return;
-        const merges = other.def.id === u.def.id && other.rank === u.rank && u.rank < maxRank();
+        const merges = mergeable(other, u.sim);
         if (merges || (mime && canBecome(u.sim, other)) || (portal && other.rank === u.rank)) mark(slot);
       });
     });
@@ -987,7 +987,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.portal?.hit(obj.x, obj.y)) {
         if (!sim.canBanish(from)) this.refuse(u, u.awakened ? "Awakened units stay" : "Can't go through");
         else done(sim.banish(from));
-      } else if (target && target !== u && target.def.id === u.def.id && target.rank === u.rank && u.rank < maxRank()) {
+      } else if (target && target !== u && mergeable(target.sim, u.sim)) {
         done(sim.merge(from, target.slot));
       } else if (target && target !== u && kitPrimary(u.def) === "mime") {
         if (!sim.mimeReady(from)) this.refuse(u, `Ready in ${Math.ceil(mimePrep(this.supportMult(u)) - u.sim.timer)}s`);
@@ -1247,6 +1247,8 @@ export class BattleScene extends Phaser.Scene {
         if (u) this.spawnUnit(u);
         // v2.7 Big Ben ranks units up; Retribution awakens a Shield Knight.
         if (e.why === "rank") this.floater(e.x, e.y - 70, "RANK UP!", "#ffd86b", 26);
+        // v2.10 Echo Spirit: a ghostly ring where it took its new shape.
+        if (e.why === "echo") this.vfx("ice_burst", e.x, e.y - 20, 140);
         break;
       }
       case "swap": {
@@ -1559,21 +1561,6 @@ export class BattleScene extends Phaser.Scene {
         this.tweens.add({ targets: beam, alpha: 0, duration: 260, onComplete: () => beam.destroy() });
         if (u) this.vfx(HIT_VFX[u.def.element], e.x, e.y, e.radius * 1.6);
         this.floater(e.x, e.y - 70, "ULTIMATE!", "#ffd93b", 30);
-        break;
-      }
-      case "encore": {
-        for (const u of this.units.values()) if (kitPrimary(u.def) === "echo") u.playOnce("attack");
-        if (e.ult) {
-          // The recast emits its own "ultimate" event (drawn there); only mark it as an encore.
-          this.floater(e.x, e.y - 110, "ENCORE!", "#9ff0ff", 24);
-          break;
-        }
-        this.floater(e.x, e.y - 70, "ENCORE!", "#9ff0ff", 28);
-        if (!e.strike) break;
-        const ring = this.add.graphics().setDepth(2060).setPosition(e.x, e.y);
-        ring.lineStyle(6, 0x9ff0ff, 1).strokeCircle(0, 0, e.radius).setScale(0.2);
-        this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 380, ease: "Cubic.Out", onComplete: () => ring.destroy() });
-        this.vfx("ice_burst", e.x, e.y, e.radius * 1.4);
         break;
       }
       case "shot_lost":

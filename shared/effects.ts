@@ -31,6 +31,7 @@ export const DEFAULT_EFFECTS = {
   mirror: { interval: 25, intervalPerRank: 1.5, intervalMin: 8, warn: 2 },
   lucky: { chance: 1, perRank: 0, max: 1 },
   hourglass: { charge: 0.4, chargePerRank: 0.1, chargeMax: 1.5, speed: 0.1, speedPerRank: 0.0333, speedMax: 0.5 },
+  // Unused since the v2.10 Echo Spirit rework (it copies units now); kept so saved configs still load.
   echo: { strength: 0.25, perRank: 0.05, max: 0.75, delay: 0.6 },
   herald: { perAwakened: 0.05, perRank: 0.01, max: 0.6, shout: 0.3, shoutTime: 6 },
   brewer: { every: 5, perRank: 8, harvestPerRank: 1, tapBonus: 0.25, tapWindow: 2, pvpMult: 0.6 },

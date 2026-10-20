@@ -159,8 +159,8 @@ export function orcText(id: string): { arch: string; lines: string[]; stat?: [st
       return {
         arch: "Green cero at the leading monster",
         lines: [
-          `Resurrección: every attack has a ${pct(r.chance)} chance to awaken him at once, at max rank.`,
-          `Awakened, he rolls one of three ultimates: Dark Zero, Lanza del Relámpago or True Despair (see his ultimate).`,
+          `Dark Rebirth: every attack has a ${pct(r.chance)} chance to awaken him at once, at max rank.`,
+          `Awakened, he rolls one of three ultimates: Dark Zero, Dark Javelin or True Despair (see his ultimate).`,
         ],
       };
     }

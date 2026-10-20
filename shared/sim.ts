@@ -47,13 +47,12 @@ import { LAWS, LAW_IDS, TRIBUNAL, panOf, type CellState, type LawId } from "./tr
 import { arenaPaths, slotPos, type Path, type Pt } from "./path.ts";
 import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type ActivePerk } from "./perks.ts";
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
-import { MURC_VARIANTS, NO_ECHO, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type MurcVariant, type UltId } from "./awakened.ts";
+import { MURC_VARIANTS, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type MurcVariant, type UltId } from "./awakened.ts";
 import { castUltimate, hatchReborn, ultimateAttack, type UltCtx } from "./ultimates.ts";
 import { BETA_SUPPORT, REWORKS, drumStage, gruntMult, gruntStep, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
   brewMana,
   canBecome,
-  echoStrength,
   harvestMana,
   heraldBonus,
   isSupport,
@@ -119,7 +118,7 @@ export interface SimLogEntry {
 }
 
 export type ManaSource = "kill" | "wave" | "harvest" | "brew" | "pulse" | "lantern" | "ultimate" | "echo" | "plunder" | "hero" | "income" | "other";
-export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald" | "berserk" | "pillage" | "surgeon" | "scalpel" | "resurreccion";
+export type CalloutKind = "miss" | "block" | "dodge" | "rally" | "rush" | "lucky" | "copy" | "mirror" | "echo" | "tsk" | "shellshock" | "unpaid" | "crit" | "execute" | "herald" | "berserk" | "pillage" | "surgeon" | "scalpel" | "resurreccion";
 
 /**
  * Structured events for a renderer, drained with drainEvents(). Unit uids are stable per
@@ -132,7 +131,7 @@ export type SimEvent =
   /** `gone` are the two merged units; `uid` is the new one on the target slot. `lucky`: a Lucky Cat kept the unit. */
   | { type: "merge"; t: number; uid: number; gone: [number, number]; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean; lucky: boolean }
   /** `gone` was replaced by `uid` (a Mime copy or a Mirror Slime turning). */
-  | { type: "become"; t: number; uid: number; gone: number; why: "copy" | "mirror" | "awaken" | "rank"; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean }
+  | { type: "become"; t: number; uid: number; gone: number; why: "copy" | "mirror" | "awaken" | "rank" | "echo"; id: string; rank: number; slot: number; x: number; y: number; awakened: boolean }
   /** Portal Imp: `other` is the unit it traded with (null for a hop to an empty tile). */
   | { type: "swap"; t: number; uid: number; other: number | null; from: number; to: number }
   | { type: "awaken"; t: number; uid: number; id: string; slot: number; x: number; y: number }
@@ -167,7 +166,6 @@ export type SimEvent =
    * `ult` names it, `points` are where it lands (spear line, bombs, cannonballs) and `targets` the monsters it picked.
    */
   | { type: "ultimate"; t: number; uid: number; kind: "strike" | "mana" | "special"; ult?: UltId; x: number; y: number; radius: number; points?: Pt[]; targets?: number[]; variant?: MurcVariant }
-  | { type: "encore"; t: number; x: number; y: number; radius: number; strike: boolean; ult?: UltId }
   | { type: "herald_cry"; t: number; uid: number | null }
   /** A shot arrived but its target was already gone (play an impact). */
   | { type: "shot_lost"; t: number; uid: number; x: number; y: number }
@@ -409,6 +407,12 @@ const DUMMY: MonsterDef = { id: "dummy", name: "Training dummy", race: "construc
 
 // ---------------------------------------------------------------- actors
 
+/** v2.10: what a unit merges as. An Echo Spirit's copy merges as an Echo Spirit of its own rank. */
+export const mergeId = (u: SimUnit) => (u.echoRank ? "echo_spirit" : u.def.id);
+export const mergeRank = (u: SimUnit) => u.echoRank || u.rank;
+/** Whether two units merge (same unit, same rank, below max rank). */
+export const mergeable = (a: SimUnit, b: SimUnit) => mergeId(a) === mergeId(b) && mergeRank(a) === mergeRank(b) && mergeRank(a) < maxRank();
+
 export class SimUnit {
   readonly def: UnitDef;
   readonly rank: number;
@@ -479,6 +483,8 @@ export class SimUnit {
   /** v2.10 Heart Surgeon: monsters that died inside its Rooms, and the Surgeons merged into it (itself included). */
   roomKills = 0;
   surgeons = 1;
+  /** v2.10 Echo Spirit: its own rank while it fights as a copy of another unit (0 = not a copy). It merges by this, as an Echo Spirit. */
+  echoRank = 0;
   /** v2.10 Murcielago: the ultimate rolled when he awakened, and when he was summoned (rank-ups and Resurreccion keep it). */
   murc: MurcVariant | null = null;
   summonedAt = 0;
@@ -813,8 +819,6 @@ export class Sim {
   scorch: { until: number; dps: number; src: Source } | null = null;
   /** v2.7 Frozen Fields: every monster is slowed by `slow` until `until`. Read by the renderer. */
   frost: { until: number; slow: number } | null = null;
-  /** Echo Spirit encores waiting to go off. */
-  private echoes: { at: number; unit: SimUnit; x: number; y: number; damage: number; mana: number; ult?: UltId; scale: number }[] = [];
   /** v2.2 Story 3 state (see shared/faceless.ts). Read by the renderer: brazierLit (per ChapterMechanics.faceless.braziers entry), cageHp (null without a cage), cageOpen. */
   brazierLit: boolean[] = [];
   private brazierReach: number[] = [];
@@ -1160,8 +1164,10 @@ export class Sim {
   }
 
   /** Swap a unit onto another tile (a Mime copy, a Mirror Slime turning): same slot, new unit, new uid. */
-  protected become(u: SimUnit, id: string, rank: number, why: "copy" | "mirror" | "awaken" | "rank" = "copy", awake = false) {
+  protected become(u: SimUnit, id: string, rank: number, why: "copy" | "mirror" | "awaken" | "rank" | "echo" = "copy", awake = false) {
     const v = this.place(id, rank, u.slot, { x: u.x, y: u.y }, awake);
+    // An Echo Spirit's copy stays an Echo Spirit through rank-ups and awakenings (it merges as one).
+    v.echoRank = u.echoRank;
     // A Heart Surgeon that ranks up or awakens keeps its Room kills.
     if (id === u.def.id) {
       v.roomKills = u.roomKills;
@@ -1235,6 +1241,28 @@ export class Sim {
     }
   }
 
+  /** The wave that just started had a boss (Echo Spirits copy anew when the next one starts). */
+  private lastWaveBoss = false;
+
+  /**
+   * v2.10 Echo Spirit: become an exact copy (unit, rank, awakening, 100% stats) of a random
+   * neighbour, or of any unit on the board when no neighbour has one. Other Echo Spirits and
+   * their copies are never copied. Keeps its own rank in echoRank for merging.
+   */
+  private echoCopy(u: SimUnit) {
+    const ok = (v: SimUnit | null): v is SimUnit => !!v && v !== u && !v.echoRank && v.primary !== "echo" && !v.dragging && !v.witness;
+    let options = neighbours(u.slot).map((j) => this.units[j]).filter(ok);
+    if (!options.length) options = this.units.filter(ok);
+    if (!options.length) return false;
+    const v = options[Math.floor(this.rand() * options.length)];
+    const rank = u.echoRank || u.rank;
+    u.echoRank = rank;
+    const w = this.become(u, v.def.id, v.rank, "echo", v.awakened);
+    this.log(`Echo Spirit copied ${v.def.name}`, "unit");
+    this.callout("echo", "ECHO!", "#9ff0ff", w.x, w.y - 60, w.uid);
+    return true;
+  }
+
   private startWave(forceBoss?: BossDef, escort = true) {
     if (this.labNext !== null) {
       this.wave = this.labNext - 1;
@@ -1245,6 +1273,9 @@ export class Sim {
     const e = ECONOMY;
     const scripted = this.story?.waves[n - 1];
     const isBoss = !!forceBoss || (scripted ? !!scripted.boss : n % e.bossEvery === 0);
+    // After every boss wave, each Echo Spirit copies a new (random) unit.
+    if (this.lastWaveBoss) for (const u of [...this.units]) if (u?.echoRank && !u.dragging) this.echoCopy(u);
+    this.lastWaveBoss = isBoss;
     if (n > 1 && this.setup.scenario.kind === "run") {
       this.gainMana(Math.round(e.waveManaBase + n * e.waveManaPerWave), null, null, "wave");
       this.harvest(n - 1);
@@ -1456,7 +1487,6 @@ export class Sim {
     this.drums = this.drumsNow();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
     if (this.fields.length || this.scorch || this.frost) this.updateFields(dt);
-    if (this.echoes.length) this.updateEchoes();
     this.updateStorm(dt);
     this.updateShots(dt);
     if (this.bubbles.length) this.updateBubbles();
@@ -2137,14 +2167,15 @@ export class Sim {
   merge(from: number, to: number) {
     const x = this.units[from];
     const y = this.units[to];
-    if (this.over || !x || !y || from === to || x.def.id !== y.def.id || x.rank !== y.rank || x.rank >= maxRank() || !this.deck.length || x.chain > 0 || y.chain > 0) return false;
+    if (this.over || !x || !y || from === to || !mergeable(x, y) || !this.deck.length || x.chain > 0 || y.chain > 0) return false;
     this.units[from] = null;
     this.units[to] = null;
     // A Lucky Cat next to the merge may keep the unit (its own merges roll as usual).
     const luck = x.primary === "lucky" ? 0 : this.luckAt(to);
     const keep = luck > 0 && this.rand() < luck;
     if (keep) this.counts.lucky++;
-    const u = this.place(keep ? x.def.id : this.deck[Math.floor(this.rand() * this.deck.length)], x.rank + 1, to);
+    // Two Echo Spirits merge as Echo Spirits, whatever they were copying.
+    const u = this.place(keep ? mergeId(x) : this.deck[Math.floor(this.rand() * this.deck.length)], mergeRank(x) + 1, to);
     // Two Heart Surgeons merging into a Heart Surgeon pool their Room kills.
     if (u.def.id === x.def.id) u.roomKills = x.roomKills + y.roomKills;
     this.flagBorn(u, "no_merge");
@@ -3328,12 +3359,8 @@ export class Sim {
       u.ult += dt * (1 + u.charge);
       if (u.ult >= every && ultOf(u.def.id)) {
         // v2.7: the unit's own ultimate (it keeps attacking alongside it).
-        const ult = ultOf(u.def.id)!.id;
-        if (castUltimate(this.ultCtx, u, 1)) {
-          u.ult = 0;
-          // Some ultimates can't be echoed (an echoed roar would find every monster still immune).
-          if (!NO_ECHO.has(ult)) this.queueEcho(u, u.x, u.y, 0, 0, ult);
-        } else u.ult = every;
+        if (castUltimate(this.ultCtx, u, 1)) u.ult = 0;
+        else u.ult = every;
       } else if (u.ult >= every) {
         const target = u.primary === "mana" ? null : this.pickTarget(u.primary === "sniper" ? "strongest" : "first");
         if (target || u.primary === "mana") {
@@ -3477,6 +3504,10 @@ export class Sim {
         this.callout("mirror", "MIRROR!", "#d9b3ff", w.x, w.y - 60, w.uid);
         break;
       }
+      case "echo":
+        // A fresh Echo Spirit copies a unit as soon as there is one to copy.
+        this.echoCopy(u);
+        break;
       case "brewer":
         u.pulse += t;
         if (u.pulse >= u.fx.brewer.every) {
@@ -3521,38 +3552,6 @@ export class Sim {
   /** Bubbles that waited out the tap window pop by themselves. */
   private updateBubbles() {
     for (const b of [...this.bubbles]) if (this.now >= b.expires) this.popBubble(b.id, false);
-  }
-
-  /** Echo Spirits next to a unit that just fired its ultimate repeat it (the strongest one only). `ult`: a unit's own ultimate, recast at the echo's strength. */
-  private queueEcho(u: SimUnit, x: number, y: number, damage: number, mana: number, ult?: UltId) {
-    let best = 0;
-    for (const j of neighbours(u.slot)) {
-      const v = this.units[j];
-      if (v?.primary === "echo") best = Math.max(best, echoStrength(v.rank, this.supportMult(v), v.fx));
-    }
-    if (best > 0) this.echoes.push({ at: this.now + u.fx.echo.delay, unit: u, x, y, damage: damage * best, mana: Math.round(mana * best), ult, scale: best });
-  }
-
-  private updateEchoes() {
-    const due = this.echoes.filter((e) => e.at <= this.now);
-    if (!due.length) return;
-    this.echoes = this.echoes.filter((e) => e.at > this.now);
-    for (const e of due) {
-      this.mark("text", e.x, e.y - 70, "#9ff0ff", { text: "ENCORE" });
-      if (e.ult) {
-        // The caster is gone: no encore.
-        if (this.units[e.unit.slot] !== e.unit) continue;
-        this.emit({ type: "encore", t: this.now, x: e.unit.x, y: e.unit.y, radius: 0, strike: true, ult: e.ult });
-        castUltimate(this.ultCtx, e.unit, e.scale);
-        continue;
-      }
-      this.emit({ type: "encore", t: this.now, x: e.x, y: e.y, radius: ECONOMY.ultimateRadius, strike: e.damage > 0 });
-      if (e.mana) this.gainMana(e.mana, e.x, e.y - 30, "echo");
-      // The caster is gone (merged away, copied over, turned): no encore strike.
-      if (!e.damage || this.units[e.unit.slot] !== e.unit) continue;
-      this.mark("ring", e.x, e.y, "#9ff0ff", { x2: ECONOMY.ultimateRadius });
-      for (const m of this.nearby({ x: e.x, y: e.y }, ECONOMY.ultimateRadius)) this.applyHit(e.unit, e.damage, m);
-    }
   }
 
   // ---------------------------------------------------------------- v2.7 fields (shared/reworks.ts, shared/ultimates.ts)
@@ -4019,13 +4018,11 @@ export class Sim {
       const mana = Math.round(u.fx.mana.ultimateBase + u.fx.mana.ultimatePerWave * this.wave);
       this.gainMana(mana, u.x, u.y - 60, "ultimate");
       this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "mana", x: u.x, y: u.y, radius: 0 });
-      this.queueEcho(u, u.x, u.y, 0, mana);
       return;
     }
     const center = target.pos;
     this.emit({ type: "ultimate", t: this.now, uid: u.uid, kind: "strike", x: center.x, y: center.y, radius: ECONOMY.ultimateRadius });
     const damage = this.statDamage(u) * this.heroDamageMult * this.heraldMult * ECONOMY.ultimateDamageMult;
-    this.queueEcho(u, center.x, center.y, damage, 0);
     this.mark("ring", center.x, center.y, "#ffd93b", { x2: ECONOMY.ultimateRadius });
     this.mark("text", center.x, center.y - 70, "#ffd93b", { text: "ULTIMATE" });
     for (const m of this.nearby(center, ECONOMY.ultimateRadius)) this.applyHit(u, damage, m);
@@ -4073,7 +4070,7 @@ export class Sim {
     // v2.10 Murcielago: Resurreccion may awaken him mid-attack, at max rank.
     if (u.def.id === "murcielago" && !u.awakened && mayAwaken(u.def.id) && this.o.awakens?.(u.def.id) && this.rand() < REWORKS.murcielago.resurreccion.chance) {
       const v = this.become(u, u.def.id, maxRank(), "awaken", true);
-      this.callout("resurreccion", "RESURRECCIÓN!", "#5dffb0", v.x, v.y - 70, v.uid);
+      this.callout("resurreccion", "DARK REBIRTH!", "#5dffb0", v.x, v.y - 70, v.uid);
       this.emit({ type: "ultimate", t: now, uid: v.uid, kind: "special", ult: "resurreccion", x: v.x, y: v.y, radius: 0, variant: v.murc ?? undefined });
       return;
     }

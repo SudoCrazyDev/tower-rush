@@ -31,7 +31,7 @@ import { PvpBoard, SIM_DT } from "../../../shared/pvpsim.ts";
 import { ShotView } from "../battle/vfx";
 import { BoardPortal } from "../battle/portalView";
 import { PvpBot, botSkill } from "../../../shared/pvpbot.ts";
-import type { SimFx, SimMonster, SimShot, SimUnit } from "../../../shared/sim.ts";
+import { mergeable, type SimFx, type SimMonster, type SimShot, type SimUnit } from "../../../shared/sim.ts";
 import type { Promotion } from "../../../shared/profile.ts";
 import { canBecome } from "../../../shared/support.ts";
 import { kitPrimary } from "../../../shared/kit.ts";
@@ -1101,7 +1101,7 @@ export class PvpScene extends Phaser.Scene {
       const portal = this.board.portalReady(slot!);
       this.board.units.forEach((o, i) => {
         if (i === slot) return;
-        const merges = !!o && o.def.id === u.def.id && o.rank === u.rank && u.rank < maxRank();
+        const merges = !!o && mergeable(o, u);
         const ok = o ? merges || (mime && canBecome(u, o)) || (portal && o.rank === u.rank) : portal;
         if (!ok) return;
         const p = slotPos(this.arena, i);

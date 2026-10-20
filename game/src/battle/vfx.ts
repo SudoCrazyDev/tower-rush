@@ -335,7 +335,6 @@ export function fxHit(scene: FxScene, e: Extract<SimEvent, { type: "hit" }>): bo
  *  mana (hero)       star_burst, pt_coin
  *  mana (other)      pt_coin
  *  ultimate          explosion_big + ground decal of the unit's element (strike), pt_coin (mana)
- *  encore            ground_holy ring, pt_star
  *  heal_pulse        ground_holy, pt_heart
  *  brew_collect      pt_coin
  *  hero              meteor: explosion_big + ground_scorch; freeze: ground_frost + impact_ice;
@@ -447,10 +446,6 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
       }
       break;
     }
-    case "encore":
-      fxSprite(scene, "ground_holy", e.x, e.y + 20, { size: e.radius * 2, life: 1200, flat: true, depth: 60 });
-      fxBurst(scene, "pt_star", e.x, e.y, { n: 6, size: 20, spread: e.radius });
-      break;
     case "heal_pulse":
       fxSprite(scene, "ground_holy", e.x, e.y + 20, { size: 150, life: 900, flat: true, depth: 60 });
       fxBurst(scene, "pt_heart", e.x, e.y - 20, { n: 3, size: 20, spread: 30, gravity: -40 });

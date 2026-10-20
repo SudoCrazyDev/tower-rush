@@ -37,7 +37,7 @@ export type Arch =
   | "mirror" // now and then turns into a same-rank neighbour
   | "lucky" // neighbours' merges may keep their unit
   | "hourglass" // neighbours charge ultimates faster
-  | "echo" // repeats neighbours' ultimates
+  | "echo" // becomes a copy of a neighbour (v2.10)
   | "herald" // every unit hits harder per awakened unit
   | "brewer" // brews mana, pays a harvest every wave
   // v1.2 Stories: no attack of their own.
@@ -237,7 +237,7 @@ export const ARCHETYPES: Record<Arch, { speed: number; dmg: number; label: strin
   mirror: { speed: 0, dmg: 0, label: "Support: turns into a neighbour of the same rank" },
   lucky: { speed: 0, dmg: 0, label: "Support: neighbours' merges can keep their unit" },
   hourglass: { speed: 0, dmg: 0, label: "Support: neighbours charge ultimates faster" },
-  echo: { speed: 0, dmg: 0, label: "Support: repeats neighbours' ultimates" },
+  echo: { speed: 0, dmg: 0, label: "Support: becomes a copy of a neighbour" },
   herald: { speed: 0, dmg: 0, label: "Support: every unit hits harder per awakening" },
   brewer: { speed: 0, dmg: 0, label: "Support: brews mana, pays a bonus every wave" },
   aura: { speed: 0, dmg: 0, label: "Units around it attack faster and hit harder" },
@@ -441,7 +441,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   // v1.1 Supporting Cast Arrival: support units (epic)
   { ...U("mime", "Mime", "epic", "arcane", "mime", "arcane_orb", "A silent performer who becomes whoever stands across.", "fae", "balanced", "none"), enabled: false },
   U("hourglass_owl", "Hourglass Owl", "epic", "lightning", "hourglass", "lightning", "A clockwork owl that makes time run faster for friends.", "construct", "balanced", "none"),
-  U("echo_spirit", "Echo Spirit", "epic", "ice", "echo", "ice_shard", "Every great move deserves an encore.", "undead", "balanced", "none"),
+  U("echo_spirit", "Echo Spirit", "epic", "ice", "echo", "ice_shard", "Wears the face of whoever stands beside it.", "undead", "balanced", "none"),
   // legendary
   U("anubis_priest", "Anubis Priest", "legendary", "arcane", "execute", "arcane_orb", "Weighs every soul. Takes the weak.", "celestial", "balanced", "finisher"),
   U("crystal_queen", "Crystal Queen", "legendary", "ice", "freeze", "ice_shard", "Even the frost-born fall still.", "elf", "balanced", "frostbite"),
@@ -460,8 +460,8 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   { ...U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"), weapon: "sig_monkey_king" },
   // v2.10: Heart Surgeon keeps a Room on the path (shared/reworks.ts); awakened, Surgeon of Death (shared/awakened.ts).
   U("heart_surgeon", "Heart Surgeon", "mythic", "arcane", "shot", "slash", "Every room is his operating table.", "human", "heavy", "true_strike"),
-  // v2.10: Murcielago may release himself mid-fight (shared/reworks.ts); awakened, one of three ultimates (shared/awakened.ts).
-  U("murcielago", "Murciélago", "mythic", "arcane", "shot", "cero", "Despair has no bottom.", "demon", "balanced", "true_strike"),
+  // v2.10: Murcielago (shown as Dark Spawn since the rename; id kept) may release himself mid-fight (shared/reworks.ts); awakened, one of three ultimates (shared/awakened.ts).
+  U("murcielago", "Dark Spawn", "mythic", "arcane", "shot", "cero", "Despair has no bottom.", "demon", "balanced", "true_strike"),
   // v1.2 Stories: Princess Muse, the Story 1 reward and the first Event card.
   { ...U("princess_muse", "Princess Muse", "event", "arcane", "aura", "arcane_orb", "A round on the house, and the whole bar fights harder.", "human", "balanced", "none"), role: "Barkeeper" },
   // v1.2 Stories: Story 2's Knights and Mercenaries. Pentagonal and Rogue Knight are its reward
