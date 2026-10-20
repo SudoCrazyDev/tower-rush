@@ -42,6 +42,7 @@ changes between releases are listed with them. For the longer backlog of ideas, 
 | v2.8.6 | Unit Lab TEST ★5 in every build | 2026-10-17 | tag `game-v2.8.6` | [game CHANGELOG](../../game/CHANGELOG.md) |
 | — | API 1.5.2: CORS allows PATCH (admin player edits) | 2026-10-17 | tag `api-v1.5.2` | — |
 | v2.9.0 | **League Revamp**, player profiles, scrolling leagues list | 2026-10-17 | tag `game-v2.9.0` (API `api-v1.6.0`, admin `admin-v1.5.0`, website `website-v1.6.0`, `MIN_CLIENT` 2.9.0) | [v2.9](v2.9-league-revamp/README.md) |
+| v2.9.2 | Deck lag fix for low-end phones, `?fps` tester overlay | staging 2026-10-21 (prod pending) | `88cfeeb` | [v2.9.2](v2.9.2-phone-lag/README.md) |
 | next | Balance pass, Book 3 | — | — | — |
 
 ---
@@ -175,6 +176,7 @@ Aelyria's army charges Vaeltharion. New art: 5 corrupted elf monsters, 5 bosses,
 - **v2.8.4 (2026-10-16):** the five Orcs were redrawn as chibi busts (big head, waist-up) like every other unit, with new idle and attack animations. The first full-body art read too small on the board.
 - **v2.8.5 (2026-10-16):** the Grunt was redrawn with a rounded silhouette inside the frame (he read as a square tile), and new units now follow a written board-art style guide ([assets/UNIT_ART_STYLE.md](../../assets/UNIT_ART_STYLE.md)).
 - **v2.9.0 "League Revamp" (live 2026-10-17; game 2.9.0, API 1.6.0, admin 1.5.0, website 1.6.0):** per-league minimum waves with uncapped gains and real losses, longer gates, Mythic and Immortal leagues, a two-highest-arenas trophy lock, a rage-quit loss and the hidden Secret Society League with an entry fee and monthly dues. See [v2.9](v2.9-league-revamp/README.md).
+- **v2.9.2 (staging 2026-10-21, prod pending):** the Deck scrolls smoothly on low-end phones. Additive glows (one per card) ran a tester's phone at 5 fps; they now use normal blending. Also a frame limit of 62 (60 dropped frames on 60 Hz screens), the batched pipeline on phones, a tighter Deck cull and the `?fps` / `&probe=<Scene>` tester overlay. See [v2.9.2](v2.9.2-phone-lag/README.md).
 - **v2.9.0 also shipped player profiles** (tap a leaderboard row or your own avatar: hero and 5 deck units on a stage, stats and badges) and a **scrolling leagues list** with each league's top player.
 
 ## Next
