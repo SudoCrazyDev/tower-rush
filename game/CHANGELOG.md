@@ -2,6 +2,11 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.3
+- Offline Arena: when boot can't reach the server, a player who has signed in on this device before can choose "Play offline (practice Arena)". The lobby shows only the arena picker, with an OFFLINE PRACTICE note and GO ONLINE (reload). Offline runs are practice: nothing is saved and nothing is paid. The game keeps the last config, account, profile and asset index in localStorage while online; signing out clears it. Details in `docs/features/v2.9.3-offline-arena/`.
+- Settings: DEBUG: ON/OFF turns the `?fps` tester overlay on and off (same stored switch as `?fps` / `?fps=0`).
+- Game only; no API change, `MIN_CLIENT` unchanged.
+
 ## 2.9.2
 - Fix: smooth frame pacing on phones, most visible when scrolling the Deck. 2.8.1's frame limit of exactly 60 made Phaser skip a frame whenever the smoothed frame time came in a hair under 1000/60, so 60 Hz phones ran at 30-40 fps with uneven pacing (90 Hz ones at 45). The limit is now 62: 60 Hz screens hold a steady 60, and 90/120 Hz screens still draw at an even 45/60.
 - Fix: the Deck page scrolls smoothly on low-end phones. Phaser's Mobile Pipeline (on by default for Android and iOS) batched one texture at a time, so every card frame, portrait and label was its own draw call: about 550 a frame on a full collection, against about 40 now. `?mobilepipe` turns it back on for comparison. Battles and other screens draw with the batched pipeline on phones too.

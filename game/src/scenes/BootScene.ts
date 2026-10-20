@@ -2,7 +2,8 @@ import Phaser from "phaser";
 import { BASE, loadImages, setAssetIndex, type AssetIndex } from "../assets";
 import { W, H, txt, NAVY } from "../ui";
 import { ApiError, getToken, setToken } from "../api";
-import { checkInvite, loadConfig, loadMe } from "../save";
+import { checkInvite, loadConfig, loadMe, loadOffline } from "../save";
+import { canPlayOffline, goOffline, readSnapshot, saveSnapshot } from "../offline";
 import { showAuth, showBlocker, type Invite } from "../authOverlay";
 import { unlockAudio } from "../audio";
 import { ambientVideo, coverFit } from "../backdrop";
@@ -42,8 +43,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    const index = this.cache.json.get("index") as AssetIndex;
+    // Offline the fresh index can't load: the one from the last online boot stands in.
+    const index = (this.cache.json.get("index") as AssetIndex | undefined) ?? readSnapshot().index!;
     setAssetIndex(index);
+    saveSnapshot({ index });
 
     const bg = this.add.image(W / 2, H / 2, "loc:loading_keyart");
     bg.setScale(Math.max(W / bg.width, H / bg.height));
@@ -94,9 +97,20 @@ export class BootScene extends Phaser.Scene {
       } catch (e) {
         // Banned accounts get their own screen (see main.ts) and stop here.
         if (e instanceof ApiError && e.data.error === "banned") return new Promise<never>(() => {});
-        await new Promise<void>((retry) =>
-          showBlocker("Can't reach the server", "Check your connection and try again.", { label: "RETRY", onClick: retry }),
+        // Offline Arena: a player who has played here before can practice without the server.
+        const off = await new Promise<boolean>((done) =>
+          showBlocker(
+            "Can't reach the server",
+            "Check your connection and try again.",
+            { label: "RETRY", onClick: () => done(false) },
+            getToken() && canPlayOffline() ? { label: "Play offline (practice Arena)", onClick: () => done(true) } : undefined,
+          ),
         );
+        if (off) {
+          goOffline();
+          loadOffline();
+          return;
+        }
       }
     }
   }

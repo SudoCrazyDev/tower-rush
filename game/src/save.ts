@@ -13,6 +13,7 @@ import type { Reward } from "../../shared/daily.ts";
 import type { StoryObjectives } from "../../shared/stories.ts";
 import type { Promotion, StoryWin } from "../../shared/profile.ts";
 import { needsAttention, type MailMessage } from "../../shared/mail.ts";
+import { clearSnapshot, readSnapshot, saveSnapshot } from "./offline";
 
 export type { MailMessage };
 
@@ -36,6 +37,15 @@ export let inviteOnly = false;
 
 function setProfile(p: Profile) {
   Object.assign(profile, p);
+  saveSnapshot({ profile });
+}
+
+/** Offline Arena: the config, account and progress last seen online stand in for the server's. */
+export function loadOffline() {
+  const s = readSnapshot();
+  if (s.config) applyConfig(s.config);
+  Object.assign(account, s.account);
+  Object.assign(profile, s.profile);
 }
 
 let clockOffset = 0;
@@ -51,6 +61,7 @@ export async function loadConfig() {
   inviteOnly = !!r.inviteOnly;
   if (r.minClient && versionBelow(__APP_VERSION__, r.minClient)) onOutdated();
   applyConfig(r.config);
+  saveSnapshot({ config: r.config });
   // Server time at the middle of the round trip, so countdowns match what the server enforces.
   if (r.now) clockOffset = r.now - (sent + Date.now()) / 2;
   return r.version;
@@ -60,6 +71,7 @@ export async function loadConfig() {
 export async function loadMe() {
   const r = await get<{ user: Account; profile: Profile }>("/me");
   Object.assign(account, r.user);
+  saveSnapshot({ account: { ...account } });
   setProfile(r.profile);
 }
 
@@ -128,6 +140,7 @@ export async function signOut() {
     await post("/auth/logout");
   } finally {
     setToken(null);
+    clearSnapshot();
   }
 }
 

@@ -24,6 +24,7 @@ import { leagueBadge } from "./leagues";
 import { cardLevel, profile, startBattle, finishBattle, finishStory, type BattleResult, type StoryResult, type StoryStart } from "../save";
 import { storyPanels, storyResult } from "./storyUi";
 import { onPlayLost, releasePlay } from "../play";
+import { offline } from "../offline";
 import { arenaMusic, music, sfx } from "../audio";
 import { audioButtons, W, H, WIDE, ARENA_W, ARENA_H, txt, button, iconButton, fmt, floatText, modal, pressable, NAVY, resourcePill, toast, PORTRAIT_FIT, rewardRays, rewardPop } from "../ui";
 import { coach, setTutorialDone, tutorialDue, type CoachStep } from "../tutorial";
@@ -267,7 +268,8 @@ export class BattleScene extends Phaser.Scene {
 
     const a = this.arena;
     // A story chapter was started on the server before the scene (the server chose its deck).
-    this.battleId = this.lab ? Promise.resolve(null) : this.story ? Promise.resolve(this.story.start.battleId) : startBattle(a.id).catch(() => null);
+    // Offline Arena runs are practice: no server run to start.
+    this.battleId = this.lab || offline ? Promise.resolve(null) : this.story ? Promise.resolve(this.story.start.battleId) : startBattle(a.id).catch(() => null);
     this.paths = arenaPaths(a);
     const tint = this.story?.chapter.tint ? Phaser.Display.Color.HexStringToColor(this.story.chapter.tint).color : null;
     const bg = this.add.image(0, 0, this.artKey).setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
@@ -1995,7 +1997,8 @@ export class BattleScene extends Phaser.Scene {
         if (!m.active) return;
         if (!r) {
           sfx("lose");
-          saving.setText("Couldn't save this run\n(no connection)").setColor("#ff8080").setFontSize(30);
+          if (offline) saving.setText("Offline practice\nnot saved, no rewards").setColor("#ff9d5c").setFontSize(30);
+          else saving.setText("Couldn't save this run\n(no connection)").setColor("#ff8080").setFontSize(30);
           return;
         }
         saving.destroy();

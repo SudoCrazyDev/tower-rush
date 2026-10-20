@@ -351,7 +351,7 @@ export function showAccount(): Promise<void> {
 }
 
 /** Full-screen message with an optional button (server down, banned...). */
-export function showBlocker(title: string, message: string, action?: { label: string; onClick: () => void }) {
+export function showBlocker(title: string, message: string, action?: { label: string; onClick: () => void }, alt?: { label: string; onClick: () => void }) {
   ensureCss();
   document.querySelectorAll(".tr-auth").forEach((n) => n.remove());
   const root = document.createElement("div");
@@ -370,6 +370,17 @@ export function showBlocker(title: string, message: string, action?: { label: st
     b.onclick = () => {
       root.remove();
       action.onClick();
+    };
+    form.appendChild(b);
+  }
+  if (alt) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "link";
+    b.textContent = alt.label;
+    b.onclick = () => {
+      root.remove();
+      alt.onClick();
     };
     form.appendChild(b);
   }

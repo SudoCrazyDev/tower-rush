@@ -14,6 +14,8 @@ import { inboxModal, mailIcon } from "./inbox";
 import { playerLeague } from "../../../shared/leagues.ts";
 import { showAccount, showAuth } from "../authOverlay";
 import { claimPlay, releasePlay } from "../play";
+import { offline } from "../offline";
+import { debugMode, setDebugMode } from "../fpsMeter";
 import { music } from "../audio";
 import { bakeAll } from "../bake";
 import { pointAt, tutorialDue } from "../tutorial";
@@ -50,7 +52,7 @@ let bookTab = 0;
 const curBook = () => BOOKS[bookTab] ?? BOOK;
 const hasStories = () => BOOKS.some((b) => b.stories.length > 0);
 /** The mode cards this build shows, in carousel order. */
-const activeModes = () => MODES.filter((m) => m !== "story" || hasStories());
+const activeModes = (): Mode[] => (offline ? ["arena"] : MODES.filter((m) => m !== "story" || hasStories()));
 
 /** The story to show first: the first one not finished yet (or the last one). */
 function currentStory() {
@@ -150,7 +152,8 @@ export class LobbyScene extends Phaser.Scene {
     this.peeks = [];
     if (!activeModes().includes(mode)) mode = "arena";
     // New players go straight to the first arena's BATTLE.
-    if (tutorialDue("battle")) [mode, opened] = ["arena", true];
+    // Offline Arena: the arena picker is the only page.
+    if (tutorialDue("battle") || offline) [mode, opened] = ["arena", true];
     if (bookTab >= BOOKS.length) bookTab = 0;
     if (bookIdx < 0 || bookIdx >= curBook().stories.length) bookIdx = currentStory();
     this.saveTimer = undefined;
@@ -161,10 +164,12 @@ export class LobbyScene extends Phaser.Scene {
     iconButton(this, W - 44, 120, "settings", 70, () => this.settings());
     // What's new: the latest release popup, any time (under settings; under the quests on phones).
     const [nx, ny, ns] = WIDE ? [W - 44, 215, 80] : [54, 420, 64];
-    const book = this.add.image(nx, ny, "item:spell_book");
-    book.setScale(ns / Math.max(book.width, book.height));
-    pressable(book, () => whatsNew(this, true));
-    txt(this, nx, ny + ns * 0.58, "NEW", 20, "#ffd93b");
+    if (!offline) {
+      const book = this.add.image(nx, ny, "item:spell_book");
+      book.setScale(ns / Math.max(book.width, book.height));
+      pressable(book, () => whatsNew(this, true));
+      txt(this, nx, ny + ns * 0.58, "NEW", 20, "#ffd93b");
+    }
 
     // Wide: logo on the left, arena in the middle, deck on the right. Phone: stacked.
     const side = W * 0.2;
@@ -173,7 +178,7 @@ export class LobbyScene extends Phaser.Scene {
     this.tweens.add({ targets: logo, y: logoPos[1] + 12, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
     if (WIDE) txt(this, side, 575, `Welcome, ${account.name}!`, 40, "#fff4c2");
     // Phones: a small ring in the right tile column, under RANKS (the logo fills the middle; no room for the name).
-    this.avatarButton(WIDE ? [side, 665] : [W - 66, 408], WIDE ? 100 : 76);
+    if (!offline) this.avatarButton(WIDE ? [side, 665] : [W - 66, 408], WIDE ? 100 : 76);
 
     this.drawCard();
     // Swipe the card: the other mode card, or (once one is open) the next arena or book.
@@ -190,8 +195,14 @@ export class LobbyScene extends Phaser.Scene {
     txt(this, deckX, deckY - 90, "YOUR DECK", 30, "#fff4c2");
     profile.deck.forEach((id, i) => {
       const c = cardView(this, deckX + (i - 2) * gap, deckY, Math.min(120, gap - 12), id, { level: profile.cards[id].level });
-      pressable(c, () => this.scene.start("Deck", { show: id }));
+      if (!offline) pressable(c, () => this.scene.start("Deck", { show: id }));
     });
+
+    if (offline) {
+      this.offlineBar(deckX, deckY);
+      bakeAll(this);
+      return;
+    }
 
     this.lobbyTiles(side);
 
@@ -259,6 +270,14 @@ export class LobbyScene extends Phaser.Scene {
     });
     if (!ids.length) m.add(txt(this, cx, cy - 40, "No avatars yet", 28, "#c9d2ff"));
     if (profile.avatar) m.add(button(this, cx, cy + (rows * cell) / 2 + 40, 360, 84, "DEFAULT LOOK", "blue", () => void pick(null), 30));
+  }
+
+  /** Offline Arena: what offline means, and a button to try the server again (a reload boots online). */
+  private offlineBar(deckX: number, deckY: number) {
+    const y = WIDE ? deckY + 180 : 1470;
+    txt(this, deckX, y, "OFFLINE PRACTICE", 34, "#ff9d5c");
+    txt(this, deckX, y + 44, "Arena runs here aren't saved and give no rewards.", 22, "#c9d2ff");
+    button(this, deckX, y + 140, 340, 100, "GO ONLINE", "green", () => location.reload(), 40);
   }
 
   /** Daily reward, quests, leaderboard and mail buttons (with a badge when something can be claimed). */
@@ -505,7 +524,7 @@ export class LobbyScene extends Phaser.Scene {
 
   /** The ✕ on an open card, back to the mode cards (not for new players before their first battle). */
   private closeButton(group: Phaser.GameObjects.Container) {
-    if (!tutorialDue("battle")) group.add(iconButton(this, -248, -282, "close", 60, () => this.open(false)));
+    if (!tutorialDue("battle") && !offline) group.add(iconButton(this, -248, -282, "close", 60, () => this.open(false)));
   }
 
   /** The card's ornate frame, with a border around the art window at the top (the art goes in at index 1, under it). */
@@ -599,7 +618,8 @@ export class LobbyScene extends Phaser.Scene {
     group.add(txt(this, 0, 186, a.name, 46));
     group.add(txt(this, 0, 226, `Best wave: ${profile.arenaBest?.[a.id] ?? 0}`, 26, "#c9d2ff"));
     // v2.9: the trophy rule for a run here (every unlocked arena counts since 2.9.1).
-    if (!locked) {
+    if (offline) group.add(txt(this, 0, 258, "Offline practice: no trophies or gold", 22, "#ff9d5c"));
+    else if (!locked) {
       const counts = trophyArena(a.id, profile.trophies);
       group.add(txt(this, 0, 258, counts ? `Reach wave ${playerLeague(profile).minWave} to win trophies` : "Gold only: no trophies in this arena", 22, counts ? "#ffd27a" : "#8f9ad0"));
     }
@@ -778,12 +798,14 @@ export class LobbyScene extends Phaser.Scene {
     if (!this.saveTimer) return;
     this.saveTimer.remove();
     this.saveTimer = undefined;
-    if (profile.arena) setArena(profile.arena).catch(() => {});
+    if (profile.arena && !offline) setArena(profile.arena).catch(() => {});
   }
 
   /** Start a battle, unless another device is in one and the player keeps it there. */
   private async battle(arena: string) {
     if (this.starting) return;
+    // Offline practice has no play slot to claim.
+    if (offline) return void this.scene.start("Battle", { arena });
     this.starting = true;
     const ok = await claimPlay("battle");
     this.starting = false;
@@ -792,7 +814,7 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   private settings() {
-    const m = modal(this, 600, 780, "SETTINGS", () => {});
+    const m = modal(this, 600, 900, "SETTINGS", () => {});
     const { cx, cy } = m;
     m.add(txt(this, cx, cy - 280, account.name, 40, "#fff4c2"));
     m.add(txt(this, cx, cy - 230, account.isGuest ? "Guest account" : `Signed in as ${account.username}`, 24, "#c9d2ff"));
@@ -833,5 +855,13 @@ export class LobbyScene extends Phaser.Scene {
         location.reload();
       }, 34),
     );
+    // Debug mode: the FPS tester overlay (same switch as `?fps`).
+    const label = () => `DEBUG: ${debugMode() ? "ON" : "OFF"}`;
+    const dbg = button(this, cx, cy + 372, 280, 64, label(), debugMode() ? "blue" : "grey", () => {
+      setDebugMode(this.game, !debugMode());
+      dbg.label.setText(label());
+      (dbg.list[0] as Phaser.GameObjects.NineSlice).setTexture(`button:${debugMode() ? 2 : 4}`);
+    }, 26);
+    m.add(dbg);
   }
 }

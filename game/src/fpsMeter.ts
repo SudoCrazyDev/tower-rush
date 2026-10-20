@@ -4,9 +4,30 @@ import Phaser from "phaser";
  * Tester overlay for lag reports: frames drawn vs the screen's refresh rate, frame gaps,
  * CPU time per frame, draw calls and the device's GPU. `?fps` turns it on and keeps it on
  * (so the installed app shows it too), `?fps=0` turns it off. Plain DOM, refreshed twice a
- * second, so it costs the game next to nothing.
+ * second, so it costs the game next to nothing. Since 2.10 the Debug mode setting turns it on
+ * and off too.
  */
 const KEY = "tower-rush:fps";
+
+/** The overlay once shown; hidden (not removed) when debug mode goes off. */
+let meter: HTMLDivElement | null = null;
+
+/** Settings' Debug mode switch: show or hide the overlay now, and remember it. */
+export function setDebugMode(game: Phaser.Game, on: boolean) {
+  try {
+    if (on) localStorage.setItem(KEY, "1");
+    else localStorage.removeItem(KEY);
+  } catch {
+    // Storage blocked: it lasts until the page reloads.
+  }
+  debugOn = on;
+  if (on && !meter) fpsMeter(game);
+  if (meter) meter.style.display = on ? "" : "none";
+}
+let debugOn: boolean | null = null;
+
+/** Debug mode is on (the setting, or `?fps`). */
+export const debugMode = () => (debugOn ??= fpsMeterWanted());
 
 export function fpsMeterWanted() {
   const p = new URLSearchParams(location.search);
@@ -22,7 +43,7 @@ export function fpsMeterWanted() {
 }
 
 export function fpsMeter(game: Phaser.Game) {
-  const el = document.createElement("div");
+  const el = (meter = document.createElement("div"));
   el.style.cssText =
     "position:fixed;left:4px;top:4px;z-index:99999;pointer-events:none;padding:4px 6px;border-radius:6px;" +
     "background:rgba(0,0,0,.72);color:#9f9;font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre";
@@ -99,6 +120,7 @@ export function fpsMeter(game: Phaser.Game) {
   }, 2000);
 
   setInterval(() => {
+    if (el.style.display === "none") return;
     const now = performance.now();
     const since = now - 1000;
     while (vsyncs.length && vsyncs[0] < since) vsyncs.shift();
