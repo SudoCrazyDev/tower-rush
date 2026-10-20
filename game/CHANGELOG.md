@@ -9,6 +9,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Awakened card back: the ultimate description scrolls inside its box. Dark Spawn's lists each awakened form with its art.
 - An awakened Dark Spawn shows the number his form runs on over his head: seconds since summoned (Dark Zero), seconds and kills (Dark Javelin), or the live damage and speed multipliers (True Despair). The card text gives an example of each formula.
 - Fix: Heart Surgeon's and Dark Spawn's DETAILS rows no longer overlap the blurb and stats; a card whose rows don't fit drops its blurb.
+- Human, Elemental and Giant race badges redrawn as one-emblem shields like the rest of the set (knight helm and sword; elemental core with flame and water; stone giant face). Cache-busted.
 - Renames: Murciélago is Dark Spawn, Resurrección is Dark Rebirth, Lanza is Dark Javelin (ids unchanged).
 - Needs API 1.6.2. The Sim changed, so raise `MIN_CLIENT` to 2.9.4 on prod.
 

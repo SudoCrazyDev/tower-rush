@@ -124,6 +124,10 @@ const REFRESHED: Record<string, string> = {
   "units_awakened/murcielago": "2.10.0",
   "units_awakened/murcielago_despair": "2.10.0",
   "portraits_awakened/murcielago": "2.10.0",
+  // v2.9.4: Human, Elemental and Giant race badges redrawn as one-emblem shields like the rest of the set.
+  "ui/races/human": "2.9.4",
+  "ui/races/elemental": "2.9.4",
+  "ui/races/giant": "2.9.4",
   // v2.8.2: particles and weapons whose flat background had survived as a square behind them.
   "vfx/pt_smoke": "2.8.2",
   "vfx/pt_confetti": "2.8.2",
