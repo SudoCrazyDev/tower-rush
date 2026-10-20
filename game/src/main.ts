@@ -89,7 +89,11 @@ async function start() {
     render: { antialias: true, roundPixels: false, autoMobilePipeline: new URLSearchParams(location.search).has("mobilepipe") },
     // ?timer drives the loop with setTimeout, for testing in background tabs. v2.8.1: limit 60, so
     // 90/120 Hz phones don't draw (and heat up) at twice the frame rate.
-    fps: { target: 60, limit: 60, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
+    // 2.9.2: limit 62, not 60. Phaser skips a frame whenever the smoothed rAF delta falls a hair
+    // under 1000/limit, so at exactly 60 a 60 Hz phone dropped about every other frame
+    // (30-40 fps with uneven pacing: laggy scrolling). 62 keeps 60 Hz at a steady 60 and still
+    // halves 90/120 Hz screens to an even 45/60.
+    fps: { target: 60, limit: 62, forceSetTimeOut: new URLSearchParams(location.search).has("timer") },
     scene: [BootScene, LobbyScene, DeckScene, ShopScene, HeroScene, LeaderboardScene, BattleScene, PvpMenuScene, PvpScene, StoryScene, LabScene],
   });
   if (!WIDE && W > ARENA_W) {
