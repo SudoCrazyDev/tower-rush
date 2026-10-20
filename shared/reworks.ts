@@ -149,7 +149,7 @@ export function orcText(id: string): { arch: string; lines: string[]; stat?: [st
       return {
         arch: "Sword slash at the leading monster",
         lines: [
-          `Room (${r.radius}px) on the path: ${pct(r.dps)} of his hit per second to monsters inside, +${pct(r.perKill)} per death in it.`,
+          `Room (${r.radius}px) on the path: ${pct(r.dps)} of her hit per second to monsters inside, +${pct(r.perKill)} per death in it.`,
           `Awakened: Surgeon of Death (tap the card).`,
         ],
       };

@@ -96,6 +96,8 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.8.0-mythic-proj": { units: { void_titan: ["proj"], dragon_egg: ["proj"], chrono_mage: ["proj"] }, effects: {} },
   // v2.9 league revamp: longer trophy gates, per-league min wave and trophy rules, Mythic, Immortal and the Secret Society.
   "2.9.0-leagues": { units: {}, effects: {}, leagues: true },
+  // v2.9.4: Murciélago is shown as Dark Spawn; Echo Spirit's blurb fits its copy rework; Heart Surgeon is a woman in her new art.
+  "2.9.4-units": { units: { murcielago: ["name"], echo_spirit: ["blurb"], heart_surgeon: ["blurb"] }, effects: {} },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

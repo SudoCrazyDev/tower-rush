@@ -2,6 +2,15 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.4
+- Two new Mythics, given to every player at card level 1 (they never drop from chests). **Heart Surgeon** keeps a Room on the path that hurts monsters inside more with every death in it; awakened (Surgeon of Death) every other Heart Surgeon merges into her and her 4 Rooms cut bosses with Scalpel. **Dark Spawn** may awaken himself (Dark Rebirth, 0.4% per attack) and rolls one of three forms: Dark Zero, Dark Javelin or True Despair. Details in `docs/features/v2.9.4-new-mythics/`.
+- Echo Spirit rework: it becomes an exact copy (unit, rank, awakening, 100% stats) of a random neighbour, or any unit if none is adjacent, and re-rolls after every boss wave. Copies merge only with Echo Spirits of the same Echo rank.
+- Original art for both Mythics (base and awakened; True Despair has its own form and card portrait). Replaced art is cache-busted.
+- Awakened card back: the ultimate description scrolls inside its box. Dark Spawn's lists each awakened form with its art.
+- Fix: Heart Surgeon's and Dark Spawn's DETAILS rows no longer overlap the blurb and stats; a card whose rows don't fit drops its blurb.
+- Renames: Murciélago is Dark Spawn, Resurrección is Dark Rebirth, Lanza is Dark Javelin (ids unchanged).
+- Needs API 1.6.2. The Sim changed, so raise `MIN_CLIENT` to 2.9.4 on prod.
+
 ## 2.9.3
 - Offline Arena: when boot can't reach the server, a player who has signed in on this device before can choose "Play offline (practice Arena)". The lobby shows only the arena picker, with an OFFLINE PRACTICE note and GO ONLINE (reload). Offline runs are practice: nothing is saved and nothing is paid. The game keeps the last config, account, profile and asset index in localStorage while online; signing out clears it. Details in `docs/features/v2.9.3-offline-arena/`.
 - Settings: DEBUG: ON/OFF turns the `?fps` tester overlay on and off (same stored switch as `?fps` / `?fps=0`).

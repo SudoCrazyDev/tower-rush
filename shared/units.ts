@@ -459,7 +459,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "chrono_gear", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
   { ...U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"), weapon: "sig_monkey_king" },
   // v2.10: Heart Surgeon keeps a Room on the path (shared/reworks.ts); awakened, Surgeon of Death (shared/awakened.ts).
-  U("heart_surgeon", "Heart Surgeon", "mythic", "arcane", "shot", "slash", "Every room is his operating table.", "human", "heavy", "true_strike"),
+  U("heart_surgeon", "Heart Surgeon", "mythic", "arcane", "shot", "slash", "Every room is her operating table.", "human", "heavy", "true_strike"),
   // v2.10: Murcielago (shown as Dark Spawn since the rename; id kept) may release himself mid-fight (shared/reworks.ts); awakened, one of three ultimates (shared/awakened.ts).
   U("murcielago", "Dark Spawn", "mythic", "arcane", "shot", "cero", "Despair has no bottom.", "demon", "balanced", "true_strike"),
   // v1.2 Stories: Princess Muse, the Story 1 reward and the first Event card.

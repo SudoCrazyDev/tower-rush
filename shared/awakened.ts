@@ -292,7 +292,7 @@ export function ultText(id: string): string {
     case "resurreccion":
       return `Awakened, he rolls one of three. ${MURC_VARIANTS.map((v) => `${MURC_NAMES[v]}: ${murcText(v)}`).join(" ")}`;
     case "surgeon_of_death":
-      return `Passive: there can only be one. Every other Heart Surgeon on the board, and every new one, merges into him with its Room kills. He opens ${p.rooms} Rooms that share one kill count. Scalpel: a boss entering a Room takes his hit × Surgeons merged × Room kills, through its shield (once per Room).`;
+      return `Passive: there can only be one. Every other Heart Surgeon on the board, and every new one, merges into her with its Room kills. She opens ${p.rooms} Rooms that share one kill count. Scalpel: a boss entering a Room takes her hit × Surgeons merged × Room kills, through its shield (once per Room).`;
   }
 }
 
