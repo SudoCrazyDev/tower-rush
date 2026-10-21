@@ -35,7 +35,7 @@ function show(scene: Phaser.Scene) {
   m.add(logo);
   scene.tweens.add({ targets: logo, y: logo.y + 10, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
-  m.add(txt(scene, m.cx, m.cy + 130, "Two gift Mythics for everyone: Heart Surgeon and Dark Spawn.", 26, "#ffffff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 130, "Two new Mythics in the chests: Heart Surgeon and Dark Spawn.", 26, "#ffffff").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 190, "Windrunner roots monsters, and the roots jump when they fall.", 26, "#8fdc5a").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 250, "Cursed Totem never attacks. Its neighbours execute.", 26, "#c9a0ff").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 310, "And from the deep... the Sea Serpent. Its secrets: ???", 26, "#7fd8ff").setWordWrapWidth(600));

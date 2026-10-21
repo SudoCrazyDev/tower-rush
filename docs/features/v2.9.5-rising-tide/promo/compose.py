@@ -79,8 +79,8 @@ keyart("coming_soon_1x1.jpg", "soon_1x1.png", 1080, 1080, 0.36, "RISING TIDE", "
 
 # Unit spotlights: the card portrait, name, rarity and one line.
 UNITS = [
-    ("heart_surgeon", "HEART SURGEON", "MYTHIC · FREE GIFT", "Every room is her operating table.", (255, 120, 200)),
-    ("murcielago", "DARK SPAWN", "MYTHIC · FREE GIFT", "May awaken mid-fight into one of three forms.", (140, 255, 120)),
+    ("heart_surgeon", "HEART SURGEON", "MYTHIC", "Every room is her operating table.", (255, 120, 200)),
+    ("murcielago", "DARK SPAWN", "MYTHIC", "May awaken mid-fight into one of three forms.", (140, 255, 120)),
     ("windrunner", "WINDRUNNER", "LEGENDARY", "Roots them. When they fall, the roots jump.", (143, 220, 90)),
     ("cursed_totem", "CURSED TOTEM", "LEGENDARY", "Never attacks. Its neighbours execute.", (201, 160, 255)),
     ("sea_serpent", "SEA SERPENT", "LEGENDARY · ???", "Race ???  ·  Element ???  ·  Ability ???", CYAN),

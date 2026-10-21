@@ -64,9 +64,9 @@ Reach: `#TowerDefense #IndieGame #IndieDev #MobileGames #BrowserGames #FantasyGa
 >
 > Five new units join the defense:
 >
-> 🩺 **Heart Surgeon** (Mythic, FREE for everyone): keeps a Room on the path that cuts harder with every death inside it.
+> 🩺 **Heart Surgeon** (Mythic): keeps a Room on the path that cuts harder with every death inside it.
 > Awakened, she becomes the Surgeon of Death.
-> 😈 **Dark Spawn** (Mythic, FREE for everyone): may awaken himself mid-fight into one of three forms: Dark Zero,
+> 😈 **Dark Spawn** (Mythic): may awaken himself mid-fight into one of three forms: Dark Zero,
 > Dark Javelin or True Despair.
 > 🏹 **Windrunner** (Legendary): her arrows root monsters in place, and when a rooted monster falls, the roots jump to
 > everything around it.
@@ -80,7 +80,7 @@ Reach: `#TowerDefense #IndieGame #IndieDev #MobileGames #BrowserGames #FantasyGa
 
 ## X / short launch post
 
-> 🌊 v2.9.5 RISING TIDE is live. Two free Mythics, two new Legendaries, and a Sea Serpent no one can explain. Play free:
+> 🌊 v2.9.5 RISING TIDE is live. Two new Mythics, two new Legendaries, and a Sea Serpent no one can explain. Play free:
 > crownnkeep.com #CrownAndKeep #RisingTide #TowerDefense
 
 ## Reel hook text

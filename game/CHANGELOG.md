@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.6
+- Hotfix: Heart Surgeon and Dark Spawn are no longer gifts. They drop from chests like any Mythic (`GIFT_UNITS` is empty). What's new says "Two new Mythics in the chests". Needs API 1.6.3.
+
 ## 2.9.5 "Rising Tide"
 - Two new Mythics, given to every player at card level 1 (they never drop from chests). **Heart Surgeon** keeps a Room on the path that hurts monsters inside more with every death in it; awakened (Surgeon of Death) every other Heart Surgeon merges into her and her 4 Rooms cut bosses with Scalpel. **Dark Spawn** may awaken himself (Dark Rebirth, 0.4% per attack) and rolls one of three forms: Dark Zero, Dark Javelin or True Despair. Details in `docs/features/v2.9.4-new-mythics/`.
 - Three new Legendaries that drop from chests (none awakens). **Windrunner** (Sylvan, Nature, rapid archer): Nature's Gaze, 85% per hit to root the target for 5s (bosses 1s); a monster that dies rooted passes the root to every monster within 150px for 2s. **Cursed Totem** (Undead, Arcane): never attacks; adjacent units' hits may execute a non-boss monster, 1.4% at rank 1 +0.4% per rank (3.0% at rank 5), +0.05% per card level. **Sea Serpent** is the teaser: a plain attacker (DMG 97, one attack every 0.8s) whose card shows ??? for race, element, ability and stats.

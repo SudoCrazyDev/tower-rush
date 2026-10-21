@@ -7,7 +7,8 @@ replay PvP and lab boards differently.
 
 ## 1. Two new Mythics (gift units)
 
-Every player owns both, given at **card level 1**. Neither drops from chests (`GIFT_UNITS` in `shared/units.ts`).
+**Not gifts (since 2.9.6):** both drop from chests like any Mythic. In 2.9.5 every player was given both at card
+level 1 and they never dropped (`GIFT_UNITS` in `shared/units.ts`, now empty).
 `giveGiftUnits()` adds them on profile load for players who joined before them. It only raises a level, never lowers one.
 Accounts on staging that got them at level 3 (the first gift level) keep level 3.
 

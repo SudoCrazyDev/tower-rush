@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.7.1
+- Heart Surgeon and Dark Spawn are no longer called free gifts (release notes, home news).
+
 ## 1.7.0
 - Game 2.9.5 "Rising Tide": release notes get v2.9.5 as the latest (five new units, Echo Spirit rework, offline practice, smoother phones), and v2.4 moves into the History panel. The home page news features Rising Tide (key art from `marketing/v2.9.5/`), the hero pill says it is live, and the oldest post (v2.3) is dropped.
 - Unit data re-exported: Heart Surgeon, Dark Spawn, Windrunner and Cursed Totem join the codex and wiki. Teaser units (`TEASER_UNITS`, the Sea Serpent) are left out of the export until their reveal. Echo Spirit's stat cell reads 100% (an exact copy).

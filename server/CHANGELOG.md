@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.6.3
+- Game 2.9.6 hotfix: no more gift units. Profile load no longer gives Heart Surgeon and Dark Spawn, and both drop from chests (`GIFT_UNITS` empty). No migration; `MIN_CLIENT` stays 2.9.5.
+
 ## 1.6.2
 - Game 2.9.5 "Rising Tide" (staged as 2.9.4): shared Sim with the Echo Spirit rework, Heart Surgeon and Dark Spawn, and the Legendaries Windrunner, Cursed Totem and Sea Serpent (added to saved configs through `ADDED_UNITS`). `giveGiftUnits()` on profile load gives every player both Mythics at card level 1 (it never lowers a level). Config hotfix `2.9.4-units` (Dark Spawn name, Echo Spirit and Heart Surgeon blurbs). No migration. `MIN_CLIENT` 2.9.5 (prod and staging).
 

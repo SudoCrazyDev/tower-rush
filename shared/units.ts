@@ -523,8 +523,11 @@ export function withAdded<T extends { id: string }>(list: T[], defaults: T[], ad
 }
 
 /** Whether a unit can drop from a chest for this player: story units never, story rewards once owned. */
-/** v2.10: units every player is given (at this card level, see giveGiftUnits) that never drop from chests. */
-export const GIFT_UNITS: Readonly<Record<string, number>> = { heart_surgeon: 1, murcielago: 1 };
+/**
+ * v2.10: units every player is given (at this card level, see giveGiftUnits) that never drop from chests.
+ * Empty since 2.9.6: Heart Surgeon and Dark Spawn drop from chests like any Mythic.
+ */
+export const GIFT_UNITS: Readonly<Record<string, number>> = {};
 /** v2.9.5: teaser units. They fight and drop like any other, but their card hides race, element, ability and stats (???). */
 export const TEASER_UNITS: ReadonlySet<string> = new Set(["sea_serpent"]);
 export const canDrop = (u: UnitDef, owns: (id: string) => boolean) => u.enabled && !u.storyOnly && u.rarity !== "event" && !(u.id in GIFT_UNITS) && (!u.storyReward || owns(u.id));
