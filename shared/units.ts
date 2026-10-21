@@ -87,7 +87,26 @@ export type Proj =
   | "slash"
   | "cero"
   // v2.9.5: Sea Serpent's ukiyo-e tide wave.
-  | "tide_wave";
+  | "tide_wave"
+  // Fantasy units: one projectile each (vfx/proj_<key>, vfx/impact_<key>).
+  | "revenant_burst"
+  | "doom_rune"
+  | "reap_axe"
+  | "void_orb"
+  | "time_scythe"
+  | "storm_bolt"
+  | "star_core"
+  | "hellfire"
+  | "sun_disc"
+  | "gear_hook"
+  | "chaos_claw"
+  | "ronin_slash"
+  | "frost_shard"
+  | "time_sand"
+  | "dragon_lance"
+  | "nightmare_flame"
+  | "razor_card"
+  | "raven_hex";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -99,6 +118,8 @@ export const CHEST_RARITIES: ChestRarity[] = ["common", "rare", "epic", "legenda
 /** A rarity's step for formulas (common 0 ... mythic 4). Event cards use Epic's numbers. */
 export const rarityIndex = (r: Rarity) => (r === "event" ? 2 : RARITIES.indexOf(r));
 export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane", "normal"];
+/** The Fantasy units' projectiles; each has its own impact art (game/src/battle/vfx.ts). */
+export const FANTASY_PROJ: Proj[] = ["revenant_burst", "doom_rune", "reap_axe", "void_orb", "time_scythe", "storm_bolt", "star_core", "hellfire", "sun_disc", "gear_hook", "chaos_claw", "ronin_slash", "frost_shard", "time_sand", "dragon_lance", "nightmare_flame", "razor_card", "raven_hex"];
 export const PROJECTILES: Proj[] = [
   "arrow",
   "fireball",
@@ -140,6 +161,7 @@ export const PROJECTILES: Proj[] = [
   "slash",
   "cero",
   "tide_wave",
+  ...FANTASY_PROJ,
 ];
 
 export interface UnitDef {
@@ -460,6 +482,25 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("windrunner", "Windrunner", "legendary", "nature", "shot", "arrow", "Her gaze roots them where they stand.", "sylvan", "rapid", "none"),
   { ...U("cursed_totem", "Cursed Totem", "legendary", "arcane", "buff", "skull", "It never strikes. It only marks who dies.", "undead", "balanced", "none"), role: "Support" },
   { ...U("sea_serpent", "Sea Serpent", "legendary", "ice", "shot", "water", "Something stirs below the tide.", "dragon", "heavy", "none"), proj: "tide_wave", damage: 97, speed: 1.25 },
+  // Fantasy units (FANTASY_UNITS): 18 Legendaries on the standard archetypes, each with its own projectile.
+  U("hollow_revenant", "Hollow Revenant", "legendary", "arcane", "chain", "revenant_burst", "The Legion's cold breath in a living shell.", "undead", "balanced", "finisher"),
+  U("veyr_doomblade", "Veyr the Doomblade", "legendary", "normal", "execute", "doom_rune", "His blade only ever falls once.", "human", "heavy", "giant_slayer"),
+  U("reapmarshal", "Reapmarshal", "legendary", "arcane", "curse", "reap_axe", "Commands the dead. Collects the living.", "undead", "heavy", "armor_breaker"),
+  U("void_sovereign", "Void Sovereign", "legendary", "arcane", "splash", "void_orb", "Wears the night sky like a cloak.", "demon", "heavy", "true_strike"),
+  U("chronodrake_warden", "Chronodrake Warden", "legendary", "arcane", "slow", "time_scythe", "Reaps the seconds you thought were yours.", "dragon", "balanced", "hunter"),
+  U("storm_empress", "Storm Empress", "legendary", "lightning", "chain", "storm_bolt", "Her crown is the thunder.", "human", "balanced", "finisher"),
+  U("starforged_titan", "Starforged Titan", "legendary", "normal", "growth", "star_core", "A dying star in a golden fist.", "giant", "heavy", "plunder"),
+  U("hellforged_overlord", "Hellforged Overlord", "legendary", "fire", "burn", "hellfire", "Forged in the pit. Crowned in flame.", "demon", "heavy", "armor_breaker"),
+  U("dawnblade_goddess", "Dawnblade Goddess", "legendary", "fire", "splash", "sun_disc", "Every sunrise is her war cry.", "celestial", "balanced", "true_strike"),
+  U("clockwork_stalker", "Clockwork Stalker", "legendary", "normal", "crit", "gear_hook", "Hunts on borrowed time.", "human", "rapid", "hunter"),
+  U("riftbreaker", "Riftbreaker", "legendary", "arcane", "stun", "chaos_claw", "The eye of chaos sees every weakness.", "chaos", "heavy", "armor_breaker"),
+  U("dusk_ronin", "Dusk Ronin", "legendary", "normal", "pierce", "ronin_slash", "One draw. One line. Done.", "human", "rapid", "true_strike"),
+  U("frostbound_berserker", "Frostbound Berserker", "legendary", "ice", "freeze", "frost_shard", "The colder he gets, the angrier.", "human", "heavy", "frostbite"),
+  U("crimson_chronomancer", "Crimson Chronomancer", "legendary", "arcane", "freeze", "time_sand", "Stops the clock. Then stops you.", "human", "balanced", "none"),
+  U("wyrmbane_general", "Wyrmbane General", "legendary", "normal", "sniper", "dragon_lance", "His lance has tasted dragon heart.", "human", "heavy", "giant_slayer"),
+  U("pit_archfiend", "Pit Archfiend", "legendary", "poison", "poison", "nightmare_flame", "The thing your nightmares fear.", "demon", "balanced", "finisher"),
+  U("card_clasher", "Card Clasher", "legendary", "arcane", "crit", "razor_card", "Every card he deals is a killing blow.", "human", "rapid", "plunder"),
+  U("neo_necromancer", "Neo Necromancer", "legendary", "poison", "curse", "raven_hex", "Old magic. New tricks. Same grave.", "human", "balanced", "finisher"),
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
@@ -510,8 +551,10 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
  * appended to an older saved unit list so a live config gets them, with the default numbers.
  */
 /** v2.8 "Beta Berserker": the Orc units. */
+/** The 18 Fantasy Legendaries (standard archetypes; no awakened forms yet, see NO_AWAKEN). */
+export const FANTASY_UNITS = ["hollow_revenant", "veyr_doomblade", "reapmarshal", "void_sovereign", "chronodrake_warden", "storm_empress", "starforged_titan", "hellforged_overlord", "dawnblade_goddess", "clockwork_stalker", "riftbreaker", "dusk_ronin", "frostbound_berserker", "crimson_chronomancer", "wyrmbane_general", "pit_archfiend", "card_clasher", "neo_necromancer"];
 export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent"];
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent", ...FANTASY_UNITS];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
 }

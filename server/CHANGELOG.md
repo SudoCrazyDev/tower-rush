@@ -1,5 +1,8 @@
 # API changelog
 
+## 1.6.4 (staging)
+- Game 2.9.7: shared Sim with the 18 Fantasy Legendaries (added to saved configs through `ADDED_UNITS`). No migration; `MIN_CLIENT` unchanged.
+
 ## 1.6.3
 - Game 2.9.6 hotfix: no more gift units. Profile load no longer gives Heart Surgeon and Dark Spawn, and both drop from chests (`GIFT_UNITS` empty). No migration; `MIN_CLIENT` stays 2.9.5.
 
