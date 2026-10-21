@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { bakeAll } from "./bake";
 import { BUTTON, ICON, type ButtonColor } from "./assets";
-import { UNIT_BY_ID, RARITY_STATS } from "./data/units";
+import { UNIT_BY_ID, RARITY_STATS, TEASER_UNITS } from "./data/units";
 import { sfx, audioSettings, setAudio } from "./audio";
 import { LAYOUT, RES } from "./display";
 import { RACES, raceCss, raceLabel, type Race } from "../../shared/races.ts";
@@ -207,7 +207,9 @@ export function cardView(
   const portrait = scene.add.image(0, 0, art).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
   const parts: Phaser.GameObjects.GameObject[] = [frame, portrait];
   // Element badge in the corner (an icon, so it doesn't read as a notification dot).
-  parts.push(fitImage(scene.add.image(size * 0.35, -size * 0.35, `element:${def.element}`), size * 0.24));
+  // v2.9.4 teaser units hide their element behind a "?".
+  if (TEASER_UNITS.has(id)) parts.push(txt(scene, size * 0.35, -size * 0.35, "?", Math.round(size * 0.2), "#ffffff"));
+  else parts.push(fitImage(scene.add.image(size * 0.35, -size * 0.35, `element:${def.element}`), size * 0.24));
   if (opts.level !== undefined) {
     const lv = txt(scene, 0, size * 0.39, `LV ${opts.level}`, Math.round(size * 0.15));
     parts.push(lv);

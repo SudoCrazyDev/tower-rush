@@ -4,12 +4,12 @@ import { ARCH_KIND, kitPrimary, kitSummary, perkSummary } from "../../../shared/
 import {
   SUPPORT_ARCHS, SUPPORT_TEXT, brewMana, isSupport, luckyChance, mimePrep, mirrorInterval, owlCharge, portalCooldown, type SupportArch,
 } from "../../../shared/support.ts";
-import { ARCHETYPES, STYLES, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
+import { ARCHETYPES, STYLES, TEASER_UNITS, maxRank, RARITY_ORDER, rarityIndex, RARITY_STATS, ELEMENTS, ELEMENT_COLOR, UNITS, UNIT_BY_ID, maxCardLevel, maxPowerUp, powerUpCost, unitStats, upgradeCost, boostMult, levelMult } from "../data/units";
 import type { Arch, Element, Rarity, UnitDef } from "../data/units";
 import { HERO_BY_ID, heroAbilityText } from "../data/heroes";
 import { ECONOMY } from "../../../shared/economy.ts";
 import { awakenDamageMult, awakenSpeedMult, MURC_NAMES, MURC_VARIANTS, murcText, ultEvery, ultName, ultOf, ultText, ULTIMATES } from "../../../shared/awakened.ts";
-import { liveDef, orcText, puddleTime, raccoonEvery, raccoonMana, REWORKS } from "../../../shared/reworks.ts";
+import { liveDef, orcText, puddleTime, raccoonEvery, raccoonMana, REWORKS, totemChance } from "../../../shared/reworks.ts";
 import { profile, canUpgrade, upgradeCard, setDeck } from "../save";
 import { canAwaken } from "../battle/Unit";
 import { RES } from "../display";
@@ -603,7 +603,9 @@ export class DeckScene extends Phaser.Scene {
     });
 
     const rarityCss = "#" + RARITY_STATS[def.rarity].color.toString(16).padStart(6, "0");
-    const rarityLine = txt(this, cx, cy - 120, `${def.rarity.toUpperCase()} · ${def.element.toUpperCase()}`, 28, rarityCss);
+    // v2.9.4 teaser units (Sea Serpent): race, element, ability and stats all read ???.
+    const teaser = TEASER_UNITS.has(id);
+    const rarityLine = txt(this, cx, cy - 120, `${def.rarity.toUpperCase()} · ${teaser ? "???" : def.element.toUpperCase()}`, 28, rarityCss);
     info.add(rarityLine);
     // Awakened form: a small preview to the side (inside the dialog's border); tap either card to flip between them.
     if (canAwaken(id) && this.textures.exists(`portrait_awakened:${id}`)) {
@@ -636,7 +638,7 @@ export class DeckScene extends Phaser.Scene {
       for (const c of [card, awake, thumb]) pressable(c, flip);
     }
     // Race crest on the card's lower-left corner, mirroring the element badge at top-right.
-    if (this.textures.exists(`race:${def.race}`)) m.add(fitImage(this.add.image(cx - 260 * 0.35, cardY + 260 * 0.35, `race:${def.race}`), 260 * 0.24));
+    if (!teaser && this.textures.exists(`race:${def.race}`)) m.add(fitImage(this.add.image(cx - 260 * 0.35, cardY + 260 * 0.35, `race:${def.race}`), 260 * 0.24));
 
     // Two-column info list: dim tag in the label column, value column to its right. Rows stack by real height.
     const TAG = "#9fb0e0";
@@ -657,7 +659,10 @@ export class DeckScene extends Phaser.Scene {
       cursor += h + 10;
     };
     // A role (Barkeeper, Knight, Mercenary) replaces the style for units that have one.
-    if (def.role) row("ROLE", [value(def.role, 22, "#ffffff")]);
+    if (teaser) {
+      row("RACE", [value("???", 22, "#ffffff")]);
+      row("STYLE", [value("???", 22, "#ffffff")]);
+    } else if (def.role) row("ROLE", [value(def.role, 22, "#ffffff")]);
     else if (!supportish) row("STYLE", [value(STYLES[def.style].label, 22, "#ffffff")]);
     // Attack archetype, with the slot-0 numbers stacked under it in the same row.
     const lv = owned?.level ?? 1;
@@ -685,6 +690,10 @@ export class DeckScene extends Phaser.Scene {
       archName = orc.arch;
       slotLines = orc.lines;
     }
+    if (teaser) {
+      archName = "???";
+      slotLines = [];
+    }
     row(supportish ? "SUPPORT" : "ATTACK", [value(archName, 22, "#ffffff"), ...(slotLines[0] ? [value(slotLines[0], 18, "#7fffd4")] : [])]);
     // One ability row per extra kit slot, then one perk row per perk.
     slotLines.forEach((line, i) => {
@@ -707,7 +716,12 @@ export class DeckScene extends Phaser.Scene {
 
     const now = unitStats(def, 1, level, 0);
     const rows: [string, string][] = [
-      ...(isSupport(arch)
+      ...(teaser
+        ? ([
+            ["stat:damage", "???"],
+            ["stat:attack_speed", "???"],
+          ] as [string, string][])
+        : isSupport(arch)
         ? ([[SUPPORT_STAT[arch][0], "never attacks"]] as [string, string][])
         : orc?.stat
         ? [orc.stat]
@@ -947,6 +961,11 @@ export class DeckScene extends Phaser.Scene {
 
   private statsTab(def: UnitDef, level: number, cx: number, top: number) {
     const box = this.add.container(0, 0);
+    if (TEASER_UNITS.has(def.id)) {
+      box.add(txt(this, cx, top + 160, "???", 64, "#c9d2ff"));
+      box.add(txt(this, cx, top + 230, "Its secrets surface soon.", 22, "#9fb0e0"));
+      return box;
+    }
     const arch = primaryOf(def);
     const support = isSupport(arch) ? arch : null;
     const noAttack = arch === "buff" || arch === "aura" || arch === "aegis" || !!support;
@@ -960,7 +979,9 @@ export class DeckScene extends Phaser.Scene {
     // v2.8 Peon and Kodo Beasts: their own number in place of a buff.
     const orc = orcText(def.id);
     const buff = (rank: number, lvl: number, up: number, mult = 1) =>
-      orc?.stat
+      def.id === "cursed_totem"
+        ? `${+(totemChance(rank, lvl) * 100).toFixed(2)}%`
+        : orc?.stat
         ? orc.stat[1]
         : support
         ? supportCell(support, rank, boostMult(lvl, up))

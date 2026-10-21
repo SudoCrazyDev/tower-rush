@@ -878,8 +878,8 @@ export class PvpScene extends Phaser.Scene {
       const d = moving ? Math.min(m.path.length, m.dist + m.speed(b.now) * frac * SIM_DT) : m.dist;
       const p = m.path.at(d);
       v.sprite.setPosition(p.x, p.y).setDepth(100 + p.y);
-      v.sprite.anims.timeScale = b.now < m.frozenUntil || b.now < m.stunUntil ? 0 : 1;
-      const tint = b.now < m.frozenUntil ? 0x7fd8ff : b.now < m.shieldUntil ? 0x9fb4ff : m.poison.length ? 0xc89bff : b.now < m.slowUntil ? 0xb8e8ff : 0xffffff;
+      v.sprite.anims.timeScale = b.now < m.frozenUntil || b.now < m.stunUntil || b.now < m.rootedUntil ? 0 : 1;
+      const tint = b.now < m.frozenUntil ? 0x7fd8ff : b.now < m.rootedUntil ? 0xa8e07a : b.now < m.shieldUntil ? 0x9fb4ff : m.poison.length ? 0xc89bff : b.now < m.slowUntil ? 0xb8e8ff : 0xffffff;
       v.sprite.setTint(tint);
       const hp = Math.max(0, Math.ceil(m.hp));
       if (hp !== v.hp) {

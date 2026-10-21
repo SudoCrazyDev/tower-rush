@@ -131,12 +131,13 @@ export class Monster {
     this.ring?.setPosition(p.x, p.y + 6).setDepth(99 + p.y);
     this.drawRune(p, m);
     this.statusFx.sync(p, m.size, 1200 + p.y, monsterStatuses(m, now));
-    this.sprite.anims.timeScale = now < m.frozenUntil || now < m.stunUntil ? 0 : 1;
+    this.sprite.anims.timeScale = now < m.frozenUntil || now < m.stunUntil || now < m.rootedUntil ? 0 : 1;
 
     let tint: number | null = null;
     if (m.masked) tint = 0x5f5f86;
     else if (friendly) tint = 0xb8ffc8;
     else if (now < m.frozenUntil) tint = 0x7fd8ff;
+    else if (now < m.rootedUntil) tint = 0xa8e07a;
     else if (now < m.shieldUntil) tint = 0x9fb4ff;
     else if (m.poison.length) tint = 0xc89bff;
     else if (now < m.slowUntil) tint = 0xb8e8ff;

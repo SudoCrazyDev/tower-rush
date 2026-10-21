@@ -452,6 +452,11 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   { ...U("unicorn_knight", "Unicorn Knight", "legendary", "arcane", "pierce", "arcane_orb", "Charges through armor and line.", "fae", "balanced", "armor_breaker"), weapon: "lance" },
   U("valkyrie", "Valkyrie", "legendary", "lightning", "chain", "lightning", "Chooses who falls.", "celestial", "balanced", "finisher"),
   U("vampire_countess", "Vampire Countess", "legendary", "poison", "growth", "poison", "Every bite feeds her power.", "undead", "balanced", "plunder"),
+  // v2.9.4 Legendaries (rules in shared/reworks.ts). Windrunner roots; Cursed Totem never attacks (BETA_SUPPORT) and lends
+  // its neighbours an execute chance; Sea Serpent is the teaser: a plain attacker whose card shows ??? (TEASER_UNITS).
+  U("windrunner", "Windrunner", "legendary", "nature", "shot", "arrow", "Her gaze roots them where they stand.", "sylvan", "rapid", "none"),
+  { ...U("cursed_totem", "Cursed Totem", "legendary", "arcane", "buff", "skull", "It never strikes. It only marks who dies.", "undead", "balanced", "none"), role: "Support" },
+  { ...U("sea_serpent", "Sea Serpent", "legendary", "ice", "shot", "water", "Something stirs below the tide.", "dragon", "heavy", "none"), damage: 97, speed: 1.25 },
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
@@ -503,7 +508,7 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
  */
 /** v2.8 "Beta Berserker": the Orc units. */
 export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago"];
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent"];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
 }
@@ -517,6 +522,8 @@ export function withAdded<T extends { id: string }>(list: T[], defaults: T[], ad
 /** Whether a unit can drop from a chest for this player: story units never, story rewards once owned. */
 /** v2.10: units every player is given (at this card level, see giveGiftUnits) that never drop from chests. */
 export const GIFT_UNITS: Readonly<Record<string, number>> = { heart_surgeon: 1, murcielago: 1 };
+/** v2.9.4: teaser units. They fight and drop like any other, but their card hides race, element, ability and stats (???). */
+export const TEASER_UNITS: ReadonlySet<string> = new Set(["sea_serpent"]);
 export const canDrop = (u: UnitDef, owns: (id: string) => boolean) => u.enabled && !u.storyOnly && u.rarity !== "event" && !(u.id in GIFT_UNITS) && (!u.storyReward || owns(u.id));
 /** Whether a unit may go in the player's own deck. */
 export const deckable = (u: UnitDef | undefined) => !!u && u.enabled && !u.storyOnly;

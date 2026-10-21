@@ -49,7 +49,7 @@ import { addPerk, armorMult, chills, dodgeChance, perkMult, plunderMana, type Ac
 import { kitHas, kitPrimary, perkValue, unitEffects } from "./kit.ts";
 import { MURC_VARIANTS, ULTIMATES, awakenDamageMult, awakenSpeedMult, mayAwaken, ultEvery, ultOf, type MurcVariant, type UltId } from "./awakened.ts";
 import { castUltimate, hatchReborn, ultimateAttack, type UltCtx } from "./ultimates.ts";
-import { BETA_SUPPORT, REWORKS, drumStage, gruntMult, gruntStep, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
+import { BETA_SUPPORT, REWORKS, drumStage, totemChance, gruntMult, gruntStep, gruntTier, liveDef, noOwnAttack, pillageChance, puddleTime, raccoonEvery, raccoonMana } from "./reworks.ts";
 import {
   brewMana,
   canBecome,
@@ -247,7 +247,7 @@ export type SimEvent =
   /** A big damage number over a monster (crit, boss execute, sniper, hero meteor). */
   | { type: "bighit"; t: number; target: number; x: number; y: number; dmg: number; color: string; uid?: number }
   /** A proc on a monster: frozen, stunned, executed. */
-  | { type: "proc"; t: number; kind: "frozen" | "stun" | "execute"; x: number; y: number }
+  | { type: "proc"; t: number; kind: "frozen" | "stun" | "execute" | "root"; x: number; y: number }
   /** A lightning bolt segment: chain n (0 first), a Lance Knight's bane chain, or a hero storm bolt. */
   | { type: "zap"; t: number; kind: "chain" | "bane" | "storm"; n: number; x: number; y: number; x2: number; y2: number; color: string }
   /** A healer monster's pulse. */
@@ -553,6 +553,8 @@ export class SimMonster {
   slowUntil = 0;
   frozenUntil = 0;
   stunUntil = 0;
+  /** v2.9.4 Windrunner's Nature's Gaze: held in place until then; dying rooted passes the root on. */
+  rootedUntil = 0;
   hasteUntil = 0;
   shieldUntil = 0;
   curse = 0;
@@ -650,7 +652,7 @@ export class SimMonster {
   }
 
   speed(now: number) {
-    if (now < this.frozenUntil || now < this.stunUntil) return 0;
+    if (now < this.frozenUntil || now < this.stunUntil || now < this.rootedUntil) return 0;
     let s = this.baseSpeed * this.speedMult;
     if (this.envMult !== 1) s *= this.envMult;
     if (now < this.slowUntil) s *= 1 - this.slowPct;
@@ -1680,6 +1682,7 @@ export class Sim {
     if (m.raiseBy) this.raiseDead(m);
     if (m.kissBy) this.kissPays(m);
     if (this.fields.length) this.roomKill(m);
+    if (this.now < m.rootedUntil) this.rootSpread(m);
     this.gainMana(m.mana, null, null, "kill");
     const p = m.pos;
     this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
@@ -1842,7 +1845,7 @@ export class Sim {
       const haste = k.part ? (b.parts ?? []).reduce((x, d) => (d.haste?.part === k.part && m.parts.some((p) => p.id === d.id && p.broken) ? x * d.haste!.mult : x), 1) : 1;
       m.skillAt[i] = k.every / haste;
       // Frozen or stunned: no trail. A boss stopped by its broken legs still spawns (speed 0, not held).
-      if (k.kind === "sapling_trail" && (this.now < m.frozenUntil || this.now < m.stunUntil)) continue;
+      if (k.kind === "sapling_trail" && (this.now < m.frozenUntil || this.now < m.stunUntil || this.now < m.rootedUntil)) continue;
       m.skillUsed[i]++;
       const p = m.pos;
       const n = this.count(k.n);
@@ -3474,6 +3477,36 @@ export class Sim {
     this.emit({ type: "spirit_push", t: this.now, uid: u.uid, targets: pushed.map((o) => o.uid), x: at.x, y: at.y });
   }
 
+  /** v2.9.4 Windrunner's Nature's Gaze: may root the hit monster (bosses briefly). */
+  private gaze(m: SimMonster) {
+    const g = REWORKS.windrunner.gaze;
+    if (m.gone || m.dead || m.civilian || m.family || this.rand() >= g.chance) return;
+    this.root(m, m.boss ? g.bossDuration : g.duration);
+  }
+
+  /** A monster that died rooted passes the root to every monster near it. */
+  private rootSpread(m: SimMonster) {
+    const g = REWORKS.windrunner.gaze;
+    for (const o of this.nearby(m.pos, g.radius, m)) if (!o.dead && !o.gone && !o.civilian && !o.family) this.root(o, o.boss ? g.bossDuration : g.spread);
+  }
+
+  private root(m: SimMonster, time: number) {
+    const fresh = this.now >= m.rootedUntil;
+    m.rootedUntil = Math.max(m.rootedUntil, this.now + time);
+    if (fresh) this.view({ type: "proc", t: this.now, kind: "root", x: m.pos.x, y: m.pos.y });
+  }
+
+  /** The execute chance an adjacent Cursed Totem gives this unit's hits (the best Totem counts; 0 with none). */
+  private totemChance(u: SimUnit) {
+    if (u.def.id === "cursed_totem" || this.units[u.slot] !== u) return 0;
+    let best = 0;
+    for (const j of neighbours(u.slot)) {
+      const v = this.units[j];
+      if (v?.def.id === "cursed_totem" && !v.dragging) best = Math.max(best, totemChance(v.rank, v.level));
+    }
+    return best;
+  }
+
   private adjacentKnights(u: SimUnit) {
     return neighbours(u.slot).filter((j) => this.units[j] && isKnight(this.units[j]!.def)).length;
   }
@@ -4207,6 +4240,11 @@ export class Sim {
         damage *= cm;
       } else if (s.arch === "execute") exec = this.rand() < executeChance(rank, rarityIdx, e);
     }
+    // v2.9.4 Cursed Totem: an adjacent Totem may execute any monster but a boss (rolled only next to one).
+    if (!exec && !isBoss) {
+      const tc = this.totemChance(u);
+      if (tc > 0) exec = this.rand() < tc;
+    }
 
     // 2. The attack.
     const hits: SimMonster[] = [];
@@ -4355,6 +4393,8 @@ export class Sim {
     if (!chained) this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
     // v2.8 Spirit Walker: Ancestral Spirit pushes them back.
     if (def.id === "spirit_walker") this.spiritPush(u, m);
+    // v2.9.4 Windrunner: Nature's Gaze roots the target.
+    if (def.id === "windrunner") this.gaze(m);
   }
 }
 

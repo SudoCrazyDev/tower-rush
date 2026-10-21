@@ -1604,6 +1604,7 @@ export class BattleScene extends Phaser.Scene {
           this.floater(e.x, e.y, "FROZEN", "#7fd8ff", 22);
           sfx("freeze");
         } else if (e.kind === "stun") this.floater(e.x, e.y, "STUN", "#ffd93b", 22);
+        else if (e.kind === "root") this.floater(e.x, e.y, "ROOTED", "#8fdc5a", 20);
         else this.floater(e.x, e.y, "EXECUTE", "#ff7ad9", 26);
         break;
       case "zap": {

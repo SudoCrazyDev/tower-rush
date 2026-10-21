@@ -1,4 +1,4 @@
-# 2.9.4: Heart Surgeon, Dark Spawn and the Echo Spirit rework
+# 2.9.4: Five new units and the Echo Spirit rework
 
 Patch release. Game 2.9.4 and API 1.6.2, on staging since 2026-10-21; not on prod yet.
 Before prod, raise `MIN_CLIENT` to 2.9.4: the battle Sim changed (Echo Spirit, the new Mythics). An older client would
@@ -36,6 +36,36 @@ Id `murcielago`; the ultimate id stays `resurreccion`.
   Dark Javelin shows the seconds and his kills, and True Despair shows his current damage and speed multipliers
   (`Sim.despair()`, public now). The card text gives an example of each formula (a 60s-old Dark Zero hits ×60; two
   Dark Spawns make True Despair ×12 damage and ×6 speed).
+
+## 1b. Three new Legendaries
+
+They drop from Legendary chests like any other Legendary, and none of them awakens (`NO_AWAKEN`). They are in
+`ADDED_UNITS`, so saved configs get them with the default numbers. Numbers live in `REWORKS` (`shared/reworks.ts`).
+
+### Windrunner (Sylvan, Nature, rapid archer)
+
+- **Attack:** arrow at the leading monster, Rapid style (faster attacks, smaller hits).
+- **Nature's Gaze:** each hit has an 85% chance to root the target for 5s (bosses 1s). A rooted monster doesn't move
+  (`SimMonster.rootedUntil`). Re-rooting only extends the time.
+- **Spread:** a monster that dies rooted roots every monster within 150px for 2s (bosses 1s). Those can pass it on again.
+- Rooted monsters show the `status_rooted` overlay and a green tint; a fresh root plays `root_grasp` and "ROOTED".
+
+### Cursed Totem (Undead, Arcane, support)
+
+- **Never attacks** (in `BETA_SUPPORT`, so it gives no generic buff either).
+- **Death Mark:** hits by adjacent units may execute a monster, never a boss: 1.4% at rank 1, +0.4% per rank above 1
+  (3.0% at rank 5), +0.05% per card level above 1 (`totemChance()`). Several Totems don't stack: the best one counts.
+  The chance is only rolled next to a Totem, so other boards replay exactly as before.
+
+### Sea Serpent (teaser)
+
+- A plain Legendary attacker: DMG 97, one attack every 0.8s (heavy style, water projectile). No ability.
+- Its card is a teaser (`TEASER_UNITS` in `shared/units.ts`): race, element, style, attack, damage, speed and the STATS
+  tab read ???, the element badge is a "?" and the race crest is hidden. Under the hood it is Dragon / Ice; the
+  website wiki still lists those.
+- The art is original: an armoured tide warrior with a serpent-head pauldron.
+
+Smoke test: `node scripts/smoke-legendaries.ts`.
 
 ## 2. Echo Spirit rework
 
@@ -96,7 +126,8 @@ A saved config keeps its own unit fields. The hotfix copies these fields from th
 
 - `shared/sim.ts`: Echo copy (`echoCopy`, `echoRank`, `mergeId` / `mergeRank` / `mergeable`), boss-wave re-roll.
   Room, Scalpel, Dark Rebirth and `despair()`.
-- `shared/units.ts`: the two Mythics, `GIFT_UNITS` (level 1).
+- `shared/units.ts`: the two Mythics, `GIFT_UNITS` (level 1), the three Legendaries, `TEASER_UNITS`.
+- `shared/sim.ts`: Windrunner's root (`gaze`, `rootSpread`) and the Cursed Totem's execute (`totemChance`).
 - `shared/awakened.ts`: `surgeon_of_death`, `resurreccion`, `MURC_NAMES`, `murcText()`.
 - `shared/reworks.ts`: Room and Dark Rebirth numbers and card lines.
 - `shared/config.ts`: hotfix `2.9.4-units`.

@@ -40,10 +40,27 @@ export const REWORKS = {
   heart_surgeon: { room: { radius: 90, dps: 1, perKill: 0.05, from: 0.05, to: 0.4 } },
   /** Murcielago: Resurreccion. Each attack has `chance` to awaken him at once, at max rank (if the game has the art). */
   murcielago: { resurreccion: { chance: 0.004 } },
+  // v2.9.4 Legendaries.
+  /**
+   * Windrunner: Nature's Gaze. Each hit has `chance` to root the target for `duration`s (bosses `bossDuration`s). A monster
+   * that dies rooted passes the root to every monster within `radius` for `spread`s (bosses still `bossDuration`s).
+   */
+  windrunner: { gaze: { chance: 0.85, duration: 5, bossDuration: 1, radius: 150, spread: 2 } },
+  /**
+   * Cursed Totem: never attacks. Adjacent units' hits may execute a monster (never a boss): `base` + `perRank` per rank
+   * above 1 + `perLevel` per card level above 1. Several Totems don't stack: the best one counts.
+   */
+  cursed_totem: { curse: { base: 0.014, perRank: 0.004, perLevel: 0.0005 } },
 } as const;
 
-/** v2.8: Peon and Kodo Beasts. Their kit is "buff" (no attack of their own), but they give no generic buff: the Sim runs their own rules. */
-export const BETA_SUPPORT: ReadonlySet<string> = new Set(["peon", "kodo_beasts"]);
+/** v2.8: Peon and Kodo Beasts (and the v2.9.4 Cursed Totem). Their kit is "buff" (no attack of their own), but they give no generic buff: the Sim runs their own rules. */
+export const BETA_SUPPORT: ReadonlySet<string> = new Set(["peon", "kodo_beasts", "cursed_totem"]);
+
+/** Cursed Totem: the execute chance it gives its neighbours at this rank and card level. */
+export const totemChance = (rank: number, level: number) => {
+  const c = REWORKS.cursed_totem.curse;
+  return c.base + c.perRank * (rank - 1) + c.perLevel * (level - 1);
+};
 
 /** Peon's Pillage chance with `orcRanks` = the summed ranks of the OTHER Orcs on the board. */
 export const pillageChance = (orcRanks: number) => {
@@ -162,6 +179,27 @@ export function orcText(id: string): { arch: string; lines: string[]; stat?: [st
           `Dark Rebirth: ${pct(r.chance)} per attack to awaken at once, at max rank.`,
           `Awakened: one of three forms (tap the card).`,
         ],
+      };
+    }
+    case "windrunner": {
+      const g = REWORKS.windrunner.gaze;
+      return {
+        arch: "Arrow at the leading monster",
+        lines: [
+          `Nature's Gaze: ${pct(g.chance)} per hit to root it for ${g.duration}s (bosses ${g.bossDuration}s).`,
+          `Dies rooted: the root jumps to every monster within ${g.radius}px for ${g.spread}s.`,
+        ],
+      };
+    }
+    case "cursed_totem": {
+      const c = REWORKS.cursed_totem.curse;
+      return {
+        arch: "Death Mark",
+        lines: [
+          `Never attacks. Adjacent units' hits may execute a monster: ${pct(c.base)} at rank 1, +${pct(c.perRank)} per rank.`,
+          `Card level adds a little. Never a boss. Totems don't stack.`,
+        ],
+        stat: ["stat:critical", `${pct(c.base)}+ execute`],
       };
     }
     case "kodo_beasts": {

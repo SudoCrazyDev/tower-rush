@@ -131,7 +131,7 @@ export const MURC_VARIANTS: MurcVariant[] = ["zero", "lanza", "despair"];
 export const MURC_NAMES: Record<MurcVariant, string> = { zero: "Dark Zero", lanza: "Dark Javelin", despair: "True Despair" };
 
 /** Units that never awaken (even with awakened art). */
-export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller", "peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"]);
+export const NO_AWAKEN: ReadonlySet<string> = new Set(["imp_hunter", "frog_alchemist", "witch_doctor", "pumpkin_scarecrow", "ogre_chef", "emberhold_gunner", "runecaller", "peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts", "windrunner", "cursed_totem", "sea_serpent"]);
 
 export interface Awakening {
   /** Permanent multipliers on the awakened unit's damage and attack speed. */

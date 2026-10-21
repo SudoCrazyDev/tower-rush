@@ -163,6 +163,7 @@ export function monsterStatuses(m: SimMonster, now: number): string[] {
   const out: string[] = [];
   if (now < m.frozenUntil) out.push("frozen");
   if (now < m.stunUntil) out.push("stunned");
+  if (now < m.rootedUntil) out.push("rooted");
   if (m.burn.until > now) out.push("burn");
   if (m.poison.length) out.push("poisoned");
   if (now < m.slowUntil && now >= m.frozenUntil) out.push("slowed");
@@ -353,7 +354,10 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
         fxSprite(scene, "status_frozen", e.x, e.y, { size: 90, life: 500, from: 0.8 });
         fxBurst(scene, "pt_snowflake", e.x, e.y, { n: 5, size: 20, spread: 45 });
       } else if (e.kind === "stun") fxSprite(scene, "status_stunned", e.x, e.y - 40, { size: 80, life: 500, from: 0.9, rotate: 1 });
-      else {
+      else if (e.kind === "root") {
+        // v2.9.4 Windrunner: roots burst from the ground (rooted again and again, so only within budget).
+        if (!fxBusy()) fxSprite(scene, "root_grasp", e.x, e.y + 10, { size: 90, life: 600, from: 0.6 });
+      } else {
         fxSprite(scene, "crit_burst", e.x, e.y, { size: 150, life: 450 });
         fxSprite(scene, "soul_wisp", e.x, e.y - 20, { size: 60, life: 900, rise: 60, from: 1 });
       }
