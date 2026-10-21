@@ -2,7 +2,7 @@
 // (a plain script, so index.html also works when opened straight from disk).
 // Run from the repo root: node website/scripts/export-data.mjs
 import { writeFileSync, mkdirSync } from "node:fs";
-import { DEFAULT_UNITS, ARCHETYPES, STYLES, maxRank, maxPowerUp, powerUpCost, rarityIndex, unitStats } from "../../shared/units.ts";
+import { DEFAULT_UNITS, TEASER_UNITS, ARCHETYPES, STYLES, maxRank, maxPowerUp, powerUpCost, rarityIndex, unitStats } from "../../shared/units.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES } from "../../shared/monsters.ts";
 import { DEFAULT_ARENAS } from "../../shared/arenas.ts";
 import { DEFAULT_LEAGUES, MYSTERY_ICON, TROPHY_BASE } from "../../shared/leagues.ts";
@@ -13,7 +13,7 @@ import { ECONOMY, DEFAULT_CHESTS } from "../../shared/economy.ts";
 import { DEFAULT_PVP, PVP_MODE_INFO } from "../../shared/pvp.ts";
 import { EFFECTS, auraBonus, buffBonus } from "../../shared/effects.ts";
 import {
-  SUPPORT_TEXT, brewMana, echoStrength, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
+  SUPPORT_TEXT, brewMana, isSupport, luckyChance, mimePrep, mirrorInterval, noAttack, owlCharge, portalCooldown,
 } from "../../shared/support.ts";
 import { storyUnlocking, DEFAULT_BOOK, DEFAULT_BOOK2, SAGA, BADGES } from "../../shared/stories.ts";
 import { PERKS } from "../../shared/perks.ts";
@@ -46,7 +46,7 @@ function supportCell(arch, rank, mult) {
     case "mirror": return `${+mirrorInterval(rank, mult).toFixed(1)}s`;
     case "lucky": return pct(luckyChance(rank, mult));
     case "hourglass": return `+${pct(owlCharge(rank, mult))}`;
-    case "echo": return pct(echoStrength(rank, mult));
+    case "echo": return "100%"; // v2.9.5: an exact copy, whatever the rank
     case "herald": return `+${pct(Math.min(EFFECTS.herald.max, (EFFECTS.herald.perAwakened + EFFECTS.herald.perRank * (rank - 1)) * mult))}`;
     case "brewer": return `+${brewMana(rank, mult)}`;
   }
@@ -156,7 +156,8 @@ function cardInfo(u) {
 }
 
 const out = {
-  units: DEFAULT_UNITS.map((u) => ({ ...u, card: cardInfo(u) })),
+  // v2.9.5: teaser units (Sea Serpent) stay off the site until their reveal.
+  units: DEFAULT_UNITS.filter((u) => !TEASER_UNITS.has(u.id)).map((u) => ({ ...u, card: cardInfo(u) })),
   monsters: DEFAULT_MONSTERS,
   bosses: DEFAULT_BOSSES,
   arenas: DEFAULT_ARENAS,

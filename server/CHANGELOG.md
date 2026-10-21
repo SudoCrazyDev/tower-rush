@@ -1,7 +1,7 @@
 # API changelog
 
 ## 1.6.2
-- Game 2.9.5 "Rising Tide" (staged as 2.9.4): shared Sim with the Echo Spirit rework, Heart Surgeon and Dark Spawn, and the Legendaries Windrunner, Cursed Totem and Sea Serpent (added to saved configs through `ADDED_UNITS`). `giveGiftUnits()` on profile load gives every player both Mythics at card level 1 (it never lowers a level). Config hotfix `2.9.4-units` (Dark Spawn name, Echo Spirit and Heart Surgeon blurbs). No migration. Set `MIN_CLIENT` 2.9.5 when it ships to prod.
+- Game 2.9.5 "Rising Tide" (staged as 2.9.4): shared Sim with the Echo Spirit rework, Heart Surgeon and Dark Spawn, and the Legendaries Windrunner, Cursed Totem and Sea Serpent (added to saved configs through `ADDED_UNITS`). `giveGiftUnits()` on profile load gives every player both Mythics at card level 1 (it never lowers a level). Config hotfix `2.9.4-units` (Dark Spawn name, Echo Spirit and Heart Surgeon blurbs). No migration. `MIN_CLIENT` 2.9.5 (prod and staging).
 
 ## 1.6.1
 - Hotfix (game 2.9.1): `trophyArena` counts every unlocked arena, not only the player's two highest. Solo-run gains and losses (and the abandoned-run loss) follow the league's `minWave` in any arena the player has unlocked. No migration, no `MIN_CLIENT` change.
