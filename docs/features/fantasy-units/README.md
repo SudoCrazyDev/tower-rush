@@ -36,7 +36,7 @@ Made with the Higgsfield MCP on 2026-10-22. The whole set cost 148.9 credits, re
 - **Raw files:** raw stills are in `assets/_green/fantasy/`. Rejected first takes are in `old_v1/` and `old_v2/`. The job ids are in `assets/_fantasy_jobs.tsv`.
 - **Clips:** `seedance1_5`, 4 s, 480p, 1:1, no audio, idle and attack. The start image is the still's job id.
   - Batches often get a preset suggestion instead of a job. Retry with `declined_preset_id`: IN THE DARK, DROWN IN MUSIC, or Sword and Sorcery.
-- **Sheets:** `PAD=1.16 tospritesheet.py ... 16 256 <green|magenta>`. On every frame, the left and right 12px bands are under 5% opaque.
+- **Sheets:** `PAD=1.04 tospritesheet.py ... 16 256 <green|magenta>`. The first cut used `PAD=1.16`, and on the board the units looked about 10% smaller than the standard ones: idle height was 0.84 of the frame against 0.93. At 1.04 they match (0.88-0.95). For a few attack frames, weapon swings and effects cross the side bands.
 - **Card portraits:** `gpt_image_2_5`, quality high. References are the unit's still and the style anchor, with a full-bleed themed background.
 - **Projectiles and impacts:** `gpt_image_2_5`, quality medium. References are `vfx/proj_tide_wave` and `vfx/impact_tide_wave`, keyed into `vfx/`. Projectiles draw at 80px (`PROJ_SIZE`).
 
