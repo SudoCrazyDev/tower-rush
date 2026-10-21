@@ -85,7 +85,9 @@ export type Proj =
   | "chrono_gear"
   // v2.10: Heart Surgeon's sword slash wave, Murcielago's green cero.
   | "slash"
-  | "cero";
+  | "cero"
+  // v2.9.4: Sea Serpent's ukiyo-e tide wave.
+  | "tide_wave";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -137,6 +139,7 @@ export const PROJECTILES: Proj[] = [
   "chrono_gear",
   "slash",
   "cero",
+  "tide_wave",
 ];
 
 export interface UnitDef {
@@ -456,7 +459,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   // its neighbours an execute chance; Sea Serpent is the teaser: a plain attacker whose card shows ??? (TEASER_UNITS).
   U("windrunner", "Windrunner", "legendary", "nature", "shot", "arrow", "Her gaze roots them where they stand.", "sylvan", "rapid", "none"),
   { ...U("cursed_totem", "Cursed Totem", "legendary", "arcane", "buff", "skull", "It never strikes. It only marks who dies.", "undead", "balanced", "none"), role: "Support" },
-  { ...U("sea_serpent", "Sea Serpent", "legendary", "ice", "shot", "water", "Something stirs below the tide.", "dragon", "heavy", "none"), damage: 97, speed: 1.25 },
+  { ...U("sea_serpent", "Sea Serpent", "legendary", "ice", "shot", "water", "Something stirs below the tide.", "dragon", "heavy", "none"), proj: "tide_wave", damage: 97, speed: 1.25 },
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),

@@ -63,7 +63,7 @@ They drop from Legendary chests like any other Legendary, and none of them awake
 - Its card is a teaser (`TEASER_UNITS` in `shared/units.ts`): race, element, style, attack, damage, speed and the STATS
   tab read ???, the element badge is a "?" and the race crest is hidden. Under the hood it is Dragon / Ice; the
   website wiki still lists those.
-- The art is original: a slate-blue armoured warrior (the inspiration's colours) with serpent-head pauldrons and dual serpent-head swords. Its still and portrait load with `?v=2.9.4b`.
+- The art is original: a slate-blue armoured warrior (the inspiration's colours) with serpent-head pauldrons and dual serpent-head swords. Its still and portrait load with `?v=2.9.4b`. It throws its own `tide_wave` projectile (ukiyo-e water wave, `impact_tide_wave` on hit); hotfix `2.9.4-serpent` copies the new `proj` into saved configs.
 
 Smoke test: `node scripts/smoke-legendaries.ts`.
 
