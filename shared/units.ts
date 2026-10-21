@@ -86,7 +86,7 @@ export type Proj =
   // v2.10: Heart Surgeon's sword slash wave, Murcielago's green cero.
   | "slash"
   | "cero"
-  // v2.9.4: Sea Serpent's ukiyo-e tide wave.
+  // v2.9.5: Sea Serpent's ukiyo-e tide wave.
   | "tide_wave";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
@@ -455,7 +455,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   { ...U("unicorn_knight", "Unicorn Knight", "legendary", "arcane", "pierce", "arcane_orb", "Charges through armor and line.", "fae", "balanced", "armor_breaker"), weapon: "lance" },
   U("valkyrie", "Valkyrie", "legendary", "lightning", "chain", "lightning", "Chooses who falls.", "celestial", "balanced", "finisher"),
   U("vampire_countess", "Vampire Countess", "legendary", "poison", "growth", "poison", "Every bite feeds her power.", "undead", "balanced", "plunder"),
-  // v2.9.4 Legendaries (rules in shared/reworks.ts). Windrunner roots; Cursed Totem never attacks (BETA_SUPPORT) and lends
+  // v2.9.5 Legendaries (rules in shared/reworks.ts). Windrunner roots; Cursed Totem never attacks (BETA_SUPPORT) and lends
   // its neighbours an execute chance; Sea Serpent is the teaser: a plain attacker whose card shows ??? (TEASER_UNITS).
   U("windrunner", "Windrunner", "legendary", "nature", "shot", "arrow", "Her gaze roots them where they stand.", "sylvan", "rapid", "none"),
   { ...U("cursed_totem", "Cursed Totem", "legendary", "arcane", "buff", "skull", "It never strikes. It only marks who dies.", "undead", "balanced", "none"), role: "Support" },
@@ -525,7 +525,7 @@ export function withAdded<T extends { id: string }>(list: T[], defaults: T[], ad
 /** Whether a unit can drop from a chest for this player: story units never, story rewards once owned. */
 /** v2.10: units every player is given (at this card level, see giveGiftUnits) that never drop from chests. */
 export const GIFT_UNITS: Readonly<Record<string, number>> = { heart_surgeon: 1, murcielago: 1 };
-/** v2.9.4: teaser units. They fight and drop like any other, but their card hides race, element, ability and stats (???). */
+/** v2.9.5: teaser units. They fight and drop like any other, but their card hides race, element, ability and stats (???). */
 export const TEASER_UNITS: ReadonlySet<string> = new Set(["sea_serpent"]);
 export const canDrop = (u: UnitDef, owns: (id: string) => boolean) => u.enabled && !u.storyOnly && u.rarity !== "event" && !(u.id in GIFT_UNITS) && (!u.storyReward || owns(u.id));
 /** Whether a unit may go in the player's own deck. */

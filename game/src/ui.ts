@@ -207,7 +207,7 @@ export function cardView(
   const portrait = scene.add.image(0, 0, art).setDisplaySize(size * PORTRAIT_FIT, size * PORTRAIT_FIT);
   const parts: Phaser.GameObjects.GameObject[] = [frame, portrait];
   // Element badge in the corner (an icon, so it doesn't read as a notification dot).
-  // v2.9.4 teaser units hide their element behind a "?".
+  // v2.9.5 teaser units hide their element behind a "?".
   if (TEASER_UNITS.has(id)) parts.push(txt(scene, size * 0.35, -size * 0.35, "?", Math.round(size * 0.2), "#ffffff"));
   else parts.push(fitImage(scene.add.image(size * 0.35, -size * 0.35, `element:${def.element}`), size * 0.24));
   if (opts.level !== undefined) {

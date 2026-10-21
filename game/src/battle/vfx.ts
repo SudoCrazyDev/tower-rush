@@ -356,7 +356,7 @@ export function fxEvent(scene: FxScene, e: SimEvent) {
         fxBurst(scene, "pt_snowflake", e.x, e.y, { n: 5, size: 20, spread: 45 });
       } else if (e.kind === "stun") fxSprite(scene, "status_stunned", e.x, e.y - 40, { size: 80, life: 500, from: 0.9, rotate: 1 });
       else if (e.kind === "root") {
-        // v2.9.4 Windrunner: roots burst from the ground (rooted again and again, so only within budget).
+        // v2.9.5 Windrunner: roots burst from the ground (rooted again and again, so only within budget).
         if (!fxBusy()) fxSprite(scene, "root_grasp", e.x, e.y + 10, { size: 90, life: 600, from: 0.6 });
       } else {
         fxSprite(scene, "crit_burst", e.x, e.y, { size: 150, life: 450 });

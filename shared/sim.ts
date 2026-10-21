@@ -553,7 +553,7 @@ export class SimMonster {
   slowUntil = 0;
   frozenUntil = 0;
   stunUntil = 0;
-  /** v2.9.4 Windrunner's Nature's Gaze: held in place until then; dying rooted passes the root on. */
+  /** v2.9.5 Windrunner's Nature's Gaze: held in place until then; dying rooted passes the root on. */
   rootedUntil = 0;
   hasteUntil = 0;
   shieldUntil = 0;
@@ -3477,7 +3477,7 @@ export class Sim {
     this.emit({ type: "spirit_push", t: this.now, uid: u.uid, targets: pushed.map((o) => o.uid), x: at.x, y: at.y });
   }
 
-  /** v2.9.4 Windrunner's Nature's Gaze: may root the hit monster (bosses briefly). */
+  /** v2.9.5 Windrunner's Nature's Gaze: may root the hit monster (bosses briefly). */
   private gaze(m: SimMonster) {
     const g = REWORKS.windrunner.gaze;
     if (m.gone || m.dead || m.civilian || m.family || this.rand() >= g.chance) return;
@@ -4240,7 +4240,7 @@ export class Sim {
         damage *= cm;
       } else if (s.arch === "execute") exec = this.rand() < executeChance(rank, rarityIdx, e);
     }
-    // v2.9.4 Cursed Totem: an adjacent Totem may execute any monster but a boss (rolled only next to one).
+    // v2.9.5 Cursed Totem: an adjacent Totem may execute any monster but a boss (rolled only next to one).
     if (!exec && !isBoss) {
       const tc = this.totemChance(u);
       if (tc > 0) exec = this.rand() < tc;
@@ -4393,7 +4393,7 @@ export class Sim {
     if (!chained) this.view({ type: "hit", t: now, uid: u.uid, target: m.uid, kind: "main", element: def.element, x: pos.x, y: pos.y, size: vfxSize });
     // v2.8 Spirit Walker: Ancestral Spirit pushes them back.
     if (def.id === "spirit_walker") this.spiritPush(u, m);
-    // v2.9.4 Windrunner: Nature's Gaze roots the target.
+    // v2.9.5 Windrunner: Nature's Gaze roots the target.
     if (def.id === "windrunner") this.gaze(m);
   }
 }

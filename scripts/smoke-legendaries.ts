@@ -1,5 +1,5 @@
 /**
- * v2.9.4 smoke test for the new Legendaries: Windrunner roots (and the root jumps on a rooted death),
+ * v2.9.5 smoke test for the new Legendaries: Windrunner roots (and the root jumps on a rooted death),
  * Cursed Totem lends its neighbours an execute chance (never on bosses), Sea Serpent fights plain.
  *   node scripts/smoke-legendaries.ts
  */

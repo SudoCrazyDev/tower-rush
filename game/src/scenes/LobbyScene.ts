@@ -22,7 +22,7 @@ import { pointAt, tutorialDue } from "../tutorial";
 import { ambientVideo, coverFit } from "../backdrop";
 import { arenaInfo } from "./arenaInfo";
 import { avatarIds, avatarView } from "../avatars";
-import { whatsNew } from "./whatsNew";
+import { whatsNew, TEASER, comingSoon } from "./whatsNew";
 import { canInstall, install, installAsked, isInstalled, isIos } from "../pwa";
 import { installModal, installStrip } from "./installApp";
 import { audioButtons, W, H, WIDE, txt, button, iconButton, resourcePill, cardView, fmt, NAVY, modal, pressable, badge, onSwipe, toast, ornateFrame } from "../ui";
@@ -169,6 +169,17 @@ export class LobbyScene extends Phaser.Scene {
       book.setScale(ns / Math.max(book.width, book.height));
       pressable(book, () => whatsNew(this, true));
       txt(this, nx, ny + ns * 0.58, "NEW", 20, "#ffd93b");
+      // v2.9.5: the next reveal's teaser, a "?" orb under the book.
+      if (TEASER) {
+        const sy = ny + ns + 34;
+        const orb = this.add.graphics();
+        orb.fillStyle(0x0b1f4a, 0.95).fillCircle(0, 0, ns / 2).lineStyle(4, 0x3fb8ff, 1).strokeCircle(0, 0, ns / 2);
+        const q = txt(this, 0, 2, "?", Math.round(ns * 0.6), "#7fd8ff");
+        const c = this.add.container(nx, sy, [orb, q]).setSize(ns, ns);
+        this.tweens.add({ targets: c, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.InOut" });
+        pressable(c, () => comingSoon(this));
+        txt(this, nx, sy + ns * 0.58, "SOON", 20, "#7fd8ff");
+      }
     }
 
     // Wide: logo on the left, arena in the middle, deck on the right. Phone: stacked.

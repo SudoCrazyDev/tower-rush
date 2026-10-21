@@ -603,7 +603,7 @@ export class DeckScene extends Phaser.Scene {
     });
 
     const rarityCss = "#" + RARITY_STATS[def.rarity].color.toString(16).padStart(6, "0");
-    // v2.9.4 teaser units (Sea Serpent): race, element, ability and stats all read ???.
+    // v2.9.5 teaser units (Sea Serpent): race, element, ability and stats all read ???.
     const teaser = TEASER_UNITS.has(id);
     const rarityLine = txt(this, cx, cy - 120, `${def.rarity.toUpperCase()} · ${teaser ? "???" : def.element.toUpperCase()}`, 28, rarityCss);
     info.add(rarityLine);

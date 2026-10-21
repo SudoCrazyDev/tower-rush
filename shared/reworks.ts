@@ -40,7 +40,7 @@ export const REWORKS = {
   heart_surgeon: { room: { radius: 90, dps: 1, perKill: 0.05, from: 0.05, to: 0.4 } },
   /** Murcielago: Resurreccion. Each attack has `chance` to awaken him at once, at max rank (if the game has the art). */
   murcielago: { resurreccion: { chance: 0.004 } },
-  // v2.9.4 Legendaries.
+  // v2.9.5 Legendaries.
   /**
    * Windrunner: Nature's Gaze. Each hit has `chance` to root the target for `duration`s (bosses `bossDuration`s). A monster
    * that dies rooted passes the root to every monster within `radius` for `spread`s (bosses still `bossDuration`s).
@@ -53,7 +53,7 @@ export const REWORKS = {
   cursed_totem: { curse: { base: 0.014, perRank: 0.004, perLevel: 0.0005 } },
 } as const;
 
-/** v2.8: Peon and Kodo Beasts (and the v2.9.4 Cursed Totem). Their kit is "buff" (no attack of their own), but they give no generic buff: the Sim runs their own rules. */
+/** v2.8: Peon and Kodo Beasts (and the v2.9.5 Cursed Totem). Their kit is "buff" (no attack of their own), but they give no generic buff: the Sim runs their own rules. */
 export const BETA_SUPPORT: ReadonlySet<string> = new Set(["peon", "kodo_beasts", "cursed_totem"]);
 
 /** Cursed Totem: the execute chance it gives its neighbours at this rank and card level. */

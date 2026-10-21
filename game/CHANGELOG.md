@@ -2,7 +2,7 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
-## 2.9.4
+## 2.9.5 "Rising Tide"
 - Two new Mythics, given to every player at card level 1 (they never drop from chests). **Heart Surgeon** keeps a Room on the path that hurts monsters inside more with every death in it; awakened (Surgeon of Death) every other Heart Surgeon merges into her and her 4 Rooms cut bosses with Scalpel. **Dark Spawn** may awaken himself (Dark Rebirth, 0.4% per attack) and rolls one of three forms: Dark Zero, Dark Javelin or True Despair. Details in `docs/features/v2.9.4-new-mythics/`.
 - Three new Legendaries that drop from chests (none awakens). **Windrunner** (Sylvan, Nature, rapid archer): Nature's Gaze, 85% per hit to root the target for 5s (bosses 1s); a monster that dies rooted passes the root to every monster within 150px for 2s. **Cursed Totem** (Undead, Arcane): never attacks; adjacent units' hits may execute a non-boss monster, 1.4% at rank 1 +0.4% per rank (3.0% at rank 5), +0.05% per card level. **Sea Serpent** is the teaser: a plain attacker (DMG 97, one attack every 0.8s) whose card shows ??? for race, element, ability and stats.
 - Echo Spirit rework: it becomes an exact copy (unit, rank, awakening, 100% stats) of a random neighbour, or any unit if none is adjacent, and re-rolls after every boss wave. Copies merge only with Echo Spirits of the same Echo rank.
@@ -12,7 +12,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Fix: Heart Surgeon's and Dark Spawn's DETAILS rows no longer overlap the blurb and stats; a card whose rows don't fit drops its blurb.
 - Human, Elemental, Giant and Demon race badges redrawn as one-emblem shields like the rest of the set (knight helm and sword; elemental core with flame and water; stone giant face; horned demon skull over hellfire, which also drops the old white box). Cache-busted.
 - Renames: Murciélago is Dark Spawn, Resurrección is Dark Rebirth, Lanza is Dark Javelin (ids unchanged).
-- Needs API 1.6.2. The Sim changed, so raise `MIN_CLIENT` to 2.9.4 on prod.
+- Released as 2.9.5 "Rising Tide" (it was built and staged as 2.9.4; 2.9.4 never shipped on its own). Needs API 1.6.2. The Sim changed, so raise `MIN_CLIENT` to 2.9.5 on prod.
 
 ## 2.9.3
 - Offline Arena: when boot can't reach the server, a player who has signed in on this device before can choose "Play offline (practice Arena)". The lobby shows only the arena picker, with an OFFLINE PRACTICE note and GO ONLINE (reload). Offline runs are practice: nothing is saved and nothing is paid. The game keeps the last config, account, profile and asset index in localStorage while online; signing out clears it. Details in `docs/features/v2.9.3-offline-arena/`.

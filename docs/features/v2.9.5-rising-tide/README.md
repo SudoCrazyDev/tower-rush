@@ -1,7 +1,8 @@
-# 2.9.4: Five new units and the Echo Spirit rework
+# 2.9.5 "Rising Tide": five new units and the Echo Spirit rework
 
-Patch release. Game 2.9.4 and API 1.6.2, on staging since 2026-10-21; not on prod yet.
-Before prod, raise `MIN_CLIENT` to 2.9.4: the battle Sim changed (Echo Spirit, the new Mythics). An older client would
+Release. Game 2.9.5 "Rising Tide" and API 1.6.2, on staging since 2026-10-21 (built and staged as 2.9.4 first; renamed
+to 2.9.5 for the release); not on prod yet. Promo kit: [PROMO.md](PROMO.md).
+Before prod, raise `MIN_CLIENT` to 2.9.5: the battle Sim changed (Echo Spirit, the new Mythics). An older client would
 replay PvP and lab boards differently.
 
 ## 1. Two new Mythics (gift units)
