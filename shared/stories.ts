@@ -1373,7 +1373,7 @@ const THE_APPRENTICE: StoryDef = {
   title: "The Apprentice",
   blurb: "Long ago the Archfiend raised a dying smith and made him his apprentice. Every blade of the Abyss was his work, until the day he forged one for himself.",
   cover: "legends_the_dark_war",
-  trophies: 0,
+  trophies: 800,
   replayCards: [],
   chapters: [
     chapter({
