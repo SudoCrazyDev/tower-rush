@@ -2,6 +2,9 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 2.9.8 (staging)
+- Monkey King throws a flaming spinning rod: his red-and-gold staff (`bo_staff` until `sig_monkey_king` art exists) spins inside a turning ring of fire, and flames peel off both ends. Replaces the golden cloud trail and the spark projectile. Client only.
+
 ## 2.9.7 (staging)
 - 18 new **Fantasy** Legendaries that drop from chests (`FANTASY_UNITS`): Hollow Revenant, Veyr the Doomblade, Reapmarshal, Void Sovereign, Chronodrake Warden, Storm Empress, Starforged Titan, Hellforged Overlord, Dawnblade Goddess, Clockwork Stalker, Riftbreaker, Dusk Ronin, Frostbound Berserker, Crimson Chronomancer, Wyrmbane General, Pit Archfiend, Card Clasher and Neo Necromancer. Standard archetypes, no awakened forms yet; each throws its own projectile with its own impact. Details in `docs/features/fantasy-units/`. Needs API 1.6.4.
 

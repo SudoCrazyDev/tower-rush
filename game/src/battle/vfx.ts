@@ -244,8 +244,12 @@ const PROJ_SIZE: Record<string, number> = { slash: 96, cero: 60, tide_wave: 100,
 const SPIN_PROJ = new Set(["chrono_gear"]);
 /** v2.8: units with their own impact on top of the usual one (Monkey King's staff). */
 const UNIT_IMPACT: Record<string, string> = { monkey_king: "monkey_impact" };
-/** v2.8: units whose weapon leaves its own trail (Monkey King's golden cloud). */
-const UNIT_TRAIL: Record<string, string> = { monkey_king: "monkey_cloud" };
+/** v2.8: units whose weapon leaves its own trail. */
+const UNIT_TRAIL: Record<string, string> = {};
+/** Units whose spinning weapon burns in flight: a ring of fire turns with it and flames peel off both ends. */
+const FLAMING_WEAPON = new Set(["monkey_king"]);
+/** Built weapon art a signature weapon borrows until its own is drawn (Monkey King's red-and-gold rod). */
+const WEAPON_FALLBACK: Record<string, string> = { sig_monkey_king: "bo_staff" };
 /** Ground decal an element's hit leaves behind. */
 const GROUND: Record<Element, string | null> = {
   fire: "ground_scorch",
@@ -540,7 +544,10 @@ export function shotWeapon(scene: Phaser.Scene, def: UnitDef, tier = 0): string 
     for (let t = Math.max(0, Math.min(4, tier)); t >= 0; t--) if (has(`grunt_axe_${t}`)) return `grunt_axe_${t}`;
     return has("axe") ? "axe" : null;
   }
-  return def.weapon && has(def.weapon) ? def.weapon : null;
+  if (!def.weapon) return null;
+  if (has(def.weapon)) return def.weapon;
+  const alt = WEAPON_FALLBACK[def.weapon];
+  return alt && has(alt) ? alt : null;
 }
 
 export class ShotView {
@@ -549,6 +556,9 @@ export class ShotView {
   private readonly color: number;
   private readonly element: Element;
   private readonly projSpin: boolean = false;
+  /** Flaming weapons: the fire ring behind the weapon, and which end the next flame leaves from. */
+  private readonly flame: Phaser.GameObjects.Image | null = null;
+  private flameEnd = 1;
   private spin = Math.random() * 6;
   private trailAt = 0;
 
@@ -567,6 +577,14 @@ export class ShotView {
       else if (tier >= 3) this.img.setTint(0xffb0a0);
       // Focus spear: blood red and bigger.
       if (focus) this.img.setTint(0xff5040).setScale(this.img.scaleX * 1.35);
+      // Flaming staff: heated tint plus a ring of fire that spins with it (normal blend, no ADD: phone lag).
+      if (FLAMING_WEAPON.has(def.id) && this.motion === "spin") {
+        this.img.setScale(80 / Math.max(1, this.img.width)).setTint(0xffe0b0, 0xffe0b0, 0xffa060, 0xffa060);
+        if (hasFx(scene, "aura_fire")) {
+          this.flame = scene.add.image(x, y, fxKey("aura_fire")).setDepth(1999).setAlpha(0.8);
+          this.flame.setScale(72 / Math.max(1, this.flame.width));
+        }
+      }
     } else {
       const proj = !hasFx(scene, `proj_${def.proj}`) && PROJ_FALLBACK[def.proj] ? PROJ_FALLBACK[def.proj] : def.proj;
       const tex = proj === "spark" ? "vfx:hit_spark" : `vfx:proj_${proj}`;
@@ -583,13 +601,14 @@ export class ShotView {
       this.spin += 0.25;
       this.img.rotation = this.spin;
     } else if (this.motion === "spin") {
-      this.spin += 0.35;
+      this.spin += this.flame ? 0.5 : 0.35;
       this.img.rotation = this.spin;
     } else this.img.rotation = angle;
+    if (this.flame) this.flame.setPosition(x, y).setRotation(-this.spin * 0.6);
     if (this.motion && this.motion !== "strike") {
       const t = this.scene.time.now;
       // v2.8.1: a trail puff every 90 ms (was 45), none while the effect budget is spent.
-      if (t - this.trailAt > 90 && !fxBusy()) {
+      if (t - this.trailAt > (this.flame ? 60 : 90) && !fxBusy()) {
         this.trailAt = t;
         this.trail(x, y);
       }
@@ -597,6 +616,16 @@ export class ShotView {
   }
 
   private trail(x: number, y: number) {
+    // Flaming staff: a flame peels off one end of the staff (alternating) and rises as it fades.
+    if (this.flame && hasFx(this.scene, "status_burn")) {
+      const r = (this.img.displayWidth / 2) * 0.8 * this.flameEnd;
+      this.flameEnd = -this.flameEnd;
+      const fx = x + Math.cos(this.img.rotation) * r, fy = y + Math.sin(this.img.rotation) * r;
+      const puff = fxTrack(this.scene.add.image(fx, fy, fxKey("status_burn")).setDepth(1990));
+      puff.setScale(30 / Math.max(1, puff.width)).setRotation((Math.random() - 0.5) * 0.5);
+      this.scene.tweens.add({ targets: puff, alpha: 0, y: fy - 14, scale: puff.scale * 0.4, duration: 320, onComplete: () => puff.destroy() });
+      return;
+    }
     const own = UNIT_TRAIL[this.def.id];
     if (own && hasFx(this.scene, own)) {
       const puff = fxTrack(this.scene.add.image(x, y, fxKey(own)).setDepth(1990));
@@ -628,6 +657,7 @@ export class ShotView {
       pop.setScale(end * 0.5).setRotation((Math.random() - 0.5) * 0.6);
       this.scene.tweens.add({ targets: pop, scale: end, alpha: 0, duration: 320, ease: "Back.Out", onComplete: () => pop.destroy() });
     }
+    this.flame?.destroy();
     this.img.destroy();
   }
 }
