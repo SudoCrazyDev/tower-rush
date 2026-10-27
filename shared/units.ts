@@ -106,7 +106,11 @@ export type Proj =
   | "dragon_lance"
   | "nightmare_flame"
   | "razor_card"
-  | "raven_hex";
+  | "raven_hex"
+  // v3.0 The Dark War units (DARKWAR_PROJ).
+  | "soul_odachi" | "pyre_tonfa" | "ink_skull" | "dread_dagger" | "conductor_bolt" | "twin_katana" | "prism_shard" | "wolf_fang" | "dread_saw" | "blade_crescent"
+  | "fiend_armblade" | "tempest_orb" | "storm_piercer" | "shield_throw" | "worship_sigil" | "infernal_meteor" | "blood_bat" | "oblivion_spear" | "golden_shuriken" | "death_scythe"
+  | "soulforge_hammer" | "abyssal_diamond";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -120,6 +124,8 @@ export const rarityIndex = (r: Rarity) => (r === "event" ? 2 : RARITIES.indexOf(
 export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane", "normal"];
 /** The Fantasy units' projectiles; each has its own impact art (game/src/battle/vfx.ts). */
 export const FANTASY_PROJ: Proj[] = ["revenant_burst", "doom_rune", "reap_axe", "void_orb", "time_scythe", "storm_bolt", "star_core", "hellfire", "sun_disc", "gear_hook", "chaos_claw", "ronin_slash", "frost_shard", "time_sand", "dragon_lance", "nightmare_flame", "razor_card", "raven_hex"];
+/** v3.0 The Dark War units' projectiles; each has its own impact art like FANTASY_PROJ. */
+export const DARKWAR_PROJ: Proj[] = ["soul_odachi", "pyre_tonfa", "ink_skull", "dread_dagger", "conductor_bolt", "twin_katana", "prism_shard", "wolf_fang", "dread_saw", "blade_crescent", "fiend_armblade", "tempest_orb", "storm_piercer", "shield_throw", "worship_sigil", "infernal_meteor", "blood_bat", "oblivion_spear", "golden_shuriken", "death_scythe", "soulforge_hammer", "abyssal_diamond"];
 export const PROJECTILES: Proj[] = [
   "arrow",
   "fireball",
@@ -162,6 +168,7 @@ export const PROJECTILES: Proj[] = [
   "cero",
   "tide_wave",
   ...FANTASY_PROJ,
+  ...DARKWAR_PROJ,
 ];
 
 export interface UnitDef {
@@ -501,9 +508,34 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("pit_archfiend", "Pit Archfiend", "legendary", "poison", "poison", "nightmare_flame", "The thing your nightmares fear.", "demon", "balanced", "finisher"),
   U("card_clasher", "Card Clasher", "legendary", "arcane", "crit", "razor_card", "Every card he deals is a killing blow.", "human", "rapid", "plunder"),
   U("neo_necromancer", "Neo Necromancer", "legendary", "poison", "curse", "raven_hex", "Old magic. New tricks. Same grave.", "human", "balanced", "finisher"),
+  // v3.0 Legends "The Dark War" (DARKWAR_UNITS): the Undying Legion...
+  U("soulforge_blademaster", "Soulforge Blademaster", "legendary", "fire", "crit", "soul_odachi", "His blade burns on what the dead leave behind.", "undead", "rapid", "finisher"),
+  U("pyre_warmonger", "Pyre Warmonger", "legendary", "fire", "burn", "pyre_tonfa", "Every war needs a fire. He brings two.", "undead", "heavy", "armor_breaker"),
+  U("dread_artisan", "Dread Artisan", "legendary", "arcane", "curse", "ink_skull", "Paints the battlefield, then forges it.", "undead", "balanced", "finisher"),
+  U("grimgate_dreadknight", "Grimgate Dread Knight", "legendary", "normal", "execute", "dread_dagger", "Lures the brave through the gate. None come back.", "undead", "heavy", "giant_slayer"),
+  U("underworld_electromancer", "Underworld Electromancer", "legendary", "lightning", "chain", "conductor_bolt", "Enough charge to light a city of the dead.", "undead", "balanced", "finisher"),
+  U("abyss_blademaster", "Abyss Blademaster", "legendary", "normal", "pierce", "twin_katana", "Two blades, one shadow, no second chances.", "human", "rapid", "true_strike"),
+  U("prismatic_paragon", "Prismatic Paragon", "legendary", "arcane", "splash", "prism_shard", "Light bends around his armor, then breaks on you.", "undead", "heavy", "true_strike"),
+  U("fenrir_legionnaire", "Fenrir Legionnaire", "legendary", "ice", "stun", "wolf_fang", "The Legion's wolf. Its howl freezes the bold.", "beast", "balanced", "hunter"),
+  U("dreadsaw_fiend", "Dreadsaw Fiend", "legendary", "normal", "splash", "dread_saw", "Grins the whole time. The saw never stops.", "demon", "heavy", "armor_breaker"),
+  U("ascended_blademaster", "Ascended Blademaster", "legendary", "normal", "sniper", "blade_crescent", "Bring him the Archfiend's head. He will bring yours.", "undead", "heavy", "giant_slayer"),
+  // ...and the Abyssal Nation.
+  U("naraka_fiend", "Naraka Fiend", "legendary", "poison", "poison", "fiend_armblade", "An underworld fiend sworn to the Archfiend.", "demon", "rapid", "finisher"),
+  U("tempest_voidcaller", "Tempest Voidcaller", "legendary", "lightning", "chain", "tempest_orb", "Carries a storm in its hands.", "demon", "balanced", "hunter"),
+  U("midnight_stormvoid", "Midnight Stormvoid", "legendary", "ice", "freeze", "storm_piercer", "The storm at midnight cuts colder.", "demon", "balanced", "frostbite"),
+  U("abyss_recruit", "Abyss Recruit", "legendary", "normal", "stun", "shield_throw", "Signed in diamond. Fights like it.", "human", "heavy", "armor_breaker"),
+  U("archfiend_worshipper", "Archfiend Worshipper", "legendary", "arcane", "curse", "worship_sigil", "Gave everything to the Archfiend. He answered.", "human", "balanced", "finisher"),
+  U("infernalfiend", "Infernalfiend", "legendary", "fire", "splash", "infernal_meteor", "Rains molten stone on whatever is left.", "demon", "heavy", "armor_breaker"),
+  U("abyssal_vampire", "Abyssal Vampire", "legendary", "arcane", "crit", "blood_bat", "Drinks deep. Bites twice.", "undead", "rapid", "plunder"),
+  U("oblivion_dragoon", "Oblivion Dragoon", "legendary", "arcane", "pierce", "oblivion_spear", "His spear opens a door to nothing.", "dragon", "heavy", "true_strike"),
+  U("golden_hanzo", "Golden Hanzo", "legendary", "normal", "crit", "golden_shuriken", "Gold edge, void step, no sound.", "human", "rapid", "hunter"),
+  U("deathfiend", "Deathfiend", "legendary", "poison", "slow", "death_scythe", "Its scythe slows the living to a crawl.", "demon", "heavy", "finisher"),
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
+  // v3.0 The Dark War warlords: earned in Legends "The Dark War" first (storyReward), then they drop like any Mythic.
+  { ...U("malgrave_dreadforger", "Malgrave, the Dreadforger", "mythic", "fire", "burn", "soulforge_hammer", "Every blade of the Abyss was his. Now he forges for himself.", "undead", "heavy", "armor_breaker"), storyReward: true },
+  { ...U("vorthrax_archfiend", "Vorthrax, the Archfiend", "mythic", "arcane", "curse", "abyssal_diamond", "He pays in diamonds. He collects in souls.", "demon", "balanced", "true_strike"), storyReward: true },
   U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "dragon_flame", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
   U("chrono_mage", "Chrono Mage", "mythic", "arcane", "slow", "chrono_gear", "Time bends. No one dodges.", "human", "rapid", "true_strike"),
   { ...U("monkey_king", "Monkey King", "mythic", "nature", "chain", "spark", "His staff outruns any runner.", "beast", "rapid", "hunter"), weapon: "sig_monkey_king" },
@@ -554,7 +586,16 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
 /** The 18 Fantasy Legendaries (standard archetypes; no awakened forms yet, see NO_AWAKEN). */
 export const FANTASY_UNITS = ["hollow_revenant", "veyr_doomblade", "reapmarshal", "void_sovereign", "chronodrake_warden", "storm_empress", "starforged_titan", "hellforged_overlord", "dawnblade_goddess", "clockwork_stalker", "riftbreaker", "dusk_ronin", "frostbound_berserker", "crimson_chronomancer", "wyrmbane_general", "pit_archfiend", "card_clasher", "neo_necromancer"];
 export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent", ...FANTASY_UNITS];
+/** v3.0 The Dark War: 20 Legendaries (10 Legion, 10 Nation) and the two warlord Mythics (standard archetypes, own projectiles). */
+export const DARKWAR_UNITS = [
+  "soulforge_blademaster", "pyre_warmonger", "dread_artisan", "grimgate_dreadknight", "underworld_electromancer", "abyss_blademaster", "prismatic_paragon", "fenrir_legionnaire", "dreadsaw_fiend", "ascended_blademaster",
+  "naraka_fiend", "tempest_voidcaller", "midnight_stormvoid", "abyss_recruit", "archfiend_worshipper", "infernalfiend", "abyssal_vampire", "oblivion_dragoon", "golden_hanzo", "deathfiend",
+  "malgrave_dreadforger", "vorthrax_archfiend",
+];
+/** Which side of the Dark War each of DARKWAR_UNITS fights for. */
+export const DARKWAR_LEGION = DARKWAR_UNITS.slice(0, 10).concat("malgrave_dreadforger");
+export const DARKWAR_NATION = DARKWAR_UNITS.slice(10, 20).concat("vorthrax_archfiend");
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent", ...FANTASY_UNITS, ...DARKWAR_UNITS];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
 }

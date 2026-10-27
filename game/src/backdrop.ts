@@ -43,6 +43,52 @@ export function ambientVideo(scene: Phaser.Scene, name: string, fit: Fit, loop =
   return v;
 }
 
+let clips = 0;
+
+/**
+ * v3.0: a one-shot clip (video story panel, front-shift transition) drawn into a canvas texture every frame.
+ * It doesn't wait on Phaser's video frame callbacks, which can stall for a video started mid-scene. The image
+ * stays invisible until the first frame is in, then fades in; `ready` sizes it. `ended` fires when the clip
+ * ends (the last frame stays up). Returns null when there's no such video or video is off.
+ */
+export function clipImage(scene: Phaser.Scene, name: string, ready: (img: Phaser.GameObjects.Image, width: number, height: number) => void, ended?: () => void) {
+  if (!VIDEO || !assetIndex().videos?.includes(name)) return null;
+  const el = document.createElement("video");
+  el.muted = el.defaultMuted = true;
+  el.playsInline = true;
+  el.crossOrigin = "anonymous";
+  el.preload = "auto";
+  el.src = `${BASE}video/${name}.mp4`;
+  const key = `clip:${name}:${++clips}`;
+  let tex: Phaser.Textures.CanvasTexture | null = null;
+  const img = scene.add.image(0, 0, "__WHITE").setAlpha(0);
+  const draw = () => {
+    if (!tex || el.readyState < 2) return;
+    tex.context.drawImage(el, 0, 0, tex.width, tex.height);
+    tex.refresh();
+  };
+  el.addEventListener("loadeddata", () => {
+    if (!img.active || tex) return;
+    tex = scene.textures.createCanvas(key, el.videoWidth, el.videoHeight);
+    if (!tex) return;
+    draw();
+    img.setTexture(key);
+    ready(img, el.videoWidth, el.videoHeight);
+    scene.tweens.add({ targets: img, alpha: 1, duration: 300 });
+  });
+  el.addEventListener("ended", () => img.active && ended?.());
+  scene.events.on(Phaser.Scenes.Events.UPDATE, draw);
+  img.once(Phaser.GameObjects.Events.DESTROY, () => {
+    scene.events.off(Phaser.Scenes.Events.UPDATE, draw);
+    el.pause();
+    el.removeAttribute("src");
+    el.load();
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+  });
+  el.play().catch(() => {});
+  return img;
+}
+
 /** Fit that scales the video to cover a `w` x `h` area centred on it. */
 export const coverFit =
   (w: number, h: number): Fit =>

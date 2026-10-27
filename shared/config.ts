@@ -4,7 +4,7 @@
  */
 import { DEFAULT_UNITS, UNITS, indexUnits, RARITY_STATS, RARITIES, CHEST_RARITIES, ELEMENTS, PROJECTILES, STYLE_IDS, WEAPON_KEYS, withAdded, withAddedUnits, withStyles, type UnitDef, type Rarity } from "./units.ts";
 import { DEFAULT_MONSTERS, DEFAULT_BOSSES, MONSTERS, BOSSES, indexMonsters, TRAITS, BOSS_POWERS, BOSS_SKILLS, MINION_POWERS, ADDED_MONSTERS, ADDED_BOSSES, type MonsterDef, type BossDef } from "./monsters.ts";
-import { DEFAULT_BOOK, DEFAULT_BOOK2, booksOf, booksProblems, setBooks, type BookDef, type ChapterMechanics } from "./stories.ts";
+import { DEFAULT_BOOK, DEFAULT_BOOK2, DEFAULT_BOOK3, DEFAULT_BOOKS, booksOf, booksProblems, setBooks, type BookDef, type ChapterMechanics } from "./stories.ts";
 import { DEFAULT_ARENAS, ARENAS, indexArenas, type ArenaDef } from "./arenas.ts";
 import { DEFAULT_ECONOMY, ECONOMY, DEFAULT_CHESTS, CHESTS, type Economy, type ChestDef } from "./economy.ts";
 import { DEFAULT_HEROES, HEROES, indexHeroes, HERO_POWER_IDS, type HeroDef } from "./heroes.ts";
@@ -129,7 +129,7 @@ export function withHotfixes(cfg: GameConfig): GameConfig {
     }
     for (const [chapterId, keys] of Object.entries(fix.chapters ?? {})) {
       const c = books?.flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
-      const d = [DEFAULT_BOOK, DEFAULT_BOOK2].flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
+      const d = DEFAULT_BOOKS.flatMap((b) => b.stories).flatMap((s) => s.chapters).find((x) => x.id === chapterId);
       if (!c || !d) continue;
       for (const k of keys) {
         if (k === "waves") c.waves = structuredClone(d.waves);
@@ -157,7 +157,7 @@ export function defaultConfig(): GameConfig {
     effects: DEFAULT_EFFECTS,
     perks: DEFAULT_PERK_VALUES,
     pvp: DEFAULT_PVP,
-    books: [DEFAULT_BOOK, DEFAULT_BOOK2],
+    books: [DEFAULT_BOOK, DEFAULT_BOOK2, DEFAULT_BOOK3],
     hotfixes: Object.keys(HOTFIXES),
     dropWeights: { common: 60, rare: 26, epic: 10, legendary: 3.5, mythic: 0.5, event: 0 },
   });

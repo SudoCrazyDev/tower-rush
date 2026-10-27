@@ -35,6 +35,7 @@ import { TideView } from "../battle/tideView";
 import { FacelessView } from "../battle/facelessView";
 import { OathView } from "../battle/oathView";
 import { TribunalView } from "../battle/tribunalView";
+import { FrontView } from "../battle/frontView";
 import { BoardPortal } from "../battle/portalView";
 import { playUltimate, fistStrike, icebornHit, mjolnirBolt } from "../battle/ultFx";
 import { MJOLNIR_COLOR } from "../../../shared/ultimates.ts";
@@ -126,6 +127,8 @@ export class BattleScene extends Phaser.Scene {
   private oath: OathView | null = null;
   /** v2.4 The Silver Tribunal visuals (pleas, laws, jail, cells, pans, falling city, sentence). */
   private tribunal: TribunalView | null = null;
+  /** v3.0 The Dark War: the war meter and the front shifts. */
+  private frontView: FrontView | null = null;
   /** v2.7.1: opens under a locked board; a unit dropped in leaves for part of its worth. */
   private portal: BoardPortal | null = null;
   /** Equal ground: units wear the balance tint until this sim time. */
@@ -167,7 +170,7 @@ export class BattleScene extends Phaser.Scene {
     this.arena = (this.story && ARENA_BY_ID[this.story.chapter.layout]) || (ARENAS.find((a) => a.id === data.arena) ?? ARENAS[0]);
     this.deck = this.lab ? this.lab.deck.filter((id) => UNIT_BY_ID[id] && profile.cards[id]) : this.story ? [...this.story.start.deck] : [...profile.deck];
     this.tethers = null;
-    this.tideView = this.faceless = this.oath = this.tribunal = null;
+    this.tideView = this.faceless = this.oath = this.tribunal = this.frontView = null;
     this.equalUntil = 0;
     this.acc = 0;
     this.speedMult = 1;
@@ -227,6 +230,8 @@ export class BattleScene extends Phaser.Scene {
     this.load.image(this.artKey, `${BASE}locations/${this.art}.webp`);
     // v2.2: a tide chapter's arena has a flooded twin (<art>_high) that fades in at high tide.
     if (this.story?.chapter.mechanics?.tide && assetIndex().locations.includes(`${this.art}_high`)) this.load.image(`${this.artKey}_high`, `${BASE}locations/${this.art}_high.webp`);
+    // v3.0: a Dark War chapter's later fronts (their art swaps in mid-battle).
+    if (this.story?.chapter.mechanics?.front) FrontView.preload(this, this.story.chapter.mechanics.front);
     // v2.3: a chapter's hero unit isn't in the deck but is on the board; unitArt gives a stand-in sheet while its own art is missing.
     // v2.4: the trial's witnesses are lent to the board for a count, so their sheets load too.
     const witnesses = this.story?.chapter.mechanics?.trial ? this.story.chapter.waves.flatMap((w) => (w.charge ? [w.charge.witness] : [])) : [];
@@ -278,11 +283,12 @@ export class BattleScene extends Phaser.Scene {
     const sepia = !!this.story?.chapter.sepia;
     if (sepia) bg.preFX?.addColorMatrix().sepia();
     // Half the arenas have an ambient loop of the same picture (water, flags, lava...).
-    ambientVideo(this, this.art, (v) => {
+    const loop = ambientVideo(this, this.art, (v) => {
       v.setOrigin(0).setDisplaySize(ARENA_W, ARENA_H);
       if (tint !== null) v.setTint(tint);
       if (sepia) v.preFX?.addColorMatrix().sepia();
     });
+    if (this.story?.chapter.mechanics?.front) this.frontView = new FrontView(this, this.story.chapter.mechanics.front, bg, loop);
     this.tethers = this.add.graphics().setDepth(1400);
     // Wide layout: the world (arena coordinates) is centred by scrolling the camera;
     // HUD objects use scrollFactor 0 so they stay in screen space.
@@ -1123,6 +1129,7 @@ export class BattleScene extends Phaser.Scene {
     this.tideView?.update(delta / 1000);
     this.oath?.update();
     this.tribunal?.update();
+    this.frontView?.update(sim);
     this.portal?.update(sim);
   }
 
@@ -1470,6 +1477,9 @@ export class BattleScene extends Phaser.Scene {
       case "collapse":
       case "sentence":
         this.tribunal?.handle(e);
+        break;
+      case "front":
+        this.frontView?.handle(e);
         break;
       case "unit_gone":
         if (e.why !== "portal") {

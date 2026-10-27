@@ -2,6 +2,13 @@
 
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
+## 3.0.0 "The Dark War" (staging)
+- New book **Legends: The Dark War** (Book 3, side book outside the saga): 4 stories, 9 chapters (`dws1`-`dws4`). Malgrave the Dreadforger's Undying Legion against Vorthrax the Archfiend's Abyssal Nation. Details in `docs/features/v3.0-the-dark-war/`.
+- **The Shifting Front** (`ChapterMechanics.front`, `shared/front.ts`): a war meter fills with kills; a full meter (or wave `by`) shifts the front: a transition video plays over the arena, then the new arena art, loop and field rule take over (element/race damage, haste, monster HP/speed, kill mana, storm bolts, fire bursts). `game/src/battle/frontView.ts`.
+- **Video story panels**: a panel with `video/panel_<image>.mp4` plays it once over the still and holds the last frame.
+- 20 new Legendaries (`DARKWAR_UNITS`, 10 Legion, 10 Nation) and 2 warlord Mythics (story rewards), each with its own projectile and impact (`DARKWAR_PROJ`). 13 monsters, 9 bosses (existing skill kinds).
+- What's new: 3.0.0 "The Dark War"; the Sea Serpent teaser is removed. Needs API 1.7.0.
+
 ## 2.9.8 (staging)
 - Monkey King throws a flaming spinning rod: his red-and-gold staff (`bo_staff` until `sig_monkey_king` art exists) spins inside a turning ring of fire, and flames peel off both ends. Replaces the golden cloud trail and the spark projectile. Client only.
 

@@ -132,6 +132,20 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   M("chainbearer", "Chainbearer", "construct", 1.8, 52, ["tank"], 14, 96),
   M("quill_drone", "Quill Drone", "construct", 0.6, 125, ["fast", "dodge"], 8, 76),
   M("gavel_golem", "Gavel Golem", "construct", 2.6, 44, ["tank", "armored"], 18, 108),
+  // v3.0 Legends "The Dark War": the Undying Legion (fought by the Nation) and the Abyssal Nation's fiends (fought by the Legion).
+  M("bone_fiendrider", "Bone Fiendrider", "undead", 1.2, 100, ["fast"], 12, 96),
+  M("doom_legionnaire", "Doom Legionnaire", "undead", 1.4, 58, ["armored"], 12, 92),
+  M("grave_inquisitor", "Grave Inquisitor", "undead", 0.8, 92, ["dodge"], 10, 88),
+  M("dreadmarcher", "Dreadmarcher", "undead", 1.0, 66, [], 9, 88),
+  M("undead_bruiser", "Undead Bruiser", "undead", 2.6, 42, ["tank"], 16, 106),
+  M("legion_fenrir", "Legion Fenrir", "beast", 0.7, 128, ["fast"], 8, 84),
+  M("skull_infantry", "Skull Infantry", "undead", 0.5, 80, [], 5, 70),
+  M("dreadfiend", "Dreadfiend", "demon", 1.1, 74, [], 10, 92),
+  M("hellstomper", "Hellstomper", "demon", 1.9, 50, ["tank"], 14, 100),
+  M("bloodfiend", "Bloodfiend", "demon", 0.8, 104, ["fast", "dodge"], 9, 86),
+  M("manslayer_fiend", "Manslayer Fiend", "demon", 2.2, 46, ["tank", "armored"], 16, 104),
+  M("void_fiend", "Void Fiend", "demon", 1.3, 64, ["frostproof"], 11, 92),
+  M("dark_makai", "Dark Makai", "demon", 0.45, 96, ["fast"], 5, 70),
 ];
 
 /** Monsters added after configs were already saved: appended to an older saved list. */
@@ -144,6 +158,8 @@ export const ADDED_MONSTERS = [
   "faceless_soldier", "faceless_archer", "faceless_civilian", "scarab", "jackal",
   "drake_whelp", "dwarf_family", "iron_soldier", "iron_crossbow", "iron_brute",
   "brass_warden", "ledger_crossbowman", "chainbearer", "quill_drone", "gavel_golem",
+  "bone_fiendrider", "doom_legionnaire", "grave_inquisitor", "dreadmarcher", "undead_bruiser", "legion_fenrir", "skull_infantry",
+  "dreadfiend", "hellstomper", "bloodfiend", "manslayer_fiend", "void_fiend", "dark_makai",
 ];
 
 /** What a splitter breaks into: a smaller copy of itself unless listed here. */
@@ -422,6 +438,64 @@ export const DEFAULT_BOSSES: BossDef[] = [
     ],
     rally: { at: 0.5, damage: 0.25, speed: 1.15 },
   },
+  // v3.0 Legends "The Dark War" (docs/features/v3.0-the-dark-war).
+  {
+    // The Archfiend's brute, the prologue's boss.
+    id: "grumbok", name: "Grumbok", race: "beast", hp: 2.4, speed: 26, power: "roar", targets: 3,
+  },
+  {
+    // The Bone Herald blows his horn and the Legion's dead march in behind him.
+    id: "war_bone_herald", name: "War, the Bone Herald", race: "undead", hp: 2.2, speed: 28, power: "summon", minion: "skull_infantry",
+    skills: [{ kind: "impale", every: 10, first: 6, n: 2, dur: 3 }],
+  },
+  {
+    // The belly-mouthed fiend eats the forge's fire: units near him lose heart (glimmered).
+    id: "gravelgut", name: "Gravelgut", race: "demon", hp: 2.4, speed: 22, power: "heal",
+    skills: [{ kind: "lantern_beam", every: 13, first: 7, n: 1, dur: 5, amount: 0.6, hold: 4 }],
+  },
+  {
+    // The Blade Master duels the strongest units: he chains them in place and parries hits.
+    id: "kaelith_blademaster", name: "Kaelith, the Blade Master", race: "undead", hp: 2.4, speed: 34, power: "none", block: 0.25,
+    skills: [
+      { kind: "chain", every: 12, first: 5, n: 1, amount: 10 },
+      { kind: "impale", every: 9, first: 7, n: 1, dur: 4 },
+    ],
+  },
+  {
+    // The Archfiend's void wyrm: oblivion fire roots whole rows.
+    id: "oblivax_void_wyrm", name: "Oblivax, the Void Wyrm", race: "dragon", hp: 2.2, speed: 26, power: "freeze_units", targets: 2,
+    skills: [{ kind: "entangle", every: 15, first: 9, n: [1, 2] }],
+  },
+  {
+    // A goblin in a cardboard archfiend costume. Mostly harmless.
+    id: "snivelfiend", name: "Snivelfiend", race: "goblin", hp: 1.2, speed: 40, power: "summon", minion: "dark_makai", traits: ["dodge"],
+  },
+  {
+    // Lord of the Undying Legion: raises the dead and drags units into his SoulForge.
+    id: "malgrave_boss", name: "Malgrave, the Dreadforger", race: "undead", hp: 3.2, speed: 20, power: "summon", minion: "dreadmarcher",
+    skills: [
+      { kind: "anchor_hook", every: 11, first: 6, n: 1 },
+      { kind: "impale", every: 9, first: 4, n: 2, dur: 4 },
+    ],
+  },
+  {
+    // The Archfiend: blood diamonds encase units (asleep until tapped) and his fiends pour through.
+    id: "vorthrax_boss", name: "Vorthrax, the Archfiend", race: "demon", hp: 3.2, speed: 20, power: "summon", minion: "dreadfiend",
+    skills: [
+      { kind: "siren_song", every: 12, first: 6, n: [1, 2], dur: 8 },
+      { kind: "volley", every: 8, first: 4, n: 3, miss: 0.5, dur: 2 },
+    ],
+  },
+  {
+    // Ten wars of dead under the throne. Both lords charge it once (the rally).
+    id: "hunger_below", name: "The Hunger Below", race: "chaos", hp: 4.5, speed: 12, power: "none", minion: "void_fiend",
+    skills: [
+      { kind: "burrow", every: 12, first: 8, n: 4, amount: 0.25 },
+      { kind: "entangle", every: 16, first: 10, n: [2, 3] },
+      { kind: "sapling_trail", every: 6, first: 3, n: [1, 2] },
+    ],
+    rally: { at: 0.5, damage: 0.3, speed: 1.1 },
+  },
 ];
 
 /** Bosses added after configs were already saved: appended to an older saved list. */
@@ -429,7 +503,8 @@ export const ADDED_BOSSES = ["gummy_warlord", "licorice_witch", "sugar_plum_tyra
   "elf_captain_morvane", "elf_captain_sylris", "elf_captain_kaelen", "thalmyr", "vaeltharion",
   "grell", "lusca", "ondrath", "corvaline", "faceless_herald", "dune_warden", "sefa",
   "ashmaw", "walking_forge", "chaos_colossus",
-  "prosecutor", "bailiff", "vaeltharion_dust", "argent_justiciar"];
+  "prosecutor", "bailiff", "vaeltharion_dust", "argent_justiciar",
+  "grumbok", "war_bone_herald", "gravelgut", "kaelith_blademaster", "oblivax_void_wyrm", "snivelfiend", "malgrave_boss", "vorthrax_boss", "hunger_below"];
 
 export const BOSSES: BossDef[] = structuredClone(DEFAULT_BOSSES);
 export const BOSS_BY_ID: Record<string, BossDef> = {};

@@ -3,7 +3,7 @@ import { sfx } from "../audio";
 import { button, modal, txt } from "../ui";
 
 /** The release the "What's new" popup describes (see docs/features). */
-export const RELEASE = { version: "2.9.5", title: "Rising Tide", tagline: "Five new units. Something stirs below." };
+export const RELEASE = { version: "3.0.0", title: "The Dark War", tagline: "Legion or Nation? The tenth war begins." };
 const SEEN_KEY = "tower-rush-whats-new";
 
 function seen() {
@@ -35,20 +35,15 @@ function show(scene: Phaser.Scene) {
   m.add(logo);
   scene.tweens.add({ targets: logo, y: logo.y + 10, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
-  m.add(txt(scene, m.cx, m.cy + 130, "Two new Mythics in the chests: Heart Surgeon and Dark Spawn.", 26, "#ffffff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 190, "Windrunner roots monsters, and the roots jump when they fall.", 26, "#8fdc5a").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 250, "Cursed Totem never attacks. Its neighbours execute.", 26, "#c9a0ff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 310, "And from the deep... the Sea Serpent. Its secrets: ???", 26, "#7fd8ff").setWordWrapWidth(600));
-  m.add(txt(scene, m.cx, m.cy + 365, "Echo Spirit now becomes a copy of its neighbour.", 22, "#c9d2ff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 130, "New book: Legends: The Dark War. Four stories, nine chapters, video story panels.", 26, "#ffffff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 190, "The Shifting Front: fill the war meter and the battlefield itself changes.", 26, "#ff8a3d").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 250, "20 new Legendaries of the Undying Legion and the Abyssal Nation.", 26, "#ff6b8b").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 310, "Earn the warlords: Malgrave, the Dreadforger and Vorthrax, the Archfiend.", 26, "#ffd93b").setWordWrapWidth(600));
   m.add(button(scene, m.cx, m.cy + 445, 320, 96, "LET'S GO!", "green", () => m.close()));
 }
 
 /** v2.9.5: the next reveal, teased in the lobby (the SOON orb under What's new). Unset to hide it. */
-export const TEASER: { title: string; lines: string[]; art: string } | null = {
-  title: "THE DEEP STIRS",
-  lines: ["The Sea Serpent has surfaced, but no one knows what it is.", "Its secrets rise with the next tide. Coming soon."],
-  art: "ui:coming_soon",
-};
+export const TEASER: { title: string; lines: string[]; art: string } | null = null;
 
 export function comingSoon(scene: Phaser.Scene) {
   if (!TEASER) return;

@@ -5,6 +5,7 @@
 import Phaser from "phaser";
 import { BASE, ensureAnim, loadSheet, sheetKey, sheetScale } from "../assets";
 import { sfx } from "../audio";
+import { clipImage } from "../backdrop";
 import { W, H, NAVY, txt, button, modal, fmt, cardView, lootCards, rewardRays, rewardPop } from "../ui";
 import { UNIT_BY_ID } from "../data/units";
 import { BADGES, type StoryChapter, type StoryDef, type StoryObjectives, type StoryPanel } from "../../../shared/stories.ts";
@@ -54,7 +55,11 @@ export function storyPanels(scene: Phaser.Scene, panels: StoryPanel[], onDone: (
     const fh = img.height * scale;
     frame.lineStyle(8, 0xf2b630, 1).strokeRoundedRect(-fw / 2 - 4, -fh / 2 - 4, fw + 8, fh + 8, 12);
     const top = H / 2 - 60 - fh / 2;
-    const parts: Phaser.GameObjects.GameObject[] = [img.setPosition(0, 0), frame];
+    const parts: Phaser.GameObjects.GameObject[] = [img.setPosition(0, 0)];
+    // v3.0: a video panel (video/panel_<image>) plays once over its still and holds the last frame; the still is the fallback.
+    const vid = clipImage(scene, `panel_${p.image}`, (v, vw, vh) => v.setScale(Math.min(fw / vw, fh / vh)));
+    if (vid) parts.push(vid.setScrollFactor(0));
+    parts.push(frame);
     const text = txt(scene, 0, fh / 2 + 40, p.lines.join("\n"), 34, "#fff4c2", [0.5, 0]).setWordWrapWidth(W - 80).setLineSpacing(10);
     parts.push(text);
     const animKeyName = p.anim ? ensureAnim(scene, "bosses", p.anim, 12, -1) : null;

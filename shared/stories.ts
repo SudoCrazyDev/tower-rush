@@ -7,6 +7,7 @@
  */
 import type { Reward } from "./daily.ts";
 import { BOSS_BY_ID } from "./monsters.ts";
+import { frontProblems, type FrontRule, type FrontRules } from "./front.ts";
 import { LAWS, type CellRules, type Charge, type CollapseRules, type ScaleRules, type TrialRules } from "./tribunal.ts";
 import { UNIT_BY_ID, deckable, type Rarity } from "./units.ts";
 
@@ -122,6 +123,8 @@ export interface ChapterMechanics {
   scale?: ScaleRules;
   /** v2.4 Story 5 Ch 4: tiles of the city fall away at set waves; units on them are caught by a free tile or returned as mana. */
   collapse?: CollapseRules;
+  /** v3.0 The Dark War: the Shifting Front. Kills fill a war meter; a full meter shifts the arena (art and field rule). */
+  front?: FrontRules;
 }
 
 /** v2.2: an arena duel chapter (Story 3): a best-of PvP match against the bot with a fixed deck. */
@@ -1338,6 +1341,382 @@ const THE_SILVER_TRIBUNAL: StoryDef = {
   ],
 };
 
+// ---------------------------------------------------------------- Book 3 · Legends: The Dark War (v3.0)
+// docs/features/v3.0-the-dark-war. A side book outside the Forsakens saga: the Undying Legion of Malgrave the
+// Dreadforger against the Abyssal Nation of Vorthrax the Archfiend. Every chapter fights over shifting fronts.
+
+// The Undying Legion (fought on the Nation's side) and the Abyssal Nation's fiends (fought on the Legion's side).
+const BFR = "bone_fiendrider", DLG = "doom_legionnaire", GIQ = "grave_inquisitor", DMR = "dreadmarcher", UBR = "undead_bruiser", LFN = "legion_fenrir", SKI = "skull_infantry";
+const DFD = "dreadfiend", HST = "hellstomper", BLF = "bloodfiend", MSF = "manslayer_fiend", VFD = "void_fiend", MKI = "dark_makai";
+const MAL = "malgrave_dreadforger", VOR = "vorthrax_archfiend";
+const DW_ALLIES = ["ally_malgrave", "ally_vorthrax", "ally_legion", "ally_nation", "ally_legion", "ally_nation"];
+
+/** A front of the war (shared/front.ts): `art` is the arena edit's id after "arena_dw_". */
+const fr = (art: string, name: string, text: string, rule: Omit<FrontRule, "art" | "name" | "text"> = {}): FrontRule => ({ art: `arena_dw_${art}`, name, text, ...rule });
+const F = {
+  bone_fields: fr("bone_fields", "The Bone Fields", "Undead units deal +20% damage.", { race: "undead", dmg: 1.2 }),
+  soulforge: fr("soulforge", "The SoulForge", "Fire units deal +30% damage. The forge bursts every 10 s.", { element: "fire", dmg: 1.3, burst: { every: 10, dmg: 0.6, radius: 120 } }),
+  dread_citadel: fr("dread_citadel", "The Dread Citadel", "Monsters have +15% HP. Kills give +1 mana.", { monsterHp: 1.15, killMana: 1 }),
+  abyss_citadel: fr("abyss_citadel", "The Abyss Citadel", "Arcane units deal +20% damage.", { element: "arcane", dmg: 1.2 }),
+  void_storm: fr("void_storm", "The Void Storm", "Lightning strikes a monster every 6 s. Lightning units deal +25% damage.", { element: "lightning", dmg: 1.25, bolt: { every: 6, stun: 1.5, dmg: 0.4 } }),
+  diamond_mines: fr("diamond_mines", "The Diamond Mines", "Every kill pays +2 mana.", { killMana: 2 }),
+  rebel_forge: fr("rebel_forge", "The Rebel Forge", "The SoulForge is lit. Fire bursts every 7 s.", { burst: { every: 7, dmg: 0.7, radius: 130 } }),
+  underworld_gate: fr("underworld_gate", "The Underworld Gate", "No field rule: hold the gate."),
+  blood_moon: fr("blood_moon", "The Blood Moon", "Every unit attacks 20% faster. Monsters move 15% faster.", { haste: 0.2, monsterSpeed: 1.15 }),
+  hunger_below: fr("hunger_below", "The Hunger Below", "Monsters have +20% HP. Every kill feeds you 2 mana.", { monsterHp: 1.2, killMana: 2 }),
+};
+/** A chapter's fronts: the meter needs `kills` kills per shift, and shifts by wave `by` at the latest. */
+const fronts = (list: FrontRule[], kills: number[], by: number[]): ChapterMechanics => ({ front: { fronts: structuredClone(list), kills, by } });
+
+const THE_APPRENTICE: StoryDef = {
+  id: "dws1",
+  title: "The Apprentice",
+  blurb: "Long ago the Archfiend raised a dying smith and made him his apprentice. Every blade of the Abyss was his work, until the day he forged one for himself.",
+  cover: "legends_the_dark_war",
+  trophies: 0,
+  replayCards: [],
+  chapters: [
+    chapter({
+      id: "dws1c1",
+      title: "The Apprentice",
+      layout: "hell_fortress",
+      art: "arena_dw_abyss_citadel",
+      corruption: 0,
+      sepia: false,
+      hpScale: 2.0,
+      mechanics: fronts([F.abyss_citadel, F.void_storm, F.rebel_forge], [40, 55], [5, 9]),
+      eventDeck: { units: ["naraka_fiend", "tempest_voidcaller", "midnight_stormvoid", "abyss_recruit", "archfiend_worshipper", "infernalfiend", "abyssal_vampire"], pick: 5, level: 8 },
+      intro: [
+        panel("dw_p01_fallen_smith", "Long ago, on a field no one remembers, a young smith fell.", `A voice like a furnace: "Your hands are not finished, little smith."`),
+        panel("dw_p02_the_raising", `Vorthrax the Archfiend: "Rise. Forge for me, and you will never die."`),
+        panel("dw_p03_the_apprentice", "Every famous blade of the Abyssal Nation was his work.", `Malgrave: "Another blade for your war, master. Never one for me."`),
+        panel("dw_p04_the_soulforge", "In secret, the apprentice built a forge that burns on what the dead leave behind.", "Tonight the dead are rising at the Archfiend's gates. You stand with the Nation."),
+      ],
+      waves: [
+        w(`${SKI} 10, ${DMR} 4`, { bark: say(VOR, "The dead walk on my citadel? Then they will die twice.") }),
+        w(`${SKI} 8, ${DMR} 6, ${LFN} 3`),
+        w(`${DMR} 8, ${GIQ} 4, ${LFN} 4`),
+        w(`${DLG} 4, ${DMR} 8, ${SKI} 8`),
+        w(`${GIQ} 6, ${LFN} 6, ${DMR} 6`, { bark: say(VOR, "A storm out of the void. Use it.") }),
+        w(`${DLG} 6, ${UBR} 1, ${SKI} 10`),
+        w(`${BFR} 4, ${DMR} 8, ${GIQ} 4`),
+        w(`${UBR} 2, ${DLG} 6, ${LFN} 6`),
+        w(`${BFR} 6, ${DLG} 6, ${SKI} 10`, { bark: say(MAL, "Master. You taught me that a forge must never go cold.") }),
+        w(`${DMR} 6, ${SKI} 8`, {
+          boss: "war_bone_herald",
+          hp: 0.9,
+          cutscene: [panel("dw_p05_betrayal", `Malgrave: "I am done forging your chains."`, `Vorthrax: "Then I will break the hand that forged them."`)],
+        }),
+      ],
+      reward: reward(2400, 50),
+      replay: replay(400),
+    }),
+    chapter({
+      id: "dws1c2",
+      title: "The Call to War",
+      layout: "volcano",
+      art: "arena_dw_underworld_gate",
+      corruption: 0,
+      hpScale: 2.4,
+      mechanics: fronts([F.underworld_gate, F.blood_moon], [70], [7]),
+      intro: [
+        panel("dw_p06_ten_wars", "That was the first war. This is the tenth.", "The throne of the Underworld still stands empty."),
+        panel("dw_p07_legion_call", `Commander Rhask: "Lord Malgrave calls every blade that will burn for him. Will yours?"`),
+        panel("dw_p08_nation_call", `Vesk the Quartermaster: "The Archfiend pays in diamonds. And he never forgets a debt."`, "Both armies storm the gate. You are caught between them."),
+      ],
+      waves: [
+        w(`${SKI} 8, ${MKI} 8`, { bark: say("rhask", "Hold the gate! Whoever holds it chooses the war.") }),
+        w(`${DMR} 6, ${DFD} 6`),
+        w(`${LFN} 6, ${BLF} 6`),
+        w(`${DLG} 4, ${HST} 2, ${MKI} 8`),
+        w(`${MKI} 10`, { boss: "snivelfiend", hp: 0.6, bark: say("snivelfiend", "Kneel before the Archfiend! The real one! Me!") }),
+        w(`${GIQ} 6, ${VFD} 4, ${SKI} 8`),
+        w(`${BFR} 4, ${BLF} 6, ${DMR} 6`, { bark: say("vesk", "A blood moon. Prices just went up.") }),
+        w(`${UBR} 2, ${MSF} 2, ${DFD} 6, ${DMR} 6`),
+        w(`${DLG} 6, ${HST} 3, ${LFN} 6, ${BLF} 6`),
+        w(`${DMR} 6, ${DFD} 6`, { boss: "grumbok", hp: 0.9, bark: say("grumbok", "GRUMBOK GUARD GATE. NOBODY PASS.") }),
+      ],
+      reward: reward(2800, 60),
+      replay: replay(450),
+    }),
+  ],
+  ending: [
+    panel("dw_p09_pledge", "Two banners. Two lords. One empty throne.", "Choose a banner, and then learn what the other side is fighting for."),
+  ],
+};
+
+const THE_LEGIONS_WAR: StoryDef = {
+  id: "dws2",
+  title: "The Legion's War",
+  blurb: "Under the black banner of the flame. Keep the SoulForge burning while the Archfiend's fiends come to put it out.",
+  cover: "legends_the_dark_war",
+  trophies: 0,
+  replayCards: [],
+  chapters: [
+    chapter({
+      id: "dws2c1",
+      title: "The SoulForge",
+      layout: "graveyard",
+      art: "arena_dw_bone_fields",
+      corruption: 0,
+      hpScale: 2.6,
+      mechanics: fronts([F.bone_fields, F.soulforge], [65], [7]),
+      intro: [
+        panel("dw_p10_rhask_forge", `Rhask: "The forge must never go cold. If it does, the Legion falls."`),
+        panel("dw_p11_gravelgut", "The Nation sends Gravelgut, who eats fire for breakfast.", `Gravelgut: "Mmm. Warm. More!"`),
+      ],
+      waves: [
+        w(`${MKI} 10, ${DFD} 4`, { bark: say("rhask", "Fiends at the bone fields. Push them back to the forge.") }),
+        w(`${DFD} 8, ${BLF} 4`),
+        w(`${MKI} 8, ${HST} 2, ${DFD} 6`),
+        w(`${BLF} 8, ${VFD} 4`),
+        w(`${HST} 3, ${MSF} 1, ${MKI} 10`),
+        w(`${VFD} 6, ${BLF} 6, ${DFD} 6`, { bark: say("rhask", "The front moves into the SoulForge. Fire is ours there.") }),
+        w(`${MSF} 2, ${HST} 3, ${DFD} 8`),
+        w(`${BLF} 10, ${VFD} 6`),
+        w(`${MSF} 3, ${HST} 4, ${MKI} 12`),
+        w(`${DFD} 6, ${MKI} 8`, { boss: "gravelgut", hp: 0.9, bark: say("gravelgut", "The forge is a snack. You are dessert.") }),
+      ],
+      reward: reward(3000, 60),
+      replay: replay(500),
+    }),
+    chapter({
+      id: "dws2c2",
+      title: "Embers and Oaths",
+      layout: "graveyard",
+      art: "arena_dw_soulforge",
+      corruption: 0,
+      hpScale: 2.9,
+      mechanics: fronts([F.soulforge, F.dread_citadel], [80], [8]),
+      intro: [
+        panel("dw_p12_kaelith_oath", `Kaelith the Blade Master: "I will bring you the Archfiend's head, my lord."`, `Malgrave: "Bring me victory. Heads are cheap."`),
+        panel("dw_p13_kaelith_duel", `Kaelith: "But first: prove your blade is worth the Legion's fire."`),
+      ],
+      waves: [
+        w(`${DFD} 8, ${MKI} 8`),
+        w(`${BLF} 8, ${VFD} 4`),
+        w(`${HST} 3, ${DFD} 8`),
+        w(`${MSF} 2, ${BLF} 8, ${MKI} 6`),
+        w(`${VFD} 8, ${HST} 3`, { bark: say("kaelith", "The citadel gates. Here the weak are left outside.") }),
+        w(`${MSF} 3, ${DFD} 8, ${BLF} 6`),
+        w(`${HST} 4, ${VFD} 6, ${MKI} 10`),
+        w(`${MSF} 3, ${HST} 3, ${BLF} 8`),
+        w(`${DFD} 10, ${VFD} 8, ${MSF} 2`),
+        w(`${BLF} 6, ${MKI} 8`, { boss: "kaelith_blademaster", hp: 0.85, bark: say("kaelith", "Draw. One of us leaves this courtyard a legend.") }),
+      ],
+      reward: reward(3300, 65),
+      replay: replay(550),
+    }),
+    chapter({
+      id: "dws2c3",
+      title: "Wings of Oblivion",
+      layout: "graveyard",
+      art: "arena_dw_dread_citadel",
+      corruption: 0,
+      hpScale: 3.2,
+      mechanics: fronts([F.dread_citadel, F.bone_fields], [90], [8]),
+      intro: [
+        panel("dw_p14_oblivax", "The Archfiend sends his wyrm. Oblivion fire falls on the Legion's lands.", `Rhask: "Hold the line! The bone fields remember every war!"`),
+      ],
+      waves: [
+        w(`${BLF} 10, ${MKI} 8`),
+        w(`${DFD} 8, ${VFD} 6`),
+        w(`${HST} 4, ${MSF} 2, ${MKI} 8`),
+        w(`${BLF} 10, ${DFD} 6`),
+        w(`${VFD} 8, ${MSF} 3`),
+        w(`${HST} 4, ${BLF} 8, ${MKI} 10`),
+        w(`${MSF} 3, ${VFD} 8, ${DFD} 8`, { bark: say(MAL, "My wyrm-slayers, to the bone fields. The dead fight best at home.") }),
+        w(`${BLF} 12, ${HST} 4`),
+        w(`${MSF} 4, ${DFD} 10, ${VFD} 6`),
+        w(`${BLF} 8, ${DFD} 8, ${HST} 3, ${MKI} 10`),
+        w(`${BLF} 6, ${VFD} 6`, { boss: "oblivax_void_wyrm", hp: 0.85, bark: say("oblivax", "The Archfiend sends his regards. And his fire.") }),
+      ],
+      reward: reward(4000, 120, "legendary", [MAL]),
+      replay: replay(650),
+    }),
+  ],
+  ending: [
+    panel("dw_p20_two_armies", "The wyrm flees into the void. The Legion marches on the throne.", `Malgrave: "Ten wars, old man. This one is mine."`),
+  ],
+};
+
+const THE_NATIONS_WAR: StoryDef = {
+  id: "dws3",
+  title: "The Nation's War",
+  blurb: "Under the red banner of the diamond. Guard the Archfiend's mines, his rites, and his gate, and find out who sold it.",
+  cover: "legends_the_dark_war",
+  trophies: 0,
+  replayCards: [],
+  chapters: [
+    chapter({
+      id: "dws3c1",
+      title: "The Diamond Debt",
+      layout: "hell_fortress",
+      art: "arena_dw_abyss_citadel",
+      corruption: 0,
+      hpScale: 2.6,
+      mechanics: fronts([F.abyss_citadel, F.diamond_mines], [65], [7]),
+      intro: [
+        panel("dw_p15_vesk_camp", `Vesk: "Every diamond is a promise. The Legion wants to steal our promises."`),
+        panel("dw_p16_war_herald", `War, the Bone Herald: "The Legion has come for your diamonds."`),
+      ],
+      waves: [
+        w(`${SKI} 12, ${DMR} 4`, { bark: say("vesk", "Guard the carts. I've counted every stone.") }),
+        w(`${DMR} 8, ${LFN} 4`),
+        w(`${SKI} 10, ${DLG} 3, ${GIQ} 3`),
+        w(`${LFN} 8, ${DMR} 6`),
+        w(`${UBR} 2, ${DLG} 4, ${SKI} 8`),
+        w(`${GIQ} 6, ${BFR} 4, ${DMR} 6`, { bark: say("vesk", "Into the mines! Every kill down there pays.") }),
+        w(`${DLG} 6, ${UBR} 2, ${LFN} 6`),
+        w(`${BFR} 6, ${GIQ} 6, ${SKI} 10`),
+        w(`${UBR} 3, ${DLG} 6, ${DMR} 8`),
+        w(`${DMR} 6, ${SKI} 10`, { boss: "war_bone_herald", hp: 0.9 }),
+      ],
+      reward: reward(3000, 60),
+      replay: replay(500),
+    }),
+    chapter({
+      id: "dws3c2",
+      title: "The Worshippers' Rite",
+      layout: "hell_fortress",
+      art: "arena_dw_diamond_mines",
+      corruption: 0,
+      hpScale: 2.9,
+      mechanics: fronts([F.diamond_mines, F.void_storm], [80], [8]),
+      intro: [
+        panel("dw_p17_worshippers", `A worshipper: "The rite needs the essence of a blade master. Only then will He hear us."`),
+        panel("dw_p18_blademan_hunt", "The Blade Master comes for the worshippers first.", `Kaelith: "Your god will not hear you through steel."`),
+      ],
+      waves: [
+        w(`${DMR} 8, ${SKI} 8`),
+        w(`${LFN} 8, ${GIQ} 4`),
+        w(`${DLG} 4, ${DMR} 8`),
+        w(`${BFR} 4, ${GIQ} 6, ${SKI} 8`),
+        w(`${UBR} 2, ${LFN} 8`, { bark: say("archfiend_worshipper", "The void storm answers the rite! Strike while it rages!") }),
+        w(`${DLG} 6, ${BFR} 4, ${DMR} 6`),
+        w(`${UBR} 3, ${GIQ} 8, ${SKI} 10`),
+        w(`${BFR} 6, ${DLG} 6, ${LFN} 6`),
+        w(`${UBR} 3, ${DMR} 10, ${GIQ} 6`),
+        w(`${DLG} 6, ${SKI} 8`, { boss: "kaelith_blademaster", hp: 0.85, bark: say("kaelith", "I hunt blade masters' killers. Today that is you.") }),
+      ],
+      reward: reward(3300, 65),
+      replay: replay(550),
+    }),
+    chapter({
+      id: "dws3c3",
+      title: "The Traitor",
+      layout: "hell_fortress",
+      art: "arena_dw_void_storm",
+      corruption: 0,
+      hpScale: 3.2,
+      mechanics: fronts([F.void_storm, F.abyss_citadel], [90], [8]),
+      intro: [
+        panel("dw_p19_the_traitor", "Someone sold the gate of the Abyss Citadel.", "The Undying Legion is already inside. Malgrave leads it himself."),
+      ],
+      waves: [
+        w(`${SKI} 12, ${LFN} 6`),
+        w(`${DMR} 8, ${GIQ} 6`),
+        w(`${DLG} 6, ${BFR} 4`),
+        w(`${UBR} 3, ${SKI} 12`),
+        w(`${LFN} 10, ${GIQ} 6`),
+        w(`${BFR} 6, ${DLG} 6, ${DMR} 6`),
+        w(`${UBR} 3, ${GIQ} 8, ${LFN} 6`, { bark: say(VOR, "Back to my citadel. Let him see what he betrayed.") }),
+        w(`${DLG} 8, ${BFR} 6, ${SKI} 10`),
+        w(`${UBR} 4, ${DMR} 10, ${GIQ} 6`),
+        w(`${BFR} 8, ${DLG} 6, ${LFN} 8`),
+        w(`${DMR} 8, ${SKI} 8`, { boss: "malgrave_boss", hp: 0.85, bark: say(MAL, "Your gate was sold for one red diamond. I expected more of you, old man.") }),
+      ],
+      reward: reward(4000, 120, "legendary", [VOR]),
+      replay: replay(650),
+    }),
+  ],
+  ending: [
+    panel("dw_p20_two_armies", "The Legion is driven out. The Nation marches on the throne.", `Vorthrax: "Ten wars, boy. And ten times you came back."`),
+  ],
+};
+
+const THE_THRONE_BELOW: StoryDef = {
+  id: "dws4",
+  title: "The Throne Below",
+  blurb: "Both armies reach the empty throne under a blood moon. Ten wars of dead have been waiting beneath it.",
+  cover: "legends_the_dark_war",
+  trophies: 0,
+  replayCards: [],
+  chapters: [
+    chapter({
+      id: "dws4c1",
+      title: "Ten Wars",
+      layout: "volcano",
+      art: "arena_dw_underworld_gate",
+      corruption: 0,
+      hpScale: 3.4,
+      mechanics: fronts([F.underworld_gate, F.blood_moon], [90], [8]),
+      intro: [
+        panel("dw_p20_two_armies", "Under the blood moon the two armies meet before the throne.", `Vorthrax: "Ten wars, boy." Malgrave: "And ten times I came back, old man."`),
+      ],
+      waves: [
+        w(`${SKI} 10, ${MKI} 10`),
+        w(`${DMR} 8, ${DFD} 8`),
+        w(`${LFN} 6, ${BLF} 6, ${GIQ} 4`),
+        w(`${DLG} 6, ${HST} 3, ${VFD} 4`),
+        w(`${UBR} 2, ${MSF} 2, ${SKI} 10, ${MKI} 10`),
+        w(`${BFR} 6, ${BLF} 8`, { bark: say("rhask", "Blood moon! Everything moves faster now. So do we.") }),
+        w(`${DLG} 6, ${VFD} 6, ${DMR} 6, ${DFD} 6`),
+        w(`${UBR} 3, ${MSF} 3, ${LFN} 8`),
+        w(`${BFR} 6, ${HST} 4, ${GIQ} 6, ${BLF} 6`),
+        w(`${DFD} 8, ${MKI} 8`, { boss: "vorthrax_boss", hp: 0.8, bark: say(VOR, "Whoever stands between us and the throne answers to me first.") }),
+      ],
+      reward: reward(4200, 80),
+      replay: replay(700),
+    }),
+    chapter({
+      id: "dws4c2",
+      title: "The Throne Below",
+      layout: "volcano",
+      art: "arena_dw_blood_moon",
+      corruption: 0,
+      hpScale: 3.8,
+      mechanics: fronts([F.blood_moon, F.underworld_gate, F.hunger_below], [70, 90], [6, 11]),
+      intro: [
+        panel("dw_p21_the_ground_opens", "The ground splits beneath the throne.", "Ten wars of dead had gathered under it. And they were hungry."),
+        panel("dw_p22_back_to_back", `Malgrave: "Just this once."`, `Vorthrax: "Just this once."`),
+      ],
+      waves: [
+        w(`${SKI} 10, ${MKI} 10`),
+        w(`${DMR} 8, ${DFD} 8`),
+        w(`${VFD} 6, ${GIQ} 6`),
+        w(`${UBR} 2, ${HST} 3, ${LFN} 6`),
+        w(`${BLF} 8, ${BFR} 6`),
+        w(`${MSF} 3, ${DLG} 6, ${VFD} 6`),
+        w(`${UBR} 3, ${HST} 3, ${SKI} 12`),
+        w(`${VFD} 10, ${GIQ} 8`),
+        w(`${BFR} 8, ${BLF} 8, ${MKI} 10`),
+        w(`${MSF} 4, ${UBR} 3, ${DMR} 8`, { bark: say(MAL, "The ground is going. Make every kill count!") }),
+        w(`${VFD} 10, ${DLG} 6, ${DFD} 6`),
+        w(`${UBR} 4, ${MSF} 4, ${SKI} 12, ${MKI} 12`),
+        w(`${VFD} 8, ${SKI} 8`, {
+          boss: "hunger_below",
+          hp: 0.8,
+          cutscene: [panel("dw_p23_combined_strike", "Soulfire and blood diamond, side by side for the first time in ten wars.")],
+          rally: { before: [], allies: DW_ALLIES, after: [] },
+        }),
+      ],
+      reward: reward(6000, 220, "mythic", [], "dark_war"),
+      replay: replay(800),
+    }),
+  ],
+  ending: [
+    panel("dw_p24_sealed", "The Hunger was sealed beneath the throne."),
+    panel("dw_p25_empty_throne", `Vorthrax: "Whoever sits there feeds it."`, `Malgrave: "Then let it stay empty."`),
+    panel("dw_p26_next_year", `Vorthrax: "Ten wars, and you still hold the hammer like I taught you."`, `Malgrave: "Next year, old man." Vorthrax: "Next year, boy."`),
+    panel("dw_p27_never_ends", "THE DARK WAR NEVER ENDS"),
+    panel("dw_p28_snivelfiend", `Snivelfiend: "Finally. MY throne."`),
+  ],
+};
+
+/** Book 3: Legends, a side book of stories outside the saga. */
+export const DEFAULT_BOOK3: BookDef = { title: "Legends: The Dark War", stories: [THE_APPRENTICE, THE_LEGIONS_WAR, THE_NATIONS_WAR, THE_THRONE_BELOW], planned: 4 };
+
 /** Book 2: its stories can be edited by the admin. */
 export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST, THE_IRON_OATH, THE_SILVER_TRIBUNAL], unlockBadge: "the_chosen", planned: 5 };
 
@@ -1346,8 +1725,10 @@ export const SAGA = "The Forsakens";
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */
 export const BOOK: BookDef = structuredClone(DEFAULT_BOOK);
+/** Every default book, in order. */
+export const DEFAULT_BOOKS: BookDef[] = [DEFAULT_BOOK, DEFAULT_BOOK2, DEFAULT_BOOK3];
 /** Every book, in order. BOOKS[0] is BOOK (same object). */
-export const BOOKS: BookDef[] = [BOOK, structuredClone(DEFAULT_BOOK2)];
+export const BOOKS: BookDef[] = [BOOK, structuredClone(DEFAULT_BOOK2), structuredClone(DEFAULT_BOOK3)];
 
 /** Replace the live books in place (BOOK stays BOOKS[0]). */
 export function setBooks(books: BookDef[]) {
@@ -1357,7 +1738,7 @@ export function setBooks(books: BookDef[]) {
     for (const k of Object.keys(t)) delete (t as unknown as Record<string, unknown>)[k];
     Object.assign(t, structuredClone(b));
     // Configs saved before `planned` existed keep the default's count.
-    t.planned ??= [DEFAULT_BOOK, DEFAULT_BOOK2][i]?.planned;
+    t.planned ??= DEFAULT_BOOKS[i]?.planned;
   });
   BOOKS.length = list.length;
 }
@@ -1367,7 +1748,7 @@ export const bookSlots = (b: BookDef) => Math.max(b.stories.length, b.planned ??
 
 /** The saved books of a config: `books`, or a legacy single `book` followed by the Book 2 placeholder. */
 export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
-  return withAddedMechanics(withAddedStories(c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2]));
+  return withAddedMechanics(withAddedStories(c.books?.length ? c.books : [c.book ?? DEFAULT_BOOK, DEFAULT_BOOK2, DEFAULT_BOOK3]));
 }
 
 /**
@@ -1376,7 +1757,7 @@ export function booksOf(c: { books?: BookDef[]; book?: BookDef }): BookDef[] {
  */
 export const ADDED_MECHANICS: Record<string, (keyof ChapterMechanics)[]> = { b2s3c3: ["freeMove"], b2s5c3: ["noBoss"] };
 function withAddedMechanics(books: BookDef[]): BookDef[] {
-  const defaults = new Map([DEFAULT_BOOK, DEFAULT_BOOK2].flatMap((b) => b.stories.flatMap((s) => s.chapters.map((c) => [c.id, c] as const))));
+  const defaults = new Map(DEFAULT_BOOKS.flatMap((b) => b.stories.flatMap((s) => s.chapters.map((c) => [c.id, c] as const))));
   return books.map((b) => ({
     ...b,
     stories: b.stories.map((s) => ({
@@ -1396,14 +1777,19 @@ function withAddedMechanics(books: BookDef[]): BookDef[] {
  * Stories added to the defaults after configs were saved (like ADDED_MONSTERS): appended by id to the
  * saved book that holds the story's neighbours (its default book's index), unless a saved book already has it.
  */
-export const ADDED_STORIES = ["b2s2", "b2s3", "b2s4", "b2s5"];
+export const ADDED_STORIES = ["b2s2", "b2s3", "b2s4", "b2s5", "dws1", "dws2", "dws3", "dws4"];
 function withAddedStories(books: BookDef[]): BookDef[] {
   const have = new Set(books.flatMap((b) => b.stories.map((s) => s.id)));
   let out = books;
-  [DEFAULT_BOOK, DEFAULT_BOOK2].forEach((d, i) => {
+  DEFAULT_BOOKS.forEach((d, i) => {
     const missing = d.stories.filter((s) => ADDED_STORIES.includes(s.id) && !have.has(s.id));
-    if (!missing.length || !out[i]) return;
+    if (!missing.length) return;
     if (out === books) out = [...books];
+    // v3.0: a book added after configs were saved (Book 3) is appended whole.
+    if (!out[i]) {
+      if (i === out.length) out.push({ ...structuredClone(d), stories: structuredClone(missing) });
+      return;
+    }
     out[i] = { ...out[i], stories: [...out[i].stories, ...structuredClone(missing)] };
   });
   return out;
@@ -1420,6 +1806,7 @@ export const BADGES: Record<string, { label: string; text: string }> = {
   dunewarden: { label: "Dunewarden", text: "Finished Book 2 · Story 3" },
   oathkeeper: { label: "Oathkeeper", text: "Finished Book 2 · Story 4" },
   unbroken: { label: "Unbroken", text: "Finished Book 2 · The Silver Tribunal" },
+  dark_war: { label: "Ten Wars", text: "Finished Legends · The Dark War" },
 };
 
 // ---------------------------------------------------------------- progress
@@ -1614,6 +2001,7 @@ export function storyProblems(book: BookDef, ids: { units: Set<string>; monsters
         if (wv.boss && !ids.bosses.has(wv.boss)) errs.push(`${ww}: unknown boss "${wv.boss}"`);
       });
       if (c.waves?.length && !c.mechanics?.noBoss && !c.waves[c.waves.length - 1].boss) errs.push(`${wc}: the last wave needs a boss`);
+      if (c.mechanics?.front) for (const p of frontProblems(c.mechanics.front)) errs.push(`${wc}: ${p}`);
       rew(c.reward, `${wc} reward`);
       rew(c.replay, `${wc} replay reward`);
       if (c.eventDeck) {

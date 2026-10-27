@@ -38,6 +38,7 @@ import { HERO_BY_ID, type HeroDef } from "./heroes.ts";
 import { BOSS_BY_ID, MONSTER_BY_ID, SPLITS_INTO, SPLIT_COUNT, type BossDef, type BossPower, type BossSkill, type BossSkillKind, type MonsterDef } from "./monsters.ts";
 import { UNIT_BY_ID, boostMult, maxPowerUp, maxRank, powerUpCost, rarityIndex, unitStats, type Arch, type Element, type UnitDef } from "./units.ts";
 import { raceLabel } from "./races.ts";
+import { frontDamage, type FrontRule } from "./front.ts";
 import { starsFor, type StoryChapter, type StoryLine, type StoryObjectives } from "./stories.ts";
 import { BoardRules, TIDE_RULES } from "./tide.ts";
 import { clearDebuffs, isKnight, isMercenary, newStatus, square3 } from "./statuses.ts";
@@ -239,6 +240,8 @@ export type SimEvent =
   | { type: "crush"; t: number; uid: number; heavy: "left" | "right"; x: number; y: number }
   /** The floor trembles (`warn`, the tiles fall in `in` seconds) or tiles fell. */
   | { type: "collapse"; t: number; warn: boolean; slots: number[]; in: number }
+  /** v3.0 The Dark War: the front shifted to `index` (art `from` → `to`); `name`/`text` are its field rule. */
+  | { type: "front"; t: number; index: number; from: string; to: string; name: string; text: string }
   /** The sentence counter is at `count` of `max`; at `max` the strongest unit (`uid`) is condemned and it starts over. */
   | { type: "sentence"; t: number; count: number; max: number; uid: number | null; x: number; y: number }
   // View-only events, emitted only with the `view` option (the solo scene): they never change a rule.
@@ -881,6 +884,11 @@ export class Sim {
   sentenceMax = 0;
   private pleaDone = 0;
   private lawsOn = false;
+  /** v3.0 The Dark War: the front being fought over (ChapterMechanics.front) and kills toward the next shift. */
+  frontIndex = 0;
+  frontKills = 0;
+  private frontBolt = 0;
+  private frontBurst = 0;
   private witness: { unit: SimUnit; lent: SimUnit | null } | null = null;
   private scaleAt = 0;
 
@@ -1286,6 +1294,8 @@ export class Sim {
     this.bellRung = true;
     if (this.story?.mechanics?.collapse) this.collapseAt(n);
     if (this.story?.mechanics?.cage) this.cageRoar(n);
+    const fr = this.story?.mechanics?.front;
+    if (fr && this.frontIndex < fr.by.length && n >= fr.by[this.frontIndex]) this.shiftFront();
     if (scripted) return this.startScriptedWave(scripted, n);
     const pool = this.arena.monsters.map((id) => MONSTER_BY_ID[id]).filter(Boolean);
     const pick = () => {
@@ -1375,6 +1385,10 @@ export class Sim {
       m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     }
     this.monsters.push(m);
+    // v3.0 The Dark War: the front's field rule on monsters that walk in.
+    const front = this.front;
+    if (front?.monsterHp) m.hp = m.maxHp = m.maxHp * front.monsterHp;
+    if (front?.monsterSpeed) m.speedMult *= front.monsterSpeed;
     // v2.7 Queen's Gambit: every monster walks in already kissed.
     const queen = this.units.find((v) => v?.awakened && ultOf(v.def.id)?.id === "queens_gambit");
     if (queen) m.kissBy = queen;
@@ -1485,6 +1499,7 @@ export class Sim {
     if (this.forgeBoss) this.tickForge();
     if (this.lawsOn) this.lawTick();
     if (this.story?.mechanics?.scale) this.tickScale();
+    if (this.front) this.tickFront(dt);
     this.boardRules();
     this.drums = this.drumsNow();
     for (const u of this.units) if (u) this.updateUnit(u, dt);
@@ -1684,6 +1699,7 @@ export class Sim {
     if (this.fields.length) this.roomKill(m);
     if (this.now < m.rootedUntil) this.rootSpread(m);
     this.gainMana(m.mana, null, null, "kill");
+    if (this.story?.mechanics?.front && !m.civilian && !m.family) this.frontKill();
     const p = m.pos;
     this.emit({ type: "kill", t: this.now, uid: m.uid, id: m.id, boss: !!m.boss, x: p.x, y: p.y, mana: m.mana, slot: src });
     if (this.cells.length) this.cellKill(p);
@@ -2732,6 +2748,66 @@ export class Sim {
     this.log(`${m.boss!.name} absorbs ${prey.length} iron (${m.stacks} stacks)`, "boss");
   }
 
+  // ---------------------------------------------------------------- v3.0 "The Dark War": the Shifting Front (shared/front.ts)
+
+  /** The front being fought over now, or null outside a front chapter. */
+  get front(): FrontRule | null {
+    return this.story?.mechanics?.front?.fronts[this.frontIndex] ?? null;
+  }
+
+  /** Kills still needed for the next shift (0 on the last front). */
+  frontNeed() {
+    const fr = this.story?.mechanics?.front;
+    return fr && this.frontIndex < fr.kills.length ? fr.kills[this.frontIndex] : 0;
+  }
+
+  private frontKill() {
+    const f = this.front!;
+    if (f.killMana) this.gainMana(f.killMana, null, null, "kill");
+    const need = this.frontNeed();
+    if (!need) return;
+    this.frontKills++;
+    if (this.frontKills >= need) this.shiftFront();
+  }
+
+  private shiftFront() {
+    const fr = this.story!.mechanics!.front!;
+    if (this.frontIndex >= fr.fronts.length - 1) return;
+    const from = fr.fronts[this.frontIndex].art;
+    this.frontIndex++;
+    this.frontKills = 0;
+    this.frontBolt = this.frontBurst = 0;
+    const f = fr.fronts[this.frontIndex];
+    this.log(`The front shifts: ${f.name}`, "wave");
+    this.emit({ type: "front", t: this.now, index: this.frontIndex, from, to: f.art, name: f.name, text: f.text });
+  }
+
+  /** The front's timed field effects: storm bolts and fire bursts on random monsters. */
+  private tickFront(dt: number) {
+    const f = this.front!;
+    const live = () => this.monsters.filter((m) => !m.gone && m.intro <= 0 && !m.civilian && !m.family);
+    if (f.bolt && (this.frontBolt += dt) >= f.bolt.every) {
+      this.frontBolt = 0;
+      const all = live();
+      if (all.length) {
+        const m = all[Math.floor(this.rand() * all.length)];
+        m.stunUntil = Math.max(m.stunUntil, this.now + f.bolt.stun);
+        this.mark("zap", m.pos.x, m.pos.y - 320, "#c9a3ff", { x2: m.pos.x, y2: m.pos.y });
+        this.view({ type: "zap", t: this.now, kind: "storm", n: 0, x: m.pos.x, y: m.pos.y - 320, x2: m.pos.x, y2: m.pos.y, color: "#c9a3ff" });
+        this.hurt(m, f.bolt.dmg * this.baseHp(Math.max(1, this.wave)), "hero", { sure: true });
+      }
+    }
+    if (f.burst && (this.frontBurst += dt) >= f.burst.every) {
+      this.frontBurst = 0;
+      const all = live();
+      if (all.length) {
+        const c = all[Math.floor(this.rand() * all.length)].pos;
+        this.mark("ring", c.x, c.y, "#ff8a3d", { x2: f.burst.radius });
+        for (const m of this.nearby(c, f.burst.radius)) this.hurt(m, f.burst.dmg * this.baseHp(Math.max(1, this.wave)), "hero", { sure: true });
+      }
+    }
+  }
+
   // ---------------------------------------------------------------- v2.4 Story 5 "The Silver Tribunal" (shared/tribunal.ts)
 
   private tribunalInit() {
@@ -3382,6 +3458,7 @@ export class Sim {
     if (u.absorbed) rate *= 1 + ULTIMATES.star_merger.params.speed * u.absorbed;
     rate *= this.despair(u)[1];
     if (now < u.benUntil) rate *= 1 + ULTIMATES.big_ben.params.speed;
+    if (this.front?.haste) rate *= 1 + this.front.haste;
     // v2.8 Headhunter: Berserker Upgrade attack speed from a late wave on.
     const hh = u.def.id === "headhunter" ? REWORKS.headhunter.upgrade : null;
     if (hh && this.wave >= hh.fastWave) rate *= hh.speed;
@@ -4087,7 +4164,7 @@ export class Sim {
     if (now < u.status.glimmeredUntil) damage *= u.status.glimmer;
     // v2.8: Grunt's Berserker Strength, Headhunter's focus.
     if (u.def.id === "grunt") damage *= gruntMult(this.wave - u.placedWave);
-    damage *= mult;
+    damage *= mult * frontDamage(this.front, u.def.element, u.def.race);
     const from = { x: u.x, y: u.y - 30 };
     // v2.7 Luna's Blessing: every attack earns mana.
     const blessings = this.blessed(u);

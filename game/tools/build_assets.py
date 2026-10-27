@@ -345,6 +345,16 @@ for path in sorted(glob.glob(f"{SRC}/animations/locations/*_loop.mp4")):
     jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", True))
 index["videos"].append("trailer")
 jobs.append(lambda: video(f"{SRC}/video/trailer_main.mp4", f"{OUT}/video/trailer.mp4", False))
+# v3.0 The Dark War: video story panels (story/panels/<id>.mp4 plays as video/panel_<id>.mp4)
+# and front-shift transitions (animations/locations/<from>__<to>.mp4, played once mid-battle).
+for path in sorted(glob.glob(f"{SRC}/story/panels/*.mp4")):
+    name = "panel_" + os.path.basename(path)[: -len(".mp4")]
+    index["videos"].append(name)
+    jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", False))
+for path in sorted(glob.glob(f"{SRC}/animations/locations/*__*.mp4")):
+    name = os.path.basename(path)[: -len(".mp4")]
+    index["videos"].append(name)
+    jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", False))
 
 # v2.8 arena music: assets/music/arena_<arenaId>.mp3 (or already in public/assets/music) is copied as is.
 # The game only streams the tracks listed here; a missing track plays the synth battle music.
