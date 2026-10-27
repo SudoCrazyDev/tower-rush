@@ -1,5 +1,8 @@
 # Website changelog
 
+## 1.7.2
+- Discord links on every page point to the new permanent invite (discord.gg/MKvzuBRUCg, lands in #welcome and gives the Player role) instead of discord.gg/q7wq9DCfE.
+
 ## 1.7.1
 - Heart Surgeon and Dark Spawn are no longer called free gifts (release notes, home news).
 
