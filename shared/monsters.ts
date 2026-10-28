@@ -132,7 +132,7 @@ export const DEFAULT_MONSTERS: MonsterDef[] = [
   M("chainbearer", "Chainbearer", "construct", 1.8, 52, ["tank"], 14, 96),
   M("quill_drone", "Quill Drone", "construct", 0.6, 125, ["fast", "dodge"], 8, 76),
   M("gavel_golem", "Gavel Golem", "construct", 2.6, 44, ["tank", "armored"], 18, 108),
-  // v3.0 Legends "The Dark War": the Undying Legion (fought by the Nation) and the Abyssal Nation's fiends (fought by the Legion).
+  // v2.10 Legends "The Dark War": the Undying Legion (fought by the Nation) and the Abyssal Nation's fiends (fought by the Legion).
   M("bone_fiendrider", "Bone Fiendrider", "undead", 1.2, 100, ["fast"], 12, 96),
   M("doom_legionnaire", "Doom Legionnaire", "undead", 1.4, 58, ["armored"], 12, 92),
   M("grave_inquisitor", "Grave Inquisitor", "undead", 0.8, 92, ["dodge"], 10, 88),
@@ -438,7 +438,7 @@ export const DEFAULT_BOSSES: BossDef[] = [
     ],
     rally: { at: 0.5, damage: 0.25, speed: 1.15 },
   },
-  // v3.0 Legends "The Dark War" (docs/features/v3.0-the-dark-war).
+  // v2.10 Legends "The Dark War" (docs/features/v2.10-dark-war).
   {
     // The Archfiend's brute, the prologue's boss.
     id: "grumbok", name: "Grumbok", race: "beast", hp: 2.4, speed: 26, power: "roar", targets: 3,

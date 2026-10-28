@@ -1,5 +1,5 @@
 /**
- * v3.0 "The Dark War" battle visuals: the war meter and the front shift. When the front shifts, the
+ * v2.10 "Dark War" battle visuals: the war meter and the front shift. When the front shifts, the
  * transition video (<from>__<to>) plays over the arena once, then the new front's art and ambient loop
  * take over for good. A view only: the rules are in shared/sim.ts and shared/front.ts.
  */

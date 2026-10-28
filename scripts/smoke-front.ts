@@ -1,4 +1,4 @@
-/** v3.0 smoke test: the Dark War's fronts shift in order (kills or the wave fallback). node scripts/smoke-front.ts */
+/** v2.10 smoke test: the Dark War's fronts shift in order (kills or the wave fallback). node scripts/smoke-front.ts */
 import { applyConfig, defaultConfig } from "../shared/config.ts";
 import { Sim, type BoardUnit } from "../shared/sim.ts";
 import { ECONOMY } from "../shared/economy.ts";

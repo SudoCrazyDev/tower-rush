@@ -240,7 +240,7 @@ export type SimEvent =
   | { type: "crush"; t: number; uid: number; heavy: "left" | "right"; x: number; y: number }
   /** The floor trembles (`warn`, the tiles fall in `in` seconds) or tiles fell. */
   | { type: "collapse"; t: number; warn: boolean; slots: number[]; in: number }
-  /** v3.0 The Dark War: the front shifted to `index` (art `from` → `to`); `name`/`text` are its field rule. */
+  /** v2.10 The Dark War: the front shifted to `index` (art `from` → `to`); `name`/`text` are its field rule. */
   | { type: "front"; t: number; index: number; from: string; to: string; name: string; text: string }
   /** The sentence counter is at `count` of `max`; at `max` the strongest unit (`uid`) is condemned and it starts over. */
   | { type: "sentence"; t: number; count: number; max: number; uid: number | null; x: number; y: number }
@@ -884,7 +884,7 @@ export class Sim {
   sentenceMax = 0;
   private pleaDone = 0;
   private lawsOn = false;
-  /** v3.0 The Dark War: the front being fought over (ChapterMechanics.front) and kills toward the next shift. */
+  /** v2.10 The Dark War: the front being fought over (ChapterMechanics.front) and kills toward the next shift. */
   frontIndex = 0;
   frontKills = 0;
   private frontBolt = 0;
@@ -1385,7 +1385,7 @@ export class Sim {
       m = new SimMonster(++this.uid, { def }, path, hp, { dist: at?.dist, scale, mana: def.mana + Math.floor(n / 2) });
     }
     this.monsters.push(m);
-    // v3.0 The Dark War: the front's field rule on monsters that walk in.
+    // v2.10 The Dark War: the front's field rule on monsters that walk in.
     const front = this.front;
     if (front?.monsterHp) m.hp = m.maxHp = m.maxHp * front.monsterHp;
     if (front?.monsterSpeed) m.speedMult *= front.monsterSpeed;
@@ -2748,7 +2748,7 @@ export class Sim {
     this.log(`${m.boss!.name} absorbs ${prey.length} iron (${m.stacks} stacks)`, "boss");
   }
 
-  // ---------------------------------------------------------------- v3.0 "The Dark War": the Shifting Front (shared/front.ts)
+  // ---------------------------------------------------------------- v2.10 "The Dark War": the Shifting Front (shared/front.ts)
 
   /** The front being fought over now, or null outside a front chapter. */
   get front(): FrontRule | null {

@@ -107,7 +107,7 @@ export type Proj =
   | "nightmare_flame"
   | "razor_card"
   | "raven_hex"
-  // v3.0 The Dark War units (DARKWAR_PROJ).
+  // v2.10 The Dark War units (DARKWAR_PROJ).
   | "soul_odachi" | "pyre_tonfa" | "ink_skull" | "dread_dagger" | "conductor_bolt" | "twin_katana" | "prism_shard" | "wolf_fang" | "dread_saw" | "blade_crescent"
   | "fiend_armblade" | "tempest_orb" | "storm_piercer" | "shield_throw" | "worship_sigil" | "infernal_meteor" | "blood_bat" | "oblivion_spear" | "golden_shuriken" | "death_scythe"
   | "soulforge_hammer" | "abyssal_diamond";
@@ -124,7 +124,7 @@ export const rarityIndex = (r: Rarity) => (r === "event" ? 2 : RARITIES.indexOf(
 export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poison", "arcane", "normal"];
 /** The Fantasy units' projectiles; each has its own impact art (game/src/battle/vfx.ts). */
 export const FANTASY_PROJ: Proj[] = ["revenant_burst", "doom_rune", "reap_axe", "void_orb", "time_scythe", "storm_bolt", "star_core", "hellfire", "sun_disc", "gear_hook", "chaos_claw", "ronin_slash", "frost_shard", "time_sand", "dragon_lance", "nightmare_flame", "razor_card", "raven_hex"];
-/** v3.0 The Dark War units' projectiles; each has its own impact art like FANTASY_PROJ. */
+/** v2.10 The Dark War units' projectiles; each has its own impact art like FANTASY_PROJ. */
 export const DARKWAR_PROJ: Proj[] = ["soul_odachi", "pyre_tonfa", "ink_skull", "dread_dagger", "conductor_bolt", "twin_katana", "prism_shard", "wolf_fang", "dread_saw", "blade_crescent", "fiend_armblade", "tempest_orb", "storm_piercer", "shield_throw", "worship_sigil", "infernal_meteor", "blood_bat", "oblivion_spear", "golden_shuriken", "death_scythe", "soulforge_hammer", "abyssal_diamond"];
 export const PROJECTILES: Proj[] = [
   "arrow",
@@ -508,7 +508,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("pit_archfiend", "Pit Archfiend", "legendary", "poison", "poison", "nightmare_flame", "The thing your nightmares fear.", "demon", "balanced", "finisher"),
   U("card_clasher", "Card Clasher", "legendary", "arcane", "crit", "razor_card", "Every card he deals is a killing blow.", "human", "rapid", "plunder"),
   U("neo_necromancer", "Neo Necromancer", "legendary", "poison", "curse", "raven_hex", "Old magic. New tricks. Same grave.", "human", "balanced", "finisher"),
-  // v3.0 Legends "The Dark War" (DARKWAR_UNITS): the Undying Legion...
+  // v2.10 Legends "The Dark War" (DARKWAR_UNITS): the Undying Legion...
   U("soulforge_blademaster", "Soulforge Blademaster", "legendary", "fire", "crit", "soul_odachi", "His blade burns on what the dead leave behind.", "undead", "rapid", "finisher"),
   U("pyre_warmonger", "Pyre Warmonger", "legendary", "fire", "burn", "pyre_tonfa", "Every war needs a fire. He brings two.", "undead", "heavy", "armor_breaker"),
   U("dread_artisan", "Dread Artisan", "legendary", "arcane", "curse", "ink_skull", "Paints the battlefield, then forges it.", "undead", "balanced", "finisher"),
@@ -533,7 +533,7 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
-  // v3.0 The Dark War warlords: earned in Legends "The Dark War" first (storyReward), then they drop like any Mythic.
+  // v2.10 The Dark War warlords: earned in Legends "The Dark War" first (storyReward), then they drop like any Mythic.
   { ...U("malgrave_dreadforger", "Malgrave, the Dreadforger", "mythic", "fire", "burn", "soulforge_hammer", "Every blade of the Abyss was his. Now he forges for himself.", "undead", "heavy", "armor_breaker"), storyReward: true },
   { ...U("vorthrax_archfiend", "Vorthrax, the Archfiend", "mythic", "arcane", "curse", "abyssal_diamond", "He pays in diamonds. He collects in souls.", "demon", "balanced", "true_strike"), storyReward: true },
   U("dragon_egg", "Dragon Egg", "mythic", "fire", "growth", "dragon_flame", "Hatching fire melts any armor.", "dragon", "balanced", "armor_breaker"),
@@ -586,7 +586,7 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
 /** The 18 Fantasy Legendaries (standard archetypes; no awakened forms yet, see NO_AWAKEN). */
 export const FANTASY_UNITS = ["hollow_revenant", "veyr_doomblade", "reapmarshal", "void_sovereign", "chronodrake_warden", "storm_empress", "starforged_titan", "hellforged_overlord", "dawnblade_goddess", "clockwork_stalker", "riftbreaker", "dusk_ronin", "frostbound_berserker", "crimson_chronomancer", "wyrmbane_general", "pit_archfiend", "card_clasher", "neo_necromancer"];
 export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
-/** v3.0 The Dark War: 20 Legendaries (10 Legion, 10 Nation) and the two warlord Mythics (standard archetypes, own projectiles). */
+/** v2.10 The Dark War: 20 Legendaries (10 Legion, 10 Nation) and the two warlord Mythics (standard archetypes, own projectiles). */
 export const DARKWAR_UNITS = [
   "soulforge_blademaster", "pyre_warmonger", "dread_artisan", "grimgate_dreadknight", "underworld_electromancer", "abyss_blademaster", "prismatic_paragon", "fenrir_legionnaire", "dreadsaw_fiend", "ascended_blademaster",
   "naraka_fiend", "tempest_voidcaller", "midnight_stormvoid", "abyss_recruit", "archfiend_worshipper", "infernalfiend", "abyssal_vampire", "oblivion_dragoon", "golden_hanzo", "deathfiend",

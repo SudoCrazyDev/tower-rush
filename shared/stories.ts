@@ -123,7 +123,7 @@ export interface ChapterMechanics {
   scale?: ScaleRules;
   /** v2.4 Story 5 Ch 4: tiles of the city fall away at set waves; units on them are caught by a free tile or returned as mana. */
   collapse?: CollapseRules;
-  /** v3.0 The Dark War: the Shifting Front. Kills fill a war meter; a full meter shifts the arena (art and field rule). */
+  /** v2.10 The Dark War: the Shifting Front. Kills fill a war meter; a full meter shifts the arena (art and field rule). */
   front?: FrontRules;
 }
 
@@ -1341,8 +1341,8 @@ const THE_SILVER_TRIBUNAL: StoryDef = {
   ],
 };
 
-// ---------------------------------------------------------------- Book 3 · Legends: The Dark War (v3.0)
-// docs/features/v3.0-the-dark-war. A side book outside the Forsakens saga: the Undying Legion of Malgrave the
+// ---------------------------------------------------------------- Book 3 · Legends: The Dark War (v2.10)
+// docs/features/v2.10-dark-war. A side book outside the Forsakens saga: the Undying Legion of Malgrave the
 // Dreadforger against the Abyssal Nation of Vorthrax the Archfiend. Every chapter fights over shifting fronts.
 
 // The Undying Legion (fought on the Nation's side) and the Abyssal Nation's fiends (fought on the Legion's side).
@@ -1785,7 +1785,7 @@ function withAddedStories(books: BookDef[]): BookDef[] {
     const missing = d.stories.filter((s) => ADDED_STORIES.includes(s.id) && !have.has(s.id));
     if (!missing.length) return;
     if (out === books) out = [...books];
-    // v3.0: a book added after configs were saved (Book 3) is appended whole.
+    // v2.10: a book added after configs were saved (Book 3) is appended whole.
     if (!out[i]) {
       if (i === out.length) out.push({ ...structuredClone(d), stories: structuredClone(missing) });
       return;

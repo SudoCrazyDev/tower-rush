@@ -3,7 +3,7 @@ import { sfx } from "../audio";
 import { button, modal, txt } from "../ui";
 
 /** The release the "What's new" popup describes (see docs/features). */
-export const RELEASE = { version: "3.0.0", title: "The Dark War", tagline: "Legion or Nation? The tenth war begins." };
+export const RELEASE = { version: "2.10.0", title: "Dark War", tagline: "Legion or Nation? The tenth war begins." };
 const SEEN_KEY = "tower-rush-whats-new";
 
 function seen() {

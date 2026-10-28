@@ -345,7 +345,7 @@ for path in sorted(glob.glob(f"{SRC}/animations/locations/*_loop.mp4")):
     jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", True))
 index["videos"].append("trailer")
 jobs.append(lambda: video(f"{SRC}/video/trailer_main.mp4", f"{OUT}/video/trailer.mp4", False))
-# v3.0 The Dark War: video story panels (story/panels/<id>.mp4 plays as video/panel_<id>.mp4)
+# v2.10 Dark War: video story panels (story/panels/<id>.mp4 plays as video/panel_<id>.mp4)
 # and front-shift transitions (animations/locations/<from>__<to>.mp4, played once mid-battle).
 for path in sorted(glob.glob(f"{SRC}/story/panels/*.mp4")):
     name = "panel_" + os.path.basename(path)[: -len(".mp4")]

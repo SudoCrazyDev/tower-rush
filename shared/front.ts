@@ -1,5 +1,5 @@
 /**
- * v3.0 "The Dark War" (docs/features/v3.0-the-dark-war): the Shifting Front.
+ * v2.10 "The Dark War" (docs/features/v2.10-dark-war): the Shifting Front.
  *
  * A chapter fights over 2-3 fronts in turn. A war meter fills with kills; when it is full (or at the
  * latest when wave `by` starts) the front shifts: the arena's art changes for good (a transition video

@@ -56,7 +56,7 @@ export function storyPanels(scene: Phaser.Scene, panels: StoryPanel[], onDone: (
     frame.lineStyle(8, 0xf2b630, 1).strokeRoundedRect(-fw / 2 - 4, -fh / 2 - 4, fw + 8, fh + 8, 12);
     const top = H / 2 - 60 - fh / 2;
     const parts: Phaser.GameObjects.GameObject[] = [img.setPosition(0, 0)];
-    // v3.0: a video panel (video/panel_<image>) plays once over its still and holds the last frame; the still is the fallback.
+    // v2.10: a video panel (video/panel_<image>) plays once over its still and holds the last frame; the still is the fallback.
     const vid = clipImage(scene, `panel_${p.image}`, (v, vw, vh) => v.setScale(Math.min(fw / vw, fh / vh)));
     if (vid) parts.push(vid.setScrollFactor(0));
     parts.push(frame);

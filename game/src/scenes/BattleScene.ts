@@ -127,7 +127,7 @@ export class BattleScene extends Phaser.Scene {
   private oath: OathView | null = null;
   /** v2.4 The Silver Tribunal visuals (pleas, laws, jail, cells, pans, falling city, sentence). */
   private tribunal: TribunalView | null = null;
-  /** v3.0 The Dark War: the war meter and the front shifts. */
+  /** v2.10 Dark War: the war meter and the front shifts. */
   private frontView: FrontView | null = null;
   /** v2.7.1: opens under a locked board; a unit dropped in leaves for part of its worth. */
   private portal: BoardPortal | null = null;
@@ -230,7 +230,7 @@ export class BattleScene extends Phaser.Scene {
     this.load.image(this.artKey, `${BASE}locations/${this.art}.webp`);
     // v2.2: a tide chapter's arena has a flooded twin (<art>_high) that fades in at high tide.
     if (this.story?.chapter.mechanics?.tide && assetIndex().locations.includes(`${this.art}_high`)) this.load.image(`${this.artKey}_high`, `${BASE}locations/${this.art}_high.webp`);
-    // v3.0: a Dark War chapter's later fronts (their art swaps in mid-battle).
+    // v2.10: a Dark War chapter's later fronts (their art swaps in mid-battle).
     if (this.story?.chapter.mechanics?.front) FrontView.preload(this, this.story.chapter.mechanics.front);
     // v2.3: a chapter's hero unit isn't in the deck but is on the board; unitArt gives a stand-in sheet while its own art is missing.
     // v2.4: the trial's witnesses are lent to the board for a count, so their sheets load too.

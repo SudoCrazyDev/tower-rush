@@ -46,7 +46,7 @@ export function ambientVideo(scene: Phaser.Scene, name: string, fit: Fit, loop =
 let clips = 0;
 
 /**
- * v3.0: a one-shot clip (video story panel, front-shift transition) drawn into a canvas texture every frame.
+ * v2.10: a one-shot clip (video story panel, front-shift transition) drawn into a canvas texture every frame.
  * It doesn't wait on Phaser's video frame callbacks, which can stall for a video started mid-scene. The image
  * stays invisible until the first frame is in, then fades in; `ready` sizes it. `ended` fires when the clip
  * ends (the last frame stays up). Returns null when there's no such video or video is off.

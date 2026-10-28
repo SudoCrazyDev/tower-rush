@@ -1,6 +1,6 @@
-# v3.0 "The Dark War"
+# v2.10 "Dark War"
 
-**Status:** built, on staging (2026-10-28) as game 3.0.0 / API 1.7.0 (staging `MIN_CLIENT` 3.0.0). Not on prod. **Inspiration:** AdventureQuest Worlds' Dage vs Nulgath wars (the 2012 Evil War and
+**Status:** built, on staging (2026-10-28) as game 2.10.0 / API 1.7.0 (staging `MIN_CLIENT` 2.10.0). Not on prod. **Inspiration:** AdventureQuest Worlds' Dage vs Nulgath wars (the 2012 Evil War and
 the 2022 Dark War). Reference page with the original gear and monsters: https://claude.ai/artifact/2EHy7ikUjGAfx1EWuAkuRi.
 All names, designs and art here are original; nothing is copied from AQW.
 
