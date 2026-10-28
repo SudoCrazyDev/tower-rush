@@ -357,6 +357,11 @@ for path in sorted(glob.glob(f"{SRC}/animations/locations/*__*.mp4")):
     name = os.path.basename(path)[: -len(".mp4")]
     index["videos"].append(name)
     jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", False))
+# v2.10 series banners that move (story/series/<slug>.mp4 loops as video/series_<slug>.mp4 over the still).
+for path in sorted(glob.glob(f"{SRC}/story/series/*.mp4")):
+    name = "series_" + os.path.basename(path)[: -len(".mp4")]
+    index["videos"].append(name)
+    jobs.append(lambda p=path, n=name: video(p, f"{OUT}/video/{n}.mp4", True))
 
 # v2.8 arena music: assets/music/arena_<arenaId>.mp3 (or already in public/assets/music) is copied as is.
 # The game only streams the tracks listed here; a missing track plays the synth battle music.

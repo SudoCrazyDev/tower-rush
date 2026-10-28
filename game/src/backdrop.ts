@@ -49,13 +49,14 @@ let clips = 0;
  * v2.10: a one-shot clip (video story panel, front-shift transition) drawn into a canvas texture every frame.
  * It doesn't wait on Phaser's video frame callbacks, which can stall for a video started mid-scene. The image
  * stays invisible until the first frame is in, then fades in; `ready` sizes it. `ended` fires when the clip
- * ends (the last frame stays up). Returns null when there's no such video or video is off.
+ * ends (the last frame stays up); `loop` plays it forever instead. Returns null when there's no such video or video is off.
  */
-export function clipImage(scene: Phaser.Scene, name: string, ready: (img: Phaser.GameObjects.Image, width: number, height: number) => void, ended?: () => void) {
+export function clipImage(scene: Phaser.Scene, name: string, ready: (img: Phaser.GameObjects.Image, width: number, height: number) => void, ended?: () => void, loop = false) {
   if (!VIDEO || !assetIndex().videos?.includes(name)) return null;
   const el = document.createElement("video");
   el.muted = el.defaultMuted = true;
   el.playsInline = true;
+  el.loop = loop;
   el.crossOrigin = "anonymous";
   el.preload = "auto";
   el.src = `${BASE}video/${name}.mp4`;

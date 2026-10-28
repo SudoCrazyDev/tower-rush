@@ -19,7 +19,7 @@ import { debugMode, setDebugMode } from "../fpsMeter";
 import { music } from "../audio";
 import { bakeAll } from "../bake";
 import { pointAt, tutorialDue } from "../tutorial";
-import { ambientVideo, coverFit } from "../backdrop";
+import { ambientVideo, clipImage, coverFit } from "../backdrop";
 import { arenaInfo } from "./arenaInfo";
 import { avatarIds, avatarView } from "../avatars";
 import { whatsNew, TEASER, comingSoon } from "./whatsNew";
@@ -796,6 +796,19 @@ export class LobbyScene extends Phaser.Scene {
       c.addAt(img, 1);
     };
     loadStoryImages(this, [info?.art, cover].filter((k): k is string => !!k), show);
+    // A series banner that moves: its loop plays over the still, cropped the same way.
+    if (info) {
+      clipImage(this, `series_${info.art.slice(info.art.lastIndexOf("/") + 1)}`, (img, vw, vh) => {
+        if (!c.active) return void img.destroy();
+        const s = Math.max(w / vw, h / vh);
+        const cw = w / s;
+        const ch = h / s;
+        const cy = (vh - ch) * 0.4;
+        img.setScale(s).setCrop((vw - cw) / 2, cy, cw, ch).setY((vh / 2 - cy - ch / 2) * s);
+        if (lock) img.setTint(0x8a8a9e);
+        c.addAt(img, c.getIndex(shade));
+      }, undefined, true);
+    }
     const shade = this.add.graphics();
     shade.fillGradientStyle(0x05061a, 0x05061a, 0x05061a, 0x05061a, 0, 0, 0.92, 0.92).fillRect(-w / 2, -h / 2 + h * 0.3, w, h * 0.7);
     const edge = this.add.graphics();
