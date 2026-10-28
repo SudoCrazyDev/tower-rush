@@ -3,7 +3,7 @@
  * chapter result (victory with stars and rewards, or defeat).
  */
 import Phaser from "phaser";
-import { BASE, ensureAnim, loadSheet, sheetKey, sheetScale } from "../assets";
+import { BASE, ensureAnim, loadSheet, refreshQuery, sheetKey, sheetScale } from "../assets";
 import { sfx } from "../audio";
 import { clipImage } from "../backdrop";
 import { W, H, NAVY, txt, button, modal, fmt, cardView, lootCards, rewardRays, rewardPop } from "../ui";
@@ -16,7 +16,7 @@ import type { StoryResult } from "../save";
 export function loadStoryImages(scene: Phaser.Scene, paths: string[], done: () => void) {
   const need = paths.filter((p) => !scene.textures.exists(`story:${p}`));
   if (!need.length && !scene.load.totalToLoad) return done();
-  for (const p of need) scene.load.image(`story:${p}`, `${BASE}story/${p}.webp`);
+  for (const p of need) scene.load.image(`story:${p}`, `${BASE}story/${p}.webp${refreshQuery(`story/${p}`)}`);
   scene.load.once(Phaser.Loader.Events.COMPLETE, done);
   scene.load.start();
 }

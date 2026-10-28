@@ -104,6 +104,9 @@ export function unitArt(id: string) {
  * so these load with a version query to skip the stale copy. Add an entry whenever art is replaced.
  */
 const REFRESHED: Record<string, string> = {
+  // v2.10: the series banners, redrawn in the game's style.
+  "story/series/the_forsakens": "2.10.0b",
+  "story/series/the_dark_war": "2.10.0b",
   // v2.8.1: new Slow and Frozen status art, the Headhunter portrait redone from his still.
   "vfx/status_slowed": "2.8.1",
   "vfx/status_frozen": "2.8.1",
@@ -151,6 +154,8 @@ const REFRESHED: Record<string, string> = {
   "vfx/weapons/scimitar": "2.8.2",
   "vfx/weapons/twin_daggers": "2.8.2",
 };
+/** The version query for art replaced in place (see REFRESHED), or "". */
+export const refreshQuery = (path: string) => (REFRESHED[path] ? `?v=${REFRESHED[path]}` : "");
 const imgUrl = (folder: string, id: string) => `${BASE}${folder}/${id}.webp${REFRESHED[`${folder}/${id}`] ? `?v=${REFRESHED[`${folder}/${id}`]}` : ""}`;
 
 export function loadImages(scene: Phaser.Scene, prefix: string, folder: string, ids: string[]) {
