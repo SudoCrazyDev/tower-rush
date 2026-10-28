@@ -3,7 +3,7 @@ import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, trophyArena, type ArenaDef } from "../data/arenas";
 import { profile, account, mail, setArena, setAvatar, signOut, loadMe, loadInbox, serverNow } from "../save";
 import { storyIsNew } from "../../../shared/profile.ts";
-import { BOOK, BOOKS, SAGA, bookLock, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
+import { BOOK, BOOKS, allSeries, bookLock, seriesBooks, seriesOf, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
 import { loadStoryImages } from "./storyUi";
 import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
@@ -436,7 +436,7 @@ export class LobbyScene extends Phaser.Scene {
       const all = BOOKS.flatMap((b) => b.stories);
       const total = all.reduce((n, s) => n + storyStars(s), 0);
       const max = all.reduce((n, s) => n + s.chapters.length * 3, 0);
-      this.chips(group, [{ text: SAGA }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
+      this.chips(group, [{ text: seriesOf(bookTab) }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
       this.namePlate(group, "STORIES", "ui:icon_story");
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
@@ -695,22 +695,37 @@ export class LobbyScene extends Phaser.Scene {
     if (bookIdx < n - 1) group.add(iconButton(this, 250, coverY, "back", 76, () => this.stepBook(1)).setFlipX(true));
   }
 
-  /** The saga title above the card, with a tab per book (a padlock on a book that isn't open yet). */
+  /**
+   * The series above the card (a tab per series when there are several), then a tab per book of the
+   * current series, numbered within it (a padlock on a book that isn't open yet).
+   */
   private sagaHeader(group: Phaser.GameObjects.Container) {
-    group.add(txt(this, 0, -440, SAGA.toUpperCase(), 40, "#ffd27a"));
-    const w = Math.min(290, 560 / BOOKS.length);
-    BOOKS.forEach((b, i) => {
-      const x = (i - (BOOKS.length - 1) / 2) * (w + 10);
-      const label = `Book ${i + 1}${b.title.includes(":") ? b.title.slice(b.title.indexOf(":")) : ""}`;
-      const on = i === bookTab;
+    const series = allSeries();
+    const cur = seriesOf(bookTab);
+    const open = (i: number) => {
+      if (i === bookTab) return;
+      const slide = (i > bookTab ? 1 : -1) * 120;
+      bookTab = i;
+      bookIdx = currentStory();
+      this.drawCard({ slide });
+    };
+    if (series.length < 2) group.add(txt(this, 0, -440, cur.toUpperCase(), 40, "#ffd27a"));
+    else {
+      const sw = 580 / series.length;
+      series.forEach((name, j) => {
+        const on = name === cur;
+        group.add(button(this, (j - (series.length - 1) / 2) * sw, -446, sw - 12, 64, name.toUpperCase(), on ? "green" : "grey", () => on || open(seriesBooks(name)[0]), 30));
+      });
+    }
+    const books = seriesBooks(cur);
+    const w = Math.min(290, 560 / books.length);
+    books.forEach((i, n) => {
+      const b = BOOKS[i];
+      const x = (n - (books.length - 1) / 2) * (w + 10);
+      const label = `Book ${n + 1}${b.title.includes(":") ? b.title.slice(b.title.indexOf(":")) : ""}`;
       // Built at full button height and scaled down: the 9-slice caps (84px) crush below that.
       const k = 60 / 88;
-      const tab = button(this, x, -380, w / k, 88, label, on ? "yellow" : "blue", () => {
-        if (on) return;
-        bookTab = i;
-        bookIdx = currentStory();
-        this.drawCard({ slide: (i > 0 ? 1 : -1) * 120 });
-      }, 28).setScale(k);
+      const tab = button(this, x, -380, w / k, 88, label, i === bookTab ? "yellow" : "blue", () => open(i), 28).setScale(k);
       group.add(tab);
       if (bookLock(profile.story, i)) {
         const pad = this.add.image(x - w / 2 + 6, -380, "ui:padlock");

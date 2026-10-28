@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useConfig } from "../config";
 import { Num, Text, Select, PageHead } from "../components";
-import { DEFAULT_BOOK2, SAGA, booksOf, type StoryChapter, type StoryDef, type StorySpawn, type StoryWave } from "../../../shared/stories.ts";
+import { DEFAULT_BOOK2, DEFAULT_BOOKS, SAGA, booksOf, type StoryChapter, type StoryDef, type StorySpawn, type StoryWave } from "../../../shared/stories.ts";
 import type { GameConfig } from "../../../shared/config.ts";
 
 const NONE = "(none)";
@@ -49,15 +49,17 @@ export function StoriesPage() {
       />
       <div className="panel">
         <div style={{ marginBottom: 8 }}>
-          <b>{SAGA}</b>{" "}
           {books.map((b, i) => (
             <button key={i} className={i === bookIdx ? "primary" : ""} onClick={() => { setBi(i); setOpen(null); }}>
-              {b.title || `Book ${i + 1}`}
+              {b.series ?? DEFAULT_BOOKS[i]?.series ?? SAGA} · {b.title || `Book ${i + 1}`}
             </button>
           ))}
         </div>
         <label>
           Book title <Text value={book.title} onChange={(v) => editBook((b) => void (b.title = v))} width={260} />
+        </label>{" "}
+        <label>
+          Series <Text value={book.series ?? DEFAULT_BOOKS[bookIdx]?.series ?? SAGA} onChange={(v) => editBook((b) => void (b.series = v || undefined))} width={200} />
         </label>
       </div>
       {book.stories.map((s: StoryDef, si) => (

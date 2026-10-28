@@ -35,7 +35,7 @@ function show(scene: Phaser.Scene) {
   m.add(logo);
   scene.tweens.add({ targets: logo, y: logo.y + 10, yoyo: true, repeat: -1, duration: 1800, ease: "Sine.InOut" });
   logo.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(logo));
-  m.add(txt(scene, m.cx, m.cy + 130, "New book: Legends: The Dark War. Four stories, nine chapters, video story panels.", 26, "#ffffff").setWordWrapWidth(600));
+  m.add(txt(scene, m.cx, m.cy + 130, "New series: The Dark War. Book 1, Legends: four stories, nine chapters, video story panels.", 26, "#ffffff").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 190, "The Shifting Front: fill the war meter and the battlefield itself changes.", 26, "#ff8a3d").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 250, "20 new Legendaries of the Undying Legion and the Abyssal Nation.", 26, "#ff6b8b").setWordWrapWidth(600));
   m.add(txt(scene, m.cx, m.cy + 310, "Earn the warlords: Malgrave, the Dreadforger and Vorthrax, the Archfiend.", 26, "#ffd93b").setWordWrapWidth(600));

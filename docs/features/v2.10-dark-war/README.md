@@ -4,7 +4,7 @@
 the 2022 Dark War). Reference page with the original gear and monsters: https://claude.ai/artifact/2EHy7ikUjGAfx1EWuAkuRi.
 All names, designs and art here are original; nothing is copied from AQW.
 
-A side book, **Legends: The Dark War**, outside the Forsakens saga (no Keeper, no shards, no Voice), so it
+A new series, **The Dark War**, not part of The Forsakens. Its Book 1, **Legends**, has no Keeper, no shards, no Voice, so it
 cannot break Book 3 canon. The player is an unpledged warrior who answers the call and chooses a side.
 
 ## 1. The world

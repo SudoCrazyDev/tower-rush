@@ -275,6 +275,8 @@ export interface BookDef {
   unlockBadge?: string;
   /** How many stories the book will have; the lobby shows "Coming soon" pages for the ones not out yet. */
   planned?: number;
+  /** v2.10: the series the book belongs to (default SAGA). Books are numbered within their series. */
+  series?: string;
 }
 
 // ---------------------------------------------------------------- helpers for the defaults
@@ -1341,8 +1343,8 @@ const THE_SILVER_TRIBUNAL: StoryDef = {
   ],
 };
 
-// ---------------------------------------------------------------- Book 3 · Legends: The Dark War (v2.10)
-// docs/features/v2.10-dark-war. A side book outside the Forsakens saga: the Undying Legion of Malgrave the
+// ---------------------------------------------------------------- The Dark War series, Book 1: Legends (v2.10)
+// docs/features/v2.10-dark-war. Its own series, The Dark War (not part of The Forsakens): the Undying Legion of Malgrave the
 // Dreadforger against the Abyssal Nation of Vorthrax the Archfiend. Every chapter fights over shifting fronts.
 
 // The Undying Legion (fought on the Nation's side) and the Abyssal Nation's fiends (fought on the Legion's side).
@@ -1714,13 +1716,13 @@ const THE_THRONE_BELOW: StoryDef = {
   ],
 };
 
-/** Book 3: Legends, a side book of stories outside the saga. */
-export const DEFAULT_BOOK3: BookDef = { title: "Legends: The Dark War", stories: [THE_APPRENTICE, THE_LEGIONS_WAR, THE_NATIONS_WAR, THE_THRONE_BELOW], planned: 4 };
+/** The Dark War, Book 1: Legends. Its own series, not part of The Forsakens (BOOKS[2] in code). */
+export const DEFAULT_BOOK3: BookDef = { title: "Book 1: Legends", series: "The Dark War", stories: [THE_APPRENTICE, THE_LEGIONS_WAR, THE_NATIONS_WAR, THE_THRONE_BELOW], planned: 4 };
 
 /** Book 2: its stories can be edited by the admin. */
 export const DEFAULT_BOOK2: BookDef = { title: "Book 2: Chaos Corrupted", stories: [THE_ELVEN_WILDS, THE_DROWNED_COAST, THE_THRONE_OF_DUST, THE_IRON_OATH, THE_SILVER_TRIBUNAL], unlockBadge: "the_chosen", planned: 5 };
 
-/** The saga title shown above the books. */
+/** The first series (Books 1 and 2); a book without `series` belongs to it. */
 export const SAGA = "The Forsakens";
 
 /** Live tables: replaced in place when a config is applied (see config.ts). */
@@ -1742,6 +1744,13 @@ export function setBooks(books: BookDef[]) {
   });
   BOOKS.length = list.length;
 }
+
+/** v2.10: the series of book `i` (a saved config without the field keeps the default's series). */
+export const seriesOf = (i: number) => BOOKS[i]?.series ?? DEFAULT_BOOKS[i]?.series ?? SAGA;
+/** Every series, in book order. */
+export const allSeries = () => [...new Set(BOOKS.map((_, i) => seriesOf(i)))];
+/** Indexes of the books in a series, in order. */
+export const seriesBooks = (series: string) => BOOKS.flatMap((_, i) => (seriesOf(i) === series ? [i] : []));
 
 /** How many story pages a book shows: its stories, plus "Coming soon" ones up to its planned count. */
 export const bookSlots = (b: BookDef) => Math.max(b.stories.length, b.planned ?? 0);
@@ -1806,7 +1815,7 @@ export const BADGES: Record<string, { label: string; text: string }> = {
   dunewarden: { label: "Dunewarden", text: "Finished Book 2 · Story 3" },
   oathkeeper: { label: "Oathkeeper", text: "Finished Book 2 · Story 4" },
   unbroken: { label: "Unbroken", text: "Finished Book 2 · The Silver Tribunal" },
-  dark_war: { label: "Ten Wars", text: "Finished Legends · The Dark War" },
+  dark_war: { label: "Ten Wars", text: "Finished The Dark War · Legends" },
 };
 
 // ---------------------------------------------------------------- progress

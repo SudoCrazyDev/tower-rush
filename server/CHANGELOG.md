@@ -1,7 +1,7 @@
 # API changelog
 
 ## 1.7.0 (staging)
-- Shared rules for game 2.10.0 "Dark War": Book 3 (`DEFAULT_BOOK3`, stories `dws1`-`dws4`, added to saved configs by `withAddedStories`), the Shifting Front mechanic, 22 units, 13 monsters, 9 bosses, badge `dark_war`. Staging `MIN_CLIENT` 2.10.0.
+- Shared rules for game 2.10.0 "Dark War": the new series The Dark War, Book 1 Legends (`DEFAULT_BOOK3`, `BookDef.series`, stories `dws1`-`dws4`, added to saved configs by `withAddedStories`), the Shifting Front mechanic, 22 units, 13 monsters, 9 bosses, badge `dark_war`. Staging `MIN_CLIENT` 2.10.0.
 
 ## 1.6.4 (staging)
 - Game 2.9.7: shared Sim with the 18 Fantasy Legendaries (added to saved configs through `ADDED_UNITS`). No migration; `MIN_CLIENT` unchanged.
