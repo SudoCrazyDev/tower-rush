@@ -3,6 +3,7 @@
 Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/features/ROADMAP.md`); tags `v1.1.0` to `v2.2.0` stay as game history. From here, tags are `game-vX.Y.Z`.
 
 ## 2.10.0 "Dark War" (staging)
+- New Legendary **Goblin Rocket Baron** (Goblin, Fire, splash, heavy, Armor Breaker): the first Goblin Legendary, with its own goblin-face rocket and fiery scrap explosion. Staging only (`STAGING_ONLY_UNITS`), no awakening.
 - New series **The Dark War**, not part of The Forsakens. Its Book 1, **Legends**: 4 stories, 9 chapters (`dws1`-`dws4`). Malgrave the Dreadforger's Undying Legion against Vorthrax the Archfiend's Abyssal Nation. Details in `docs/features/v2.10-dark-war/`.
 - Stories page: books carry a `series`. Opening Stories shows a series picker, a banner panel per series (art `story/series/<slug>`, with a Seedance loop `video/series_<slug>` over it; title, pitch, stars, books, lock; pages of three past three series); tapping one opens its books, numbered within the series, and the book's close goes back to the picker. Admin Stories edits the series.
 - **The Shifting Front** (`ChapterMechanics.front`, `shared/front.ts`): a war meter fills with kills; a full meter (or wave `by`) shifts the front: a transition video plays over the arena, then the new arena art, loop and field rule take over (element/race damage, haste, monster HP/speed, kill mana, storm bolts, fire bursts). `game/src/battle/frontView.ts`.

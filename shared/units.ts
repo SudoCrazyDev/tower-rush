@@ -110,7 +110,9 @@ export type Proj =
   // v2.10 The Dark War units (DARKWAR_PROJ).
   | "soul_odachi" | "pyre_tonfa" | "ink_skull" | "dread_dagger" | "conductor_bolt" | "twin_katana" | "prism_shard" | "wolf_fang" | "dread_saw" | "blade_crescent"
   | "fiend_armblade" | "tempest_orb" | "storm_piercer" | "shield_throw" | "worship_sigil" | "infernal_meteor" | "blood_bat" | "oblivion_spear" | "golden_shuriken" | "death_scythe"
-  | "soulforge_hammer" | "abyssal_diamond";
+  | "soulforge_hammer" | "abyssal_diamond"
+  // v2.10 Goblin Rocket Baron (GOBLIN_PROJ).
+  | "goblin_rocket";
 
 export const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary", "mythic", "event"];
 /**
@@ -126,6 +128,8 @@ export const ELEMENTS: Element[] = ["fire", "ice", "lightning", "nature", "poiso
 export const FANTASY_PROJ: Proj[] = ["revenant_burst", "doom_rune", "reap_axe", "void_orb", "time_scythe", "storm_bolt", "star_core", "hellfire", "sun_disc", "gear_hook", "chaos_claw", "ronin_slash", "frost_shard", "time_sand", "dragon_lance", "nightmare_flame", "razor_card", "raven_hex"];
 /** v2.10 The Dark War units' projectiles; each has its own impact art like FANTASY_PROJ. */
 export const DARKWAR_PROJ: Proj[] = ["soul_odachi", "pyre_tonfa", "ink_skull", "dread_dagger", "conductor_bolt", "twin_katana", "prism_shard", "wolf_fang", "dread_saw", "blade_crescent", "fiend_armblade", "tempest_orb", "storm_piercer", "shield_throw", "worship_sigil", "infernal_meteor", "blood_bat", "oblivion_spear", "golden_shuriken", "death_scythe", "soulforge_hammer", "abyssal_diamond"];
+/** v2.10 Goblin Rocket Baron's projectile; its own impact art like FANTASY_PROJ. */
+export const GOBLIN_PROJ: Proj[] = ["goblin_rocket"];
 export const PROJECTILES: Proj[] = [
   "arrow",
   "fireball",
@@ -169,6 +173,7 @@ export const PROJECTILES: Proj[] = [
   "tide_wave",
   ...FANTASY_PROJ,
   ...DARKWAR_PROJ,
+  ...GOBLIN_PROJ,
 ];
 
 export interface UnitDef {
@@ -533,6 +538,8 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
+  // v2.10: the first Goblin Legendary.
+  U("goblin_rocket_baron", "Goblin Rocket Baron", "legendary", "fire", "splash", "goblin_rocket", "Built the rocket himself. Mostly in one piece.", "goblin", "heavy", "armor_breaker"),
   // v2.10 The Dark War warlords: earned in Legends "The Dark War" first (storyReward), then they drop like any Mythic.
   { ...U("malgrave_dreadforger", "Malgrave, the Dreadforger", "mythic", "fire", "burn", "soulforge_hammer", "Every blade of the Abyss was his. Now he forges for himself.", "undead", "heavy", "armor_breaker"), storyReward: true },
   { ...U("vorthrax_archfiend", "Vorthrax, the Archfiend", "mythic", "arcane", "curse", "abyssal_diamond", "He pays in diamonds. He collects in souls.", "demon", "balanced", "true_strike"), storyReward: true },
@@ -592,6 +599,8 @@ export const DARKWAR_UNITS = [
   "naraka_fiend", "tempest_voidcaller", "midnight_stormvoid", "abyss_recruit", "archfiend_worshipper", "infernalfiend", "abyssal_vampire", "oblivion_dragoon", "golden_hanzo", "deathfiend",
   "malgrave_dreadforger", "vorthrax_archfiend",
 ];
+/** v2.10: the Goblin Legendary (own art and projectile, standard archetype). */
+export const GOBLIN_UNITS = ["goblin_rocket_baron"];
 /** Which side of the Dark War each of DARKWAR_UNITS fights for. */
 export const DARKWAR_LEGION = DARKWAR_UNITS.slice(0, 10).concat("malgrave_dreadforger");
 export const DARKWAR_NATION = DARKWAR_UNITS.slice(10, 20).concat("vorthrax_archfiend");
@@ -599,8 +608,8 @@ export const DARKWAR_NATION = DARKWAR_UNITS.slice(10, 20).concat("vorthrax_archf
  * v2.10: units switched off (no drops, no decks, hidden unless owned) except where the API runs with
  * STAGING_UNITS="1" (staging). Empty this list to release them everywhere.
  */
-export const STAGING_ONLY_UNITS: readonly string[] = DARKWAR_UNITS;
-export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent", ...FANTASY_UNITS, ...DARKWAR_UNITS];
+export const STAGING_ONLY_UNITS: readonly string[] = [...DARKWAR_UNITS, ...GOBLIN_UNITS];
+export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent", ...FANTASY_UNITS, ...DARKWAR_UNITS, ...GOBLIN_UNITS];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
 }

@@ -1,6 +1,7 @@
 # API changelog
 
 ## 1.7.0 (staging)
+- Goblin Rocket Baron (`GOBLIN_UNITS`, projectile `goblin_rocket`), staging only.
 - Shared rules for game 2.10.0 "Dark War": the new series The Dark War, Book 1 Legends (`DEFAULT_BOOK3`, `BookDef.series`, stories `dws1`-`dws4`, added to saved configs by `withAddedStories`), the Shifting Front mechanic, 22 units, 13 monsters, 9 bosses, badge `dark_war`. Staging `MIN_CLIENT` 2.10.0.
 
 ## 1.6.4 (staging)

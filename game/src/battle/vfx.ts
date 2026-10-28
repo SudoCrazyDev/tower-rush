@@ -10,7 +10,7 @@
  *  - ShotView: a projectile, or a melee weapon thrown by a unit with `def.weapon`.
  */
 import Phaser from "phaser";
-import { DARKWAR_PROJ, ELEMENT_COLOR, FANTASY_PROJ, UNIT_BY_ID, WEAPON_MOTION, rarityIndex, type Element, type UnitDef } from "../../../shared/units.ts";
+import { DARKWAR_PROJ, ELEMENT_COLOR, FANTASY_PROJ, GOBLIN_PROJ, UNIT_BY_ID, WEAPON_MOTION, rarityIndex, type Element, type UnitDef } from "../../../shared/units.ts";
 import type { Sim, SimEvent, SimMonster } from "../../../shared/sim.ts";
 
 type FxScene = Phaser.Scene & { sim: Sim };
@@ -234,12 +234,12 @@ const PROJ_IMPACT: Record<string, string> = {
   cero: "impact_lanza",
   tide_wave: "impact_tide_wave",
   // Fantasy units: impact_<proj> for each of FANTASY_PROJ.
-  ...Object.fromEntries([...FANTASY_PROJ, ...DARKWAR_PROJ].map((p) => [p, `impact_${p}`])),
+  ...Object.fromEntries([...FANTASY_PROJ, ...DARKWAR_PROJ, ...GOBLIN_PROJ].map((p) => [p, `impact_${p}`])),
 };
 /** v2.8 projectiles whose art may not be built yet: drawn with an existing projectile until then. */
 const PROJ_FALLBACK: Record<string, string> = { lantern: "arcane_orb", void_rift: "arcane_orb", dragon_flame: "fireball", chrono_gear: "arcane_orb", slash: "arcane_orb", cero: "arcane_orb", tide_wave: "water" };
 /** Projectiles drawn larger than the usual 56px (the slash wave is wide). */
-const PROJ_SIZE: Record<string, number> = { slash: 96, cero: 60, tide_wave: 100, ...Object.fromEntries([...FANTASY_PROJ, ...DARKWAR_PROJ].map((p) => [p, 80])) };
+const PROJ_SIZE: Record<string, number> = { slash: 96, cero: 60, tide_wave: 100, ...Object.fromEntries([...FANTASY_PROJ, ...DARKWAR_PROJ, ...GOBLIN_PROJ].map((p) => [p, 80])) };
 /** Projectiles that turn in flight instead of pointing along it. */
 const SPIN_PROJ = new Set(["chrono_gear"]);
 /** v2.8: units with their own impact on top of the usual one (Monkey King's staff). */
