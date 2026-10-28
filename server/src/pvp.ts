@@ -336,7 +336,7 @@ export class Matchmaker extends DurableObject<Bindings> {
   private hosts = new Map<string, Waiting>();
 
   async fetch(req: Request) {
-    await ensureConfig(this.env.DB);
+    await ensureConfig(this.env.DB, this.env.STAGING_UNITS);
     const userId = Number(req.headers.get("x-player-id"));
     const join = req.headers.get("x-join");
     const u = await getUser(this.env.DB, userId);
@@ -423,7 +423,7 @@ export class Matchmaker extends DurableObject<Bindings> {
   }
 
   async alarm() {
-    await ensureConfig(this.env.DB);
+    await ensureConfig(this.env.DB, this.env.STAGING_UNITS);
     const r = PVP.rules;
     const now = Date.now();
     const band = (w: Waiting) => r.matchBand + r.matchBandGrowth * ((now - w.since) / 1000);
@@ -520,7 +520,7 @@ export class MatchRoom extends DurableObject<Bindings> {
 
   /** Called by the matchmaker when the match is made. */
   async init(setup: MatchSetup, users: [number, number]) {
-    await ensureConfig(this.env.DB);
+    await ensureConfig(this.env.DB, this.env.STAGING_UNITS);
     this.state = { setup, users, result: null, away: [null, null] };
     this.hp = [PVP.rules.hp, PVP.rules.hp];
     await this.save();
@@ -539,7 +539,7 @@ export class MatchRoom extends DurableObject<Bindings> {
   }
 
   async fetch(req: Request) {
-    await ensureConfig(this.env.DB);
+    await ensureConfig(this.env.DB, this.env.STAGING_UNITS);
     const s = await this.load();
     const userId = Number(req.headers.get("x-player-id"));
     const idx = s ? s.users.indexOf(userId) : -1;
@@ -648,7 +648,7 @@ export class MatchRoom extends DurableObject<Bindings> {
   }
 
   async alarm() {
-    await ensureConfig(this.env.DB);
+    await ensureConfig(this.env.DB, this.env.STAGING_UNITS);
     const s = await this.load();
     if (!s || s.result) return;
     const now = Date.now();

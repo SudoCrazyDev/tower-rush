@@ -83,7 +83,8 @@
         "GAME_URL": "https://staging-game.crownnkeep.com/",
         "TURNSTILE_SITEKEY": "0x4AAAAAAFUwTM4HbhgRHLCK",
         "TURNSTILE_HOSTNAMES": "staging-game.crownnkeep.com",
-        "INVITE_ONLY": "1"
+        "INVITE_ONLY": "1",
+        "STAGING_UNITS": "1"
       }
     }
   }

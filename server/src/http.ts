@@ -25,6 +25,8 @@ export interface Bindings {
   TURNSTILE_HOSTNAMES?: string;
   /** "1": accounts only through admin invites, no guests (staging; invites.ts). */
   INVITE_ONLY?: string;
+  /** "1": STAGING_ONLY_UNITS (shared/units.ts) are on (staging). */
+  STAGING_UNITS?: string;
   /** Secret, set with `wrangler secret put`. Redeems Turnstile tokens (turnstile.ts). */
   TURNSTILE_SECRET?: string;
   /** Secret, set with `wrangler secret put`. Discord webhook for #new-recruits sign-up posts (discord.ts). */

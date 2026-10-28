@@ -2,7 +2,7 @@ import { applyConfig, defaultConfig, validateConfig, withHotfixes, withPvpDefaul
 import { withEffectDefaults } from "../../shared/effects.ts";
 import { withKits, withPerkDefaults } from "../../shared/kit.ts";
 import { withRaces } from "../../shared/races.ts";
-import { withAdded, withAddedUnits, withStyles } from "../../shared/units.ts";
+import { STAGING_ONLY_UNITS, withAdded, withAddedUnits, withStyles } from "../../shared/units.ts";
 import { booksOf } from "../../shared/stories.ts";
 import { ADDED_BOSSES, ADDED_MONSTERS } from "../../shared/monsters.ts";
 import { all, audit, one, run } from "./db.ts";
@@ -21,6 +21,8 @@ interface VersionRow {
  */
 let current: { id: number; config: GameConfig; createdAt: number } | null = null;
 let checkedAt = 0;
+/** v2.10: whether this Worker serves STAGING_ONLY_UNITS (env STAGING_UNITS="1"). */
+let staging = false;
 const CHECK_MS = 5_000;
 
 /** Older saved configs may predate newer fields; fill those in from the defaults. */
@@ -45,14 +47,24 @@ function upgrade(cfg: GameConfig): GameConfig {
   return { ...c, units: withKits(c.units, c.effects) };
 }
 
+/** Outside staging, STAGING_ONLY_UNITS are off whatever the saved config says. */
+function gate(cfg: GameConfig): GameConfig {
+  if (staging || !STAGING_ONLY_UNITS.length) return cfg;
+  return { ...cfg, units: cfg.units.map((u) => (STAGING_ONLY_UNITS.includes(u.id) ? { ...u, enabled: false } : u)) };
+}
+
 function load(row: VersionRow) {
-  const config = upgrade(JSON.parse(row.config));
+  const config = gate(upgrade(JSON.parse(row.config)));
   applyConfig(config);
   current = { id: row.id, config, createdAt: row.created_at };
 }
 
 /** Make sure the shared tables hold the live config. Runs before every API request. */
-export async function ensureConfig(db: D1Database) {
+export async function ensureConfig(db: D1Database, stagingUnits?: string) {
+  if ((stagingUnits === "1") !== staging) {
+    staging = stagingUnits === "1";
+    current = null;
+  }
   const now = Date.now();
   if (current && now - checkedAt < CHECK_MS) return;
   const top = await one<{ id: number }>(db, "SELECT id FROM config_versions ORDER BY id DESC LIMIT 1");

@@ -27,7 +27,7 @@ app.use("/api/*", versionGate);
 
 // The shared game tables must hold the live config before any route uses them.
 app.use("/api/*", async (c, next) => {
-  await ensureConfig(c.env.DB);
+  await ensureConfig(c.env.DB, c.env.STAGING_UNITS);
   await next();
 });
 

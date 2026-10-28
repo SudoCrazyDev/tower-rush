@@ -595,6 +595,11 @@ export const DARKWAR_UNITS = [
 /** Which side of the Dark War each of DARKWAR_UNITS fights for. */
 export const DARKWAR_LEGION = DARKWAR_UNITS.slice(0, 10).concat("malgrave_dreadforger");
 export const DARKWAR_NATION = DARKWAR_UNITS.slice(10, 20).concat("vorthrax_archfiend");
+/**
+ * v2.10: units switched off (no drops, no decks, hidden unless owned) except where the API runs with
+ * STAGING_UNITS="1" (staging). Empty this list to release them everywhere.
+ */
+export const STAGING_ONLY_UNITS: readonly string[] = DARKWAR_UNITS;
 export const ADDED_UNITS = ["portal_imp", "mirror_slime", "lucky_cat", "banner_herald", "gnome_brewer", "mime", "hourglass_owl", "echo_spirit", ...STORY_UNITS, ...ORC_UNITS, "heart_surgeon", "murcielago", "windrunner", "cursed_totem", "sea_serpent", ...FANTASY_UNITS, ...DARKWAR_UNITS];
 export function withAddedUnits(list: UnitDef[], defaults: UnitDef[]): UnitDef[] {
   return withAdded(list, defaults, ADDED_UNITS);
