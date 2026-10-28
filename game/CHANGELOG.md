@@ -4,7 +4,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 
 ## 2.10.0 "Dark War" (staging)
 - New series **The Dark War**, not part of The Forsakens. Its Book 1, **Legends**: 4 stories, 9 chapters (`dws1`-`dws4`). Malgrave the Dreadforger's Undying Legion against Vorthrax the Archfiend's Abyssal Nation. Details in `docs/features/v2.10-dark-war/`.
-- Stories page: books carry a `series`; the header shows a tab per series and the books of the current one, numbered within it. Admin Stories edits the series.
+- Stories page: books carry a `series`. Opening Stories shows a series picker, a banner panel per series (art `story/series/<slug>`, title, pitch, stars, books, lock; pages of three past three series); tapping one opens its books, numbered within the series, and the book's close goes back to the picker. Admin Stories edits the series.
 - **The Shifting Front** (`ChapterMechanics.front`, `shared/front.ts`): a war meter fills with kills; a full meter (or wave `by`) shifts the front: a transition video plays over the arena, then the new arena art, loop and field rule take over (element/race damage, haste, monster HP/speed, kill mana, storm bolts, fire bursts). `game/src/battle/frontView.ts`.
 - **Video story panels**: a panel with `video/panel_<image>.mp4` plays it once over the still and holds the last frame.
 - 20 new Legendaries (`DARKWAR_UNITS`, 10 Legion, 10 Nation) and 2 warlord Mythics (story rewards), each with its own projectile and impact (`DARKWAR_PROJ`). 13 monsters, 9 bosses (existing skill kinds).

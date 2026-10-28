@@ -188,6 +188,8 @@ STATIC = [
     ("props", "props", 256),
     # v1.2 Story mode: book covers, illustrated panels and dialogue portraits.
     ("story/covers", "story/covers", 768),
+    # v2.10: series banners on the Stories page.
+    ("story/series", "story/series", 1344),
     ("story/panels", "story/panels", 1344),
     ("story/portraits", "story/portraits", 256),
     # v2.1: allies that charge in a story rally cutscene.

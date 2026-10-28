@@ -1747,6 +1747,11 @@ export function setBooks(books: BookDef[]) {
 
 /** v2.10: the series of book `i` (a saved config without the field keeps the default's series). */
 export const seriesOf = (i: number) => BOOKS[i]?.series ?? DEFAULT_BOOKS[i]?.series ?? SAGA;
+/** v2.10: each series' banner on the Stories page (story/<art>.webp) and its one-line pitch. */
+export const SERIES_INFO: Record<string, { art: string; tagline: string }> = {
+  [SAGA]: { art: "series/the_forsakens", tagline: "The Chosen and the shards of a fallen kingdom." },
+  "The Dark War": { art: "series/the_dark_war", tagline: "Legion or Nation? The tenth war begins." },
+};
 /** Every series, in book order. */
 export const allSeries = () => [...new Set(BOOKS.map((_, i) => seriesOf(i)))];
 /** Indexes of the books in a series, in order. */

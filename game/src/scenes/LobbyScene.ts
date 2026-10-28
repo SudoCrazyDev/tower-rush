@@ -3,7 +3,7 @@ import { BASE, ICON } from "../assets";
 import { ARENAS, ARENA_BY_ID, arenaForTrophies, trophyArena, type ArenaDef } from "../data/arenas";
 import { profile, account, mail, setArena, setAvatar, signOut, loadMe, loadInbox, serverNow } from "../save";
 import { storyIsNew } from "../../../shared/profile.ts";
-import { BOOK, BOOKS, allSeries, bookLock, seriesBooks, seriesOf, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
+import { BOOK, BOOKS, SERIES_INFO, allSeries, bookLock, seriesBooks, seriesOf, bookSlots, chapterWon, storyFinished, storyLock, type StoryDef } from "../../../shared/stories.ts";
 import { loadStoryImages } from "./storyUi";
 import { activeEvents, msLeft, shortDuration, timeOf } from "../../../shared/offers.ts";
 import { utcDay } from "../../../shared/daily.ts";
@@ -49,6 +49,11 @@ const CARD_Y = WIDE ? 680 : 790;
 let bookIdx = -1;
 /** Which book of the saga (Book 1, Book 2) the Stories page shows. */
 let bookTab = 0;
+/** v2.10: the Stories page shows the series picker (when there is more than one series) before a book. */
+let seriesPick = true;
+/** The picker's page, when there are more series than fit. */
+let seriesPage = 0;
+const picker = () => seriesPick && allSeries().length > 1;
 const curBook = () => BOOKS[bookTab] ?? BOOK;
 const hasStories = () => BOOKS.some((b) => b.stories.length > 0);
 /** The mode cards this build shows, in carousel order. */
@@ -139,7 +144,7 @@ export class LobbyScene extends Phaser.Scene {
     }
     for (const [b, book] of BOOKS.entries()) {
       const i = data.story ? book.stories.findIndex((s) => s.id === data.story) : -1;
-      if (i >= 0) [bookTab, bookIdx] = [b, i];
+      if (i >= 0) [bookTab, bookIdx, seriesPick] = [b, i, false];
     }
   }
 
@@ -196,6 +201,7 @@ export class LobbyScene extends Phaser.Scene {
     onSwipe(this, new Phaser.Geom.Rectangle(W / 2 - 330, CARD_Y - 340, 660, 740), () => this.card, (d) => {
       if (!opened) this.setMode(activeModes().indexOf(mode) + d, d);
       else if (mode === "arena") this.stepArena(d);
+      else if (picker()) this.stepSeriesPage(d);
       else this.stepBook(d);
     });
 
@@ -370,7 +376,7 @@ export class LobbyScene extends Phaser.Scene {
     if (!opened) {
       this.modeCard(group);
       this.drawPeeks(group, !!slide);
-    } else if (mode === "story") this.storyCard(group);
+    } else if (mode === "story") picker() ? this.seriesCard(group) : this.storyCard(group);
     else this.arenaCard(group);
     if (flip && old) {
       group.setScale(0, 1);
@@ -436,7 +442,7 @@ export class LobbyScene extends Phaser.Scene {
       const all = BOOKS.flatMap((b) => b.stories);
       const total = all.reduce((n, s) => n + storyStars(s), 0);
       const max = all.reduce((n, s) => n + s.chapters.length * 3, 0);
-      this.chips(group, [{ text: seriesOf(bookTab) }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
+      this.chips(group, [{ text: allSeries().length > 1 ? `${allSeries().length} series` : seriesOf(0) }, { text: `★ ${total} / ${max}`, color: "#ffd93b" }]);
       this.namePlate(group, "STORIES", "ui:icon_story");
       if (storyIsNew(profile)) group.add(badge(this, 268, -298, "!"));
     }
@@ -535,7 +541,14 @@ export class LobbyScene extends Phaser.Scene {
 
   /** The ✕ on an open card, back to the mode cards (not for new players before their first battle). */
   private closeButton(group: Phaser.GameObjects.Container) {
-    if (!tutorialDue("battle") && !offline) group.add(iconButton(this, -248, -282, "close", 60, () => this.open(false)));
+    if (tutorialDue("battle") || offline) return;
+    // v2.10: a book's close goes back to the series picker first.
+    const back = mode === "story" && !seriesPick && allSeries().length > 1;
+    group.add(iconButton(this, -248, -282, "close", 60, () => {
+      if (!back) return this.open(false);
+      seriesPick = true;
+      this.drawCard({ slide: -120 });
+    }));
   }
 
   /** The card's ornate frame, with a border around the art window at the top (the art goes in at index 1, under it). */
@@ -695,12 +708,8 @@ export class LobbyScene extends Phaser.Scene {
     if (bookIdx < n - 1) group.add(iconButton(this, 250, coverY, "back", 76, () => this.stepBook(1)).setFlipX(true));
   }
 
-  /**
-   * The series above the card (a tab per series when there are several), then a tab per book of the
-   * current series, numbered within it (a padlock on a book that isn't open yet).
-   */
+  /** The series title above the card, then a tab per book of that series, numbered within it (a padlock on a book that isn't open yet). */
   private sagaHeader(group: Phaser.GameObjects.Container) {
-    const series = allSeries();
     const cur = seriesOf(bookTab);
     const open = (i: number) => {
       if (i === bookTab) return;
@@ -709,14 +718,7 @@ export class LobbyScene extends Phaser.Scene {
       bookIdx = currentStory();
       this.drawCard({ slide });
     };
-    if (series.length < 2) group.add(txt(this, 0, -440, cur.toUpperCase(), 40, "#ffd27a"));
-    else {
-      const sw = 580 / series.length;
-      series.forEach((name, j) => {
-        const on = name === cur;
-        group.add(button(this, (j - (series.length - 1) / 2) * sw, -446, sw - 12, 64, name.toUpperCase(), on ? "green" : "grey", () => on || open(seriesBooks(name)[0]), 30));
-      });
-    }
+    group.add(txt(this, 0, -440, cur.toUpperCase(), 40, "#ffd27a"));
     const books = seriesBooks(cur);
     const w = Math.min(290, 560 / books.length);
     books.forEach((i, n) => {
@@ -733,6 +735,99 @@ export class LobbyScene extends Phaser.Scene {
         group.add(pad);
       }
     });
+  }
+
+  /**
+   * v2.10: the series picker. A banner panel per series (its art, title, pitch, stars and books), a
+   * page of three; arrows (and swipes) page through more. Tapping a series opens its book.
+   */
+  private seriesCard(group: Phaser.GameObjects.Container) {
+    const { frame, trim } = ornateFrame(this, 600, 660, false);
+    group.add([frame, trim]);
+    group.add(txt(this, 0, -290, "CHOOSE A SERIES", 26, "#ffd27a"));
+    this.closeButton(group);
+    const list = allSeries();
+    const per = list.length > 3 ? 2 : 3;
+    const pages = Math.ceil(list.length / per);
+    seriesPage = Math.min(seriesPage, pages - 1);
+    const shown = list.slice(seriesPage * per, seriesPage * per + per);
+    const pw = 540;
+    // Taller banners while there are few series.
+    const ph = shown.length < 3 ? 250 : 180;
+    shown.forEach((name, j) => group.add(this.seriesPanel(name, 20 + (j - (shown.length - 1) / 2) * (ph + 10), pw, ph)));
+    if (pages > 1) {
+      group.add(txt(this, 0, 290, `${seriesPage + 1} / ${pages}`, 26, "#c9d2ff"));
+      if (seriesPage > 0) group.add(iconButton(this, -200, 290, "back", 64, () => this.stepSeriesPage(-1)));
+      if (seriesPage < pages - 1) group.add(iconButton(this, 200, 290, "back", 64, () => this.stepSeriesPage(1)).setFlipX(true));
+    }
+  }
+
+  /** One series' banner panel: art cropped to fill, a shade with the title and pitch, stars, books and any lock. */
+  private seriesPanel(name: string, y: number, w: number, h: number) {
+    const books = seriesBooks(name);
+    const first = BOOKS[books[0]];
+    const stories = books.flatMap((i) => BOOKS[i].stories);
+    const stars = stories.reduce((n, s) => n + storyStars(s), 0);
+    const max = stories.reduce((n, s) => n + s.chapters.length * 3, 0);
+    const lock = bookLock(profile.story, books[0]) ?? (first.stories[0] ? storyLock(profile.story, profile.trophies, first.stories[0]) : "Coming soon");
+    const done = stories.length > 0 && stories.every((s) => storyFinished(profile.story, s));
+    const c = this.add.container(0, y).setSize(w, h);
+    const back = this.add.graphics();
+    back.fillStyle(0x0b1030, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
+    c.add(back);
+    const info = SERIES_INFO[name];
+    const cover = first.stories[0] && `covers/${first.stories[0].cover}`;
+    let tries = 5;
+    const show = () => {
+      if (!c.active) return;
+      // The series banner; until it exists, the first story's cover.
+      const path = [info?.art, cover].find((k) => k && this.textures.exists(`story:${k}`));
+      // A busy loader can finish its other files first: wait for its next batch.
+      if (!path) return void (tries-- > 0 && this.load.once(Phaser.Loader.Events.COMPLETE, show));
+      const img = this.add.image(0, 0, `story:${path}`);
+      const s = Math.max(w / img.width, h / img.height);
+      const cw = w / s;
+      const ch = h / s;
+      // A banner keeps its middle band (its foot is dark ground); a (portrait) cover its upper part, where the title art is.
+      const cy = (img.height - ch) * (path === info?.art ? 0.4 : 0.3);
+      img.setScale(s).setCrop((img.width - cw) / 2, cy, cw, ch);
+      img.setY((img.height / 2 - cy - ch / 2) * s);
+      if (lock) img.setTint(0x8a8a9e);
+      c.addAt(img, 1);
+    };
+    loadStoryImages(this, [info?.art, cover].filter((k): k is string => !!k), show);
+    const shade = this.add.graphics();
+    shade.fillGradientStyle(0x05061a, 0x05061a, 0x05061a, 0x05061a, 0, 0, 0.92, 0.92).fillRect(-w / 2, -h / 2 + h * 0.3, w, h * 0.7);
+    const edge = this.add.graphics();
+    edge.lineStyle(4, lock ? 0x8a8fa8 : 0xf2b630, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
+    c.add([shade, edge]);
+    const L = -w / 2 + 22;
+    c.add(txt(this, L, h / 2 - 72, name.toUpperCase(), 40, lock ? "#c8ccd8" : "#ffd27a", [0, 0.5]));
+    if (info) c.add(txt(this, L, h / 2 - 32, info.tagline, 22, "#e6e0ff", [0, 0.5]).setWordWrapWidth(w - 120).setAlign("left"));
+    const R = w / 2 - 20;
+    c.add(txt(this, R, -h / 2 + 26, `★ ${stars} / ${max}`, 26, done ? "#ffd93b" : "#fff4c2", [1, 0.5]));
+    c.add(txt(this, R, -h / 2 + 58, `${books.length} ${books.length === 1 ? "book" : "books"}`, 22, "#c9d2ff", [1, 0.5]));
+    if (lock) {
+      const pad = this.add.image(R - 26, h / 2 - 52, "ui:padlock");
+      pad.setScale(52 / Math.max(pad.width, pad.height));
+      c.add(pad);
+    }
+    pressable(c, () => {
+      seriesPick = false;
+      if (seriesOf(bookTab) !== name) bookTab = books[0];
+      bookIdx = currentStory();
+      this.drawCard({ slide: 120 });
+    });
+    return c;
+  }
+
+  private stepSeriesPage(d: number) {
+    const n = allSeries().length;
+    const pages = Math.ceil(n / (n > 3 ? 2 : 3));
+    const next = seriesPage + d;
+    if (next < 0 || next >= pages) return;
+    seriesPage = next;
+    this.drawCard({ slide: d * 120 });
   }
 
   /** A planned story that isn't out yet: a sealed page with "Coming soon" and the arrows. */
