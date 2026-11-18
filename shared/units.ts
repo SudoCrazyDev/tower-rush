@@ -514,27 +514,27 @@ export const DEFAULT_UNITS: UnitDef[] = withKits([
   U("card_clasher", "Card Clasher", "legendary", "arcane", "crit", "razor_card", "Every card he deals is a killing blow.", "human", "rapid", "plunder"),
   U("neo_necromancer", "Neo Necromancer", "legendary", "poison", "curse", "raven_hex", "Old magic. New tricks. Same grave.", "human", "balanced", "finisher"),
   // v2.10 Legends "The Dark War" (DARKWAR_UNITS): the Undying Legion...
-  U("soulforge_blademaster", "Soulforge Blademaster", "legendary", "fire", "crit", "soul_odachi", "His blade burns on what the dead leave behind.", "undead", "rapid", "finisher"),
-  U("pyre_warmonger", "Pyre Warmonger", "legendary", "fire", "burn", "pyre_tonfa", "Every war needs a fire. He brings two.", "undead", "heavy", "armor_breaker"),
-  U("dread_artisan", "Dread Artisan", "legendary", "arcane", "curse", "ink_skull", "Paints the battlefield, then forges it.", "undead", "balanced", "finisher"),
-  U("grimgate_dreadknight", "Grimgate Dread Knight", "legendary", "normal", "execute", "dread_dagger", "Lures the brave through the gate. None come back.", "undead", "heavy", "giant_slayer"),
-  U("underworld_electromancer", "Underworld Electromancer", "legendary", "lightning", "chain", "conductor_bolt", "Enough charge to light a city of the dead.", "undead", "balanced", "finisher"),
-  U("abyss_blademaster", "Abyss Blademaster", "legendary", "normal", "pierce", "twin_katana", "Two blades, one shadow, no second chances.", "human", "rapid", "true_strike"),
+  U("soulforge_blademaster", "Soulforge Blademaster", "epic", "fire", "crit", "soul_odachi", "His blade burns on what the dead leave behind.", "undead", "rapid", "finisher"),
+  U("pyre_warmonger", "Pyre Warmonger", "epic", "fire", "burn", "pyre_tonfa", "Every war needs a fire. He brings two.", "undead", "heavy", "armor_breaker"),
+  U("dread_artisan", "Dread Artisan", "epic", "arcane", "curse", "ink_skull", "Paints the battlefield, then forges it.", "undead", "balanced", "finisher"),
+  U("grimgate_dreadknight", "Grimgate Dread Knight", "epic", "normal", "execute", "dread_dagger", "Lures the brave through the gate. None come back.", "undead", "heavy", "giant_slayer"),
+  U("underworld_electromancer", "Underworld Electromancer", "epic", "lightning", "chain", "conductor_bolt", "Enough charge to light a city of the dead.", "undead", "balanced", "finisher"),
+  U("abyss_blademaster", "Abyss Blademaster", "epic", "normal", "pierce", "twin_katana", "Two blades, one shadow, no second chances.", "human", "rapid", "true_strike"),
   U("prismatic_paragon", "Prismatic Paragon", "legendary", "arcane", "splash", "prism_shard", "Light bends around his armor, then breaks on you.", "undead", "heavy", "true_strike"),
-  U("fenrir_legionnaire", "Fenrir Legionnaire", "legendary", "ice", "stun", "wolf_fang", "The Legion's wolf. Its howl freezes the bold.", "beast", "balanced", "hunter"),
-  U("dreadsaw_fiend", "Dreadsaw Fiend", "legendary", "normal", "splash", "dread_saw", "Grins the whole time. The saw never stops.", "demon", "heavy", "armor_breaker"),
+  U("fenrir_legionnaire", "Fenrir Legionnaire", "rare", "ice", "stun", "wolf_fang", "The Legion's wolf. Its howl freezes the bold.", "beast", "balanced", "hunter"),
+  U("dreadsaw_fiend", "Dreadsaw Fiend", "rare", "normal", "splash", "dread_saw", "Grins the whole time. The saw never stops.", "demon", "heavy", "armor_breaker"),
   U("ascended_blademaster", "Ascended Blademaster", "legendary", "normal", "sniper", "blade_crescent", "Bring him the Archfiend's head. He will bring yours.", "undead", "heavy", "giant_slayer"),
   // ...and the Abyssal Nation.
-  U("naraka_fiend", "Naraka Fiend", "legendary", "poison", "poison", "fiend_armblade", "An underworld fiend sworn to the Archfiend.", "demon", "rapid", "finisher"),
-  U("tempest_voidcaller", "Tempest Voidcaller", "legendary", "lightning", "chain", "tempest_orb", "Carries a storm in its hands.", "demon", "balanced", "hunter"),
-  U("midnight_stormvoid", "Midnight Stormvoid", "legendary", "ice", "freeze", "storm_piercer", "The storm at midnight cuts colder.", "demon", "balanced", "frostbite"),
-  U("abyss_recruit", "Abyss Recruit", "legendary", "normal", "stun", "shield_throw", "Signed in diamond. Fights like it.", "human", "heavy", "armor_breaker"),
-  U("archfiend_worshipper", "Archfiend Worshipper", "legendary", "arcane", "curse", "worship_sigil", "Gave everything to the Archfiend. He answered.", "human", "balanced", "finisher"),
-  U("infernalfiend", "Infernalfiend", "legendary", "fire", "splash", "infernal_meteor", "Rains molten stone on whatever is left.", "demon", "heavy", "armor_breaker"),
-  U("abyssal_vampire", "Abyssal Vampire", "legendary", "arcane", "crit", "blood_bat", "Drinks deep. Bites twice.", "undead", "rapid", "plunder"),
+  U("naraka_fiend", "Naraka Fiend", "epic", "poison", "poison", "fiend_armblade", "An underworld fiend sworn to the Archfiend.", "demon", "rapid", "finisher"),
+  U("tempest_voidcaller", "Tempest Voidcaller", "rare", "lightning", "chain", "tempest_orb", "Carries a storm in its hands.", "demon", "balanced", "hunter"),
+  U("midnight_stormvoid", "Midnight Stormvoid", "rare", "ice", "freeze", "storm_piercer", "The storm at midnight cuts colder.", "demon", "balanced", "frostbite"),
+  U("abyss_recruit", "Abyss Recruit", "rare", "normal", "stun", "shield_throw", "Signed in diamond. Fights like it.", "human", "heavy", "armor_breaker"),
+  U("archfiend_worshipper", "Archfiend Worshipper", "epic", "arcane", "curse", "worship_sigil", "Gave everything to the Archfiend. He answered.", "human", "balanced", "finisher"),
+  U("infernalfiend", "Infernalfiend", "epic", "fire", "splash", "infernal_meteor", "Rains molten stone on whatever is left.", "demon", "heavy", "armor_breaker"),
+  U("abyssal_vampire", "Abyssal Vampire", "epic", "arcane", "crit", "blood_bat", "Drinks deep. Bites twice.", "undead", "rapid", "plunder"),
   U("oblivion_dragoon", "Oblivion Dragoon", "legendary", "arcane", "pierce", "oblivion_spear", "His spear opens a door to nothing.", "dragon", "heavy", "true_strike"),
   U("golden_hanzo", "Golden Hanzo", "legendary", "normal", "crit", "golden_shuriken", "Gold edge, void step, no sound.", "human", "rapid", "hunter"),
-  U("deathfiend", "Deathfiend", "legendary", "poison", "slow", "death_scythe", "Its scythe slows the living to a crawl.", "demon", "heavy", "finisher"),
+  U("deathfiend", "Deathfiend", "epic", "poison", "slow", "death_scythe", "Its scythe slows the living to a crawl.", "demon", "heavy", "finisher"),
   // mythic
   // v2.8: each Mythic throws its own projectile (HOTFIX 2.8.0-mythic-proj).
   U("void_titan", "Void Titan", "mythic", "arcane", "execute", "void_rift", "Erases giants with a touch.", "giant", "heavy", "giant_slayer"),
@@ -593,7 +593,7 @@ export const STORY_UNITS = ["princess_muse", "pentagonal_knight", "rogue_knight"
 /** The 18 Fantasy Legendaries (standard archetypes; no awakened forms yet, see NO_AWAKEN). */
 export const FANTASY_UNITS = ["hollow_revenant", "veyr_doomblade", "reapmarshal", "void_sovereign", "chronodrake_warden", "storm_empress", "starforged_titan", "hellforged_overlord", "dawnblade_goddess", "clockwork_stalker", "riftbreaker", "dusk_ronin", "frostbound_berserker", "crimson_chronomancer", "wyrmbane_general", "pit_archfiend", "card_clasher", "neo_necromancer"];
 export const ORC_UNITS = ["peon", "grunt", "headhunter", "spirit_walker", "kodo_beasts"];
-/** v2.10 The Dark War: 20 Legendaries (10 Legion, 10 Nation) and the two warlord Mythics (standard archetypes, own projectiles). */
+/** v2.10 The Dark War: 20 units (10 Legion, 10 Nation; 4 Legendary, 11 Epic, 5 Rare) and the two warlord Mythics (standard archetypes, own projectiles). */
 export const DARKWAR_UNITS = [
   "soulforge_blademaster", "pyre_warmonger", "dread_artisan", "grimgate_dreadknight", "underworld_electromancer", "abyss_blademaster", "prismatic_paragon", "fenrir_legionnaire", "dreadsaw_fiend", "ascended_blademaster",
   "naraka_fiend", "tempest_voidcaller", "midnight_stormvoid", "abyss_recruit", "archfiend_worshipper", "infernalfiend", "abyssal_vampire", "oblivion_dragoon", "golden_hanzo", "deathfiend",

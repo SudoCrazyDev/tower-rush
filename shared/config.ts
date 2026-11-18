@@ -100,6 +100,15 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
   "2.9.4-units": { units: { murcielago: ["name"], echo_spirit: ["blurb"], heart_surgeon: ["blurb"] }, effects: {} },
   // v2.9.5: Sea Serpent throws its own tide wave (it was saved with "water").
   "2.9.4-serpent": { units: { sea_serpent: ["proj"] }, effects: {} },
+  // v2.10 Dark War rarities: 11 Legendaries -> Epic, 5 -> Rare (damage re-seeds from the new rarity).
+  "2.10.0-darkwar-rarity": {
+    units: Object.fromEntries([
+      "soulforge_blademaster", "pyre_warmonger", "dread_artisan", "grimgate_dreadknight", "underworld_electromancer", "abyss_blademaster",
+      "naraka_fiend", "archfiend_worshipper", "infernalfiend", "abyssal_vampire", "deathfiend",
+      "fenrir_legionnaire", "dreadsaw_fiend", "tempest_voidcaller", "midnight_stormvoid", "abyss_recruit",
+    ].map((id) => [id, ["rarity", "damage"] as (keyof UnitDef)[]])),
+    effects: {},
+  },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

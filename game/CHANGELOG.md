@@ -8,7 +8,8 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - Stories page: books carry a `series`. Opening Stories shows a series picker, a banner panel per series (art `story/series/<slug>`, with a Seedance loop `video/series_<slug>` over it; title, pitch, stars, books, lock; pages of three past three series); tapping one opens its books, numbered within the series, and the book's close goes back to the picker. Admin Stories edits the series.
 - **The Shifting Front** (`ChapterMechanics.front`, `shared/front.ts`): a war meter fills with kills; a full meter (or wave `by`) shifts the front: a transition video plays over the arena, then the new arena art, loop and field rule take over (element/race damage, haste, monster HP/speed, kill mana, storm bolts, fire bursts). `game/src/battle/frontView.ts`.
 - **Video story panels**: a panel with `video/panel_<image>.mp4` plays it once over the still and holds the last frame.
-- 20 new Legendaries (`DARKWAR_UNITS`, 10 Legion, 10 Nation) and 2 warlord Mythics (story rewards), each with its own projectile and impact (`DARKWAR_PROJ`). 13 monsters, 9 bosses (existing skill kinds).
+- 20 new units (`DARKWAR_UNITS`, 10 Legion, 10 Nation) and 2 warlord Mythics (story rewards), each with its own projectile and impact (`DARKWAR_PROJ`). 13 monsters, 9 bosses (existing skill kinds).
+- Dark War rarities: 4 Legendary (Prismatic Paragon, Ascended Blademaster, Oblivion Dragoon, Golden Hanzo), 11 Epic, 5 Rare (Fenrir Legionnaire, Dreadsaw Fiend, Tempest Voidcaller, Midnight Stormvoid, Abyss Recruit). Hotfix `2.10.0-darkwar-rarity` resets rarity and damage in saved configs.
 - What's new: 2.10.0 "Dark War"; the Sea Serpent teaser is removed. Needs API 1.7.0.
 
 ## 2.9.8 (staging)
