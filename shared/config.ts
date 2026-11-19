@@ -109,6 +109,14 @@ const HOTFIXES: Record<string, { units: Record<string, (keyof UnitDef)[]>; effec
     ].map((id) => [id, ["rarity", "damage"] as (keyof UnitDef)[]])),
     effects: {},
   },
+  // v2.10 fantasy rarities: 8 Legendaries -> Epic, 3 -> Rare (damage re-seeds from the new rarity).
+  "2.10.0-fantasy-rarity": {
+    units: Object.fromEntries([
+      "hollow_revenant", "veyr_doomblade", "reapmarshal", "storm_empress", "hellforged_overlord", "dusk_ronin", "card_clasher", "neo_necromancer",
+      "clockwork_stalker", "frostbound_berserker", "crimson_chronomancer",
+    ].map((id) => [id, ["rarity", "damage"] as (keyof UnitDef)[]])),
+    effects: {},
+  },
 };
 
 export function withHotfixes(cfg: GameConfig): GameConfig {

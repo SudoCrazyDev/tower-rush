@@ -10,6 +10,7 @@ Releases up to 2.3.0 are documented per release in `docs/features/` (see `docs/f
 - **Video story panels**: a panel with `video/panel_<image>.mp4` plays it once over the still and holds the last frame.
 - 20 new units (`DARKWAR_UNITS`, 10 Legion, 10 Nation) and 2 warlord Mythics (story rewards), each with its own projectile and impact (`DARKWAR_PROJ`). 13 monsters, 9 bosses (existing skill kinds).
 - Dark War rarities: 4 Legendary (Prismatic Paragon, Ascended Blademaster, Oblivion Dragoon, Golden Hanzo), 11 Epic, 5 Rare (Fenrir Legionnaire, Dreadsaw Fiend, Tempest Voidcaller, Midnight Stormvoid, Abyss Recruit). Hotfix `2.10.0-darkwar-rarity` resets rarity and damage in saved configs.
+- Fantasy rarities: 7 Legendary (Void Sovereign, Chronodrake Warden, Starforged Titan, Dawnblade Goddess, Riftbreaker, Wyrmbane General, Pit Archfiend), 8 Epic, 3 Rare (Clockwork Stalker, Frostbound Berserker, Crimson Chronomancer). Hotfix `2.10.0-fantasy-rarity` resets rarity and damage in saved configs.
 - What's new: 2.10.0 "Dark War"; the Sea Serpent teaser is removed. Needs API 1.7.0.
 
 ## 2.9.8 (staging)
